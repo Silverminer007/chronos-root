@@ -17,7 +17,7 @@ public class EventAccessService {
     }
 
     private Set<Long> getAccessibleEvents(User user) {
-        Set<Long> userEventIds = new HashSet<>(UserEventRelation
+        Set<Long> userEventIds = new HashSet<>(EventUserAttendees
                 .find("user.id", user.id)
                 .project(Long.class)
                 .list());
@@ -30,7 +30,7 @@ public class EventAccessService {
 
         // 3) Alle Events, bei denen eine dieser Gruppen eingetragen ist
         Set<Long> groupEventIds = groupIds.isEmpty() ? Set.of() :
-                new HashSet<>(GroupEventRelation.find("group.id IN ?1", groupIds)
+                new HashSet<>(EventGroupAttendees.find("group.id IN ?1", groupIds)
                         .project(Long.class)
                         .list());
 
@@ -46,6 +46,10 @@ public class EventAccessService {
     }
 
     public boolean userHasAccessToEvent(User user, Event event) {
+        return userHasAccessToEvent(user, event.id);
+    }
+
+    public boolean userHasAccessToEvent(User user, Long eventId) {
         long count = Event.find(
                 """
                         id = ?1 AND (
@@ -55,81 +59,135 @@ public class EventAccessService {
                                         (SELECT g.id FROM Group g WHERE ?3 MEMBER OF g.members))
                         )
                         """,
-                event.id, user.id, user
+                eventId, user.id, user
         ).count();
 
         return count > 0;
     }
 
     // TODO
-    public void assignUserToEvent(User user, Event event, User participant) {
+    public void assignUserToEvent(User user, Long eventId, Long attendeeId, EventAttendeeRole role) {
+        if (!this.userHasAccessToEvent(user, eventId)) {
+            throw new IllegalArgumentException("User does not have access to event");
+        }
 
+        EventUserAttendees userAttendees = (EventUserAttendees) EventUserAttendees.find("event.id AND user.id", eventId, attendeeId)
+                .firstResultOptional().orElseGet(() -> {
+                    EventUserAttendees eventUserAttendees = new EventUserAttendees();
+                    Event event = Event.findById(eventId);
+                    if (event == null) {
+                        throw new IllegalArgumentException("Event with id " + eventId + " does not exist");
+                    }
+                    eventUserAttendees.setEvent(event);
+                    User attendee = User.findById(attendeeId);
+                    if (attendee == null) { // Muss der User auch in den Kontakten sein?
+                        throw new IllegalArgumentException("User with id " + attendeeId + " does not exist");
+                    }
+                    eventUserAttendees.setUser(attendee);
+                    eventUserAttendees.persist();
+                    return eventUserAttendees;
+                });
+        userAttendees.setRole(role);
     }
 
-    public void unassignUserToEvent(User user, Event event, User participant) {
-
+    public void unassignUserToEvent(User user, Long eventId, Long attendeeId) {
+        if (!this.userHasAccessToEvent(user, eventId)) {
+            throw new IllegalArgumentException("User does not have access to event");
+        }
+        EventUserAttendees.delete("event.id AND user.id", eventId, attendeeId);
     }
 
-    public void assignGroupToEvent(User user, Event event, Group participant) {
+    public void assignGroupToEvent(User user, Long eventId, Long groupId, EventAttendeeRole role) {
+        if (!this.userHasAccessToEvent(user, eventId)) {
+            throw new IllegalArgumentException("User does not have access to event");
+        }
 
+        EventGroupAttendees groupAttendees = (EventGroupAttendees) EventGroupAttendees.find("event.id AND group.id", eventId, groupId)
+                .firstResultOptional().orElseGet(() -> {
+                    EventGroupAttendees eventGroupAttendees = new EventGroupAttendees();
+                    Event event = Event.findById(eventId);
+                    if (event == null) {
+                        throw new IllegalArgumentException("Event with id " + eventId + " does not exist");
+                    }
+                    eventGroupAttendees.setEvent(event);
+                    Group group = Group.findById(groupId);
+                    if (group == null) { // TODO Muss der User auch in den Kontakten sein?
+                        throw new IllegalArgumentException("Group with id " + groupId + " does not exist");
+                    }
+                    eventGroupAttendees.setGroup(group);
+                    eventGroupAttendees.persist();
+                    return eventGroupAttendees;
+                });
+        groupAttendees.setRole(role);
     }
 
-    public void unassignGroupToEvent(User user, Event event, Group participant) {
-
+    public void unassignGroupToEvent(User user, Long eventId, Long groupId) {
+        if (!this.userHasAccessToEvent(user, eventId)) {
+            throw new IllegalArgumentException("User does not have access to event");
+        }
+        EventGroupAttendees.delete("event.id AND group.id", eventId, groupId);
     }
 
-    public UserEventRelationRole getEventRole(User user, Event event) {
-        UserEventRelationRole role = UserEventRelationRole.NONE;
+    public EventAttendeeRole getEventRole(User user, Event event) {
+        EventAttendeeRole role = EventAttendeeRole.NONE;
 
-        UserEventRelation userEventRelation = UserEventRelation.find("event.id = ?1 AND user.id = ?2", event.id, user.id).firstResult();
-        if (userEventRelation != null) {
-            role = userEventRelation.getRole();
+        EventUserAttendees eventUserAttendees = EventUserAttendees.find("event.id = ?1 AND user.id = ?2", event.id, user.id).firstResult();
+        if (eventUserAttendees != null) {
+            role = eventUserAttendees.getRole();
         }
 
         for (Group group : this.groupService.getGroups(user)) {
-            GroupEventRelation groupEventRelation =
-                    GroupEventRelation.find("event.id = ?1 AND group.id = ?2", event.id, group.id).firstResult();
-            if (groupEventRelation == null) {
+            EventGroupAttendees eventGroupAttendees =
+                    EventGroupAttendees.find("event.id = ?1 AND group.id = ?2", event.id, group.id).firstResult();
+            if (eventGroupAttendees == null) {
                 continue;
             }
-            if (groupEventRelation.getRole().ordinal() > role.ordinal()) {
-                role = groupEventRelation.getRole();
+            if (eventGroupAttendees.getRole().ordinal() > role.ordinal()) {
+                role = eventGroupAttendees.getRole();
             }
         }
         return role;
     }
 
-    public UserEventRelationRole getUserEventRole(User user, Event event) {
-        UserEventRelation userEventRelation = UserEventRelation.find("event.id = ?1 AND user.id = ?2", event.id, user.id).firstResult();
-        if (userEventRelation != null) {
-            return userEventRelation.getRole();
+    public EventAttendeeRole getUserEventRole(User user, Event event) {
+        EventUserAttendees eventUserAttendees = EventUserAttendees.find("event.id = ?1 AND user.id = ?2", event.id, user.id).firstResult();
+        if (eventUserAttendees != null) {
+            return eventUserAttendees.getRole();
         }
-        return UserEventRelationRole.NONE;
+        return EventAttendeeRole.NONE;
     }
 
-    public UserEventRelationRole getGroupEventRole(Group group, Event event) {
-        GroupEventRelation groupEventRelation =
-                    GroupEventRelation.find("event.id = ?1 AND group.id = ?2", event.id, group.id).firstResult();
-        if (groupEventRelation != null) {
-            return groupEventRelation.getRole();
+    public EventAttendeeRole getGroupEventRole(Group group, Event event) {
+        EventGroupAttendees eventGroupAttendees =
+                EventGroupAttendees.find("event.id = ?1 AND group.id = ?2", event.id, group.id).firstResult();
+        if (eventGroupAttendees != null) {
+            return eventGroupAttendees.getRole();
         }
-        return UserEventRelationRole.NONE;
+        return EventAttendeeRole.NONE;
     }
 
     public Set<User> getAttendees(Event event) {
         Set<User> attendees = new HashSet<>();
 
         // User Attendees
-        List<UserEventRelation> userAttendees = UserEventRelation.find("event", event).list();
-        for (UserEventRelation userEventRelation : userAttendees) {
-            attendees.add(userEventRelation.getUser());
+        List<EventUserAttendees> userAttendees = EventUserAttendees.find("event", event).list();
+        for (EventUserAttendees eventUserAttendees : userAttendees) {
+            attendees.add(eventUserAttendees.getUser());
         }
 
-        List<GroupEventRelation> groupAttendees = GroupEventRelation.find("event", event).list();
-        for (GroupEventRelation groupEventRelation : groupAttendees) {
-            attendees.addAll(groupEventRelation.getGroup().getMembers());
+        List<EventGroupAttendees> groupAttendees = EventGroupAttendees.find("event", event).list();
+        for (EventGroupAttendees eventGroupAttendees : groupAttendees) {
+            attendees.addAll(eventGroupAttendees.getGroup().getMembers());
         }
 
         return attendees;
+    }
+
+    public List<EventUserAttendees> getUserAttendees(Long eventId) {
+        return EventUserAttendees.find("event.id", eventId).list();
+    }
+
+    public List<EventGroupAttendees> getGroupAttendees(Long eventId) {
+        return EventGroupAttendees.find("event.id", eventId).list();
     }
 }

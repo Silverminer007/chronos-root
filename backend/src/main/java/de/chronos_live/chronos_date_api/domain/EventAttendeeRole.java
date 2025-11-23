@@ -1,6 +1,6 @@
 package de.chronos_live.chronos_date_api.domain;
 
-public enum UserEventRelationRole {
+public enum EventAttendeeRole {
     NONE,
     GUEST,
     ATTENDANT,

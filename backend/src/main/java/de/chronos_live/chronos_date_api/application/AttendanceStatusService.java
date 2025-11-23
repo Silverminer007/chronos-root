@@ -1,9 +1,6 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.domain.Attendance;
-import de.chronos_live.chronos_date_api.domain.AttendanceStatus;
-import de.chronos_live.chronos_date_api.domain.Event;
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.*;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.LocalDateTime;
@@ -13,15 +10,18 @@ import java.util.List;
 @ApplicationScoped
 public class AttendanceStatusService {
     private final MessageService messageService;
+    private final NotificationService notificationService;
 
-    public AttendanceStatusService(MessageService messageService) {
+    public AttendanceStatusService(MessageService messageService, NotificationService notificationService) {
         this.messageService = messageService;
+        this.notificationService = notificationService;
     }
 
-    public Attendance getAttendanceStatus(User user, Event event) {
-        return (Attendance) Attendance.find("user AND event", user, event).firstResultOptional().orElseGet(() -> {
+    public Attendance getAttendanceStatus(User user, Long eventId) {
+        return (Attendance) Attendance.find("user AND event.id", user, eventId).firstResultOptional().orElseGet(() -> {
             Attendance attendance = new Attendance();
             attendance.setUser(user);
+            Event event = Event.find("event", eventId).firstResult();
             attendance.setEvent(event);
             attendance.setStatus(AttendanceStatus.PENDING);
             attendance.persist();
@@ -29,13 +29,18 @@ public class AttendanceStatusService {
         });
     }
 
-    public List<Attendance> getAttendanceStatus(Event event) {
-        return Attendance.find("event", event).list();
+    public List<Attendance> getAttendanceStatus(Long eventId) {
+        return Attendance.find("event.id", eventId).list();
     }
 
-    public void setAttendanceStatus(User user, Event event, AttendanceStatus status) {
-        Attendance attendance = this.getAttendanceStatus(user, event);
+    public AttendanceStatus getAttendanceStatus(String stringValue) {
+        return AttendanceStatus.valueOf(stringValue);
+    }
 
+    public void setAttendanceStatus(User user, Long eventId, AttendanceStatus status) {
+        Attendance attendance = this.getAttendanceStatus(user, eventId);
+
+        Event event = Event.find("event", eventId).firstResult();
         if (!event.getStart().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException("Attendance status cannot be updated after start date");
         }
@@ -44,10 +49,13 @@ public class AttendanceStatusService {
             return;
         }
         attendance.setStatus(status);
-        this.messageService.sendMessage(event,
+        this.messageService.sendMessage(event.id,
                 String.format("%s: %s zu %s", status.toString(), user.getName(), event.getName()),
                 String.format("%s: %s zu %s am %s", status, user.getName(), event.getName(),
                         event.getStart().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))),
-                user);
+                user,
+                NotificationCategory.ATTENDANCE_STATUS_CHANGED);
+
+        this.notificationService.checkForEnoughAttendees(event);
     }
 }

@@ -12,6 +12,7 @@ public class Event extends PanacheEntity {
     private String name, description, venue;
     private LocalDateTime start, end;
     private EventStatus eventStatus;
+    private Integer minimalAttendees;
 
     private LocalDateTime lastUpdate, createdAt;
 
@@ -22,6 +23,7 @@ public class Event extends PanacheEntity {
         this.start = event.start;
         this.end = event.end;
         this.eventStatus = event.eventStatus;
+        this.minimalAttendees = event.minimalAttendees;
         this.lastUpdate = LocalDateTime.now();
         this.createdAt = LocalDateTime.now();
     }

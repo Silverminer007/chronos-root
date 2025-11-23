@@ -6,8 +6,8 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class UserEventRelation extends PanacheEntity {
-    private User user;
+public class EventGroupAttendees extends PanacheEntity {
+    private Group group;
     private Event event;
-    private UserEventRelationRole role;
+    private EventAttendeeRole role;
 }

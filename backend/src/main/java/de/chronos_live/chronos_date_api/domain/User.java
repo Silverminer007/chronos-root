@@ -10,6 +10,7 @@ public class User extends PanacheEntity {
     private String firstName;
     private String lastName;
     private String email;
+    private String oidcId;
 
     public String getName() {
         return firstName + " " + lastName;

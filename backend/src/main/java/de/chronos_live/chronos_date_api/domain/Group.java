@@ -5,7 +5,7 @@ import jakarta.persistence.ManyToMany;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.List;
+import java.util.Set;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -13,5 +13,5 @@ public class Group extends PanacheEntity {
     private User owner;
     private String groupName;
     @ManyToMany
-    private List<User> members;
+    private Set<User> members;
 }

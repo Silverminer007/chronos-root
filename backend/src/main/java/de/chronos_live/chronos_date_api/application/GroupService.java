@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Group;
+import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,7 +9,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @ApplicationScoped
 public class GroupService {
@@ -22,29 +25,41 @@ public class GroupService {
         return Group.find("?1 MEMBER OF members", user).list();
     }
 
-    public void addGroupMember(User user, Group group, User newMember) {
-        Group g = Group.findById(group.id);
-        if (g == null) {
+    public void addGroupMember(User user, Long groupId, User newMember) {
+        Group group = Group.findById(groupId);
+        if (group == null) {
             throw new IllegalArgumentException("Group not found");
         }
-        if (!g.getOwner().equals(user)) {
+        if (!group.getOwner().equals(user)) {
             throw new IllegalArgumentException("User is not the owner of the group");
         }
-        g.getMembers().add(newMember);
+        group.getMembers().add(newMember);
         this.notificationService.notify(newMember,
                 String.format("You were added to \"%s\"", group.getGroupName()),
-                String.format("%s added you to the Group \"%s\". You can now see related events", user.getName(), group.getGroupName()));
+                String.format("%s added you to the Group \"%s\". You can now see related events", user.getName(), group.getGroupName()),
+                NotificationCategory.GROUP_MEMBERSHIP);
     }
 
-    public void removeGroupMember(User user, Group group, User newMember) {
-        Group g = Group.findById(group.id);
-        if (g == null) {
+    public void removeGroupMember(User user, Long groupId, User oldMember) {
+        Group group = Group.findById(groupId);
+        if (group == null) {
             throw new IllegalArgumentException("Group not found");
         }
-        if (!g.getOwner().equals(user)) {
+        if (!group.getOwner().equals(user)) {
             throw new IllegalArgumentException("User is not the owner of the group");
         }
-        g.getMembers().remove(newMember);
+        group.getMembers().remove(oldMember);
+    }
+
+    public Set<User> getGroupUsers(User user, Long groupId) {
+        Group group = Group.findById(groupId);
+        if (group == null) {
+            throw new IllegalArgumentException("Group not found");
+        }
+        if (group.getMembers() == null || !group.getMembers().stream().map(m -> m.id).toList().contains(user.id)) {
+            throw new IllegalArgumentException("User is not a member of the group");
+        }
+        return group.getMembers();
     }
 
     public void createGroup(User user, Group group) {
@@ -52,7 +67,7 @@ public class GroupService {
             throw new IllegalArgumentException("Group name is required");
         }
         if (group.getMembers() == null) {
-            group.setMembers(new ArrayList<>());
+            group.setMembers(new HashSet<>());
         }
         group.getMembers().add(user);
 
@@ -60,11 +75,11 @@ public class GroupService {
         group.persist();
     }
 
-    public void editGroupName(User user, Group group, String newName) {
+    public void editGroupName(User user, Long groupId, String newName) {
         if (newName == null || newName.isBlank()) {
             throw new IllegalArgumentException("Group name is required");
         }
-        Group g = Group.findById(group.id);
+        Group g = Group.findById(groupId);
         if (g == null) {
             throw new IllegalArgumentException("Group not found");
         }
@@ -74,7 +89,11 @@ public class GroupService {
         g.setGroupName(newName);
     }
 
-    public void deleteGroup(User user, Group group) {
+    public void deleteGroup(User user, Long groupId) {
+        Group group = Group.findById(groupId);
+        if (group == null) {
+            throw new IllegalArgumentException("Group not found");
+        }
         if (!group.getOwner().equals(user)) {
             throw new IllegalArgumentException("User is not the owner of the group");
         }

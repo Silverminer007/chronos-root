@@ -1,0 +1,40 @@
+package de.chronos_live.chronos_date_api.mapper;
+
+import de.chronos_live.chronos_date_api.domain.Message;
+import de.chronos_live.chronos_date_api.presentation.MessageDto;
+import org.mapstruct.*;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@Mapper(componentModel = "cdi")
+public interface MessageMapper {
+
+    DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    // ==================================
+    // Entity → DTO
+    // ==================================
+    @Mapping(target = "sender_id", source = "sender.id")
+    @Mapping(target = "event_id", source = "event.id")
+    @Mapping(target = "timeStamp",
+            expression = "java(message.getTimeStamp() != null ? message.getTimeStamp().format(ISO) : null)")
+    MessageDto toDto(Message message);
+
+    // ==================================
+    // DTO → Entity
+    // ==================================
+    @Mapping(target = "sender",
+            expression = "java(dto.sender_id() != null ? User.findById(dto.sender_id()) : null)")
+    @Mapping(target = "event",
+            expression = "java(dto.event_id() != null ? Event.findById(dto.event_id()) : null)")
+    @Mapping(target = "timeStamp",
+            expression = "java(dto.timeStamp() != null ? LocalDateTime.parse(dto.timeStamp(), ISO) : null)")
+    Message toEntity(MessageDto dto);
+
+    // ==================================
+    // Collections
+    // ==================================
+    List<MessageDto> toDtoList(List<Message> messages);
+    List<Message> toEntityList(List<MessageDto> dtos);
+}

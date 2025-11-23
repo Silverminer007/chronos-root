@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Contact;
+import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -29,6 +30,6 @@ public class ContactService {
         contact.setContact(contactUser);
         contact.persist();
         String message = String.format("%s added you to their contacts", user.getName());
-        this.notificationService.notify(contactUser, message, message);
+        this.notificationService.notify(contactUser, message, message, NotificationCategory.CONTACTS);
     }
 }

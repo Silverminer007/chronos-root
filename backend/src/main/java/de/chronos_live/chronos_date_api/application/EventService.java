@@ -133,12 +133,39 @@ public class EventService {
     }
 
     public List<Event> searchEvent(String query, LocalDate after, LocalDate before) {
-        query = "%" + query + "%";
-        query = query.toLowerCase();
+        List<Event> events;
+        if (query != null) {
+            query = "%" + query + "%";
+            query = query.toLowerCase();
 
-        List<Event> events = Event.find(
-                "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND end AFTER ?2 AND start BEFORE ?3",
-                query, after, before).list();
+            events = Event.find(
+                    "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND end AFTER ?2 AND start BEFORE ?3",
+                    query, after, before).list();
+        } else {
+            events = Event.find(
+                    "end AFTER ?1 AND start BEFORE ?2", after, before).list();
+        }
+
+        return events.stream()
+                .filter(e -> e.getEventStatus() != EventStatus.DELETED)
+                .toList();
+    }
+
+    public List<Event> searchEvent(String query, LocalDate after, LocalDate before, int page, int pageSize) {
+        List<Event> events;
+        if (query != null) {
+            query = "%" + query + "%";
+            query = query.toLowerCase();
+
+            events = Event.find(
+                            "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND end AFTER ?2 AND start BEFORE ?3",
+                            query, after, before)
+                    .page(page, pageSize).list();
+        } else {
+            events = Event.find(
+                            "end AFTER ?1 AND start BEFORE ?2", after, before)
+                    .page(page, pageSize).list();
+        }
 
         return events.stream()
                 .filter(e -> e.getEventStatus() != EventStatus.DELETED)
