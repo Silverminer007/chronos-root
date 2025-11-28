@@ -43,7 +43,7 @@ public class EventAttendeesResource {
         List<EventUserAttendees> userAttendees = this.eventAccessService.getUserAttendees(eventId);
         List<EventGroupAttendees> groupAttendees = this.eventAccessService.getGroupAttendees(eventId);
         EventAttendeesDto eventAttendeesDto = new EventAttendeesDto(
-                this.eventGroupAttendeesMapper.toDtoList(groupAttendees, user.id),
+                this.eventGroupAttendeesMapper.toDtoListWithOwner(groupAttendees, user.id),
                 this.eventUserAttendeesMapper.toDtoList(userAttendees)
         );
         return Response.ok(eventAttendeesDto).build();

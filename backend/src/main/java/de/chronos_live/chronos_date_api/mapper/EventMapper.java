@@ -28,10 +28,10 @@ public interface EventMapper {
     // DTO → Entity
     // ============================
     @Mapping(target = "eventStatus", source = "status")
-    @Mapping(target = "start", expression = "java(dto.getStart() != null ? LocalDateTime.parse(dto.getStart(), ISO) : null)")
-    @Mapping(target = "end", expression = "java(dto.getEnd() != null ? LocalDateTime.parse(dto.getEnd(), ISO) : null)")
-    @Mapping(target = "lastUpdate", expression = "java(LocalDateTime.now())")
-    @Mapping(target = "createdAt", expression = "java(LocalDateTime.now())")
+    @Mapping(target = "start", expression = "java(dto.start() != null ? java.time.LocalDateTime.parse(dto.start(), ISO) : null)")
+    @Mapping(target = "end", expression = "java(dto.end() != null ? java.time.LocalDateTime.parse(dto.end(), ISO) : null)")
+    @Mapping(target = "lastUpdate", expression = "java(java.time.LocalDateTime.now())")
+    @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     Event toEntity(EventDto dto);
 
     List<EventDto> toDtoList(List<Event> events);

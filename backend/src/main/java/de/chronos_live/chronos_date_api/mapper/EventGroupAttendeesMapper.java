@@ -17,26 +17,25 @@ public interface EventGroupAttendeesMapper {
     // Entity → DTO
     // ============================================
 
-    @Mapping(target = "group", source = "group")
+    @Mapping(target = "group", source = "group", qualifiedByName = "withOwnerMembers")
     @Mapping(target = "role", source = "role")
-    EventGroupAttendeesDto toDto(EventGroupAttendees entity, @Context Long currentUserId);
+    @Named("withOwner")
+    EventGroupAttendeesDto toDtoWithOwner(EventGroupAttendees entity, @Context Long currentUserId);
 
-    // overload ohne Context (owner = null)
-    @Mapping(target = "group", source = "group")
+    @Named("withoutOwner")
+    @Mapping(target = "group", source = "group", qualifiedByName = "withoutOwnerMembers")
     @Mapping(target = "role", source = "role")
     EventGroupAttendeesDto toDto(EventGroupAttendees entity);
-
 
     // ============================================
     // DTO → Entity
     // ============================================
 
     @Mapping(target = "group",
-            expression = "java(dto.group() != null ? Group.findById(dto.group().id()) : null)")
+            expression = "java(dto.group() != null ? de.chronos_live.chronos_date_api.domain.Group.findById(dto.group().id()) : null)")
     @Mapping(target = "event", ignore = true) // Event kommt NICHT aus dem DTO
     @Mapping(target = "role", source = "role")
     EventGroupAttendees toEntity(EventGroupAttendeesDto dto);
-
 
     // ============================================
     // Enum Mapping
@@ -50,12 +49,14 @@ public interface EventGroupAttendeesMapper {
         return role != null ? EventAttendeeRole.valueOf(role) : null;
     }
 
-
     // ============================================
     // Collections
     // ============================================
 
-    List<EventGroupAttendeesDto> toDtoList(List<EventGroupAttendees> list, @Context Long currentUserId);
+    @IterableMapping(qualifiedByName = "withOwner")
+    List<EventGroupAttendeesDto> toDtoListWithOwner(List<EventGroupAttendees> list, @Context Long currentUserId);
+
+    @IterableMapping(qualifiedByName = "withoutOwner")
     List<EventGroupAttendeesDto> toDtoList(List<EventGroupAttendees> list);
 
     List<EventGroupAttendees> toEntityList(List<EventGroupAttendeesDto> list);

@@ -9,63 +9,62 @@ import java.util.List;
 
 @Mapper(
         componentModel = "cdi",
-        uses = { UserMapper.class }
+        uses = {UserMapper.class}
 )
 public interface GroupMapper {
 
-    // =====================================
-    // Group → GroupDto (simple)
-    // =====================================
-
+    // ---- Einzelobjekt ----
     @Mapping(target = "name", source = "groupName")
     @Mapping(target = "owner",
             expression = "java(group.getOwner() != null && currentUserId != null && group.getOwner().id.equals(currentUserId))")
-    GroupDto toDto(Group group, @Context Long currentUserId);
+    @Named("withOwner")
+    GroupDto toDtoWithOwner(Group group, @Context Long currentUserId);
 
     @Mapping(target = "name", source = "groupName")
     @Mapping(target = "owner", ignore = true)
+    @Named("withoutOwner")
     GroupDto toDto(Group group);
+
+    // ---- Liste mit @Named ----
+    @IterableMapping(qualifiedByName = "withOwner")
+    List<GroupDto> toDtoListWithOwner(List<Group> groups, @Context Long currentUserId);
+
+    @IterableMapping(qualifiedByName = "withoutOwner")
+    List<GroupDto> toDtoList(List<Group> groups);
 
     // =====================================
     // Group → GroupWithMembersDto
     // =====================================
-
+    @Named("withOwnerMembers")
     @Mapping(target = "name", source = "groupName")
     @Mapping(target = "members", source = "members")
     @Mapping(target = "owner",
             expression = "java(group.getOwner() != null && currentUserId != null && group.getOwner().id.equals(currentUserId))")
-    GroupWithMembersDto toDtoWithMembers(Group group, @Context Long currentUserId);
+    GroupWithMembersDto toDtoWithMembersWithOwner(Group group, @Context Long currentUserId);
 
     @Mapping(target = "name", source = "groupName")
-    @Mapping(target = "owner", ignore = true)
     @Mapping(target = "members", source = "members")
+    @Mapping(target = "owner", ignore = true)
+    @Named("withoutOwnerMembers")
     GroupWithMembersDto toDtoWithMembers(Group group);
+
+    // ---- Listen mit @Named ----
+    @IterableMapping(qualifiedByName = "withOwnerMembers")
+    List<GroupWithMembersDto> toDtoWithMembersListWithOwner(List<Group> groups, @Context Long currentUserId);
+
+    @IterableMapping(qualifiedByName = "withoutOwnerMembers")
+    List<GroupWithMembersDto> toDtoWithMembersList(List<Group> groups);
 
     // =====================================
     // DTO → Entity
     // =====================================
-
     @Mapping(target = "groupName", source = "name")
     @Mapping(target = "owner", ignore = true)
     @Mapping(target = "members", ignore = true)
     Group toEntity(GroupDto dto);
 
-    // Wird wahrscheinlich selten benötigt:
     @Mapping(target = "groupName", source = "name")
     @Mapping(target = "owner", ignore = true)
     @Mapping(target = "members", ignore = true)
     Group toEntity(GroupWithMembersDto dto);
-
-    // =====================================
-    // Collections
-    // =====================================
-
-    List<GroupDto> toDtoList(List<Group> groups, @Context Long currentUserId);
-    List<GroupDto> toDtoList(List<Group> groups);
-
-    List<GroupWithMembersDto> toDtoWithMembersList(List<Group> groups, @Context Long currentUserId);
-    List<GroupWithMembersDto> toDtoWithMembersList(List<Group> groups);
-
-    List<Group> toEntityList(List<GroupDto> dtos);
-    List<Group> toEntityListFromWithMembers(List<GroupWithMembersDto> dtos);
 }

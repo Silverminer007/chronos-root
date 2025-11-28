@@ -42,9 +42,9 @@ public class GroupsResource {
         List<Group> groups = this.groupService.getGroups(user);
 
         if (members == null || !members) {
-            return Response.ok(groupMapper.toDtoList(groups, user.id)).build();
+            return Response.ok(groupMapper.toDtoListWithOwner(groups, user.id)).build();
         }
-        return Response.ok(groupMapper.toDtoWithMembersList(groups, user.id)).build();
+        return Response.ok(groupMapper.toDtoWithMembersListWithOwner(groups, user.id)).build();
     }
 
     @POST
@@ -56,7 +56,7 @@ public class GroupsResource {
             Group group = new Group();
             group.setGroupName(groupDto.name());
             this.groupService.createGroup(user, group);
-            return Response.ok(groupMapper.toDto(group, user.id)).build();
+            return Response.ok(groupMapper.toDtoWithOwner(group, user.id)).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }

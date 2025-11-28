@@ -3,7 +3,6 @@ package de.chronos_live.chronos_date_api.presentation;
 import de.chronos_live.chronos_date_api.application.ContactService;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.mapper.PrincipalMapper;
 import de.chronos_live.chronos_date_api.mapper.UserMapper;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;

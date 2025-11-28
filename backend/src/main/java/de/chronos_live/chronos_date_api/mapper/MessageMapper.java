@@ -25,11 +25,11 @@ public interface MessageMapper {
     // DTO → Entity
     // ==================================
     @Mapping(target = "sender",
-            expression = "java(dto.sender_id() != null ? User.findById(dto.sender_id()) : null)")
+            expression = "java(dto.sender_id() != null ? de.chronos_live.chronos_date_api.domain.User.findById(dto.sender_id()) : null)")
     @Mapping(target = "event",
-            expression = "java(dto.event_id() != null ? Event.findById(dto.event_id()) : null)")
+            expression = "java(dto.event_id() != null ? de.chronos_live.chronos_date_api.domain.Event.findById(dto.event_id()) : null)")
     @Mapping(target = "timeStamp",
-            expression = "java(dto.timeStamp() != null ? LocalDateTime.parse(dto.timeStamp(), ISO) : null)")
+            expression = "java(dto.timeStamp() != null ? java.time.LocalDateTime.parse(dto.timeStamp(), ISO) : null)")
     Message toEntity(MessageDto dto);
 
     // ==================================
