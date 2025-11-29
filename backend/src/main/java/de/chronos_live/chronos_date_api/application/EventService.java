@@ -5,21 +5,23 @@ import de.chronos_live.chronos_date_api.domain.EventSeries;
 import de.chronos_live.chronos_date_api.domain.EventStatus;
 import de.chronos_live.chronos_date_api.domain.RepetitionRule;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @ApplicationScoped
+@Transactional
 public class EventService {
     public void createEvent(Event event) {
         if (event.getName().isBlank()) {
             throw new IllegalArgumentException("Name cannot be blank");
         }
-        if (event.getEnd() == null || event.getStart() == null) {
+        if (event.getEndTime() == null || event.getStartTime() == null) {
             throw new IllegalArgumentException("End or start cannot be null");
         }
-        if (event.getEnd().isBefore(event.getStart())) {
+        if (event.getEndTime().isBefore(event.getStartTime())) {
             throw new IllegalArgumentException("End date cannot be before start date");
         }
         if (event.getEventStatus() == null) {
@@ -88,21 +90,21 @@ public class EventService {
         }
         // Es könnte sein, dass nur Start-Datum oder nur End-Datum aktualisiert werden.
         // Deshalb müssen auch beide einzeln validiert werden
-        if (event.getStart() != null) {
-            if (event.getEnd() != null
-                    && event.getEnd().isBefore(event.getStart())
-                    || e.getEnd().isBefore(event.getStart())) {
+        if (event.getStartTime() != null) {
+            if (event.getEndTime() != null
+                    && event.getEndTime().isBefore(event.getStartTime())
+                    || e.getEndTime().isBefore(event.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
-            e.setStart(event.getStart());
+            e.setStartTime(event.getStartTime());
         }
-        if (event.getEnd() != null) {
-            if (event.getStart() != null
-                    && event.getEnd().isBefore(event.getStart())
-                    || event.getEnd().isBefore(e.getStart())) {
+        if (event.getEndTime() != null) {
+            if (event.getStartTime() != null
+                    && event.getEndTime().isBefore(event.getStartTime())
+                    || event.getEndTime().isBefore(e.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
-            e.setEnd(event.getEnd());
+            e.setEndTime(event.getEndTime());
         }
         if (e.getEventStatus() != null) {
             event.setEventStatus(e.getEventStatus());
@@ -139,11 +141,11 @@ public class EventService {
             query = query.toLowerCase();
 
             events = Event.find(
-                    "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND end AFTER ?2 AND start BEFORE ?3",
+                    "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime AFTER ?2 AND startTime BEFORE ?3",
                     query, after, before).list();
         } else {
             events = Event.find(
-                    "end AFTER ?1 AND start BEFORE ?2", after, before).list();
+                    "endTime AFTER ?1 AND startTime BEFORE ?2", after, before).list();
         }
 
         return events.stream()
@@ -158,12 +160,12 @@ public class EventService {
             query = query.toLowerCase();
 
             events = Event.find(
-                            "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND end AFTER ?2 AND start BEFORE ?3",
+                            "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime AFTER ?2 AND startTime BEFORE ?3",
                             query, after, before)
                     .page(page, pageSize).list();
         } else {
             events = Event.find(
-                            "end AFTER ?1 AND start BEFORE ?2", after, before)
+                            "endTime AFTER ?1 AND startTime BEFORE ?2", after, before)
                     .page(page, pageSize).list();
         }
 

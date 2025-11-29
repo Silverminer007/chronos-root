@@ -4,10 +4,12 @@ import de.chronos_live.chronos_date_api.domain.Contact;
 import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 
 @ApplicationScoped
+@Transactional
 public class ContactService {
     private final NotificationService notificationService;
 

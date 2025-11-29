@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import java.util.List;
 
 @ApplicationScoped
+@Transactional
 public class PushSubscriptionService {
 
     @Inject

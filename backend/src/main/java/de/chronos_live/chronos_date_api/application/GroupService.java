@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 @ApplicationScoped
+@Transactional
 public class GroupService {
     private final NotificationService notificationService;
 

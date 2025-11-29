@@ -5,12 +5,14 @@ import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
 @ApplicationScoped
+@Transactional
 public class MessageService {
     private final NotificationService notificationService;
     private final EventAccessService eventAccessService;

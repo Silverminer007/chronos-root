@@ -74,7 +74,7 @@ public class EventAttendeesResource {
         }
         EventUserAttendees eventUserAttendees = this.eventUserAttendeesMapper.toEntity(userAttendees);
         try {
-            this.eventAccessService.assignUserToEvent(user, eventId, eventUserAttendees.id, eventUserAttendees.getRole());
+            this.eventAccessService.assignUserToEvent(user, eventId, eventUserAttendees.id, eventUserAttendees.getRole(), false);
         } catch (IllegalArgumentException ex) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }

@@ -20,16 +20,16 @@ public interface EventMapper {
     // Entity → DTO
     // ============================
     @Mapping(target = "status", source = "eventStatus")
-    @Mapping(target = "start", expression = "java(event.getStart() != null ? event.getStart().format(ISO) : null)")
-    @Mapping(target = "end", expression = "java(event.getEnd() != null ? event.getEnd().format(ISO) : null)")
+    @Mapping(target = "start", expression = "java(event.getStartTime() != null ? event.getStartTime().format(ISO) : null)")
+    @Mapping(target = "end", expression = "java(event.getEndTime() != null ? event.getEndTime().format(ISO) : null)")
     EventDto toDto(Event event);
 
     // ============================
     // DTO → Entity
     // ============================
     @Mapping(target = "eventStatus", source = "status")
-    @Mapping(target = "start", expression = "java(dto.start() != null ? java.time.LocalDateTime.parse(dto.start(), ISO) : null)")
-    @Mapping(target = "end", expression = "java(dto.end() != null ? java.time.LocalDateTime.parse(dto.end(), ISO) : null)")
+    @Mapping(target = "startTime", expression = "java(dto.start() != null ? java.time.LocalDateTime.parse(dto.start(), ISO) : null)")
+    @Mapping(target = "endTime", expression = "java(dto.end() != null ? java.time.LocalDateTime.parse(dto.end(), ISO) : null)")
     @Mapping(target = "lastUpdate", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     Event toEntity(EventDto dto);

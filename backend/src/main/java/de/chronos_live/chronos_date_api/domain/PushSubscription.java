@@ -2,12 +2,14 @@ package de.chronos_live.chronos_date_api.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
+@Entity
 public class PushSubscription extends PanacheEntity {
 
     @Column(nullable = false)

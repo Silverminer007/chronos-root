@@ -31,10 +31,26 @@ public class UserResource {
         return Response.ok(mapper.toDto(user)).build();
     }
 
+    @POST
+    public Response createUser() {
+        try {
+            User user =
+                    this.userService.createUser(
+                            jwt.getClaim("given_name"),
+                            jwt.getClaim("family_name"),
+                            jwt.getClaim("email"),
+                            jwt.getSubject()
+                    );
+            return Response.ok(mapper.toDto(user)).build();
+        } catch (NullPointerException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
     @PATCH
     public Response patchUser(@RequestBody PrincipalDto userDto) {
         User user = userService.getUser(jwt.getSubject());
-        if(!Objects.equals(user.id, userDto.id())) {
+        if (!Objects.equals(user.id, userDto.id())) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         User newUser = this.userService.updateUser(mapper.toEntity(userDto));

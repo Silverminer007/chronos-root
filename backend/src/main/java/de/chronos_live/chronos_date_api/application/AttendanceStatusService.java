@@ -2,12 +2,14 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.*;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @ApplicationScoped
+@Transactional
 public class AttendanceStatusService {
     private final MessageService messageService;
     private final NotificationService notificationService;
@@ -41,7 +43,7 @@ public class AttendanceStatusService {
         Attendance attendance = this.getAttendanceStatus(user, eventId);
 
         Event event = Event.find("event", eventId).firstResult();
-        if (!event.getStart().isAfter(LocalDateTime.now())) {
+        if (!event.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException("Attendance status cannot be updated after start date");
         }
 
@@ -52,7 +54,7 @@ public class AttendanceStatusService {
         this.messageService.sendMessage(event.id,
                 String.format("%s: %s zu %s", status.toString(), user.getName(), event.getName()),
                 String.format("%s: %s zu %s am %s", status, user.getName(), event.getName(),
-                        event.getStart().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))),
+                        event.getStartTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))),
                 user,
                 NotificationCategory.ATTENDANCE_STATUS_CHANGED);
 

@@ -3,12 +3,14 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.config.PushConfig;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 
 import java.security.GeneralSecurityException;
 
 @ApplicationScoped
+@Transactional
 public class WebPushService {
 
     @Inject

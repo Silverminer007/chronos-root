@@ -17,9 +17,9 @@ public interface RepetitionRule {
         @Override
         public Event getNextEvent(Event event) {
             Event nextEvent = new Event(event);
-            nextEvent.setStart(nextEvent.getStart().plusDays(days));
-            nextEvent.setEnd(nextEvent.getEnd().plusDays(days));
-            if(nextEvent.getEnd().toLocalDate().isAfter(end)) {
+            nextEvent.setStartTime(nextEvent.getStartTime().plusDays(days));
+            nextEvent.setEndTime(nextEvent.getEndTime().plusDays(days));
+            if(nextEvent.getEndTime().toLocalDate().isAfter(end)) {
                 return null;
             }
             return nextEvent;

@@ -61,7 +61,7 @@ public class EventResource {
         Event event = mapper.toEntity(eventDto);
         try {
             this.eventService.createEvent(event);
-            this.eventAccessService.assignUserToEvent(user, event.id, user.id, EventAttendeeRole.RESPONSIBLE);
+            this.eventAccessService.assignUserToEvent(user, event.id, user.id, EventAttendeeRole.RESPONSIBLE, true);
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }

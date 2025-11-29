@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.domain.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.scheduler.Scheduled;
+import jakarta.transaction.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 @ApplicationScoped
+@Transactional
 public class NotificationService {
     @Inject
     SettingsService settingsService;
@@ -70,7 +72,7 @@ public class NotificationService {
                             %s zusagen, %s absagen und %s fehlende Rückmeldungen
                             """;
             String reminderTitleTemplate = "In %s Minuten startet %s";
-            Long minutesUntilStart = LocalDateTime.now().until(event.getStart(), ChronoUnit.MINUTES);
+            Long minutesUntilStart = LocalDateTime.now().until(event.getStartTime(), ChronoUnit.MINUTES);
             List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
             long approvedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.APPROVED).count();
             long rejectedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.REJECTED).count();
@@ -97,7 +99,7 @@ public class NotificationService {
         // Wenn Fr - So -> 1 Woche vorher
         List<Event> longEvents = Event.find("start BETWEEN (now() + interval '30 days') AND (now() + interval '30 days 14 minutes')").list();
         for (Event event : longEvents) {
-            if (event.getStart().until(event.getEnd(), ChronoUnit.HOURS) < 24) {
+            if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
             }
             this.sendEventAttendanceStatusChecks(event);
@@ -106,7 +108,7 @@ public class NotificationService {
         List<Event> weekendEvents = Event.find("start BETWEEN (now() + interval '7 days') AND (now() + interval '7 days 14 minutes')").list();
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (weekdays.contains(event.getStart().getDayOfWeek())) {
+            if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
                 continue;
             }
             this.sendEventAttendanceStatusChecks(event);
@@ -133,10 +135,10 @@ public class NotificationService {
         // Wenn Fr - So -> 2 Wochen vorher
         List<Event> longEvents = Event.find("start BETWEEN now() AND (now() + interval '60 days')").list();
         for (Event event : longEvents) {
-            if (event.getStart().until(event.getEnd(), ChronoUnit.HOURS) < 24) {
+            if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
             }
-            long quarterHours = ChronoUnit.MINUTES.between(event.getStart(), event.getEnd()) / 15;
+            long quarterHours = ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()) / 15;
             // 60 Tage -> 5760
             // 30 Tage -> 2880
             // 15 Tage -> 1440
@@ -160,10 +162,10 @@ public class NotificationService {
         List<Event> weekdayEvents = Event.find("start BETWEEN (now() + interval '7 days') AND (now() + interval '7 days 14 minutes')").list();
         for (Event event : weekdayEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (!weekdays.contains(event.getStart().getDayOfWeek())) {
+            if (!weekdays.contains(event.getStartTime().getDayOfWeek())) {
                 continue;
             }
-            long quarterHours = ChronoUnit.MINUTES.between(event.getStart(), event.getEnd()) / 15;
+            long quarterHours = ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()) / 15;
             // 7 Tage 12 h -> 720
             // 3 Tage 18 h -> 360
             // 1 Tag 21 h -> 180
@@ -184,10 +186,10 @@ public class NotificationService {
         List<Event> weekendEvents = Event.find("start BETWEEN (now() + interval '14 days') AND (now() + interval '14 days 14 minutes')").list();
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (weekdays.contains(event.getStart().getDayOfWeek())) {
+            if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
                 continue;
             }
-            long quarterHours = ChronoUnit.MINUTES.between(event.getStart(), event.getEnd()) / 15;
+            long quarterHours = ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()) / 15;
             // 14 Tage -> 1440
             // 7 Tage 12 h -> 720
             // 3 Tage 18 h -> 360
@@ -242,7 +244,7 @@ public class NotificationService {
         // Wenn Fr - So -> 5 Tage vorher
         List<Event> longEvents = Event.find("start BETWEEN (now() + interval '21 days') AND (now() + interval '21 days 14 minutes')").list();
         for (Event event : longEvents) {
-            if (event.getStart().until(event.getEnd(), ChronoUnit.HOURS) < 24) {
+            if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
             }
             this.checkForEnoughAttendees(event);
@@ -251,7 +253,7 @@ public class NotificationService {
         List<Event> weekdayEvents = Event.find("start BETWEEN (now() + interval '3 days') AND (now() + interval '3 days 14 minutes')").list();
         for (Event event : weekdayEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (!weekdays.contains(event.getStart().getDayOfWeek())) {
+            if (!weekdays.contains(event.getStartTime().getDayOfWeek())) {
                 continue;
             }
             this.checkForEnoughAttendees(event);
@@ -260,7 +262,7 @@ public class NotificationService {
         List<Event> weekendEvents = Event.find("start BETWEEN (now() + interval '5 days') AND (now() + interval '5 days 14 minutes')").list();
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (weekdays.contains(event.getStart().getDayOfWeek())) {
+            if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
                 continue;
             }
             this.checkForEnoughAttendees(event);

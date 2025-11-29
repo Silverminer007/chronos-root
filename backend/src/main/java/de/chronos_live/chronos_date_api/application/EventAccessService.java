@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.*;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
+@Transactional
 public class EventAccessService {
     private final GroupService groupService;
 
@@ -53,8 +55,8 @@ public class EventAccessService {
         long count = Event.find(
                 """
                         id = ?1 AND (
-                              id IN (SELECT uer.event.id FROM UserEventRelation uer WHERE uer.user.id = ?2)
-                           OR id IN (SELECT ger.event.id FROM GroupEventRelation ger
+                              id IN (SELECT uer.event.id FROM EventUserAttendees uer WHERE uer.user.id = ?2)
+                           OR id IN (SELECT ger.event.id FROM EventGroupAttendees ger
                                      WHERE ger.group.id IN
                                         (SELECT g.id FROM Group g WHERE ?3 MEMBER OF g.members))
                         )
@@ -66,12 +68,12 @@ public class EventAccessService {
     }
 
     // TODO
-    public void assignUserToEvent(User user, Long eventId, Long attendeeId, EventAttendeeRole role) {
-        if (!this.userHasAccessToEvent(user, eventId)) {
+    public void assignUserToEvent(User user, Long eventId, Long attendeeId, EventAttendeeRole role, boolean force) {
+        if (!force && !this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
 
-        EventUserAttendees userAttendees = (EventUserAttendees) EventUserAttendees.find("event.id AND user.id", eventId, attendeeId)
+        EventUserAttendees userAttendees = (EventUserAttendees) EventUserAttendees.find("event.id = ?1 AND user.id = ?2", eventId, attendeeId)
                 .firstResultOptional().orElseGet(() -> {
                     EventUserAttendees eventUserAttendees = new EventUserAttendees();
                     Event event = Event.findById(eventId);
