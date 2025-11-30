@@ -68,10 +68,13 @@ public class NotificationService {
                             """;
             String reminderTitleTemplate = "In %s Minuten startet %s";
             Long minutesUntilStart = LocalDateTime.now().until(event.getStartTime(), ChronoUnit.MINUTES);
+
+            Set<User> attendees = eventAccessService.getAttendees(event);
+
             List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
             long approvedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.APPROVED).count();
             long rejectedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.REJECTED).count();
-            long pendingAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.PENDING).count();
+            long pendingAttendances = attendees.size() - approvedAttendances - rejectedAttendances;
             String reminderMessage = String.format(reminderTemplate,
                     minutesUntilStart,
                     event.getName(),
@@ -82,7 +85,7 @@ public class NotificationService {
             String reminderTitle = String.format(reminderTitleTemplate,
                     minutesUntilStart,
                     event.getName());
-            for (User user : eventAccessService.getAttendees(event)) {
+            for (User user : attendees) {
                 this.notify(user, reminderTitle, reminderMessage, NotificationCategory.EVENT_REMINDER);
             }
         }
