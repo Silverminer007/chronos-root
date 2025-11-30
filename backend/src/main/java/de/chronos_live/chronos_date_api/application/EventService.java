@@ -134,18 +134,18 @@ public class EventService {
                 .toList();
     }
 
-    public List<Event> searchEvent(String query, LocalDate after, LocalDate before) {
+    public List<Event> searchEvent(String query, LocalDateTime after, LocalDateTime before) {
         List<Event> events;
         if (query != null) {
             query = "%" + query + "%";
             query = query.toLowerCase();
 
             events = Event.find(
-                    "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime AFTER ?2 AND startTime BEFORE ?3",
+                    "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime > ?2 AND startTime < ?3",
                     query, after, before).list();
         } else {
             events = Event.find(
-                    "endTime AFTER ?1 AND startTime BEFORE ?2", after, before).list();
+                    "endTime > ?1 AND startTime < ?2", after, before).list();
         }
 
         return events.stream()
@@ -153,19 +153,19 @@ public class EventService {
                 .toList();
     }
 
-    public List<Event> searchEvent(String query, LocalDate after, LocalDate before, int page, int pageSize) {
+    public List<Event> searchEvent(String query, LocalDateTime after, LocalDateTime before, int page, int pageSize) {
         List<Event> events;
         if (query != null) {
             query = "%" + query + "%";
             query = query.toLowerCase();
 
             events = Event.find(
-                            "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime AFTER ?2 AND startTime BEFORE ?3",
+                            "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime > ?2 AND startTime < ?3",
                             query, after, before)
                     .page(page, pageSize).list();
         } else {
             events = Event.find(
-                            "endTime AFTER ?1 AND startTime BEFORE ?2", after, before)
+                            "endTime > ?1 AND startTime < ?2", after, before)
                     .page(page, pageSize).list();
         }
 

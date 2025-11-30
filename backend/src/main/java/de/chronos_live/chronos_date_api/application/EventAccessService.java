@@ -19,10 +19,12 @@ public class EventAccessService {
     }
 
     private Set<Long> getAccessibleEvents(User user) {
-        Set<Long> userEventIds = new HashSet<>(EventUserAttendees
-                .find("user.id", user.id)
-                .project(Long.class)
-                .list());
+        Set<Long> userEventIds = EventUserAttendees
+                .find("user.id = ?1", user.id)
+                .stream()
+                .map(eventUserAttendee ->
+                        ((EventUserAttendees) eventUserAttendee).id)
+                .collect(Collectors.toSet());
 
         // 2) Gruppen laden, in denen der User Member ist
         List<Group> groups = this.groupService.getGroups(user);

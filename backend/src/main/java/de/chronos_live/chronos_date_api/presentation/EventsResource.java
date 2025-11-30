@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.Year;
 import java.util.List;
@@ -42,17 +43,17 @@ public class EventsResource {
                               @QueryParam("search") String search) {
         User user = this.userService.getUser(jwt.getSubject());
 
-        LocalDate after;
+        LocalDateTime after;
         if (start != null) {
-            after = LocalDate.parse(start);
+            after = LocalDateTime.parse(start);
         } else {
-            after = LocalDate.MIN;
+            after = LocalDateTime.now();
         }
-        LocalDate before;
+        LocalDateTime before;
         if (end != null) {
-            before = LocalDate.parse(end);
+            before = LocalDateTime.parse(end);
         } else {
-            before = LocalDate.MAX;
+            before = LocalDateTime.now().plusYears(1000);
         }
 
         List<Event> events;
@@ -78,8 +79,8 @@ public class EventsResource {
     public Response getDates(@PathParam("year") int year) {
         User user = userService.getUser(jwt.getSubject());
 
-        LocalDate after = LocalDate.of(year, Month.JANUARY, 1).minusDays(1);
-        LocalDate before = LocalDate.of(year, Month.DECEMBER, 31).plusDays(1);
+        LocalDateTime after = LocalDate.of(year, Month.JANUARY, 1).minusDays(1).atStartOfDay();
+        LocalDateTime before = after.plusYears(1);
 
         List<Event> events = eventService.searchEvent(null, after, before);
 
@@ -97,8 +98,8 @@ public class EventsResource {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
-        LocalDate after = LocalDate.of(year, Month.of(month), 1).minusDays(1);
-        LocalDate before = LocalDate.of(year, Month.of(month), Month.of(month).length(Year.isLeap(year))).plusDays(1);
+        LocalDateTime after = LocalDate.of(year, Month.of(month), 1).minusDays(1).atStartOfDay();
+        LocalDateTime before = after.plusMonths(1);
 
         List<Event> events = eventService.searchEvent(null, after, before);
 
@@ -120,8 +121,8 @@ public class EventsResource {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
-        LocalDate after = LocalDate.of(year, Month.of(month), dayOfMonth).minusDays(1);
-        LocalDate before = LocalDate.of(year, Month.of(month), dayOfMonth).plusDays(1);
+        LocalDateTime after = LocalDate.of(year, Month.of(month), dayOfMonth).atStartOfDay();
+        LocalDateTime before = after.plusDays(1);
 
         List<Event> events = eventService.searchEvent(null, after, before);
 
