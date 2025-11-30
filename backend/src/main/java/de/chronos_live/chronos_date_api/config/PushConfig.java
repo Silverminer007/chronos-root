@@ -1,16 +1,24 @@
 package de.chronos_live.chronos_date_api.config;
+
+import lombok.Getter;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 
+@Getter
 @ApplicationScoped
 public class PushConfig {
 
-    @ConfigProperty(name = "push.vapid.mailto")
-    public String mailto;
+    private final String mailto;
+    private final String publicKey;
+    private final String privateKey;
 
-    @ConfigProperty(name = "push.vapid.public")
-    public String publicKey;
+    public PushConfig(
+            @ConfigProperty(name = "push.vapid.mailto") String mailto,
+            @ConfigProperty(name = "push.vapid.public") String publicKey,
+            @ConfigProperty(name = "push.vapid.private") String privateKey) {
+        this.mailto = mailto;
+        this.publicKey = publicKey;
+        this.privateKey = privateKey;
+    }
 
-    @ConfigProperty(name = "push.vapid.private")
-    public String privateKey;
 }
