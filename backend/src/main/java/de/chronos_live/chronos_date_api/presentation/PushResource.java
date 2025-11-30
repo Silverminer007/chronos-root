@@ -4,12 +4,14 @@ import de.chronos_live.chronos_date_api.application.PushSubscriptionService;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.application.WebPushService;
 import de.chronos_live.chronos_date_api.domain.User;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
-@Path("/api/push")
+@Path("/api/v2/push")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class PushResource {
@@ -26,6 +28,12 @@ public class PushResource {
     @Inject
     JsonWebToken jwt;
 
+    @GET
+    @Path("/public-key")
+    public Response getPublicKey() {
+        return Response.ok(this.webPushService.getPublicKey()).build();
+    }
+
     @POST
     @Path("/subscribe")
     public void subscribe(PushSubscriptionDto dto) {
@@ -41,11 +49,16 @@ public class PushResource {
 
     @POST
     @Path("/test/{userId}")
+    @RolesAllowed("ADMIN_API")
     public void sendTest(@PathParam("userId") Long userId) {
         webPushService.sendToUser(
                 userId,
-                "Testbenachrichtigung",
-                "Push funktioniert!"
+                """
+                        "Testbenachrichtigung"
+                        """,
+                """
+                        "Push" funktioniert!
+                        """
         );
     }
 }
