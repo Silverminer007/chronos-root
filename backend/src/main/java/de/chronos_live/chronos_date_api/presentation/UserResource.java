@@ -42,19 +42,32 @@ public class UserResource {
                             jwt.getSubject()
                     );
             return Response.ok(mapper.toDto(user)).build();
-        } catch (NullPointerException e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (NullPointerException | IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
     }
 
     @PATCH
     public Response patchUser(@RequestBody PrincipalDto userDto) {
-        User user = userService.getUser(jwt.getSubject());
-        if (!Objects.equals(user.id, userDto.id())) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+        if (userDto != null) {
+            User user = userService.getUser(jwt.getSubject());
+            if (!Objects.equals(user.id, userDto.id())) {
+                return Response.status(Response.Status.UNAUTHORIZED).build();
+            }
+            User newUser = this.userService.updateUser(mapper.toEntity(userDto));
+            return Response.ok(mapper.toDto(newUser)).build();
         }
-        User newUser = this.userService.updateUser(mapper.toEntity(userDto));
-        return Response.ok(mapper.toDto(newUser)).build();
+        try {
+            User user = new User();
+            user.setFirstName(jwt.getClaim("given_name"));
+            user.setLastName(jwt.getClaim("family_name"));
+            user.setEmail(jwt.getClaim("email"));
+            user.setOidcId(jwt.getSubject());
+            User newUser = this.userService.updateUser(user);
+            return Response.ok(mapper.toDto(newUser)).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        }
     }
 
     @DELETE

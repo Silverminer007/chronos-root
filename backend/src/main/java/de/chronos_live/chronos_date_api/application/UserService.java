@@ -14,6 +14,11 @@ public class UserService {
         Objects.requireNonNull(lastName);
         Objects.requireNonNull(email);
         Objects.requireNonNull(oidcId);
+
+        if(User.find("oidcId = ?1", oidcId).firstResultOptional().isPresent()) {
+            throw new IllegalArgumentException("This user already exists");
+        }
+
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -24,25 +29,27 @@ public class UserService {
     }
 
     public User getUser(String oidcId) {
-        return User.find("oidcId = ?1", oidcId).firstResult();
+        return (User) User.find("oidcId = ?1", oidcId).firstResultOptional().orElseGet(() -> {
+            User user = new User();
+            user.setOidcId(oidcId);
+            user.persist();
+            return user;
+        });
     }
 
     public User updateUser(User user) {
-        User oldUser = User.findById(user.id);
-        if(user.getFirstName() != null) {
+        User oldUser = (User) User.find("oidcId = ?1", user.getOidcId()).firstResultOptional()
+                .orElseThrow(() -> new IllegalArgumentException("This user does not exist yet"));
+        if (user.getFirstName() != null) {
             oldUser.setFirstName(user.getFirstName());
         }
-        if(user.getLastName() != null) {
+        if (user.getLastName() != null) {
             oldUser.setLastName(user.getLastName());
         }
-        if(user.getEmail() != null) {
+        if (user.getEmail() != null) {
             // TODO E-Mail auch in Keycloak updated
             oldUser.setEmail(user.getEmail());
         }
-        // Wahrscheinlich eine schlechte Idee das zu ändern, deshalb erstmal auskommentieren
-        /*if(user.getOidcId() != null) {
-            oldUser.setOidcId(user.getOidcId());
-        }*/
         return oldUser;
     }
 }
