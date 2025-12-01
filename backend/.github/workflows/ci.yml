@@ -83,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🧩 Build Native Image
-        run: mvn -B clean package -Pnative
+        run: mvn -B clean package
 
       - name: 🔐 Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -96,7 +96,7 @@ jobs:
         run: |
           REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-date-api
-          docker build -f src/main/docker/Dockerfile.native -t $IMAGE:latest .
+          docker build -f src/main/docker/Dockerfile.jvm -t $IMAGE:latest .
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: 📦 Push Docker Image
