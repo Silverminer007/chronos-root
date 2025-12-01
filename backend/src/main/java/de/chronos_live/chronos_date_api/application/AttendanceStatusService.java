@@ -20,7 +20,7 @@ public class AttendanceStatusService {
     }
 
     public Attendance getAttendanceStatus(User user, Long eventId) {
-        return (Attendance) Attendance.find("user AND event.id", user, eventId).firstResultOptional().orElseGet(() -> {
+        return (Attendance) Attendance.find("user.id = ?1 AND event.id = ?2", user.id, eventId).firstResultOptional().orElseGet(() -> {
             Attendance attendance = new Attendance();
             attendance.setUser(user);
             Event event = Event.find("event", eventId).firstResult();
