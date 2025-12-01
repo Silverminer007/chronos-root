@@ -23,7 +23,7 @@ public class AttendanceStatusService {
         return (Attendance) Attendance.find("user.id = ?1 AND event.id = ?2", user.id, eventId).firstResultOptional().orElseGet(() -> {
             Attendance attendance = new Attendance();
             attendance.setUser(user);
-            Event event = Event.find("event", eventId).firstResult();
+            Event event = Event.find("event.id", eventId).firstResult();
             attendance.setEvent(event);
             attendance.setStatus(AttendanceStatus.PENDING);
             attendance.persist();
