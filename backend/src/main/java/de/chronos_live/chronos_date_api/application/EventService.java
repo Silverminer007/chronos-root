@@ -138,14 +138,16 @@ public class EventService {
         List<Event> events;
         if (query != null) {
             query = "%" + query + "%";
-            query = query.toLowerCase();
 
             events = Event.find(
-                    "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime > ?2 AND startTime < ?3",
+                    "(lower(name) LIKE lower(?1) OR lower(description) LIKE lower(?1) OR lower(venue) LIKE lower(?1))" +
+                            " AND endTime > ?2 AND startTime < ?3" +
+                            "ORDER BY startTime",
                     query, after, before).list();
         } else {
             events = Event.find(
-                    "endTime > ?1 AND startTime < ?2", after, before).list();
+                    "endTime > ?1 AND startTime < ?2" +
+                            "ORDER BY startTime", after, before).list();
         }
 
         return events.stream()
@@ -160,12 +162,15 @@ public class EventService {
             query = query.toLowerCase();
 
             events = Event.find(
-                            "(name LIKE ?1 OR description LIKE ?1 OR venue LIKE ?1) AND endTime > ?2 AND startTime < ?3",
+                            "(lower(name) LIKE lower(?1) OR lower(description) LIKE lower(?1) OR lower(venue) LIKE lower(?1))" +
+                                    " AND endTime > ?2 AND startTime < ?3" +
+                                    "ORDER BY startTime",
                             query, after, before)
                     .page(page, pageSize).list();
         } else {
             events = Event.find(
-                            "endTime > ?1 AND startTime < ?2", after, before)
+                            "endTime > ?1 AND startTime < ?2" +
+                                    "ORDER BY startTime", after, before)
                     .page(page, pageSize).list();
         }
 
