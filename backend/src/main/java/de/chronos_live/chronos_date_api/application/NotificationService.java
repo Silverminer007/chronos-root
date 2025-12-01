@@ -27,6 +27,9 @@ public class NotificationService {
     @Inject
     WebPushService webPushService;
 
+    @Inject
+    EventService eventService;
+
     public void notify(User user, String title, String message, NotificationCategory notificationCategory) {
         Settings settings = this.settingsService.getOrCreateSettings(user);
         if (notificationCategory == NotificationCategory.EVENT_REMINDER && !settings.isEventRemindersNotifications()) {
@@ -56,10 +59,7 @@ public class NotificationService {
         LocalDateTime in30Minutes = LocalDateTime.now().plusMinutes(30);
         LocalDateTime in31Minutes = LocalDateTime.now().plusMinutes(31);
 
-        List<Event> events = Event.find(
-                "startTime > ?1 AND startTime < ?2",
-                in30Minutes, in31Minutes
-        ).list();
+        List<Event> events = this.eventService.searchEvent(null, in30Minutes, in31Minutes);
         for (Event event : events) {
             String reminderTemplate =
                     """
@@ -98,7 +98,7 @@ public class NotificationService {
         // Wenn Fr - So -> 1 Woche vorher
         LocalDateTime in30Days = LocalDateTime.now().plusDays(30);
         LocalDateTime in30DaysAnd14Minutes = in30Days.plusMinutes(14);
-        List<Event> longEvents = Event.find("startTime > ?1 AND startTime < ?2", in30Days, in30DaysAnd14Minutes).list();
+        List<Event> longEvents = this.eventService.searchEvent(null, in30Days, in30DaysAnd14Minutes);
         for (Event event : longEvents) {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
@@ -108,7 +108,7 @@ public class NotificationService {
 
         LocalDateTime in7Days = LocalDateTime.now().plusDays(7);
         LocalDateTime in7DaysAnd14Minutes = in7Days.plusMinutes(14);
-        List<Event> weekendEvents = Event.find("startTime > ?1 AND startTime < ?2", in7Days, in7DaysAnd14Minutes).list();
+        List<Event> weekendEvents = this.eventService.searchEvent(null, in7Days, in7DaysAnd14Minutes);
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
             if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
@@ -139,7 +139,7 @@ public class NotificationService {
         // Wenn Fr - So -> 2 Wochen vorher
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime in60Days = now.plusDays(60);
-        List<Event> longEvents = Event.find("startTime > ?1 AND startTime < ?2", now, in60Days).list();
+        List<Event> longEvents = this.eventService.searchEvent(null, now, in60Days);
         for (Event event : longEvents) {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
@@ -167,7 +167,7 @@ public class NotificationService {
 
         LocalDateTime in7Days = LocalDateTime.now().plusDays(7);
         LocalDateTime in7DaysAnd14Minutes = in7Days.plusMinutes(14);
-        List<Event> weekdayEvents = Event.find("startTime > ?1 AND startTime < ?2", in7Days, in7DaysAnd14Minutes).list();
+        List<Event> weekdayEvents = this.eventService.searchEvent(null, in7Days, in7DaysAnd14Minutes);
         for (Event event : weekdayEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
             if (!weekdays.contains(event.getStartTime().getDayOfWeek())) {
@@ -193,7 +193,7 @@ public class NotificationService {
 
         LocalDateTime in14Days = LocalDateTime.now().plusDays(14);
         LocalDateTime in14DaysAnd14Minutes = in14Days.plusMinutes(14);
-        List<Event> weekendEvents = Event.find("startTime > ?1 AND startTime < ?2", in14Days, in14DaysAnd14Minutes).list();
+        List<Event> weekendEvents = this.eventService.searchEvent(null, in14Days, in14DaysAnd14Minutes);
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
             if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
@@ -255,7 +255,7 @@ public class NotificationService {
         // Wenn Fr - So -> 5 Tage vorher
         LocalDateTime in21Days = LocalDateTime.now().plusDays(21);
         LocalDateTime in21DaysAnd14Minutes = in21Days.plusMinutes(14);
-        List<Event> longEvents = Event.find("startTime > ?1 AND startTime < ?2", in21Days, in21DaysAnd14Minutes).list();
+        List<Event> longEvents = this.eventService.searchEvent(null, in21Days, in21DaysAnd14Minutes);
         for (Event event : longEvents) {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
@@ -265,7 +265,7 @@ public class NotificationService {
 
         LocalDateTime in3Days = LocalDateTime.now().plusDays(14);
         LocalDateTime in3DaysAnd14Minutes = in3Days.plusMinutes(14);
-        List<Event> weekdayEvents = Event.find("startTime > ?1 AND startTime < ?2", in3Days, in3DaysAnd14Minutes).list();
+        List<Event> weekdayEvents = this.eventService.searchEvent(null, in3Days, in3DaysAnd14Minutes);
         for (Event event : weekdayEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
             if (!weekdays.contains(event.getStartTime().getDayOfWeek())) {
@@ -276,7 +276,7 @@ public class NotificationService {
 
         LocalDateTime in5Days = LocalDateTime.now().plusDays(5);
         LocalDateTime in5DaysAnd14Minutes = in5Days.plusMinutes(14);
-        List<Event> weekendEvents = Event.find("startTime > ?1 AND startTime < ?2", in5Days, in5DaysAnd14Minutes).list();
+        List<Event> weekendEvents = this.eventService.searchEvent(null, in5Days, in5DaysAnd14Minutes);
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
             if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
