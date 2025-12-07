@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: chronos_postgres
+    environment:
+      POSTGRES_USER: chronos
+      POSTGRES_PASSWORD: chronos
+      POSTGRES_DB: chronos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/18/docker
+      - ./init:/docker-entrypoint-initdb.d:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chronos-api:
+    image: ghcr.io/silverminer007/chronos-date-api:v1.0.2
+    container_name: chronos_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_USER: chronos
+      DB_PASSWORD: chronos
+      DB_URL: jdbc:postgresql://postgres:5432/chronos
+    env_file: .env
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
