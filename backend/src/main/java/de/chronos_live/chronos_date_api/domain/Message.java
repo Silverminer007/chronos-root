@@ -15,7 +15,7 @@ public class Message extends PanacheEntity {
     private String message;
     @ManyToOne
     private Event event;
-    @OneToOne(cascade = CascadeType.DETACH)
+    @ManyToOne
     private User sender;
     private LocalDateTime timeStamp;
 }
