@@ -58,6 +58,8 @@ public class AttendanceStatusService {
                 user,
                 NotificationCategory.ATTENDANCE_STATUS_CHANGED);
 
-        this.notificationService.checkForEnoughAttendees(event);
+        if (status.equals(AttendanceStatus.REJECTED)) {
+            this.notificationService.checkForEnoughAttendees(event);
+        }
     }
 }
