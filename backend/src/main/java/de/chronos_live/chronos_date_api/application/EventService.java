@@ -7,7 +7,6 @@ import de.chronos_live.chronos_date_api.domain.RepetitionRule;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -149,6 +148,19 @@ public class EventService {
                     "endTime > ?1 AND startTime < ?2" +
                             "ORDER BY startTime", after, before).list();
         }
+
+        return events.stream()
+                .filter(e -> e.getEventStatus() != EventStatus.DELETED)
+                .toList();
+    }
+
+    public List<Event> findEventsStartingAt(LocalDateTime at) {
+        return this.findEventsStartingBetween(at.minusSeconds(30), at.plusSeconds(30));
+    }
+
+    public List<Event> findEventsStartingBetween(LocalDateTime after, LocalDateTime before) {
+        List<Event> events = Event.find(
+                "startTime < ?1 AND startTime > ?2", before, after).list();
 
         return events.stream()
                 .filter(e -> e.getEventStatus() != EventStatus.DELETED)
