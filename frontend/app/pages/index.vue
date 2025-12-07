@@ -1,22 +1,49 @@
 <script setup lang="ts">
-import {useAuth} from "~/composables/useAuth";
+import ProgressSpinner from 'primevue/progressspinner';
+import {useAuthStore} from "~/stores/auth";
 
 definePageMeta({
   middleware: 'auth'
 })
-const {logout, user} = useAuth()
+const {fetchUser} = useAuthStore()
+await fetchUser()
+const eventStore = useEventsStore()
+callOnce('events', () => eventStore.fetchEvents())
 </script>
 
 <template>
-  <div class="p-6">
-    <h1>Geschützte Seite</h1>
-    <p>Du bist eingeloggt 🎉</p>
-    <button
-        class="mt-4 px-4 py-2 bg-red-500 text-white rounded"
-        @click="logout"
-    >
-      Logout
-    </button>
-    <p>{{user}}</p>
+  <!-- Header -->
+  <SearchHeader/>
+  <!-- Body -->
+  <div class="p-4 pt-20 flex flex-col gap-4">
+    <p v-if="eventStore.error" class="text-red-500 text-sm"><span class="pi pi-exclamation-triangle"/> {{eventStore.error}}</p>
+    <p v-if="eventStore.loading" class="text-blue-500">
+      Loading events
+    </p>
+    <ProgressSpinner v-if="eventStore.loading"/>
+    <DateCard v-for="event in eventStore.events" :key="event.id" :event="event" />
+    <div class="flex flex-row w-full items-center justify-center">
+      <Button @click="eventStore.fetchEvents">
+        Mehr laden
+      </Button>
+    </div>
+    <div class="fab">
+      <Button
+          raised
+          class="fixed bottom-6 right-6 rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg"
+      >
+        <span class="pi pi-plus"></span>
+      </Button>
+    </div>
+
   </div>
 </template>
+
+<style scoped>
+.fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999; /* wichtig, damit er über dem Content bleibt */
+}
+</style>
