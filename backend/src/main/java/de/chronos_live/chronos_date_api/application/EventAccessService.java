@@ -23,7 +23,7 @@ public class EventAccessService {
                 .find("user.id = ?1", user.id)
                 .stream()
                 .map(eventUserAttendee ->
-                        ((EventUserAttendees) eventUserAttendee).id)
+                        ((EventUserAttendees) eventUserAttendee).getEvent().id)
                 .collect(Collectors.toSet());
 
         // 2) Gruppen laden, in denen der User Member ist
@@ -33,10 +33,12 @@ public class EventAccessService {
                 .collect(Collectors.toSet());
 
         // 3) Alle Events, bei denen eine dieser Gruppen eingetragen ist
-        Set<Long> groupEventIds = groupIds.isEmpty() ? Set.of() :
-                new HashSet<>(EventGroupAttendees.find("group.id IN ?1", groupIds)
-                        .project(Long.class)
-                        .list());
+        Set<Long> groupEventIds = groupIds.isEmpty()
+                ? Set.of()
+                : EventGroupAttendees.find("group.id IN ?1", groupIds)
+                .stream().map(o ->
+                        ((EventGroupAttendees) o).getEvent().id)
+                .collect(Collectors.toSet());
 
         userEventIds.addAll(groupEventIds);
         return userEventIds;
