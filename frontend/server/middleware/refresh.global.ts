@@ -1,13 +1,21 @@
-import { getCookie, setCookie } from "h3"
-import { decodeJwt } from "../utils/decodeJwt"
-import { $fetch } from "ofetch"
+import {getCookie, setCookie} from "h3"
+import {decodeJwt} from "../utils/decodeJwt"
+import {$fetch} from "ofetch"
 
 export default defineEventHandler(async (event) => {
     const access = getCookie(event, "kc_access")
     const refresh = getCookie(event, "kc_refresh")
 
     // Ohne Refresh Token können wir nichts tun
-    if (!refresh) return
+    if (!refresh) {
+        deleteCookie(event, "kc_access")
+        deleteCookie(event, "kc_refresh")
+        if (!event.node.req.originalUrl?.startsWith('/api/auth')) {
+            return sendRedirect(event, '/api/auth/login', 301);
+        } else {
+            return;
+        }
+    }
 
     const config = useRuntimeConfig()
 
@@ -35,6 +43,7 @@ export default defineEventHandler(async (event) => {
 
 async function refreshTokens(event, config, refreshToken) {
     try {
+        console.log("Trying to refresh tokens")
         const tokenResponse = await $fetch(
             `${config.auth.issuer}/protocol/openid-connect/token`,
             {
@@ -42,7 +51,6 @@ async function refreshTokens(event, config, refreshToken) {
                 body: new URLSearchParams({
                     grant_type: "refresh_token",
                     client_id: config.auth.clientId,
-                    client_secret: config.auth.clientSecret,
                     refresh_token: refreshToken
                 })
             }
@@ -50,15 +58,17 @@ async function refreshTokens(event, config, refreshToken) {
 
         // Neue Tokens setzen
         setCookie(event, "kc_access", tokenResponse.access_token, {
-            httpOnly: true, secure: true, sameSite: "strict", path: "/", maxAge: 60 * 5
+            httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 5
         })
 
         setCookie(event, "kc_refresh", tokenResponse.refresh_token, {
-            httpOnly: true, secure: true, sameSite: "strict", path: "/", maxAge: 60 * 60 * 24 * 30
+            httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30
         })
+        console.log("Token refresh succesful")
 
     } catch (err) {
         console.error("Token refresh failed", err)
-        // Refresh fehlgeschlagen → Session endet
+        deleteCookie(event, "kc_access")
+        deleteCookie(event, "kc_refresh")
     }
 }

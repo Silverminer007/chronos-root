@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
             body: new URLSearchParams({
                 grant_type: "authorization_code",
                 client_id: config.auth.clientId,
-                client_secret: config.auth.clientSecret,
                 redirect_uri: config.auth.redirectUri,
                 code,
             })
@@ -22,7 +21,7 @@ export default defineEventHandler(async (event) => {
     setCookie(event, "kc_access", tokenResponse.access_token, {
         httpOnly: true,
         secure: true,
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         maxAge: 60 * 5 // 5 Minuten reichen für Access Tokens
     })
@@ -30,7 +29,7 @@ export default defineEventHandler(async (event) => {
     setCookie(event, "kc_refresh", tokenResponse.refresh_token, {
         httpOnly: true,
         secure: true,
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 30 // Maximal alle 30 Tage neu anmelden
     })
