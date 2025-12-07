@@ -14,6 +14,7 @@ public interface AttendanceMapper {
     // Entity → DTO
     // ============================
     @Mapping(target = "user_name", expression = "java(attendance.getUser().getName())")
+    @Mapping(target = "user_id", expression = "java(attendance.getUser().id)")
     @Mapping(target = "event_id", source = "event.id")
     @Mapping(target = "status", source = "status")
     AttendanceDto toDto(Attendance attendance);
