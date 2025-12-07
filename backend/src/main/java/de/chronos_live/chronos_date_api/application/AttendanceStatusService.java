@@ -23,7 +23,7 @@ public class AttendanceStatusService {
         return (Attendance) Attendance.find("user.id = ?1 AND event.id = ?2", user.id, eventId).firstResultOptional().orElseGet(() -> {
             Attendance attendance = new Attendance();
             attendance.setUser(user);
-            Event event = Event.find("event.id = ?1", eventId).firstResult();
+            Event event = Event.find("id = ?1", eventId).firstResult();
             attendance.setEvent(event);
             attendance.setStatus(AttendanceStatus.PENDING);
             attendance.persist();
@@ -42,7 +42,7 @@ public class AttendanceStatusService {
     public void setAttendanceStatus(User user, Long eventId, AttendanceStatus status) {
         Attendance attendance = this.getAttendanceStatus(user, eventId);
 
-        Event event = Event.find("event", eventId).firstResult();
+        Event event = Event.find("id", eventId).firstResult();
         if (!event.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException("Attendance status cannot be updated after start date");
         }
