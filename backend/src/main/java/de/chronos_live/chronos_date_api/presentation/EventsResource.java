@@ -1,10 +1,13 @@
 package de.chronos_live.chronos_date_api.presentation;
 
+import de.chronos_live.chronos_date_api.application.AttendanceStatusService;
 import de.chronos_live.chronos_date_api.application.EventAccessService;
 import de.chronos_live.chronos_date_api.application.EventService;
 import de.chronos_live.chronos_date_api.application.UserService;
+import de.chronos_live.chronos_date_api.domain.Attendance;
 import de.chronos_live.chronos_date_api.domain.Event;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.mapper.AttendanceMapper;
 import de.chronos_live.chronos_date_api.mapper.EventMapper;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
@@ -12,11 +15,13 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
 
 @Path("/api/v2/events")
@@ -24,23 +29,29 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class EventsResource {
+    private static final Logger LOGGER = Logger.getLogger(EventsResource.class);
     @Inject
     EventService eventService;
     @Inject
     EventAccessService eventAccessService;
     @Inject
+    AttendanceStatusService attendanceStatusService;
+    @Inject
     UserService userService;
     @Inject
     JsonWebToken jwt;
     @Inject
-    EventMapper mapper;
+    EventMapper eventMapper;
+    @Inject
+    AttendanceMapper attendanceMapper;
 
 
     @GET
     @Path("/")
     public Response getAgenda(@QueryParam("page") Integer page, @QueryParam("size") Integer size,
-                            @QueryParam("start") String start, @QueryParam("end") String end,
-                              @QueryParam("search") String search) {
+                              @QueryParam("start") String start, @QueryParam("end") String end,
+                              @QueryParam("search") String search, @QueryParam("attendances") Boolean includeAttendances) {
+        long currentMillis = System.currentTimeMillis();
         User user = this.userService.getUser(jwt.getSubject());
 
         LocalDateTime after;
@@ -56,22 +67,34 @@ public class EventsResource {
             before = LocalDateTime.now().plusYears(1000);
         }
 
-        List<Event> events;
-        if (page == null && size == null) {
-            events = eventService.searchEvent(search, after, before);
-        } else {
-            if (size == null) {
-                size = 50;
-            }
-            if (page == null) {
-                page = 1;
-            }
-            events = eventService.searchEvent(search, after, before, page, size);
+        if (size == null) {
+            size = 10;
         }
+        if (page == null) {
+            page = 0;
+        }
+        List<Event> events = eventService.searchEvent(search, after, before, page, size);
 
         events = this.eventAccessService.filterEvents(events, user);
 
-        return Response.ok(mapper.toDtoList(events)).build();
+        List<EventDto> eventDtos;
+        if(includeAttendances != null && includeAttendances) {
+            eventDtos = new ArrayList<>();
+            for (Event event : events) {
+                List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
+                Attendance ownAttendance = this.attendanceStatusService.getAttendanceStatus(user, event.id);
+
+                EventDto eventDto = eventMapper.toDto(event)
+                        .withOwnAttendanceStatus(ownAttendance.getStatus().name())
+                        .withAttendances(attendanceMapper.toDtoList(attendances));
+                eventDtos.add(eventDto);
+            }
+        } else {
+            eventDtos = eventMapper.toDtoList(events);
+        }
+
+        LOGGER.infof("Fetching events took %d ms with attendances %s",  System.currentTimeMillis() - currentMillis, includeAttendances != null && includeAttendances ? "enabled" : "disabled");
+        return Response.ok(eventDtos).build();
     }
 
     @GET
@@ -86,7 +109,7 @@ public class EventsResource {
 
         events = this.eventAccessService.filterEvents(events, user);
 
-        return Response.ok(mapper.toDtoList(events)).build();
+        return Response.ok(eventMapper.toDtoList(events)).build();
     }
 
     @GET
@@ -105,7 +128,7 @@ public class EventsResource {
 
         events = this.eventAccessService.filterEvents(events, user);
 
-        return Response.ok(mapper.toDtoList(events)).build();
+        return Response.ok(eventMapper.toDtoList(events)).build();
     }
 
     @GET
@@ -128,6 +151,6 @@ public class EventsResource {
 
         events = this.eventAccessService.filterEvents(events, user);
 
-        return Response.ok(mapper.toDtoList(events)).build();
+        return Response.ok(eventMapper.toDtoList(events)).build();
     }
 }
