@@ -42,6 +42,6 @@ public class MessageService {
     }
 
     public List<Message> getMessages(Long eventId) {
-        return Message.find("event.id ORDER BY timeStamp DESC", eventId).list();
+        return Message.find("event.id = ?1 ORDER BY timeStamp DESC", eventId).list();
     }
 }
