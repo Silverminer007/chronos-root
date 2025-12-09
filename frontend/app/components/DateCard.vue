@@ -60,5 +60,10 @@ const {user} = useAuthStore()
 </template>
 
 <style scoped>
-
+.p-button:disabled,
+.p-button.p-disabled {
+  opacity: 1 !important;
+  filter: none !important;
+  cursor: not-allowed;
+}
 </style>
