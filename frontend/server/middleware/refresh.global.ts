@@ -39,6 +39,8 @@ export default defineEventHandler(async (event) => {
     if (expiresIn < threshold) {
         return await refreshTokens(event, config, refresh)
     }
+
+    event.context.accessToken = access
 })
 
 async function refreshTokens(event, config, refreshToken) {
@@ -58,12 +60,13 @@ async function refreshTokens(event, config, refreshToken) {
 
         // Neue Tokens setzen
         setCookie(event, "kc_access", tokenResponse.access_token, {
-            httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 5
+            httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 60 * 5
         })
 
         setCookie(event, "kc_refresh", tokenResponse.refresh_token, {
-            httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30
+            httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 60 * 60 * 24 * 30
         })
+        event.context.accessToken = tokenResponse.access_token
         console.log("Token refresh succesful")
 
     } catch (err) {

@@ -3,7 +3,7 @@ import {$fetch} from 'ofetch'
 
 export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
-    const access = getCookie(event, 'kc_access')
+    const access = event.context.accessToken || getCookie(event, 'kc_access')
 
     const path = event.context.params.path
     const query = getQuery(event)
