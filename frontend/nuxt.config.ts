@@ -1,6 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import Aura from '@primeuix/themes/aura';
-import { definePreset } from '@primeuix/themes';
+import {definePreset} from '@primeuix/themes';
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -16,6 +16,51 @@ const MyPreset = definePreset(Aura, {
             800: '{indigo.800}',
             900: '{indigo.900}',
             950: '{indigo.950}'
+        },
+        surface: {
+            ground: '{surface.700}'
+        }
+    },
+    components: {
+        card: {
+            colorScheme: {
+                light: {
+                    root: {
+                        background: '{surface.0}',
+                        color: '{surface.700}'
+                    },
+                    subtitle: {
+                        color: '{surface.500}'
+                    }
+                },
+                dark: {
+                    root: {
+                        background: '{surface.800}',
+                        color: '{surface.0}'
+                    },
+                    subtitle: {
+                        color: '{surface.400}'
+                    }
+                }
+            }
+        },
+        button: {
+            colorScheme: {
+                light: {
+                    root: {
+                        secondary: {
+                            borderColor: '{surface.900}',
+                        }
+                    }
+                },
+                dark: {
+                    root: {
+                        secondary: {
+                            borderColor: '{surface.900}',
+                        }
+                    }
+                }
+            }
         }
     }
 });
