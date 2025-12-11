@@ -7,7 +7,8 @@ import io.quarkus.scheduler.Scheduled;
 import jakarta.transaction.Transactional;
 
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
@@ -57,7 +58,7 @@ public class NotificationService {
     @Scheduled(cron = "0 */1 * * * ?")
     void sendEventReminders() {
         long minutesUntilStart = 30L;
-        LocalDateTime in30Minutes = LocalDateTime.now().plusMinutes(minutesUntilStart);
+        Instant in30Minutes = Instant.now().plusSeconds(60L * minutesUntilStart);
 
         List<Event> events = this.eventService.findEventsStartingAt(in30Minutes);
         for (Event event : events) {
@@ -95,8 +96,8 @@ public class NotificationService {
         // Wenn mehr als 24h -> 1 Monat vorher
         // Wenn Mo - Do -> gar nicht
         // Wenn Fr - So -> 1 Woche vorher
-        LocalDateTime in30Days = LocalDateTime.now().plusDays(30);
-        LocalDateTime in30DaysAnd14Minutes = in30Days.plusMinutes(14);
+        Instant in30Days = Instant.now().plusSeconds(60 * 60 * 24 * 30);
+        Instant in30DaysAnd14Minutes = in30Days.plusSeconds(60 * 14);
         List<Event> longEvents = this.eventService.findEventsStartingBetween(in30Days, in30DaysAnd14Minutes);
         for (Event event : longEvents) {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
@@ -105,12 +106,12 @@ public class NotificationService {
             this.sendEventAttendanceStatusChecks(event);
         }
 
-        LocalDateTime in7Days = LocalDateTime.now().plusDays(7);
-        LocalDateTime in7DaysAnd14Minutes = in7Days.plusMinutes(14);
+        Instant in7Days = Instant.now().plusSeconds(60 * 60 * 24 * 7);
+        Instant in7DaysAnd14Minutes = in7Days.plusSeconds(60 * 14);
         List<Event> weekendEvents = this.eventService.findEventsStartingBetween(in7Days, in7DaysAnd14Minutes);
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
+            if (weekdays.contains(event.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
             this.sendEventAttendanceStatusChecks(event);
@@ -136,8 +137,8 @@ public class NotificationService {
         // Wenn mehr als 24h -> 2 Monate vorher
         // Wenn Mo - Do -> 1 Woche vorher
         // Wenn Fr - So -> 2 Wochen vorher
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime in60Days = now.plusDays(60);
+        Instant now = Instant.now();
+        Instant in60Days = now.plusSeconds(60 * 60 * 24 * 60);
         List<Event> longEvents = this.eventService.findEventsStartingBetween(now, in60Days);
         for (Event event : longEvents) {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
@@ -164,12 +165,12 @@ public class NotificationService {
             this.sendAttendanceStatusPendingReminder(event);
         }
 
-        LocalDateTime in7Days = LocalDateTime.now().plusDays(7);
-        LocalDateTime in7DaysAnd14Minutes = in7Days.plusMinutes(14);
+        Instant in7Days = Instant.now().plusSeconds(60 * 60 * 24 * 7);
+        Instant in7DaysAnd14Minutes = in7Days.plusSeconds(60 * 14);
         List<Event> weekdayEvents = this.eventService.findEventsStartingBetween(in7Days, in7DaysAnd14Minutes);
         for (Event event : weekdayEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (!weekdays.contains(event.getStartTime().getDayOfWeek())) {
+            if (!weekdays.contains(event.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
             long quarterHours = ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()) / 15;
@@ -190,12 +191,12 @@ public class NotificationService {
             this.sendAttendanceStatusPendingReminder(event);
         }
 
-        LocalDateTime in14Days = LocalDateTime.now().plusDays(14);
-        LocalDateTime in14DaysAnd14Minutes = in14Days.plusMinutes(14);
+        Instant in14Days = Instant.now().plusSeconds(60 * 60 * 24 * 14);
+        Instant in14DaysAnd14Minutes = in14Days.plusSeconds(60 * 14);
         List<Event> weekendEvents = this.eventService.findEventsStartingBetween(in14Days, in14DaysAnd14Minutes);
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
+            if (weekdays.contains(event.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
             long quarterHours = ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()) / 15;
@@ -252,8 +253,8 @@ public class NotificationService {
         // Wenn mehr als 24h -> 3 Wochen vorher
         // Wenn Mo - DO -> 3 Tage vorher
         // Wenn Fr - So -> 5 Tage vorher
-        LocalDateTime in21Days = LocalDateTime.now().plusDays(21);
-        LocalDateTime in21DaysAnd14Minutes = in21Days.plusMinutes(14);
+        Instant in21Days = Instant.now().plusSeconds(60 * 60 * 24 * 21);
+        Instant in21DaysAnd14Minutes = in21Days.plusSeconds(60 * 14);
         List<Event> longEvents = this.eventService.findEventsStartingBetween(in21Days, in21DaysAnd14Minutes);
         for (Event event : longEvents) {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
@@ -262,23 +263,23 @@ public class NotificationService {
             this.checkForEnoughAttendees(event);
         }
 
-        LocalDateTime in3Days = LocalDateTime.now().plusDays(14);
-        LocalDateTime in3DaysAnd14Minutes = in3Days.plusMinutes(14);
+        Instant in3Days = Instant.now().plusSeconds(60 * 60 * 24 * 14);
+        Instant in3DaysAnd14Minutes = in3Days.plusSeconds(60 * 14);
         List<Event> weekdayEvents = this.eventService.findEventsStartingBetween(in3Days, in3DaysAnd14Minutes);
         for (Event event : weekdayEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (!weekdays.contains(event.getStartTime().getDayOfWeek())) {
+            if (!weekdays.contains(event.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
             this.checkForEnoughAttendees(event);
         }
 
-        LocalDateTime in5Days = LocalDateTime.now().plusDays(5);
-        LocalDateTime in5DaysAnd14Minutes = in5Days.plusMinutes(14);
+        Instant in5Days = Instant.now().plusSeconds(60 * 60 * 24 * 5);
+        Instant in5DaysAnd14Minutes = in5Days.plusSeconds(60 * 14);
         List<Event> weekendEvents = this.eventService.findEventsStartingBetween(in5Days, in5DaysAnd14Minutes);
         for (Event event : weekendEvents) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
-            if (weekdays.contains(event.getStartTime().getDayOfWeek())) {
+            if (weekdays.contains(event.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
             this.checkForEnoughAttendees(event);

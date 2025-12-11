@@ -17,10 +17,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Month;
-import java.time.Year;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,20 +48,19 @@ public class EventsResource {
     public Response getAgenda(@QueryParam("page") Integer page, @QueryParam("size") Integer size,
                               @QueryParam("start") String start, @QueryParam("end") String end,
                               @QueryParam("search") String search, @QueryParam("attendances") Boolean includeAttendances) {
-        long currentMillis = System.currentTimeMillis();
         User user = this.userService.getUser(jwt.getSubject());
 
-        LocalDateTime after;
+        Instant after;
         if (start != null) {
-            after = LocalDateTime.parse(start);
+            after = Instant.parse(start);
         } else {
-            after = LocalDateTime.now();
+            after = Instant.now();
         }
-        LocalDateTime before;
+        Instant before;
         if (end != null) {
-            before = LocalDateTime.parse(end);
+            before = Instant.parse(end);
         } else {
-            before = LocalDateTime.now().plusYears(1000);
+            before = Instant.now().plusSeconds(60L * 60 * 24 * 365 * 1000);
         }
 
         if (size == null) {
@@ -93,7 +89,6 @@ public class EventsResource {
             eventDtos = eventMapper.toDtoList(events);
         }
 
-        LOGGER.infof("Fetching events took %d ms with attendances %s",  System.currentTimeMillis() - currentMillis, includeAttendances != null && includeAttendances ? "enabled" : "disabled");
         return Response.ok(eventDtos).build();
     }
 

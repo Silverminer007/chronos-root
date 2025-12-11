@@ -5,18 +5,18 @@ import jakarta.persistence.Entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
 public class Event extends PanacheEntity {
     private String name, description, venue;
-    private LocalDateTime startTime, endTime;
+    private Instant startTime, endTime;
     private EventStatus eventStatus;
     private Integer minimalAttendees;
 
-    private LocalDateTime lastUpdate, createdAt;
+    private Instant lastUpdate, createdAt;
 
     public Event(Event event) {
         this.name = event.name;
@@ -26,8 +26,8 @@ public class Event extends PanacheEntity {
         this.endTime = event.endTime;
         this.eventStatus = event.eventStatus;
         this.minimalAttendees = event.minimalAttendees;
-        this.lastUpdate = LocalDateTime.now();
-        this.createdAt = LocalDateTime.now();
+        this.lastUpdate = Instant.now();
+        this.createdAt = Instant.now();
     }
 
     public Event(){}

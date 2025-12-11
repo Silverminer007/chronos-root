@@ -4,7 +4,9 @@ import de.chronos_live.chronos_date_api.domain.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -43,7 +45,7 @@ public class AttendanceStatusService {
         Attendance attendance = this.getAttendanceStatus(user, eventId);
 
         Event event = Event.find("id", eventId).firstResult();
-        if (!event.getStartTime().isAfter(LocalDateTime.now())) {
+        if (!event.getStartTime().isAfter(Instant.now())) {
             throw new IllegalArgumentException("Attendance status cannot be updated after start date");
         }
 
@@ -51,10 +53,12 @@ public class AttendanceStatusService {
             return;
         }
         attendance.setStatus(status);
+        // TODO Wir versenden die Zeit immer als UTC, weil wir keine Ahnung haben in welcher Zeitzone der User ist
+        // Können wir die Zeitzone mit der Subscription senden? Oder noch besser als Placeholder und das am Client einfügen?
         this.messageService.sendMessage(event.id,
                 String.format("%s: %s zu %s", status.toString(), user.getName(), event.getName()),
                 String.format("%s: %s zu %s am %s", status, user.getName(), event.getName(),
-                        event.getStartTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))),
+                        event.getStartTime().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))),
                 user,
                 NotificationCategory.ATTENDANCE_STATUS_CHANGED);
 

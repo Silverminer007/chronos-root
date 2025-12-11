@@ -7,6 +7,7 @@ import de.chronos_live.chronos_date_api.domain.RepetitionRule;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,8 +27,8 @@ public class EventService {
         if (event.getEventStatus() == null) {
             event.setEventStatus(EventStatus.PLANNED);
         }
-        event.setCreatedAt(LocalDateTime.now());
-        event.setLastUpdate(LocalDateTime.now());
+        event.setCreatedAt(Instant.now());
+        event.setLastUpdate(Instant.now());
         event.persist();
     }
 
@@ -36,8 +37,8 @@ public class EventService {
         Event nextEvent = rrule.getNextEvent(event);
         while (nextEvent != null) {
             nextEvent.persist();
-            nextEvent.setCreatedAt(LocalDateTime.now());
-            nextEvent.setLastUpdate(LocalDateTime.now());
+            nextEvent.setCreatedAt(Instant.now());
+            nextEvent.setLastUpdate(Instant.now());
 
             EventSeries eventSeries = new EventSeries();
             eventSeries.setSeriesId(event.id);
@@ -108,7 +109,7 @@ public class EventService {
         if (e.getEventStatus() != null) {
             event.setEventStatus(e.getEventStatus());
         }
-        event.setLastUpdate(LocalDateTime.now());
+        event.setLastUpdate(Instant.now());
 
         return e;
     }
@@ -154,11 +155,11 @@ public class EventService {
                 .toList();
     }
 
-    public List<Event> findEventsStartingAt(LocalDateTime at) {
+    public List<Event> findEventsStartingAt(Instant at) {
         return this.findEventsStartingBetween(at.minusSeconds(30), at.plusSeconds(30));
     }
 
-    public List<Event> findEventsStartingBetween(LocalDateTime after, LocalDateTime before) {
+    public List<Event> findEventsStartingBetween(Instant after, Instant before) {
         List<Event> events = Event.find(
                 "startTime < ?1 AND startTime > ?2", before, after).list();
 
@@ -167,7 +168,7 @@ public class EventService {
                 .toList();
     }
 
-    public List<Event> searchEvent(String query, LocalDateTime after, LocalDateTime before, int page, int pageSize) {
+    public List<Event> searchEvent(String query, Instant after, Instant before, int page, int pageSize) {
         List<Event> events;
         if (query != null) {
             query = "%" + query + "%";

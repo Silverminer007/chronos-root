@@ -1,15 +1,15 @@
 package de.chronos_live.chronos_date_api.domain;
 
-import java.time.LocalDate;
+import java.time.Instant;
 
 public interface RepetitionRule {
     Event getNextEvent(Event event);
 
     class Day implements RepetitionRule {
         private final int days;
-        private final LocalDate end;
+        private final Instant end;
 
-        public Day(int days, LocalDate end) {
+        public Day(int days, Instant end) {
             this.days = days;
             this.end = end;
         }
@@ -17,9 +17,9 @@ public interface RepetitionRule {
         @Override
         public Event getNextEvent(Event event) {
             Event nextEvent = new Event(event);
-            nextEvent.setStartTime(nextEvent.getStartTime().plusDays(days));
-            nextEvent.setEndTime(nextEvent.getEndTime().plusDays(days));
-            if(nextEvent.getEndTime().toLocalDate().isAfter(end)) {
+            nextEvent.setStartTime(nextEvent.getStartTime().plusSeconds(60L * 60 * 24 * days));
+            nextEvent.setEndTime(nextEvent.getEndTime().plusSeconds(60L * 60 * 24 * days));
+            if(nextEvent.getEndTime().isAfter(end)) {
                 return null;
             }
             return nextEvent;
