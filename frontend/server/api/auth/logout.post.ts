@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
                     method: 'POST',
                     body: new URLSearchParams({
                         client_id: config.auth.clientId,
-                        client_secret: config.auth.clientSecret,
                         refresh_token: refreshToken
                     }),
                     headers: {

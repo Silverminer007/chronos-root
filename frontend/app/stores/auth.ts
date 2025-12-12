@@ -32,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (err) {
             console.error('Logout fehlgeschlagen:', err)
         }
+        window.location.href = '/';
     }
 
     return {
