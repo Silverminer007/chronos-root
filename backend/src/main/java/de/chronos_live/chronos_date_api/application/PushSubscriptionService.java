@@ -42,6 +42,11 @@ public class PushSubscriptionService {
         }
     }
 
+    public boolean isSubscriptionKnown(String endpoint) {
+        PushSubscription existing = repo.findByEndpoint(endpoint);
+        return existing != null;
+    }
+
     public List<PushSubscription> getAllForUser(Long userId) {
         return repo.findByUserId(userId);
     }

@@ -41,6 +41,13 @@ public class PushResource {
         subscriptionService.saveSubscription(user.id, dto);
     }
 
+    @GET
+    @Path("/status")
+    public Response status(@QueryParam("endpoint") String endpoint) {
+        PushSubscriptionStatusDto dto = new  PushSubscriptionStatusDto(this.subscriptionService.isSubscriptionKnown(endpoint));
+        return Response.ok(dto).build();
+    }
+
     @DELETE
     @Path("/unsubscribe")
     public void unsubscribe(@QueryParam("endpoint") String endpoint) {
