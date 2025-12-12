@@ -58,6 +58,18 @@ export function usePush() {
             const existing = await registration.pushManager.getSubscription();
             if (!existing) {
                 await subscribe();
+            } else {
+                const subscriptionStatus = await $fetch("/api/push/status", {
+                    method: "GET",
+                    query: {
+                        endpoint: existing.endpoint,
+                    }
+                });
+                if(!subscriptionStatus.exists) {
+                    console.warn("Server lost push subscription, reconnecting");
+                    await existing.unsubscribe();
+                    await subscribe();
+                }
             }
             return false;
         }
