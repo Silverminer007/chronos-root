@@ -104,5 +104,27 @@ export default defineNuxtConfig({
         directives: {
             include: ['Tooltip']
         },
+    },
+    app: {
+        head: {
+            link: [
+                {
+                    rel: 'manifest',
+                    href: '/manifest.webmanifest'
+                },
+                {
+                    rel: 'icon',
+                    href: '/icons/icon-192.png',
+                    sizes: '192x192',
+                    type: 'image/png'
+                },
+                {
+                    rel: 'icon',
+                    href: '/icons/icon-512.png',
+                    sizes: '512x512',
+                    type: 'image/png'
+                }
+            ]
+        }
     }
 })
