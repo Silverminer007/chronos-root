@@ -1,4 +1,4 @@
-// public/sw.js
+// public/push-sw.js
 
 self.addEventListener('push', event => {
     let data = {};
