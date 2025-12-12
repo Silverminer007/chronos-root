@@ -55,3 +55,9 @@ self.addEventListener('notificationclick', event => {
         })
     );
 });
+
+self.addEventListener('fetch', (event) => {
+    // Minimal offline response, required for PWA installation
+    // Wir lassen Requests einfach "durchfallen"
+    event.respondWith(fetch(event.request));
+});

@@ -13,9 +13,32 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+        "src": "/web-app-manifest-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any"
+    }
+  ],
+    "screenshots": [
+    {
+      "src": "/screenshots/home-narrow.png",
+      "sizes": "1125x2436",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Startseite – Dark Mode"
+    },
+    {
+      "src": "/screenshots/home-wide.png",
+      "sizes": "2160x1620",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Startseite - Dark Mode"
     }
   ],
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "display": "standalone",
+  "start_url": "/"
 }

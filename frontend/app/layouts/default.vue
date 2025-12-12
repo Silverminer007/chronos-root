@@ -1,4 +1,5 @@
 <template>
+  <PwaInstallDialog/>
   <PushPermissionModal/>
   <slot/>
 </template>

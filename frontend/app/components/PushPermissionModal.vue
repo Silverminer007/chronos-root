@@ -1,5 +1,4 @@
 <template>
-  <p v-if="visible">Test</p>
   <Dialog v-model:visible="visible" header="Push-Benachrichtigungen aktivieren?" modal @hide="dismiss">
     <p>Du bekommst so Terminerinnerungen, bekommst Neuigkeiten zu Terminen und wirst an Abstimmungen erinnert</p>
     <p>Wir benötigen von dir die Erlaubnis der Benachrichtigungen zu senden</p>
