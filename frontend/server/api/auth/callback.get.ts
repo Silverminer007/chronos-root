@@ -34,5 +34,5 @@ export default defineEventHandler(async (event) => {
         maxAge: 60 * 60 * 24 * 30 // Maximal alle 30 Tage neu anmelden
     })
 
-    return sendRedirect(event, "/")
+    return sendRedirect(event, "/agenda")
 })

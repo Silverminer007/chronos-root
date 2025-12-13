@@ -26,20 +26,14 @@ const MyPreset = definePreset(Aura, {
             colorScheme: {
                 light: {
                     root: {
-                        background: '{surface.0}',
-                        color: '{surface.700}'
-                    },
-                    subtitle: {
-                        color: '{surface.500}'
+                        background: '{surface.300}',
+                        color: '{surface.800}'
                     }
                 },
                 dark: {
                     root: {
                         background: '{surface.800}',
                         color: '{surface.0}'
-                    },
-                    subtitle: {
-                        color: '{surface.400}'
                     }
                 }
             }
@@ -49,7 +43,7 @@ const MyPreset = definePreset(Aura, {
                 light: {
                     root: {
                         secondary: {
-                            borderColor: '{surface.900}',
+                            borderColor: '{surface.400}',
                         }
                     }
                 },
