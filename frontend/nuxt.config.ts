@@ -78,8 +78,7 @@ export default defineNuxtConfig({
         port: 3000,
         host: '0.0.0.0' // do not put localhost (only accessible from the host machine)
     },
-    css: [
-        "./app/assets/css/main.css",],
+    css: ["./app/assets/css/main.css",],
     vite: {
         plugins: [
             tailwindcss(),

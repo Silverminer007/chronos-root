@@ -14,7 +14,7 @@
     "@primeuix/themes": "^2.0.1",
     "@tailwindcss/vite": "^4.1.17",
     "luxon": "^3.7.2",
-    "nuxt": "^4.2.1",
+    "nuxt": "^4.2.2",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.0",
