@@ -23,10 +23,14 @@ const {user} = useAuthStore()
       <p v-if="event.status === 'NOT_ENOUGH_ATTENDEES'" class="text-yellow-500">
         <span class="pi pi-exclamation-triangle"/> Zu wenig Teilnehmende</p>
       <div class="flex flex-row items-center justify-between flex-wrap">
-        <p>{{ event.name }}</p>
-        <p v-if="event.minimal_attendees">({{
-            (eventsStore.getApprovedAttendances(event).length / event.minimal_attendees * 100).toFixed(0)
-          }}%)</p>
+        <div class="flex flex-row gap-2">
+          {{ event.name }}
+          <p v-if="event.minimal_attendees">({{
+              eventsStore.getApprovedAttendances(event).length
+            }}/{{
+              event.minimal_attendees
+            }})</p>
+        </div>
         <AvatarGroup>
           <Avatar v-for="attendance in eventsStore.getApprovedAttendances(event)" :key="attendance.id"
                   shape="circle"
@@ -37,7 +41,7 @@ const {user} = useAuthStore()
     <template #content>
       <div class="flex flex-col gap-2">
         <p>{{ formatTimeRange(event.start, event.end) }}</p>
-        <p class="text-gray-400"> {{ event.description }}</p>
+        <p class="dark:text-gray-400 text-gray-600"> {{ event.description }}</p>
         <div class="flex flex-row items-center justify-between gap-2">
           <Button :disabled="eventsStore.hasApproved(event)"
                   :severity="eventsStore.hasApproved(event) ? 'success' : 'secondary'"
