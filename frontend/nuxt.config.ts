@@ -1,64 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
-import Aura from '@primeuix/themes/aura';
-import {definePreset} from '@primeuix/themes';
-
-const MyPreset = definePreset(Aura, {
-    semantic: {
-        primary: {
-            50: '{indigo.50}',
-            100: '{indigo.100}',
-            200: '{indigo.200}',
-            300: '{indigo.300}',
-            400: '{indigo.400}',
-            500: '{indigo.500}',
-            600: '{indigo.600}',
-            700: '{indigo.700}',
-            800: '{indigo.800}',
-            900: '{indigo.900}',
-            950: '{indigo.950}'
-        },
-        surface: {
-            ground: '{surface.700}'
-        }
-    },
-    components: {
-        card: {
-            colorScheme: {
-                light: {
-                    root: {
-                        background: '{surface.300}',
-                        color: '{surface.800}'
-                    }
-                },
-                dark: {
-                    root: {
-                        background: '{surface.800}',
-                        color: '{surface.0}'
-                    }
-                }
-            }
-        },
-        button: {
-            colorScheme: {
-                light: {
-                    root: {
-                        secondary: {
-                            borderColor: '{surface.400}',
-                        }
-                    }
-                },
-                dark: {
-                    root: {
-                        secondary: {
-                            borderColor: '{surface.900}',
-                        }
-                    }
-                }
-            }
-        }
-    }
-});
-
+import {ChronosTheme} from "./theme";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -91,7 +32,7 @@ export default defineNuxtConfig({
     primevue: {
         options: {
             theme: {
-                preset: MyPreset
+                preset: ChronosTheme
             }
         },
         directives: {
