@@ -11,11 +11,22 @@ const {event} = defineProps<{
 
 const eventsStore = useEventsStore();
 
-const {formatTimeRange} = useDateFormatter();
+const {formatTimeRange, formatDate} = useDateFormatter();
 const {user} = useAuthStore()
+
+const messageDialog = ref<boolean>(false);
+
+async function sendMessage(messageSubject: string, messageBody: string) {
+  await eventsStore.sendMessage(event.id, messageSubject, messageBody);
+  messageDialog.value = false;
+}
 </script>
 
 <template>
+  <Toast />
+  <MessageDialog :visible="messageDialog" :eventTitle="`${event.name} ${formatDate(event.start)}`"
+                 :recipientCount="event.attendances.length"
+                 @send="sendMessage($event.subject, $event.message)"/>
   <Card>
     <template #title>
       <p v-if="event.status === 'CANCELLED'" class="text-red-500">
@@ -49,7 +60,7 @@ const {user} = useAuthStore()
             <span class="pi pi-check"></span>
             <p class="not-sm:hidden">Zusagen</p>
           </Button>
-          <Button severity="secondary"><span class="pi pi-send"></span>
+          <Button severity="secondary" @click="messageDialog=true"><span class="pi pi-send"></span>
             <p class="not-sm:hidden">Nachricht</p></Button>
           <Button :disabled="eventsStore.hasRejected(event)"
                   :severity="eventsStore.hasRejected(event) ? 'danger' : 'secondary'"

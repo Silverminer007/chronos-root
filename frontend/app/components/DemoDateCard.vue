@@ -4,6 +4,9 @@ import Avatar from "primevue/avatar";
 import type {Event} from '~/types';
 import {useDateFormatter} from '~/composables/useDateFormatter';
 
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
+
 const {event} = defineProps<{
   event: Event
 }>()
@@ -18,9 +21,20 @@ function setAttendanceStatus(attendanceStatus: "APPROVED" | "REJECTED") {
     event.attendances[0].status = attendanceStatus
   }
 }
+
+const messageDialog = ref<boolean>(false)
+
+async function sendMessage() {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  toast.add({severity: 'info', summary: 'Die Nachricht wurdet versendet', life: 3000});
+  messageDialog.value = false;
+}
 </script>
 
 <template>
+  <MessageDialog :visible="messageDialog" :eventTitle="event.name"
+                 :recipientCount="event.attendances.length"
+                 @send="sendMessage()"/>
   <Card>
     <template #title>
       <p v-if="event.status === 'CANCELLED'" class="text-red-500">
@@ -54,7 +68,7 @@ function setAttendanceStatus(attendanceStatus: "APPROVED" | "REJECTED") {
             <span class="pi pi-check"></span>
             <p class="not-sm:hidden">Zusagen</p>
           </Button>
-          <Button severity="secondary"><span class="pi pi-send"></span>
+          <Button severity="secondary" @click="messageDialog = true"><span class="pi pi-send"></span>
             <p class="not-sm:hidden">Nachricht</p></Button>
           <Button :disabled="eventsStore.hasRejected(event)"
                   :severity="eventsStore.hasRejected(event) ? 'danger' : 'secondary'"

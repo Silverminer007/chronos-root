@@ -3,6 +3,7 @@ import type {Event} from '~/types'
 
 export const useEventsStore = defineStore('events', () => {
     const events = ref<Event[]>([])
+    const currentEvent = ref<Event | null>(null)
     const error = ref<string | undefined>(undefined)
     const loading = ref(false)
     const searchString = ref('')
@@ -96,6 +97,50 @@ export const useEventsStore = defineStore('events', () => {
         return event.own_attendance_status === "APPROVED"
     }
 
+    async function sendMessage(eventId: number, messageTitle: string, messageBody: string) {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/messages`, {
+            method: "POST",
+            body: {
+                event_id: eventId,
+                title: messageTitle,
+                message: messageBody
+            },
+            onResponseError() {
+                error.value = "Message sending failed."
+            }
+        })
+    }
+
+    async function setCurrentEvent(event: Event) {
+        currentEvent.value = event;
+    }
+
+    async function getEventById(eventId: number): Promise<Event | null> {
+        if (currentEvent.value && currentEvent.value.id === eventId) {
+            return currentEvent.value
+        }
+        loading.value = true
+
+        const {data} = await useFetch(`/api/event/${eventId}`, {
+            params: {
+                attendances: true,
+                messages: true,
+                attendees: true
+            }
+        })
+
+        loading.value = false
+        if (!data.value) {
+            error.value = "You either have no permission to see this event or it does not exist.";
+            return null;
+        } else {
+            currentEvent.value = data.value
+            error.value = undefined
+            return currentEvent.value
+        }
+    }
+
     return {
         events,
         error,
@@ -107,5 +152,8 @@ export const useEventsStore = defineStore('events', () => {
         getApprovedAttendances,
         hasApproved,
         hasRejected,
+        getEventById,
+        setCurrentEvent,
+        sendMessage
     }
 })

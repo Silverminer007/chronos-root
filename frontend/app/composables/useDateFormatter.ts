@@ -15,7 +15,14 @@ export function useDateFormatter() {
         return `${startDateTime.toFormat('EEE D t')} Uhr - ${endDateTime.toFormat('EEE D t')} Uhr`;
     }
 
+    function formatDate(date: string): string {
+        const dateTime = fromApi(date);
+
+        return dateTime.toFormat('D');
+    }
+
     return {
         formatTimeRange,
+        formatDate
     }
 }
