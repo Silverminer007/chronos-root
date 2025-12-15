@@ -294,6 +294,7 @@ public class NotificationService {
         long rejectedAttendees = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.REJECTED).count();
         Set<User> attendees = this.eventAccessService.getAttendees(event);
         if (attendees.size() - rejectedAttendees >= event.getMinimalAttendees()) {
+            event.setEventStatus(EventStatus.PLANNED);
             return;
         }
         String messageTitle = String.format("Es sind zu wenig Leitende bei %s", event.getName());
