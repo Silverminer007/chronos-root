@@ -22,6 +22,14 @@ public class ContactService {
         return contacts.stream().map(Contact::getContact).toList();
     }
 
+    public List<User> searchContacts(User user, String searchQuery) {
+        searchQuery = "%" + searchQuery + "%";
+        List<Contact> contacts = Contact.find("user = ?1 " +
+                        "AND (lower(contact.firstName) LIKE lower(?2) OR lower(contact.lastName) LIKE lower(?2))"
+                , user, searchQuery).list();
+        return contacts.stream().map(Contact::getContact).toList();
+    }
+
     public void addContact(User user, String contactEmail) {
         User contactUser = User.find("email = ?", contactEmail).firstResult();
         if (contactUser == null) {

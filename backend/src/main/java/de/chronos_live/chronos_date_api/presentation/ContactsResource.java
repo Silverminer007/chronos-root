@@ -29,10 +29,15 @@ public class ContactsResource {
     JsonWebToken jwt;
 
     @GET
-    public Response getContacts() {
+    public Response getContacts(@QueryParam("search") String searchQuery) {
         User user = this.userService.getUser(jwt.getSubject());
 
-        List<User> contacts = this.contactService.getContacts(user);
+        List<User> contacts;
+        if (searchQuery == null) {
+            contacts = this.contactService.getContacts(user);
+        } else {
+            contacts = this.contactService.searchContacts(user, searchQuery);
+        }
         return Response.ok(userMapper.toDtoList(contacts)).build();
     }
 
