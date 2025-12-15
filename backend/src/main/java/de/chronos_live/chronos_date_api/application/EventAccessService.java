@@ -71,7 +71,6 @@ public class EventAccessService {
         return count > 0;
     }
 
-    // TODO
     public void assignUserToEvent(User user, Long eventId, Long attendeeId, EventAttendeeRole role, boolean force) {
         if (!force && !this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
@@ -93,6 +92,16 @@ public class EventAccessService {
                     eventUserAttendees.persist();
                     return eventUserAttendees;
                 });
+        userAttendees.setRole(role);
+    }
+
+    public void updateUserEventRole(User user, Long eventId, Long attendeeId, EventAttendeeRole role) {
+        if (!this.userHasAccessToEvent(user, eventId)) {
+            throw new IllegalArgumentException("User does not have access to event");
+        }
+
+        EventUserAttendees userAttendees = (EventUserAttendees) EventUserAttendees.find("event.id = ?1 AND user.id = ?2", eventId, attendeeId)
+                .firstResultOptional().orElseThrow();
         userAttendees.setRole(role);
     }
 
@@ -132,6 +141,16 @@ public class EventAccessService {
             throw new IllegalArgumentException("User does not have access to event");
         }
         EventGroupAttendees.delete("event.id AND group.id", eventId, groupId);
+    }
+
+    public void updateGroupEventRole(User user, Long eventId, Long groupId, EventAttendeeRole role) {
+        if (!this.userHasAccessToEvent(user, eventId)) {
+            throw new IllegalArgumentException("User does not have access to event");
+        }
+
+        EventGroupAttendees groupAttendees = (EventGroupAttendees) EventGroupAttendees.find("event.id AND group.id", eventId, groupId)
+                        .firstResultOptional().orElseThrow();
+        groupAttendees.setRole(role);
     }
 
     public EventAttendeeRole getEventRole(User user, Event event) {

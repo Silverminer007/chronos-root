@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.presentation;
 
 import de.chronos_live.chronos_date_api.application.EventAccessService;
 import de.chronos_live.chronos_date_api.application.UserService;
+import de.chronos_live.chronos_date_api.domain.EventAttendeeRole;
 import de.chronos_live.chronos_date_api.domain.EventGroupAttendees;
 import de.chronos_live.chronos_date_api.domain.EventUserAttendees;
 import de.chronos_live.chronos_date_api.domain.User;
@@ -75,6 +76,38 @@ public class EventAttendeesResource {
         EventUserAttendees eventUserAttendees = this.eventUserAttendeesMapper.toEntity(userAttendees);
         try {
             this.eventAccessService.assignUserToEvent(user, eventId, eventUserAttendees.id, eventUserAttendees.getRole(), false);
+        } catch (IllegalArgumentException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    @PATCH
+    @Path("/group/{group_id}")
+    public Response updateGroupAttendeesRole(@PathParam("id") Long eventId, @PathParam("group_id") Long groupId, @RequestBody EventGroupAttendeesDto groupAttendees) {
+        User user = this.userService.getUser(jwt.getSubject());
+        if (!this.eventAccessService.userHasAccessToEvent(user, eventId)) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        EventAttendeeRole newRole = EventAttendeeRole.valueOf(groupAttendees.role());
+        try {
+            this.eventAccessService.updateGroupEventRole(user, eventId, groupId, newRole);
+        } catch (IllegalArgumentException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    @PATCH
+    @Path("/user/{user_id}")
+    public Response updateUserAttendeesRole(@PathParam("id") Long eventId, @PathParam("user_id") Long userId, @RequestBody EventUserAttendeesDto userAttendees) {
+        User user = this.userService.getUser(jwt.getSubject());
+        if (!this.eventAccessService.userHasAccessToEvent(user, eventId)) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        EventAttendeeRole newRole = EventAttendeeRole.valueOf(userAttendees.role());
+        try {
+            this.eventAccessService.updateUserEventRole(user, eventId, userId, newRole);
         } catch (IllegalArgumentException ex) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
