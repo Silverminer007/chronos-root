@@ -194,6 +194,12 @@ public class EventAccessService {
     }
 
     public List<EventGroupAttendees> getGroupAttendees(Long eventId) {
-        return EventGroupAttendees.find("event.id", eventId).list();
+        return EventGroupAttendees.find(
+                "SELECT DISTINCT a FROM EventGroupAttendees a " +
+                        "LEFT JOIN FETCH a.group g " +
+                        "LEFT JOIN FETCH g.members " +
+                        "WHERE a.event.id = ?1",
+                eventId
+        ).list();
     }
 }
