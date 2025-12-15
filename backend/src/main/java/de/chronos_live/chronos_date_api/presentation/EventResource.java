@@ -1,15 +1,8 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.AttendanceStatusService;
-import de.chronos_live.chronos_date_api.application.EventAccessService;
-import de.chronos_live.chronos_date_api.application.EventService;
-import de.chronos_live.chronos_date_api.application.UserService;
-import de.chronos_live.chronos_date_api.domain.Attendance;
-import de.chronos_live.chronos_date_api.domain.Event;
-import de.chronos_live.chronos_date_api.domain.EventAttendeeRole;
-import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.mapper.AttendanceMapper;
-import de.chronos_live.chronos_date_api.mapper.EventMapper;
+import de.chronos_live.chronos_date_api.application.*;
+import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.mapper.*;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -25,10 +18,16 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class EventResource {
-    private final EventService eventService;
-    private final EventAccessService eventAccessService;
-    private final UserService userService;
-    private final AttendanceStatusService attendanceStatusService;
+    @Inject
+    EventService eventService;
+    @Inject
+    EventAccessService eventAccessService;
+    @Inject
+    UserService userService;
+    @Inject
+    AttendanceStatusService attendanceStatusService;
+    @Inject
+    MessageService messageService;
 
     @Inject
     JsonWebToken jwt;
@@ -39,16 +38,19 @@ public class EventResource {
     @Inject
     AttendanceMapper attendanceMapper;
 
-    public EventResource(EventService eventService, EventAccessService eventAccessService, UserService userService, AttendanceStatusService attendanceStatusService) {
-        this.eventService = eventService;
-        this.eventAccessService = eventAccessService;
-        this.userService = userService;
-        this.attendanceStatusService = attendanceStatusService;
-    }
+    @Inject
+    MessageMapper messageMapper;
+
+    @Inject
+    EventUserAttendeesMapper eventUserAttendeesMapper;
+
+    @Inject
+    EventGroupAttendeesMapper eventGroupAttendeesMapper;
 
     @GET
     @Path("/{id}")
-    public Response getEvent(@PathParam("id") int id, @QueryParam("attendances") Boolean includeAttendances) {
+    public Response getEvent(@PathParam("id") Long id, @QueryParam("attendances") Boolean includeAttendances,
+                             @QueryParam("messages") Boolean includeMessages, @QueryParam("attendees") Boolean includeAttendees) {
         User user = userService.getUser(jwt.getSubject());
 
         Event event = eventService.getEvent(id);
@@ -60,17 +62,29 @@ public class EventResource {
         if (!eventAccessService.userHasAccessToEvent(user, event)) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
-        Attendance ownAttendance = this.attendanceStatusService.getAttendanceStatus(user, event.id);
 
-        if(includeAttendances != null && includeAttendances) {
-            EventDto eventDto = eventMapper.toDto(event)
-                    .withOwnAttendanceStatus(ownAttendance.getStatus().name())
-                    .withAttendances(attendanceMapper.toDtoList(attendances));
-            return Response.ok(eventDto).build();
-        } else {
-            return Response.ok(eventMapper.toDto(event)).build();
+        EventDto eventDto = eventMapper.toDto(event);
+
+        if (includeAttendances != null && includeAttendances) {
+            List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
+            Attendance ownAttendance = this.attendanceStatusService.getAttendanceStatus(user, event.id);
+            eventDto.setOwn_attendance_status(ownAttendance.getStatus().name());
+            eventDto.setAttendances(attendanceMapper.toDtoList(attendances));
         }
+
+        if(includeMessages != null && includeMessages) {
+            List<Message> messages = this.messageService.getMessages(id);
+            eventDto.setMessages(messageMapper.toDtoList(messages));
+        }
+
+        if(includeAttendees != null && includeAttendees) {
+            List<EventUserAttendees> eventUserAttendeesList = this.eventAccessService.getUserAttendees(id);
+            List<EventGroupAttendees> eventGroupAttendeesList = this.eventAccessService.getGroupAttendees(id);
+            eventDto.setUserAttendees(this.eventUserAttendeesMapper.toDtoList(eventUserAttendeesList));
+            eventDto.setGroupAttendees(this.eventGroupAttendeesMapper.toDtoListWithOwner(eventGroupAttendeesList, user.id));
+        }
+
+        return Response.ok(eventDto).build();
     }
 
     @POST

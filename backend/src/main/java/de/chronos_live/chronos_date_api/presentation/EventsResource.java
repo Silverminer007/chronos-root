@@ -74,15 +74,15 @@ public class EventsResource {
         events = this.eventAccessService.filterEvents(events, user);
 
         List<EventDto> eventDtos;
-        if(includeAttendances != null && includeAttendances) {
+        if (includeAttendances != null && includeAttendances) {
             eventDtos = new ArrayList<>();
             for (Event event : events) {
                 List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
                 Attendance ownAttendance = this.attendanceStatusService.getAttendanceStatus(user, event.id);
 
-                EventDto eventDto = eventMapper.toDto(event)
-                        .withOwnAttendanceStatus(ownAttendance.getStatus().name())
-                        .withAttendances(attendanceMapper.toDtoList(attendances));
+                EventDto eventDto = eventMapper.toDto(event);
+                eventDto.setOwn_attendance_status(ownAttendance.getStatus().name());
+                eventDto.setAttendances(attendanceMapper.toDtoList(attendances));
                 eventDtos.add(eventDto);
             }
         } else {

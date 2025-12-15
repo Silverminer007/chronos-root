@@ -1,20 +1,86 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import java.util.ArrayList;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
-public record EventDto(Long id, String name, String description, String start, String end, String venue,
-                       String status, Integer minimalAttendees, String own_attendance_status, List<AttendanceDto> attendances) {
-    public EventDto(Long id, String name, String description, String start, String end, String venue,
-                    String status, Integer minimalAttendees) {
-        this(id, name, description, start, end, venue, status, minimalAttendees, null, new ArrayList<>());
+@Data
+@Builder
+@NoArgsConstructor
+public class EventDto {
+
+    // Pflichtfelder
+    private Long id;
+
+    private String name;
+
+    private String description;
+
+    private String start;
+
+    private String end;
+
+    private String venue;
+
+    private String status;
+
+    private Integer minimal_attendees;
+
+    // Optionale Felder
+    private String own_attendance_status;
+    private List<AttendanceDto> attendances;
+    private List<MessageDto> messages;
+    private List<EventUserAttendeesDto> userAttendees;
+    private List<EventGroupAttendeesDto> groupAttendees;
+
+    /**
+     * Konstruktor für Pflichtfelder
+     */
+    public EventDto(
+            Long id,
+            String name,
+            String description,
+            String start,
+            String end,
+            String venue,
+            String status,
+            Integer minimal_attendees
+    ) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.start = start;
+        this.end = end;
+        this.venue = venue;
+        this.status = status;
+        this.minimal_attendees = minimal_attendees;
     }
 
-    EventDto withOwnAttendanceStatus(String own_attendance_status) {
-        return new EventDto(id(), name(), description(), start(), end(), venue(), status(), minimalAttendees(), own_attendance_status, attendances());
-    }
-
-    EventDto withAttendances(List<AttendanceDto> attendances) {
-        return new EventDto(id(), name(), description(), start(), end(), venue(), status(), minimalAttendees(), own_attendance_status(), attendances);
+    /**
+     * Vollständiger Konstruktor (optional nutzbar)
+     */
+    public EventDto(
+            Long id,
+            String name,
+            String description,
+            String start,
+            String end,
+            String venue,
+            String status,
+            Integer minimal_attendees,
+            String own_attendance_status,
+            List<AttendanceDto> attendances,
+            List<MessageDto> messages,
+            List<EventUserAttendeesDto> userAttendees,
+            List<EventGroupAttendeesDto> groupAttendees
+    ) {
+        this(id, name, description, start, end, venue, status, minimal_attendees);
+        this.own_attendance_status = own_attendance_status;
+        this.attendances = attendances;
+        this.messages = messages;
+        this.userAttendees = userAttendees;
+        this.groupAttendees = groupAttendees;
     }
 }
