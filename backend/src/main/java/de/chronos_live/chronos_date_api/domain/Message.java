@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -17,5 +17,5 @@ public class Message extends PanacheEntity {
     private Event event;
     @ManyToOne
     private User sender;
-    private LocalDateTime timeStamp;
+    private Instant timeStamp;
 }

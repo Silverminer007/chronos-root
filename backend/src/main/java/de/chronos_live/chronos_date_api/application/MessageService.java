@@ -7,7 +7,7 @@ import de.chronos_live.chronos_date_api.domain.User;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +30,7 @@ public class MessageService {
         message.setMessage(messageText);
         message.setSender(sender);
         message.setEvent(event);
-        message.setTimeStamp(LocalDateTime.now());
+        message.setTimeStamp(Instant.now());
         message.persist();
 
         for (User user : eventAccessService.getAttendees(event)) {
