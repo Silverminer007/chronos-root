@@ -17,7 +17,7 @@ const {user} = useAuthStore()
 const messageDialog = ref<boolean>(false);
 
 async function sendMessage(messageSubject: string, messageBody: string) {
-  await eventsStore.sendMessage(event.id, messageSubject, messageBody);
+  await eventsStore.sendMessage(event.id, messageSubject, messageBody, user);
   messageDialog.value = false;
 }
 </script>
@@ -33,7 +33,7 @@ async function sendMessage(messageSubject: string, messageBody: string) {
         <span class="pi pi-exclamation-triangle"/> Abgesagt</p>
       <p v-if="event.status === 'NOT_ENOUGH_ATTENDEES'" class="text-yellow-500">
         <span class="pi pi-exclamation-triangle"/> Zu wenig Teilnehmende</p>
-      <div class="flex flex-row items-center justify-between flex-wrap">
+      <NuxtLink :to="`/event/${event.id}`" class="flex flex-row items-center justify-between flex-wrap">
         <div class="flex flex-row gap-2">
           {{ event.name }}
           <p v-if="event.minimal_attendees">({{
@@ -47,7 +47,7 @@ async function sendMessage(messageSubject: string, messageBody: string) {
                   shape="circle"
                   :label="attendance?.user_name?.charAt(0)" v-tooltip.top="attendance.user_name"/>
         </AvatarGroup>
-      </div>
+      </NuxtLink>
     </template>
     <template #content>
       <div class="flex flex-col gap-2">

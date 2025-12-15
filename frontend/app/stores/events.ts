@@ -1,5 +1,5 @@
 import {defineStore} from 'pinia'
-import type {Event} from '~/types'
+import type {Event, Message, User} from '~/types'
 
 export const useEventsStore = defineStore('events', () => {
     const events = ref<Event[]>([])
@@ -62,6 +62,16 @@ export const useEventsStore = defineStore('events', () => {
                 break
             }
         }
+        if (currentEvent.value && currentEvent.value.id === eventId) {
+            currentEvent.value.own_attendance_status = attendanceStatus
+
+            for (const attendance of currentEvent.value.attendances) {
+                if (attendance.user_id === userId) {
+                    attendance.status = attendanceStatus
+                    break
+                }
+            }
+        }
         error.value = undefined
         await $fetch(`/api/event/${eventId}/attendance`, {
             method: "POST",
@@ -81,6 +91,15 @@ export const useEventsStore = defineStore('events', () => {
                         break
                     }
                 }
+                if (currentEvent.value && currentEvent.value.id === eventId) {
+                    currentEvent.value.own_attendance_status = oldAttendanceStatus
+                    for (const attendance of currentEvent.value.attendances) {
+                        if (attendance.user_id === userId) {
+                            attendance.status = oldAttendanceStatus
+                            break
+                        }
+                    }
+                }
             }
         })
     }
@@ -97,7 +116,23 @@ export const useEventsStore = defineStore('events', () => {
         return event.own_attendance_status === "APPROVED"
     }
 
-    async function sendMessage(eventId: number, messageTitle: string, messageBody: string) {
+    async function sendMessage(eventId: number, messageTitle: string, messageBody: string, sender: User) {
+        let oldMessages : Message[] | undefined = undefined;
+        for (const event of events.value) {
+            if (event.id === eventId) {
+                oldMessages = event.messages;
+                event.messages.push({
+                    id: -1,
+                    sender_id: sender.id,
+                    sender_name: sender.first_name + " " + sender.last_name,
+                    event_id: eventId,
+                    timestamp: new Date().toISOString(),
+                    title: messageTitle,
+                    body: messageBody,
+                });
+                break
+            }
+        }
         error.value = undefined
         await $fetch(`/api/event/${eventId}/messages`, {
             method: "POST",
@@ -107,6 +142,13 @@ export const useEventsStore = defineStore('events', () => {
                 message: messageBody
             },
             onResponseError() {
+                if(oldMessages) {
+                    for (const event of events.value) {
+                        if (event.id === eventId) {
+                            event.messages = oldMessages;
+                        }
+                    }
+                }
                 error.value = "Message sending failed."
             }
         })
@@ -122,20 +164,21 @@ export const useEventsStore = defineStore('events', () => {
         }
         loading.value = true
 
-        const {data} = await useFetch(`/api/event/${eventId}`, {
-            params: {
+        const data = await $fetch(`/api/event/${eventId}`, {
+            query: {
                 attendances: true,
                 messages: true,
                 attendees: true
             }
         })
+        console.log(data)
 
         loading.value = false
-        if (!data.value) {
+        if (!data) {
             error.value = "You either have no permission to see this event or it does not exist.";
             return null;
         } else {
-            currentEvent.value = data.value
+            currentEvent.value = data
             error.value = undefined
             return currentEvent.value
         }
@@ -154,6 +197,7 @@ export const useEventsStore = defineStore('events', () => {
         hasRejected,
         getEventById,
         setCurrentEvent,
-        sendMessage
+        sendMessage,
+        currentEvent
     }
 })

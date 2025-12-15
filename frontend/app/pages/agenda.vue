@@ -12,10 +12,10 @@ callOnce('events', () => eventStore.fetchEvents())
   <SearchHeader/>
   <!-- Body -->
   <div class="p-4 pt-20 flex flex-col gap-4">
-    <DateCard v-for="event in eventStore.events" :key="event.id" :event="event"/>
+    <EventCard v-for="event in eventStore.events" :key="event.id" :event="event"/>
     <p v-if="eventStore.error" class="text-red-500 text-sm"><span class="pi pi-exclamation-triangle"/>
       {{ eventStore.error }}</p>
-    <DateCardSkeleton v-if="eventStore.loading" v-for="i in [1, 2, 3, 4, 5]" :key="i"/>
+    <EventCardSkeleton v-if="eventStore.loading" v-for="i in [1, 2, 3, 4, 5]" :key="i"/>
     <div class="flex flex-row w-full items-center justify-center">
       <Button @click="eventStore.fetchEvents">
         Mehr laden

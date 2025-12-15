@@ -64,9 +64,9 @@
                 <div class="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500"></div>
               </div>
               <div class="space-y-3 sm:space-y-4">
-                <DemoDateCard :event="demoEvent1"/>
-                <DemoDateCard :event="demoEvent2"/>
-                <DemoDateCard :event="demoEvent3"/>
+                <EventDemoCard :event="demoEvent1"/>
+                <EventDemoCard :event="demoEvent2"/>
+                <EventDemoCard :event="demoEvent3"/>
               </div>
             </div>
           </div>

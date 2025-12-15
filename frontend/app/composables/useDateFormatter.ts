@@ -21,8 +21,22 @@ export function useDateFormatter() {
         return dateTime.toFormat('D');
     }
 
+    function formatTime(date: string): string {
+        const dateTime = fromApi(date);
+
+        return `${dateTime.toFormat('t')} Uhr`;
+    }
+
+    function formatDateTime(date: string): string {
+        const dateTime = fromApi(date);
+
+        return `${dateTime.toFormat('D t')} Uhr`;
+    }
+
     return {
         formatTimeRange,
-        formatDate
+        formatDate,
+        formatTime,
+        formatDateTime
     }
 }
