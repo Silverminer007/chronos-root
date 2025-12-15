@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Toast from "primevue/toast";
 import type {Event} from "~/types";
 import {useEventsStore} from "~/stores/events";
 import {useAuthStore} from "~/stores/auth";
@@ -38,6 +39,7 @@ const updateAttendance = async (status: 'APPROVED' | 'REJECTED') => {
 </script>
 
 <template>
+  <Toast />
   <div
       class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Deine Teilnahme</h3>

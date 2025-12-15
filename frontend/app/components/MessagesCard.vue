@@ -5,6 +5,7 @@ import {useAuthStore} from "~/stores/auth";
 import {useEventsStore} from "~/stores/events";
 import {useDateFormatter} from "~/composables/useDateFormatter";
 import {useToast} from "primevue/usetoast";
+import Toast from "primevue/toast";
 
 const authStore = useAuthStore();
 const eventStore = useEventsStore();
@@ -57,6 +58,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
 </script>
 
 <template>
+  <Toast/>
   <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700">
     <div class="p-6 border-b border-gray-200 dark:border-neutral-700">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

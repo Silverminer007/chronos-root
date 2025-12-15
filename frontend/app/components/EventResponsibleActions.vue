@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Toast from "primevue/toast";
 import {computed, ref} from "vue";
 import type {Event} from "~/types";
 import {useAuthStore} from "~/stores/auth";
@@ -74,6 +75,7 @@ const requestRecheck = () => {
 </script>
 
 <template>
+  <Toast/>
   <div v-if="isResponsible"
        class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Organisator-Aktionen</h3>

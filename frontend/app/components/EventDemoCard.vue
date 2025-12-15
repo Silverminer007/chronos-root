@@ -1,5 +1,5 @@
 <script setup lang="ts">
-
+import Toast from "primevue/toast";
 import Avatar from "primevue/avatar";
 import type {Event} from '~/types';
 import {useDateFormatter} from '~/composables/useDateFormatter';
@@ -32,6 +32,7 @@ async function sendMessage() {
 </script>
 
 <template>
+  <Toast/>
   <MessageDialog :visible="messageDialog" :eventTitle="event.name"
                  :recipientCount="event.attendances.length"
                  @send="sendMessage()"/>
