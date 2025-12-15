@@ -27,6 +27,11 @@ public class GroupService {
         return Group.find("?1 MEMBER OF members", user).list();
     }
 
+    public List<Group> searchGroups(User user, String searchQuery) {
+        searchQuery = "%" + searchQuery + "%";
+        return Group.find("?1 MEMBER OF members AND lower(groupName) LIKE lower(?2)", user, searchQuery).list();
+    }
+
     public void addGroupMember(User user, Long groupId, User newMember) {
         Group group = Group.findById(groupId);
         if (group == null) {

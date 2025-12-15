@@ -37,9 +37,14 @@ public class GroupsResource {
 
     @GET
     @Path("/")
-    public Response getGroups(@QueryParam("members") Boolean members) {
+    public Response getGroups(@QueryParam("members") Boolean members, @QueryParam("search") String search) {
         User user = this.userService.getUser(jwt.getSubject());
-        List<Group> groups = this.groupService.getGroups(user);
+        List<Group> groups;
+        if(search == null) {
+            groups = this.groupService.getGroups(user);
+        } else {
+            groups = this.groupService.searchGroups(user, search);
+        }
 
         if (members == null || !members) {
             return Response.ok(groupMapper.toDtoListWithOwner(groups, user.id)).build();
