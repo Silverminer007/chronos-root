@@ -9,18 +9,17 @@ import jakarta.transaction.Transactional;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @ApplicationScoped
 @Transactional
 public class GroupService {
     private final NotificationService notificationService;
+    private final ContactService contactService;
 
-    public GroupService(NotificationService notificationService) {
+    public GroupService(NotificationService notificationService, ContactService contactService) {
         this.notificationService = notificationService;
+        this.contactService = contactService;
     }
 
     public List<Group> getGroups(User user) {
@@ -39,6 +38,9 @@ public class GroupService {
         }
         if (!group.getOwner().equals(user)) {
             throw new IllegalArgumentException("User is not the owner of the group");
+        }
+        if(this.contactService.getContacts(user).stream().noneMatch(c -> Objects.equals(c.id, newMember.id))) {
+            throw new IllegalArgumentException("You can only add users who are in your contacts");
         }
         group.getMembers().add(newMember);
         this.notificationService.notify(newMember,
