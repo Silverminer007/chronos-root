@@ -28,7 +28,7 @@ const toggle = (event) => {
 </script>
 
 <template>
-  <div class="flex flex-row items-center justify-center w-full gap-2 p-2 fixed bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-10">
+  <div class="flex flex-row items-center justify-center w-full gap-2 p-2 fixed bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-30">
     <!-- Search Events -->
     <FloatLabel variant="in">
       <InputText fluid id="searchQuery" type="text" v-model="searchQuery" @valueChange="search(searchQuery)"/>
