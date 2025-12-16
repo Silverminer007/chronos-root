@@ -30,10 +30,10 @@
         <!-- Left Column: Event Details & Actions -->
         <div class="lg:col-span-2 space-y-6">
           <EventDetailsCard :event="event" class="order-1"/>
-          <AttendanceStatusCard :event="event" class="order-2"/>
+          <OwnAttendanceStatusCard :event="event" class="order-2"/>
 
           <!-- Mobile: Attendees Cards here (order-3 & order-4) -->
-          <AttendeesCard :event="event" class="order-3 lg:hidden"/>
+          <AttendeesAttendanceStatusCard :event="event" class="order-3 lg:hidden"/>
           <AttendeesRolesCard :event="event" class="order-4 lg:hidden"/>
 
           <EventResponsibleActions :event="event" class="order-5"/>
@@ -42,7 +42,7 @@
 
         <!-- Right Column: Attendees & Roles (Desktop only) -->
         <div class="hidden lg:block lg:col-span-1 space-y-6">
-          <AttendeesCard :event="event"/>
+          <AttendeesAttendanceStatusCard :event="event"/>
           <AttendeesRolesCard :event="event"/>
         </div>
       </div>
