@@ -6,6 +6,7 @@ import jakarta.transaction.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -13,9 +14,11 @@ import java.util.stream.Collectors;
 @Transactional
 public class EventAccessService {
     private final GroupService groupService;
+    private final ContactService contactService;
 
-    public EventAccessService(GroupService groupService) {
+    public EventAccessService(GroupService groupService, ContactService contactService) {
         this.groupService = groupService;
+        this.contactService = contactService;
     }
 
     private Set<Long> getAccessibleEvents(User user) {
@@ -91,6 +94,9 @@ public class EventAccessService {
                     if (attendee == null) { // Muss der User auch in den Kontakten sein?
                         throw new IllegalArgumentException("User with id " + attendeeId + " does not exist");
                     }
+                    if(this.contactService.getContacts(user).stream().noneMatch(c -> Objects.equals(c.id, attendeeId))) {
+                        throw new IllegalArgumentException("You can only add users who are in your contacts");
+                    }
                     eventUserAttendees.setUser(attendee);
                     eventUserAttendees.persist();
                     return eventUserAttendees;
@@ -149,8 +155,11 @@ public class EventAccessService {
                     }
                     eventGroupAttendees.setEvent(event);
                     Group group = Group.findById(groupId);
-                    if (group == null) { // TODO Muss der User auch in den Kontakten sein?
+                    if (group == null) {
                         throw new IllegalArgumentException("Group with id " + groupId + " does not exist");
+                    }
+                    if(group.getMembers().stream().noneMatch( m -> Objects.equals(user.id, m.id))) {
+                        throw new IllegalArgumentException("You can only add groups you're member in");
                     }
                     eventGroupAttendees.setGroup(group);
                     eventGroupAttendees.persist();
