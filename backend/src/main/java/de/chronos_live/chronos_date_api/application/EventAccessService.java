@@ -223,16 +223,16 @@ public class EventAccessService {
         return role;
     }
 
-    public Set<User> getAttendees(Event event) {
+    public Set<User> getAttendees(Long eventId) {
         Set<User> attendees = new HashSet<>();
 
         // User Attendees
-        List<EventUserAttendees> userAttendees = EventUserAttendees.find("event", event).list();
+        List<EventUserAttendees> userAttendees = EventUserAttendees.find("event.id = ?1", eventId).list();
         for (EventUserAttendees eventUserAttendees : userAttendees) {
             attendees.add(eventUserAttendees.getUser());
         }
 
-        List<EventGroupAttendees> groupAttendees = EventGroupAttendees.find("event", event).list();
+        List<EventGroupAttendees> groupAttendees = EventGroupAttendees.find("event.id = ?1", eventId).list();
         for (EventGroupAttendees eventGroupAttendees : groupAttendees) {
             attendees.addAll(eventGroupAttendees.getGroup().getMembers());
         }

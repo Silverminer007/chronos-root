@@ -33,7 +33,7 @@ public class MessageService {
         message.setTimeStamp(Instant.now());
         message.persist();
 
-        for (User user : eventAccessService.getAttendees(event)) {
+        for (User user : eventAccessService.getAttendees(event.id)) {
             if (Objects.equals(user.id, sender.id)) {
                 continue;
             }

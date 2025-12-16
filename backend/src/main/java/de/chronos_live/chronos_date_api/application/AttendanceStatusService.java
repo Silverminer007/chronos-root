@@ -8,17 +8,22 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @ApplicationScoped
 @Transactional
 public class AttendanceStatusService {
     private final MessageService messageService;
     private final NotificationService notificationService;
+    private final EventAccessService eventAccessService;
 
-    public AttendanceStatusService(MessageService messageService, NotificationService notificationService) {
+    public AttendanceStatusService(MessageService messageService, NotificationService notificationService, EventAccessService eventAccessService) {
         this.messageService = messageService;
         this.notificationService = notificationService;
+        this.eventAccessService = eventAccessService;
     }
 
     public Attendance getAttendanceStatus(User user, Long eventId) {
@@ -34,7 +39,26 @@ public class AttendanceStatusService {
     }
 
     public List<Attendance> getAttendanceStatus(Long eventId) {
-        return Attendance.find("event.id", eventId).list();
+        Set<User> attendees = this.eventAccessService.getAttendees(eventId);
+        List<Attendance> attendances = Attendance.find("event.id", eventId).list();
+        Event event = Event.findById(eventId);
+        if (event == null) {
+            return new ArrayList<>();
+        }
+        return attendees.stream().map(attendee -> {
+            for (Attendance a : attendances) {
+                if (Objects.equals(a.getUser().id, attendee.id)) {
+                    attendances.remove(a);
+                    return a;
+                }
+            }
+            Attendance newAttendance = new Attendance();
+            newAttendance.setEvent(event);
+            newAttendance.setUser(attendee);
+            newAttendance.setStatus(AttendanceStatus.PENDING);
+            newAttendance.persist();
+            return newAttendance;
+        }).toList();
     }
 
     public AttendanceStatus getAttendanceStatus(String stringValue) {

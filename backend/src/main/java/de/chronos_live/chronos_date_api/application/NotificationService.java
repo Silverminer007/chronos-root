@@ -69,7 +69,7 @@ public class NotificationService {
                             """;
             String reminderTitleTemplate = "In %s Minuten startet %s";
 
-            Set<User> attendees = eventAccessService.getAttendees(event);
+            Set<User> attendees = eventAccessService.getAttendees(event.id);
 
             List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
             long approvedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.APPROVED).count();
@@ -224,7 +224,7 @@ public class NotificationService {
                 .filter(attendance -> attendance.getStatus() == AttendanceStatus.APPROVED)
                 .count();
         long missingAcceptances = event.getMinimalAttendees() - acceptances;
-        for (User user : this.eventAccessService.getAttendees(event)) {
+        for (User user : this.eventAccessService.getAttendees(event.id)) {
             Attendance attendance = this.attendanceStatusService.getAttendanceStatus(user, event.id);
             if (attendance.getStatus() != AttendanceStatus.PENDING) {
                 continue;
@@ -292,7 +292,7 @@ public class NotificationService {
         }
         List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
         long rejectedAttendees = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.REJECTED).count();
-        Set<User> attendees = this.eventAccessService.getAttendees(event);
+        Set<User> attendees = this.eventAccessService.getAttendees(event.id);
         if (attendees.size() - rejectedAttendees >= event.getMinimalAttendees()) {
             event.setEventStatus(EventStatus.PLANNED);
             return;
@@ -305,7 +305,7 @@ public class NotificationService {
                 """, event.getName(), event.getMinimalAttendees(), rejectedAttendees);
         event.setEventStatus(EventStatus.NOT_ENOUGH_ATTENDEES);
 
-        for (User user : this.eventAccessService.getAttendees(event)) {
+        for (User user : this.eventAccessService.getAttendees(event.id)) {
             this.notify(user,
                     messageTitle,
                     messageBody,
