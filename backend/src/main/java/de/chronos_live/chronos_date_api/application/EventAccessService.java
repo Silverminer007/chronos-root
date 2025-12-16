@@ -75,6 +75,9 @@ public class EventAccessService {
         if (!force && !this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
+        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+            throw new IllegalArgumentException("You must be responsible for a event to add attendees");
+        }
 
         EventUserAttendees userAttendees = (EventUserAttendees) EventUserAttendees.find("event.id = ?1 AND user.id = ?2", eventId, attendeeId)
                 .firstResultOptional().orElseGet(() -> {
@@ -99,6 +102,20 @@ public class EventAccessService {
         if (!this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
+        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+            throw new IllegalArgumentException("You must be responsible for a event to add attendees");
+        }
+
+        if (!EventAttendeeRole.RESPONSIBLE.equals(role)) {
+            boolean groupWithResponsibleRole = this.getGroupAttendees(eventId).stream()
+                    .anyMatch(e -> EventAttendeeRole.RESPONSIBLE.equals(e.getRole()));
+            long usersWithResponsibleRole = this.getUserAttendees(eventId)
+                    .stream().filter(e -> EventAttendeeRole.RESPONSIBLE.equals(e.getRole()))
+                    .count();
+            if (!groupWithResponsibleRole && usersWithResponsibleRole < 2) {
+                throw new IllegalArgumentException("You can't remove the last responsible person from an event");
+            }
+        }
 
         EventUserAttendees userAttendees = (EventUserAttendees) EventUserAttendees.find("event.id = ?1 AND user.id = ?2", eventId, attendeeId)
                 .firstResultOptional().orElseThrow();
@@ -109,12 +126,18 @@ public class EventAccessService {
         if (!this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
+        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+            throw new IllegalArgumentException("You must be responsible for a event to remove attendees");
+        }
         EventUserAttendees.delete("event.id AND user.id", eventId, attendeeId);
     }
 
     public void assignGroupToEvent(User user, Long eventId, Long groupId, EventAttendeeRole role) {
         if (!this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
+        }
+        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+            throw new IllegalArgumentException("You must be responsible for a event to add attendees");
         }
 
         EventGroupAttendees groupAttendees = (EventGroupAttendees) EventGroupAttendees.find("event.id AND group.id", eventId, groupId)
@@ -140,6 +163,9 @@ public class EventAccessService {
         if (!this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
+        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+            throw new IllegalArgumentException("You must be responsible for a event to remove attendees");
+        }
         EventGroupAttendees.delete("event.id AND group.id", eventId, groupId);
     }
 
@@ -147,23 +173,37 @@ public class EventAccessService {
         if (!this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
+        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+            throw new IllegalArgumentException("You must be responsible for a event to add attendees");
+        }
+
+        if (!EventAttendeeRole.RESPONSIBLE.equals(role)) {
+            boolean userWithResponsibleRole = this.getUserAttendees(eventId).stream()
+                    .anyMatch(e -> EventAttendeeRole.RESPONSIBLE.equals(e.getRole()));
+            long groupsWithResponsibleRole = this.getGroupAttendees(eventId)
+                    .stream().filter(e -> EventAttendeeRole.RESPONSIBLE.equals(e.getRole()))
+                    .count();
+            if (!userWithResponsibleRole && groupsWithResponsibleRole < 2) {
+                throw new IllegalArgumentException("You can't remove the last responsible person from an event");
+            }
+        }
 
         EventGroupAttendees groupAttendees = (EventGroupAttendees) EventGroupAttendees.find("event.id AND group.id", eventId, groupId)
-                        .firstResultOptional().orElseThrow();
+                .firstResultOptional().orElseThrow();
         groupAttendees.setRole(role);
     }
 
-    public EventAttendeeRole getEventRole(User user, Event event) {
+    public EventAttendeeRole getEventRole(User user, Long eventId) {
         EventAttendeeRole role = EventAttendeeRole.NONE;
 
-        EventUserAttendees eventUserAttendees = EventUserAttendees.find("event.id = ?1 AND user.id = ?2", event.id, user.id).firstResult();
+        EventUserAttendees eventUserAttendees = EventUserAttendees.find("event.id = ?1 AND user.id = ?2", eventId, user.id).firstResult();
         if (eventUserAttendees != null) {
             role = eventUserAttendees.getRole();
         }
 
         for (Group group : this.groupService.getGroups(user)) {
             EventGroupAttendees eventGroupAttendees =
-                    EventGroupAttendees.find("event.id = ?1 AND group.id = ?2", event.id, group.id).firstResult();
+                    EventGroupAttendees.find("event.id = ?1 AND group.id = ?2", eventId, group.id).firstResult();
             if (eventGroupAttendees == null) {
                 continue;
             }
@@ -172,23 +212,6 @@ public class EventAccessService {
             }
         }
         return role;
-    }
-
-    public EventAttendeeRole getUserEventRole(User user, Event event) {
-        EventUserAttendees eventUserAttendees = EventUserAttendees.find("event.id = ?1 AND user.id = ?2", event.id, user.id).firstResult();
-        if (eventUserAttendees != null) {
-            return eventUserAttendees.getRole();
-        }
-        return EventAttendeeRole.NONE;
-    }
-
-    public EventAttendeeRole getGroupEventRole(Group group, Event event) {
-        EventGroupAttendees eventGroupAttendees =
-                EventGroupAttendees.find("event.id = ?1 AND group.id = ?2", event.id, group.id).firstResult();
-        if (eventGroupAttendees != null) {
-            return eventGroupAttendees.getRole();
-        }
-        return EventAttendeeRole.NONE;
     }
 
     public Set<User> getAttendees(Event event) {
