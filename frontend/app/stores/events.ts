@@ -182,7 +182,6 @@ export const useEventsStore = defineStore('events', () => {
                 attendees: true
             }
         })
-        console.log(data)
 
         loading.value = false
         if (!data) {
