@@ -78,7 +78,7 @@ public class EventAccessService {
         if (!force && !this.userHasAccessToEvent(user, eventId)) {
             throw new IllegalArgumentException("User does not have access to event");
         }
-        if(!EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
+        if(!force && !EventAttendeeRole.RESPONSIBLE.equals(this.getEventRole(user, eventId))) {
             throw new IllegalArgumentException("You must be responsible for a event to add attendees");
         }
 
@@ -94,7 +94,7 @@ public class EventAccessService {
                     if (attendee == null) { // Muss der User auch in den Kontakten sein?
                         throw new IllegalArgumentException("User with id " + attendeeId + " does not exist");
                     }
-                    if(this.contactService.getContacts(user).stream().noneMatch(c -> Objects.equals(c.id, attendeeId))) {
+                    if(!force && this.contactService.getContacts(user).stream().noneMatch(c -> Objects.equals(c.id, attendeeId))) {
                         throw new IllegalArgumentException("You can only add users who are in your contacts");
                     }
                     eventUserAttendees.setUser(attendee);
@@ -146,7 +146,7 @@ public class EventAccessService {
             throw new IllegalArgumentException("You must be responsible for a event to add attendees");
         }
 
-        EventGroupAttendees groupAttendees = (EventGroupAttendees) EventGroupAttendees.find("event.id AND group.id", eventId, groupId)
+        EventGroupAttendees groupAttendees = (EventGroupAttendees) EventGroupAttendees.find("event.id = ?1 AND group.id = ?2", eventId, groupId)
                 .firstResultOptional().orElseGet(() -> {
                     EventGroupAttendees eventGroupAttendees = new EventGroupAttendees();
                     Event event = Event.findById(eventId);
