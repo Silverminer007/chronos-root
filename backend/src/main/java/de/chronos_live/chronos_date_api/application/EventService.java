@@ -73,45 +73,51 @@ public class EventService {
                 .toList();
     }
 
-    public Event updateEvent(Event event) {
-        Event e = Event.findById(event.id);
+    public Event updateEvent(Event updatedEvent) {
+        Event oldEvent = Event.findById(updatedEvent.id);
 
-        if (event.getName() != null) {
-            if (event.getName().isBlank()) {
+        if (updatedEvent.getName() != null) {
+            if (updatedEvent.getName().isBlank()) {
                 throw new IllegalArgumentException("Name cannot be blank");
             }
-            e.setName(event.getName());
+            oldEvent.setName(updatedEvent.getName());
         }
-        if (event.getDescription() != null) {
-            e.setDescription(event.getDescription());
+        if (updatedEvent.getDescription() != null) {
+            oldEvent.setDescription(updatedEvent.getDescription());
         }
-        if (event.getVenue() != null) {
-            e.setVenue(event.getVenue());
+        if (updatedEvent.getVenue() != null) {
+            oldEvent.setVenue(updatedEvent.getVenue());
         }
         // Es könnte sein, dass nur Start-Datum oder nur End-Datum aktualisiert werden.
         // Deshalb müssen auch beide einzeln validiert werden
-        if (event.getStartTime() != null) {
-            if (event.getEndTime() != null
-                    && event.getEndTime().isBefore(event.getStartTime())
-                    || e.getEndTime().isBefore(event.getStartTime())) {
+        if (updatedEvent.getStartTime() != null && updatedEvent.getEndTime() != null) {
+            if (updatedEvent.getEndTime().isBefore(updatedEvent.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
-            e.setStartTime(event.getStartTime());
+            oldEvent.setStartTime(updatedEvent.getStartTime());
+            oldEvent.setEndTime(updatedEvent.getEndTime());
         }
-        if (event.getEndTime() != null) {
-            if (event.getStartTime() != null
-                    && event.getEndTime().isBefore(event.getStartTime())
-                    || event.getEndTime().isBefore(e.getStartTime())) {
+        if (updatedEvent.getStartTime() != null && updatedEvent.getEndTime() == null) {
+            if (oldEvent.getEndTime().isBefore(updatedEvent.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
-            e.setEndTime(event.getEndTime());
+            oldEvent.setStartTime(updatedEvent.getStartTime());
         }
-        if (e.getEventStatus() != null) {
-            event.setEventStatus(e.getEventStatus());
+        if (updatedEvent.getStartTime() == null && updatedEvent.getEndTime() != null) {
+            if (updatedEvent.getEndTime().isBefore(oldEvent.getStartTime())) {
+                throw new IllegalArgumentException("Start date cannot be after end date");
+            }
+            oldEvent.setEndTime(updatedEvent.getEndTime());
         }
-        event.setLastUpdate(Instant.now());
+        if (updatedEvent.getEventStatus() != null) {
+            oldEvent.setEventStatus(updatedEvent.getEventStatus());
+        }
+        if (updatedEvent.getMinimalAttendees() != null) {
+            oldEvent.setMinimalAttendees(updatedEvent.getMinimalAttendees());
+        }
+        updatedEvent.setLastUpdate(Instant.now());
 
-        return e;
+        return oldEvent;
     }
 
     public void deleteEvent(Event event) {
