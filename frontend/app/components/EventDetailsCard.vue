@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {Event} from '~/types'
-import { useDateFormatter} from "~/composables/useDateFormatter";
+import {useDateFormatter} from "~/composables/useDateFormatter";
+import EditEventDialog from "~/components/EditEventDialog.vue";
 
 defineProps<{
   event: Event
@@ -8,6 +9,7 @@ defineProps<{
 
 const {formatDate, formatTime} = useDateFormatter();
 
+const showEditDialog = ref<boolean>(false);
 
 const getEventStatusLabel = (status: string) => {
   const labels = {
@@ -42,6 +44,13 @@ const getEventStatusClass = (status: string) => {
         >
                   {{ getEventStatusLabel(event.status) }}
                 </span>
+        <button
+            @click="showEditDialog = true"
+            class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+            title="Termin bearbeiten"
+        >
+          <i class="pi pi-pencil"></i>
+        </button>
       </div>
       <div class="flex flex-wrap gap-4 text-white/90 text-sm">
         <div class="flex items-center gap-2">
@@ -73,6 +82,10 @@ const getEventStatusClass = (status: string) => {
       </div>
     </div>
   </div>
+  <EditEventDialog
+      v-model:visible="showEditDialog"
+      :event="event"
+  />
 </template>
 
 <style scoped>

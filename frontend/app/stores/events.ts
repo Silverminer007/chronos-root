@@ -139,7 +139,7 @@ export const useEventsStore = defineStore('events', () => {
         return event.own_attendance_status === "APPROVED"
     }
 
-    async function sendMessage(eventId: number, messageTitle: string, messageBody: string, sender: User) {
+    async function sendMessage(eventId: number, messageTitle: string, messageBody: string) {
         error.value = undefined
         const message = await $fetch(`/api/event/${eventId}/messages`, {
             method: "POST",
@@ -280,6 +280,16 @@ export const useEventsStore = defineStore('events', () => {
         });
     }
 
+    async function updateEvent(eventId: number, updates: Partial<Event>) {
+        await $fetch(`/api/event/${eventId}`, {
+            method: 'PATCH',
+            body: updates
+        });
+        if (currentEvent.value) {
+            await getEventById(currentEvent.value.id)
+        }
+    }
+
     return {
         events,
         error,
@@ -302,6 +312,7 @@ export const useEventsStore = defineStore('events', () => {
         updateGroupAttendeeRole,
         removeGroupAttendee,
         removeUserAttendee,
-        createEvent
+        createEvent,
+        updateEvent
     }
 })
