@@ -260,7 +260,7 @@ const createEvent = async () => {
       minimal_attendees: formData.value.minimalAttendees || 0
     };
 
-    await eventStore.createEvent(eventData);
+    const newEvent = await eventStore.createEvent(eventData);
 
     toast.add({
       severity: 'success',
@@ -278,6 +278,7 @@ const createEvent = async () => {
     // Emit created event
     emit('created');
 
+    navigateTo(`/event/${newEvent.id}`);
   } catch (err) {
     toast.add({
       severity: 'error',

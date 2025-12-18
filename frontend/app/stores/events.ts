@@ -10,6 +10,7 @@ export const useEventsStore = defineStore('events', () => {
 
     async function loadInitialEvents() {
         loading.value = true
+        events.value = []
 
         const {data} = await useFetch("/api/events", {
             params: {
@@ -23,7 +24,7 @@ export const useEventsStore = defineStore('events', () => {
         if (!data.value) {
             error.value = "Failed to fetch events."
         } else {
-            events.value = events.value.concat(data.value)
+            events.value = data.value
             error.value = undefined
         }
 
@@ -274,12 +275,10 @@ export const useEventsStore = defineStore('events', () => {
     }
 
     async function createEvent(eventData: any) {
-        await $fetch('/api/event', {
+        return await $fetch('/api/event', {
             method: 'POST',
             body: eventData
         });
-        events.value = [];
-        await fetchEvents();
     }
 
     return {
