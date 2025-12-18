@@ -1,5 +1,5 @@
 import {defineStore} from 'pinia'
-import type {Event, Message, User} from '~/types'
+import type {Event, User} from '~/types'
 
 export const useEventsStore = defineStore('events', () => {
     const events = ref<Event[]>([])
@@ -8,7 +8,7 @@ export const useEventsStore = defineStore('events', () => {
     const loading = ref(false)
     const searchString = ref('')
 
-    async function fetchEvents() {
+    async function loadInitialEvents() {
         loading.value = true
 
         const {data} = await useFetch("/api/events", {
@@ -24,6 +24,28 @@ export const useEventsStore = defineStore('events', () => {
             error.value = "Failed to fetch events."
         } else {
             events.value = events.value.concat(data.value)
+            error.value = undefined
+        }
+
+        loading.value = false
+    }
+
+    async function fetchEvents() {
+        loading.value = true
+
+        const data = await $fetch("/api/events", {
+            query: {
+                search: searchString.value,
+                page: Math.floor(events.value.length / 20),
+                size: 20,
+                attendances: true
+            }
+        })
+
+        if (!data) {
+            error.value = "Failed to fetch events."
+        } else {
+            events.value = events.value.concat(data)
             error.value = undefined
         }
 
@@ -137,7 +159,7 @@ export const useEventsStore = defineStore('events', () => {
                 event.messages.push(message);
             }
         }
-        if(currentEvent.value?.id === eventId) {
+        if (currentEvent.value?.id === eventId) {
             if (!currentEvent.value.messages) {
                 currentEvent.value.messages = []
             }
@@ -251,12 +273,22 @@ export const useEventsStore = defineStore('events', () => {
         })
     }
 
+    async function createEvent(eventData: any) {
+        await $fetch('/api/event', {
+            method: 'POST',
+            body: eventData
+        });
+        events.value = [];
+        await fetchEvents();
+    }
+
     return {
         events,
         error,
         loading,
         searchString,
         fetchEvents,
+        loadInitialEvents,
         search,
         updateAttendanceStatus,
         getApprovedAttendances,
@@ -271,6 +303,7 @@ export const useEventsStore = defineStore('events', () => {
         updateUserAttendeeRole,
         updateGroupAttendeeRole,
         removeGroupAttendee,
-        removeUserAttendee
+        removeUserAttendee,
+        createEvent
     }
 })
