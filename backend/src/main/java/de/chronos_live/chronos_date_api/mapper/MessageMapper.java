@@ -16,7 +16,7 @@ public interface MessageMapper {
     @Mapping(target = "sender_id", source = "sender.id")
     @Mapping(target = "sender_name", expression = "java(message.getSender().getName())")
     @Mapping(target = "event_id", source = "event.id")
-    @Mapping(target = "timeStamp",
+    @Mapping(target = "timestamp",
             expression = "java(message.getTimeStamp() != null ? message.getTimeStamp().toString() : null)")
     MessageDto toDto(Message message);
 
@@ -28,7 +28,7 @@ public interface MessageMapper {
     @Mapping(target = "event",
             expression = "java(dto.event_id() != null ? de.chronos_live.chronos_date_api.domain.Event.findById(dto.event_id()) : null)")
     @Mapping(target = "timeStamp",
-            expression = "java(dto.timeStamp() != null ? java.time.Instant.parse(dto.timeStamp()) : null)")
+            expression = "java(dto.timestamp() != null ? java.time.Instant.parse(dto.timestamp()) : null)")
     Message toEntity(MessageDto dto);
 
     // ==================================
