@@ -1,20 +1,36 @@
 <script setup lang="ts">
-import Avatar from "primevue/avatar";
 import {ref} from "vue";
 import {useAuthStore} from "~/stores/auth";
+import Menu from 'primevue/menu';
 
 const {search} = useEventsStore()
 const {logout, user, authenticated} = useAuthStore()
 
 const searchQuery = ref("");
-
 const menu = ref();
+
 const items = ref([
   {
-    label: 'Options',
     items: [
       {
-        label: 'Logout',
+        label: 'Profil',
+        icon: 'pi pi-user',
+        command: () => {
+          navigateTo('/profile')
+        }
+      },
+      {
+        label: 'Einstellungen',
+        icon: 'pi pi-cog',
+        command: () => {
+          navigateTo('/settings')
+        }
+      },
+      {
+        separator: true
+      },
+      {
+        label: 'Abmelden',
         icon: 'pi pi-sign-out',
         command: () => logout(),
       }
@@ -25,22 +41,111 @@ const items = ref([
 const toggle = (event) => {
   menu.value.toggle(event);
 };
+
+const handleSearch = () => {
+  search(searchQuery.value);
+};
 </script>
 
 <template>
-  <div class="flex flex-row items-center justify-center w-full gap-2 p-2 fixed bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-30">
-    <!-- Search Events -->
-    <FloatLabel variant="in">
-      <InputText fluid id="searchQuery" type="text" v-model="searchQuery" @valueChange="search(searchQuery)"/>
-      <label for="searchQuery">
-        <span class="pi pi-search"></span> Search</label>
-    </FloatLabel>
-    <Avatar v-if="authenticated" :label="user?.first_name?.charAt(0)" class="mr-2" size="large" shape="circle"
-            @click="toggle" aria-haspopup="true" aria-controls="overlay_menu"/>
-    <Menu ref="menu" id="overlay_menu" :model="items" :popup="true"/>
-  </div>
+  <header class="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700 shadow-sm">
+    <div class="container mx-auto px-4 sm:px-6">
+      <div class="flex items-center justify-between h-16 gap-4">
+        <!-- Logo -->
+        <NuxtLink to="/agenda" class="flex items-center gap-3 shrink-0">
+          <img src="/icon.png" alt="Chronos" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
+          <span class="text-xl sm:text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent hidden sm:block">
+            Chronos
+          </span>
+        </NuxtLink>
+
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-2xl">
+          <div class="relative">
+            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+            <input
+                v-model="searchQuery"
+                @input="handleSearch"
+                type="text"
+                placeholder="Termine durchsuchen..."
+                class="w-full pl-11 pr-4 py-2.5 rounded-lg border-2 border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-500 dark:focus:border-purple-400 focus:bg-white dark:focus:bg-neutral-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900/50 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <!-- User Menu -->
+        <div v-if="authenticated" class="flex items-center gap-3 shrink-0">
+          <!-- Notifications (optional) -->
+          <button
+              class="hidden sm:flex w-10 h-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors relative"
+          >
+            <i class="pi pi-bell text-gray-600 dark:text-gray-400"></i>
+            <!-- Notification Badge -->
+            <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+
+          <!-- User Avatar -->
+          <button
+              @click="toggle"
+              class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+              aria-haspopup="true"
+              aria-controls="user_menu"
+          >
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center">
+              <span class="text-purple-600 dark:text-purple-400 font-semibold text-sm">
+                {{ user?.first_name?.charAt(0) }}{{ user?.last_name?.charAt(0) }}
+              </span>
+            </div>
+            <span class="hidden md:block font-medium text-gray-900 dark:text-white">
+              {{ user?.first_name }}
+            </span>
+            <i class="pi pi-chevron-down text-xs text-gray-400 hidden md:block"></i>
+          </button>
+        </div>
+
+        <!-- Login Button (if not authenticated) -->
+        <NuxtLink
+            v-else
+            to="/api/auth/login"
+            class="px-4 py-2 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shrink-0"
+        >
+          Anmelden
+        </NuxtLink>
+      </div>
+    </div>
+
+    <!-- User Menu Popup -->
+    <Menu ref="menu" id="user_menu" :model="items" :popup="true" class="w-56">
+      <template #start>
+        <div class="p-3 border-b border-gray-200 dark:border-neutral-700">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center">
+              <span class="text-purple-600 dark:text-purple-400 font-semibold">
+                {{ user?.first_name?.charAt(0) }}{{ user?.last_name?.charAt(0) }}
+              </span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-gray-900 dark:text-white truncate">
+                {{ user?.first_name }} {{ user?.last_name }}
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
+                {{ user?.email }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </template>
+    </Menu>
+  </header>
+
+  <!-- Spacer to prevent content from going under fixed header -->
+  <div class="h-20"></div>
 </template>
 
 <style scoped>
-
+/* Gradient text for logo */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
 </style>

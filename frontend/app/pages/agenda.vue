@@ -13,7 +13,7 @@ callOnce('events', () => eventStore.fetchEvents())
     <SearchHeader/>
 
     <!-- Body -->
-    <div class="container mx-auto px-4 sm:px-6 pt-24 pb-24">
+    <div class="container mx-auto px-4 sm:px-6  pb-24">
       <div class="max-w-4xl mx-auto space-y-6">
         <!-- Event Cards -->
         <EventCard v-for="event in eventStore.events" :key="event.id" :event="event"/>
