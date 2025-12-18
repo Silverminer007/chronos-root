@@ -125,6 +125,15 @@ public class EventService {
         this.updateEvent(event);
     }
 
+    public void cancelEvent(Long eventId) {
+        Event event = Event.findById(eventId);
+        if (event == null) {
+            return;
+        }
+        event.setEventStatus(EventStatus.CANCELLED);
+        this.updateEvent(event);
+    }
+
     public List<Event> getEventsUpdatedAfter(LocalDateTime after) {
         List<Event> events = Event.find("lastUpdated AFTER ?", after).list();
         return events.stream()

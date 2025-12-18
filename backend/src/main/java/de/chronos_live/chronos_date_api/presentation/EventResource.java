@@ -142,5 +142,21 @@ public class EventResource {
         return Response.ok().build();
     }
 
-    // TODO Cancel Event
+    @POST
+    @Path("/{id}/cancel")
+    public Response cancelEvent(@PathParam("id") Long id) {
+        User user = userService.getUser(jwt.getSubject());
+
+        Event event = eventService.getEvent(id);
+        if (event == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        if (!eventAccessService.userHasAccessToEvent(user, event)) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        this.eventService.cancelEvent(id);
+        return Response.ok().build();
+    }
 }
