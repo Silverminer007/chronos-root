@@ -7,6 +7,7 @@ const {event} = defineProps<{
 
 interface CombinedAttendee extends Attendance {
   role?: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST';
+  name: string;
 }
 
 const approvedCount = computed(() => {
@@ -19,9 +20,18 @@ const sortedAttendees = computed(() => {
 
   const combined: CombinedAttendee[] = event.attendances.map(attendance => {
     const userAttendee = event.userAttendees?.find(ua => ua.user.id === attendance.user_id);
+    const groupAttendees = event.groupAttendees?.filter(ga => !!ga.group.members.find(u => u.id === attendance.user_id));
+    let role = userAttendee?.role || "GUEST";
+    if(groupAttendees) {
+      groupAttendees.forEach(ga => {
+        if(role === "GUEST" || role === "ATTENDANT" && ga.role === "RESPONSIBLE") {
+          role = ga.role;
+        }
+      });
+    }
     return {
       ...attendance,
-      role: userAttendee?.role,
+      role: role,
       name: attendance.user_name
     };
   });
