@@ -18,7 +18,7 @@ public class ContactService {
     }
 
     public List<User> getContacts(User user) {
-        List<Contact> contacts = Contact.find("user = ?", user).list();
+        List<Contact> contacts = Contact.find("user.id = ?1", user.id).list();
         return contacts.stream().map(Contact::getContact).toList();
     }
 
