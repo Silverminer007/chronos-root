@@ -52,7 +52,7 @@ public class MessageResource {
         if (!this.eventAccessService.userHasAccessToEvent(user, eventId)) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        this.messageService.sendMessage(eventId, messageDto.title(), messageDto.message(), user, NotificationCategory.MESSAGE);
-        return Response.ok().build();
+        Message newMessage = this.messageService.sendMessage(eventId, messageDto.title(), messageDto.message(), user, NotificationCategory.MESSAGE);
+        return Response.ok(this.messageMapper.toDto(newMessage)).build();
     }
 }

@@ -22,7 +22,7 @@ public class MessageService {
         this.eventAccessService = eventAccessService;
     }
 
-    public void sendMessage(Long eventId, String messageTitle, String messageText, User sender, NotificationCategory notificationCategory) {
+    public Message sendMessage(Long eventId, String messageTitle, String messageText, User sender, NotificationCategory notificationCategory) {
         Event event = Event.findById(eventId);
 
         Message message = new Message();
@@ -39,6 +39,8 @@ public class MessageService {
             }
             this.notificationService.notify(user, messageTitle, messageText, notificationCategory);
         }
+
+        return message;
     }
 
     public List<Message> getMessages(Long eventId) {
