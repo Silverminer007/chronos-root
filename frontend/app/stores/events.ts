@@ -117,24 +117,8 @@ export const useEventsStore = defineStore('events', () => {
     }
 
     async function sendMessage(eventId: number, messageTitle: string, messageBody: string, sender: User) {
-        let oldMessages : Message[] | undefined = undefined;
-        for (const event of events.value) {
-            if (event.id === eventId) {
-                oldMessages = event.messages;
-                event.messages.push({
-                    id: -1,
-                    sender_id: sender.id,
-                    sender_name: sender.first_name + " " + sender.last_name,
-                    event_id: eventId,
-                    timestamp: new Date().toISOString(),
-                    title: messageTitle,
-                    body: messageBody,
-                });
-                break
-            }
-        }
         error.value = undefined
-        await $fetch(`/api/event/${eventId}/messages`, {
+        const message = await $fetch(`/api/event/${eventId}/messages`, {
             method: "POST",
             body: {
                 event_id: eventId,
@@ -142,16 +126,23 @@ export const useEventsStore = defineStore('events', () => {
                 message: messageBody
             },
             onResponseError() {
-                if(oldMessages) {
-                    for (const event of events.value) {
-                        if (event.id === eventId) {
-                            event.messages = oldMessages;
-                        }
-                    }
-                }
                 error.value = "Message sending failed."
             }
         })
+        for (const event of events.value) {
+            if (event.id === eventId) {
+                if (!event.messages) {
+                    event.messages = []
+                }
+                event.messages.push(message);
+            }
+        }
+        if(currentEvent.value?.id === eventId) {
+            if (!currentEvent.value.messages) {
+                currentEvent.value.messages = []
+            }
+            currentEvent.value.messages.push(message);
+        }
     }
 
     async function setCurrentEvent(event: Event) {
