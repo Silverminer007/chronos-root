@@ -301,7 +301,7 @@
                     <i class="pi pi-users text-gray-600 dark:text-gray-400 text-xs"></i>
                   </div>
                   <span class="font-medium text-gray-900 dark:text-white truncate">{{ groupAttendee.group.name }}</span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">({{ groupAttendee.group.members }})</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">({{ groupAttendee.group.members.length }})</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <i :class="expandedGroups.includes(groupAttendee.group.id) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
