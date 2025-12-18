@@ -2,11 +2,13 @@
 import type {Event} from '~/types';
 import {useDateFormatter} from '~/composables/useDateFormatter';
 import {useAuthStore} from "~/stores/auth";
+import {useToast} from "primevue/usetoast";
 
 const {event} = defineProps<{
   event: Event
 }>()
 
+const toast = useToast()
 const eventsStore = useEventsStore();
 const {formatTimeRange, formatDate} = useDateFormatter();
 const {user} = useAuthStore()
@@ -14,13 +16,33 @@ const {user} = useAuthStore()
 const messageDialog = ref<boolean>(false);
 
 async function sendMessage(messageSubject: string, messageBody: string) {
-  await eventsStore.sendMessage(event.id, messageSubject, messageBody, user);
+  if (!user) {
+    return;
+  }
+
   messageDialog.value = false;
+  try {
+    await eventsStore.sendMessage(event.id, messageSubject, messageBody, user);
+    toast.add({
+      severity: 'success',
+      summary: 'Nachricht versendet',
+      life: 3000
+    });
+    messageDialog.value = false;
+  } catch (err) {
+    console.error(err);
+    toast.add({
+      severity: 'error',
+      summary: 'Fehler beim Senden',
+      detail: 'Bitte kontaktiere den Entwickler der App',
+      life: 3000
+    });
+  }
 }
 </script>
 
 <template>
-  <Toast />
+  <Toast/>
   <MessageDialog
       :visible="messageDialog"
       :eventTitle="`${event.name} ${formatDate(event.start)}`"
@@ -29,7 +51,8 @@ async function sendMessage(messageSubject: string, messageBody: string) {
       @send="sendMessage($event.subject, $event.message)"
   />
 
-  <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-all duration-300">
+  <div
+      class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-all duration-300">
     <!-- Status Banner -->
     <div v-if="event.status === 'CANCELLED'" class="bg-red-600 px-4 py-2 flex items-center gap-2">
       <i class="pi pi-exclamation-triangle text-white"></i>
@@ -63,7 +86,8 @@ async function sendMessage(messageSubject: string, messageBody: string) {
           <div class="flex items-center gap-3 shrink-0">
             <div v-if="event.minimal_attendees" class="text-right">
               <div class="text-2xl font-bold text-gray-900 dark:text-white">
-                {{ eventsStore.getApprovedAttendances(event).length }}<span class="text-gray-400">/{{ event.minimal_attendees }}</span>
+                {{ eventsStore.getApprovedAttendances(event).length }}<span
+                  class="text-gray-400">/{{ event.minimal_attendees }}</span>
               </div>
               <div class="text-xs text-gray-500 dark:text-gray-400">Zusagen</div>
             </div>
