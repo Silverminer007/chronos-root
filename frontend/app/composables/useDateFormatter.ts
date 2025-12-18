@@ -1,13 +1,9 @@
 import {DateTime} from "luxon"
 
 export function useDateFormatter() {
-    function fromApi(iso: string): DateTime {
-        return DateTime.fromISO(iso, {zone: "utc"}).toLocal().setLocale("de")
-    }
-
     function formatTimeRange(start: string, end: string): string {
-        const startDateTime = fromApi(start);
-        const endDateTime = fromApi(end);
+        const startDateTime = DateTime.fromISO(start);
+        const endDateTime = DateTime.fromISO(end);
 
         if (startDateTime.hasSame(endDateTime, 'day')) {
             return `${startDateTime.toFormat('EEE D t')} - ${endDateTime.toFormat('HH:mm')} Uhr`;
@@ -16,19 +12,19 @@ export function useDateFormatter() {
     }
 
     function formatDate(date: string): string {
-        const dateTime = fromApi(date);
+        const dateTime = DateTime.fromISO(date);
 
         return dateTime.toFormat('D');
     }
 
     function formatTime(date: string): string {
-        const dateTime = fromApi(date);
+        const dateTime = DateTime.fromISO(date);
 
         return `${dateTime.toFormat('t')} Uhr`;
     }
 
     function formatDateTime(date: string): string {
-        const dateTime = fromApi(date);
+        const dateTime = DateTime.fromISO(date);
 
         return `${dateTime.toFormat('D t')} Uhr`;
     }
