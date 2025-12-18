@@ -37,7 +37,9 @@
                     {{ userAttendee.user.first_name.charAt(0).toUpperCase() }}
                   </span>
                 </div>
-                <span class="font-medium text-gray-900 dark:text-white truncate">{{ userAttendee.user.first_name }}</span>
+                <span class="font-medium text-gray-900 dark:text-white truncate">{{
+                    userAttendee.user.first_name
+                  }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <button
@@ -76,7 +78,9 @@
                     <i class="pi pi-users text-purple-600 dark:text-purple-400 text-xs"></i>
                   </div>
                   <span class="font-medium text-gray-900 dark:text-white truncate">{{ groupAttendee.group.name }}</span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">({{ groupAttendee.group.members.length }})</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">({{
+                      groupAttendee.group.members.length
+                    }})</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <i :class="expandedGroups.includes(groupAttendee.group.id) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
@@ -111,7 +115,9 @@
                       {{ member.first_name.charAt(0).toUpperCase() }}
                     </span>
                   </div>
-                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ member.first_name }} {{ member.last_name }}</span>
+                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{
+                      member.first_name
+                    }} {{ member.last_name }}</span>
                 </div>
                 <div v-if="groupAttendee.group.members.length === 0"
                      class="text-xs text-gray-500 dark:text-gray-400 italic p-2">
@@ -144,7 +150,9 @@
                     {{ userAttendee.user.first_name.charAt(0).toUpperCase() }}
                   </span>
                 </div>
-                <span class="font-medium text-gray-900 dark:text-white truncate">{{ userAttendee.user.first_name }}</span>
+                <span class="font-medium text-gray-900 dark:text-white truncate">{{
+                    userAttendee.user.first_name
+                  }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <button
@@ -182,7 +190,9 @@
                     <i class="pi pi-users text-blue-600 dark:text-blue-400 text-xs"></i>
                   </div>
                   <span class="font-medium text-gray-900 dark:text-white truncate">{{ groupAttendee.group.name }}</span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">({{ groupAttendee.group.members.length }})</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">({{
+                      groupAttendee.group.members.length
+                    }})</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <i :class="expandedGroups.includes(groupAttendee.group.id) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
@@ -216,7 +226,9 @@
                       {{ member.first_name.charAt(0).toUpperCase() }}
                     </span>
                   </div>
-                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ member.first_name }} {{ member.last_name }}</span>
+                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{
+                      member.first_name
+                    }} {{ member.last_name }}</span>
                 </div>
                 <div v-if="groupAttendee.group.members.length === 0"
                      class="text-xs text-gray-500 dark:text-gray-400 italic p-2">
@@ -249,7 +261,9 @@
                     {{ userAttendee.user.first_name.charAt(0).toUpperCase() }}
                   </span>
                 </div>
-                <span class="font-medium text-gray-900 dark:text-white truncate">{{ userAttendee.user.first_name }}</span>
+                <span class="font-medium text-gray-900 dark:text-white truncate">{{
+                    userAttendee.user.first_name
+                  }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <button
@@ -321,7 +335,9 @@
                       {{ member.first_name.charAt(0).toUpperCase() }}
                     </span>
                   </div>
-                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ member.first_name }} {{ member.last_name }}</span>
+                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{
+                      member.first_name
+                    }} {{ member.last_name }}</span>
                 </div>
                 <div v-if="groupAttendee.group.members.length === 0"
                      class="text-xs text-gray-500 dark:text-gray-400 italic p-2">
@@ -394,28 +410,28 @@ const isResponsible = computed(() => {
 });
 
 // Filter users by role
-const responsibleUsers : Ref<UserAttendee[]> = computed(() =>
+const responsibleUsers: Ref<UserAttendee[]> = computed(() =>
     event.userAttendees?.filter(ua => ua.role === 'RESPONSIBLE') || []
 );
 
-const attendantUsers : Ref<UserAttendee[]> = computed(() =>
+const attendantUsers: Ref<UserAttendee[]> = computed(() =>
     event.userAttendees?.filter(ua => ua.role === 'ATTENDANT') || []
 );
 
-const guestUsers : Ref<UserAttendee[]> = computed(() =>
+const guestUsers: Ref<UserAttendee[]> = computed(() =>
     event.userAttendees?.filter(ua => ua.role === 'GUEST') || []
 );
 
 // Filter groups by role
-const responsibleGroups : Ref<GroupAttendee[]> = computed(() =>
+const responsibleGroups: Ref<GroupAttendee[]> = computed(() =>
     event.groupAttendees?.filter(ga => ga.role === 'RESPONSIBLE') || []
 );
 
-const attendantGroups : Ref<GroupAttendee[]> = computed(() =>
+const attendantGroups: Ref<GroupAttendee[]> = computed(() =>
     event.groupAttendees?.filter(ga => ga.role === 'ATTENDANT') || []
 );
 
-const guestGroups : Ref<GroupAttendee[]> = computed(() =>
+const guestGroups: Ref<GroupAttendee[]> = computed(() =>
     event.groupAttendees?.filter(ga => ga.role === 'GUEST') || []
 );
 
@@ -462,12 +478,11 @@ const changeRole = async (newRole: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST') => {
   if (!selectedAttendeeId.value) return;
 
   try {
-    // TODO: API call to change role
-    // if (selectedAttendeeType.value === 'user') {
-    //   await eventStore.updateUserAttendeeRole(props.event.id, selectedAttendeeId.value, newRole);
-    // } else {
-    //   await eventStore.updateGroupAttendeeRole(props.event.id, selectedAttendeeId.value, newRole);
-    // }
+    if (selectedAttendeeType.value === 'user') {
+      await eventStore.updateUserAttendeeRole(event.id, selectedAttendeeId.value, newRole);
+    } else {
+      await eventStore.updateGroupAttendeeRole(event.id, selectedAttendeeId.value, newRole);
+    }
 
     toast.add({
       severity: 'success',
@@ -489,12 +504,11 @@ const changeRole = async (newRole: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST') => {
 
 const removeAttendee = async (id: number, type: 'user' | 'group') => {
   try {
-    // TODO: API call to remove attendee
-    // if (type === 'user') {
-    //   await eventStore.removeUserAttendee(props.event.id, id);
-    // } else {
-    //   await eventStore.removeGroupAttendee(props.event.id, id);
-    // }
+    if (type === 'user') {
+      await eventStore.removeUserAttendee(event.id, id);
+    } else {
+      await eventStore.removeGroupAttendee(event.id, id);
+    }
 
     toast.add({
       severity: 'success',
@@ -514,14 +528,17 @@ const removeAttendee = async (id: number, type: 'user' | 'group') => {
   }
 };
 
-const handleAddAttendee = async (data: { type: 'user' | 'group'; id: number; role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' }) => {
+const handleAddAttendee = async (data: {
+  type: 'user' | 'group';
+  id: number;
+  role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST'
+}) => {
   try {
-    // TODO: API call to add attendee
-    // if (data.type === 'user') {
-    //   await eventStore.addUserAttendee(props.event.id, data.id, data.role);
-    // } else {
-    //   await eventStore.addGroupAttendee(props.event.id, data.id, data.role);
-    // }
+    if (data.type === 'user') {
+      await eventStore.addUserAttendee(event.id, data.id, data.role);
+    } else {
+      await eventStore.addGroupAttendee(event.id, data.id, data.role);
+    }
 
     toast.add({
       severity: 'success',

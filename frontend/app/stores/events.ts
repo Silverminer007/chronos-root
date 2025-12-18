@@ -150,9 +150,6 @@ export const useEventsStore = defineStore('events', () => {
     }
 
     async function getEventById(eventId: number): Promise<Event | null> {
-        if (currentEvent.value && currentEvent.value.id === eventId) {
-            return currentEvent.value
-        }
         loading.value = true
 
         const data = await $fetch(`/api/event/${eventId}`, {
@@ -175,6 +172,85 @@ export const useEventsStore = defineStore('events', () => {
         }
     }
 
+    async function addUserAttendee(eventId: number, userId: number, role: "GUEST" | "ATTENDANT" | "RESPONSIBLE") {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/attendees/user`, {
+            method: "POST",
+            body: {
+                role: role,
+                user: {
+                    id: userId
+                }
+            },
+            onResponseError() {
+                error.value = "Failed to add attendee."
+            }
+        })
+    }
+
+    async function addGroupAttendee(eventId: number, groupId: number, role: "GUEST" | "ATTENDANT" | "RESPONSIBLE") {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/attendees/group`, {
+            method: "POST",
+            body: {
+                role: role,
+                group: {
+                    id: groupId
+                }
+            },
+            onResponseError() {
+                error.value = "Failed to add attendee."
+            }
+        })
+    }
+
+    async function updateUserAttendeeRole(eventId: number, userId: number, role: "GUEST" | "ATTENDANT" | "RESPONSIBLE") {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/attendees/user/${userId}`, {
+            method: "PATCH",
+            body: {
+                role: role
+            },
+            onResponseError() {
+                error.value = "Failed to change attendees role."
+            }
+        })
+    }
+
+    async function updateGroupAttendeeRole(eventId: number, groupId: number, role: "GUEST" | "ATTENDANT" | "RESPONSIBLE") {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/attendees/group/${groupId}`, {
+            method: "PATCH",
+            body: {
+                role: role
+            },
+            onResponseError() {
+                error.value = "Failed to change attendees role."
+            }
+        })
+    }
+
+
+    async function removeUserAttendee(eventId: number, userId: number) {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/attendees/user/${userId}`, {
+            method: "DELETE",
+            onResponseError() {
+                error.value = "Failed to remove attendee."
+            }
+        })
+    }
+
+    async function removeGroupAttendee(eventId: number, groupId: number) {
+        error.value = undefined
+        await $fetch(`/api/event/${eventId}/attendees/group/${groupId}`, {
+            method: "DELETE",
+            onResponseError() {
+                error.value = "Failed to remove attendee."
+            }
+        })
+    }
+
     return {
         events,
         error,
@@ -189,6 +265,12 @@ export const useEventsStore = defineStore('events', () => {
         getEventById,
         setCurrentEvent,
         sendMessage,
-        currentEvent
+        currentEvent,
+        addGroupAttendee,
+        addUserAttendee,
+        updateUserAttendeeRole,
+        updateGroupAttendeeRole,
+        removeGroupAttendee,
+        removeUserAttendee
     }
 })
