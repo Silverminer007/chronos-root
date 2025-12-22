@@ -3,8 +3,8 @@ package de.chronos_live.chronos_date_api.presentation;
 import de.chronos_live.chronos_date_api.application.EventAccessService;
 import de.chronos_live.chronos_date_api.application.MessageService;
 import de.chronos_live.chronos_date_api.application.UserService;
+import de.chronos_live.chronos_date_api.application.WebPushService;
 import de.chronos_live.chronos_date_api.domain.Message;
-import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.mapper.MessageMapper;
 import jakarta.annotation.security.PermitAll;
@@ -31,6 +31,8 @@ public class MessageResource {
     @Inject
     EventAccessService eventAccessService;
     @Inject
+    WebPushService webPushService;
+    @Inject
     MessageMapper messageMapper;
 
     @GET
@@ -52,7 +54,8 @@ public class MessageResource {
         if (!this.eventAccessService.userHasAccessToEvent(user, eventId)) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        Message newMessage = this.messageService.sendMessage(eventId, messageDto.title(), messageDto.message(), user, NotificationCategory.MESSAGE);
+        Message newMessage = this.messageService.sendMessage(eventId, messageDto.title(), messageDto.message(), user);
+        this.webPushService.sendEventMessageNotification(messageDto.title(), messageDto.message(), user, this.eventAccessService.getAttendees(eventId));
         return Response.ok(this.messageMapper.toDto(newMessage)).build();
     }
 }

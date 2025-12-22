@@ -18,11 +18,13 @@ import java.util.Set;
 public class AttendanceStatusService {
     private final MessageService messageService;
     private final NotificationService notificationService;
+    private final WebPushService webPushService;
     private final EventAccessService eventAccessService;
 
-    public AttendanceStatusService(MessageService messageService, NotificationService notificationService, EventAccessService eventAccessService) {
+    public AttendanceStatusService(MessageService messageService, NotificationService notificationService, WebPushService webPushService, EventAccessService eventAccessService) {
         this.messageService = messageService;
         this.notificationService = notificationService;
+        this.webPushService = webPushService;
         this.eventAccessService = eventAccessService;
     }
 
@@ -77,17 +79,12 @@ public class AttendanceStatusService {
             return;
         }
         attendance.setStatus(status);
-        // TODO Wir versenden die Zeit immer als UTC, weil wir keine Ahnung haben in welcher Zeitzone der User ist
-        // Können wir die Zeitzone mit der Subscription senden? Oder noch besser als Placeholder und das am Client einfügen?
         this.messageService.sendMessage(event.id,
-                String.format("%s: %s zu %s", status.toString(), user.getName(), event.getName()),
-                String.format("%s: %s zu %s am %s", status, user.getName(), event.getName(),
-                        event.getStartTime().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))),
-                user,
-                NotificationCategory.ATTENDANCE_STATUS_CHANGED);
+                "",
+                String.format("%s hat zu %s %s", user.getName(), event.getName(), status.equals(AttendanceStatus.APPROVED) ? "zugesagt" : "abgesagt"),
+                user);
+        this.webPushService.sendAttendanceStatusChangedNotification(event, attendance, this.eventAccessService.getAttendees(eventId));
 
-        if (status.equals(AttendanceStatus.REJECTED)) {
-            this.notificationService.checkForEnoughAttendees(event);
-        }
+        this.notificationService.checkForEnoughAttendees(event);
     }
 }

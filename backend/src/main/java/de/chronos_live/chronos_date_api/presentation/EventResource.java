@@ -116,12 +116,11 @@ public class EventResource {
         }
 
         try {
-            this.eventService.updateEvent(event);
+            Event newEvent = this.eventService.updateEvent(event);
+            return Response.ok(eventMapper.toDto(newEvent)).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
-
-        return Response.ok(eventMapper.toDto(event)).build();
     }
 
     @DELETE
@@ -138,7 +137,7 @@ public class EventResource {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
-        eventService.deleteEvent(event);
+        eventService.deleteEvent(event.id);
         return Response.ok().build();
     }
 
@@ -156,7 +155,7 @@ public class EventResource {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
-        this.eventService.cancelEvent(id);
+        this.eventService.cancelEvent(id, user);
         return Response.ok().build();
     }
 }

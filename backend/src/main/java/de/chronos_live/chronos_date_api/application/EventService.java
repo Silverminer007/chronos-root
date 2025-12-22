@@ -1,10 +1,8 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.domain.Event;
-import de.chronos_live.chronos_date_api.domain.EventSeries;
-import de.chronos_live.chronos_date_api.domain.EventStatus;
-import de.chronos_live.chronos_date_api.domain.RepetitionRule;
+import de.chronos_live.chronos_date_api.domain.*;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
@@ -14,6 +12,11 @@ import java.util.List;
 @ApplicationScoped
 @Transactional
 public class EventService {
+    @Inject
+    WebPushService webPushService;
+    @Inject
+    EventAccessService eventAccessService;
+
     public void createEvent(Event event) {
         if (event.getName().isBlank()) {
             throw new IllegalArgumentException("Name cannot be blank");
@@ -94,6 +97,7 @@ public class EventService {
             if (updatedEvent.getEndTime().isBefore(updatedEvent.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
+            this.webPushService.sendEventMovedNotification(updatedEvent, oldEvent, this.eventAccessService.getAttendees(updatedEvent.id));
             oldEvent.setStartTime(updatedEvent.getStartTime());
             oldEvent.setEndTime(updatedEvent.getEndTime());
         }
@@ -101,12 +105,14 @@ public class EventService {
             if (oldEvent.getEndTime().isBefore(updatedEvent.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
+            this.webPushService.sendEventMovedNotification(updatedEvent, oldEvent, this.eventAccessService.getAttendees(updatedEvent.id));
             oldEvent.setStartTime(updatedEvent.getStartTime());
         }
         if (updatedEvent.getStartTime() == null && updatedEvent.getEndTime() != null) {
             if (updatedEvent.getEndTime().isBefore(oldEvent.getStartTime())) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
+            this.webPushService.sendEventMovedNotification(updatedEvent, oldEvent, this.eventAccessService.getAttendees(updatedEvent.id));
             oldEvent.setEndTime(updatedEvent.getEndTime());
         }
         if (updatedEvent.getEventStatus() != null) {
@@ -120,18 +126,21 @@ public class EventService {
         return oldEvent;
     }
 
-    public void deleteEvent(Event event) {
-        event.setEventStatus(EventStatus.DELETED);
-        this.updateEvent(event);
-    }
-
-    public void cancelEvent(Long eventId) {
+    public void deleteEvent(Long eventId) {
         Event event = Event.findById(eventId);
         if (event == null) {
             return;
         }
+        event.setEventStatus(EventStatus.DELETED);
+    }
+
+    public void cancelEvent(Long eventId, User user) {
+        Event event = Event.findById(eventId);
+        if (event == null) {
+            return;
+        }
+        this.webPushService.sendEventCancelledNotification(event, user, this.eventAccessService.getAttendees(eventId));
         event.setEventStatus(EventStatus.CANCELLED);
-        this.updateEvent(event);
     }
 
     public List<Event> getEventsUpdatedAfter(LocalDateTime after) {

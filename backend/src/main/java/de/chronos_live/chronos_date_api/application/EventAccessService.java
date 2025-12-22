@@ -15,10 +15,12 @@ import java.util.stream.Collectors;
 public class EventAccessService {
     private final GroupService groupService;
     private final ContactService contactService;
+    private final WebPushService webPushService;
 
-    public EventAccessService(GroupService groupService, ContactService contactService) {
+    public EventAccessService(GroupService groupService, ContactService contactService, WebPushService webPushService) {
         this.groupService = groupService;
         this.contactService = contactService;
+        this.webPushService = webPushService;
     }
 
     private Set<Long> getAccessibleEvents(User user) {
@@ -99,6 +101,8 @@ public class EventAccessService {
                     }
                     eventUserAttendees.setUser(attendee);
                     eventUserAttendees.persist();
+                    this.webPushService.sendNewEventAttendeeNotification(event, user.getName(), "user",
+                            eventUserAttendees.getRole().name(), this.getAttendees(eventId));
                     return eventUserAttendees;
                 });
         userAttendees.setRole(role);
@@ -163,6 +167,8 @@ public class EventAccessService {
                     }
                     eventGroupAttendees.setGroup(group);
                     eventGroupAttendees.persist();
+                    this.webPushService.sendNewEventAttendeeNotification(event, group.getGroupName(), "group",
+                            eventGroupAttendees.getRole().name(), this.getAttendees(eventId));
                     return eventGroupAttendees;
                 });
         groupAttendees.setRole(role);

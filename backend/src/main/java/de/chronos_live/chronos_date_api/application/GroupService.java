@@ -1,26 +1,20 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Group;
-import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.util.*;
 
 @ApplicationScoped
 @Transactional
 public class GroupService {
-    private final NotificationService notificationService;
-    private final ContactService contactService;
-
-    public GroupService(NotificationService notificationService, ContactService contactService) {
-        this.notificationService = notificationService;
-        this.contactService = contactService;
-    }
+    @Inject
+    ContactService contactService;
+    @Inject
+    WebPushService webPushService;
 
     public List<Group> getGroups(User user) {
         return Group.find("?1 MEMBER OF members", user).list();
@@ -43,10 +37,7 @@ public class GroupService {
             throw new IllegalArgumentException("You can only add users who are in your contacts");
         }
         group.getMembers().add(newMember);
-        this.notificationService.notify(newMember,
-                String.format("You were added to \"%s\"", group.getGroupName()),
-                String.format("%s added you to the Group \"%s\". You can now see related events", user.getName(), group.getGroupName()),
-                NotificationCategory.GROUP_MEMBERSHIP);
+        this.webPushService.sendNewGroupMemberNotification(group, newMember, group.getMembers());
     }
 
     public void removeGroupMember(User user, Long groupId, User oldMember) {

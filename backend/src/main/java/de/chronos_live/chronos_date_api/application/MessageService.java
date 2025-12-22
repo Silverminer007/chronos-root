@@ -2,27 +2,18 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Event;
 import de.chronos_live.chronos_date_api.domain.Message;
-import de.chronos_live.chronos_date_api.domain.NotificationCategory;
 import de.chronos_live.chronos_date_api.domain.User;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 
 @ApplicationScoped
 @Transactional
 public class MessageService {
-    private final NotificationService notificationService;
-    private final EventAccessService eventAccessService;
 
-    public MessageService(NotificationService notificationService, EventAccessService eventAccessService) {
-        this.notificationService = notificationService;
-        this.eventAccessService = eventAccessService;
-    }
-
-    public Message sendMessage(Long eventId, String messageTitle, String messageText, User sender, NotificationCategory notificationCategory) {
+    public Message sendMessage(Long eventId, String messageTitle, String messageText, User sender) {
         Event event = Event.findById(eventId);
 
         Message message = new Message();
@@ -32,13 +23,6 @@ public class MessageService {
         message.setEvent(event);
         message.setTimeStamp(Instant.now());
         message.persist();
-
-        for (User user : eventAccessService.getAttendees(event.id)) {
-            if (Objects.equals(user.id, sender.id)) {
-                continue;
-            }
-            this.notificationService.notify(user, messageTitle, messageText, notificationCategory);
-        }
 
         return message;
     }

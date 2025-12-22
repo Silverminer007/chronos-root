@@ -12,13 +12,11 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 @Transactional
 public class NotificationService {
-    @Inject
-    SettingsService settingsService;
-
     @Inject
     AttendanceStatusService attendanceStatusService;
 
@@ -31,30 +29,6 @@ public class NotificationService {
     @Inject
     EventService eventService;
 
-    public void notify(User user, String title, String message, NotificationCategory notificationCategory) {
-        Settings settings = this.settingsService.getOrCreateSettings(user);
-        if (notificationCategory == NotificationCategory.EVENT_REMINDER && !settings.isEventRemindersNotifications()) {
-            return;
-        }
-        if (notificationCategory == NotificationCategory.GROUP_MEMBERSHIP && !settings.isGroupMembershipNotifications()) {
-            return;
-        }
-        if (notificationCategory == NotificationCategory.ATTENDANCE_STATUS_CHANGED && !settings.isAttendanceStatusChangedNotifications()) {
-            return;
-        }
-        if (notificationCategory == NotificationCategory.CONTACTS && !settings.isContactsNotifications()) {
-            return;
-        }
-        if (notificationCategory == NotificationCategory.EVENT_CHANGED && !settings.isEventChangedNotifications()) {
-            return;
-        }
-        if (notificationCategory == NotificationCategory.MESSAGE && !settings.isMessagesNotifications()) {
-            return;
-        }
-
-        this.webPushService.sendToUser(user.id, title, message);
-    }
-
     @Scheduled(cron = "0 */1 * * * ?")
     void sendEventReminders() {
         long minutesUntilStart = 30L;
@@ -62,32 +36,8 @@ public class NotificationService {
 
         List<Event> events = this.eventService.findEventsStartingAt(in30Minutes);
         for (Event event : events) {
-            String reminderTemplate =
-                    """
-                            In %s Minuten startet %s
-                            %s zusagen, %s absagen und %s fehlende Rückmeldungen
-                            """;
-            String reminderTitleTemplate = "In %s Minuten startet %s";
-
             Set<User> attendees = eventAccessService.getAttendees(event.id);
-
-            List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
-            long approvedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.APPROVED).count();
-            long rejectedAttendances = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.REJECTED).count();
-            long pendingAttendances = attendees.size() - approvedAttendances - rejectedAttendances;
-            String reminderMessage = String.format(reminderTemplate,
-                    minutesUntilStart,
-                    event.getName(),
-                    approvedAttendances,
-                    rejectedAttendances,
-                    pendingAttendances
-            );
-            String reminderTitle = String.format(reminderTitleTemplate,
-                    minutesUntilStart,
-                    event.getName());
-            for (User user : attendees) {
-                this.notify(user, reminderTitle, reminderMessage, NotificationCategory.EVENT_REMINDER);
-            }
+            this.webPushService.sendEventReminderNotification(event, attendees);
         }
     }
 
@@ -103,7 +53,7 @@ public class NotificationService {
             if (event.getStartTime().until(event.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
             }
-            this.sendEventAttendanceStatusChecks(event);
+            this.webPushService.sendAttendanceStatusRecheckNotification(event, this.attendanceStatusService.getAttendanceStatus(event.id));
         }
 
         Instant in7Days = Instant.now().plusSeconds(60 * 60 * 24 * 7);
@@ -114,21 +64,7 @@ public class NotificationService {
             if (weekdays.contains(event.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
-            this.sendEventAttendanceStatusChecks(event);
-        }
-    }
-
-    private void sendEventAttendanceStatusChecks(Event event) {
-        List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
-        for (Attendance attendance : attendances) {
-            if (attendance.getStatus() == AttendanceStatus.PENDING) {
-                continue;
-            }
-            this.notify(attendance.getUser(),
-                    String.format("Du hast %s %s", event.getName(), attendance.getStatus() == AttendanceStatus.APPROVED ? "zugesagt" : "abgesagt"),
-                    String.format("Du hast %s %s. Ist das noch aktuell?", event.getName(),
-                            attendance.getStatus() == AttendanceStatus.APPROVED ? "zugesagt" : "abgesagt"),
-                    NotificationCategory.ATTENDANCE_CHECK);
+            this.webPushService.sendAttendanceStatusRecheckNotification(event, this.attendanceStatusService.getAttendanceStatus(event.id));
         }
     }
 
@@ -162,7 +98,14 @@ public class NotificationService {
             if (!pendingReminderTimes.contains(quarterHours)) {
                 continue;
             }
-            this.sendAttendanceStatusPendingReminder(event);
+            this.webPushService.sendAttendanceStatusPendingReminderNotification(event,
+                    this.attendanceStatusService.getAttendanceStatus(event.id)
+                            .stream()
+                            .filter(attendance ->
+                                    attendance.getStatus().equals(AttendanceStatus.PENDING))
+                            .map(Attendance::getUser)
+                            .collect(Collectors.toSet())
+            );
         }
 
         Instant in7Days = Instant.now().plusSeconds(60 * 60 * 24 * 7);
@@ -188,7 +131,14 @@ public class NotificationService {
             if (!pendingReminderTimes.contains(quarterHours)) {
                 continue;
             }
-            this.sendAttendanceStatusPendingReminder(event);
+            this.webPushService.sendAttendanceStatusPendingReminderNotification(event,
+                    this.attendanceStatusService.getAttendanceStatus(event.id)
+                            .stream()
+                            .filter(attendance ->
+                                    attendance.getStatus().equals(AttendanceStatus.PENDING))
+                            .map(Attendance::getUser)
+                            .collect(Collectors.toSet())
+            );
         }
 
         Instant in14Days = Instant.now().plusSeconds(60 * 60 * 24 * 14);
@@ -215,35 +165,14 @@ public class NotificationService {
             if (!pendingReminderTimes.contains(quarterHours)) {
                 continue;
             }
-            this.sendAttendanceStatusPendingReminder(event);
-        }
-    }
-
-    private void sendAttendanceStatusPendingReminder(Event event) {
-        long acceptances = this.attendanceStatusService.getAttendanceStatus(event.id).stream()
-                .filter(attendance -> attendance.getStatus() == AttendanceStatus.APPROVED)
-                .count();
-        long missingAcceptances = event.getMinimalAttendees() - acceptances;
-        for (User user : this.eventAccessService.getAttendees(event.id)) {
-            Attendance attendance = this.attendanceStatusService.getAttendanceStatus(user, event.id);
-            if (attendance.getStatus() != AttendanceStatus.PENDING) {
-                continue;
-            }
-
-            String messageTitle = String.format("Deine Rückmeldung zu %s fehlt", event.getName());
-            String messageBody = String.format(
-                    """
-                            Du hast bisher keine Rückmeldung zu %s gegeben.
-                            Bitte gib bald möglichst eine Antwort.
-                            %s
-                            """,
-                    event.getName(),
-                    missingAcceptances > 0 ?
-                            String.format("Es fehlen noch %s zusagen", missingAcceptances)
-                            : ""
+            this.webPushService.sendAttendanceStatusPendingReminderNotification(event,
+                    this.attendanceStatusService.getAttendanceStatus(event.id)
+                            .stream()
+                            .filter(attendance ->
+                                    attendance.getStatus().equals(AttendanceStatus.PENDING))
+                            .map(Attendance::getUser)
+                            .collect(Collectors.toSet())
             );
-
-            this.notify(user, messageTitle, messageBody, NotificationCategory.ATTENDANCE_CHECK);
         }
     }
 
@@ -292,25 +221,11 @@ public class NotificationService {
         }
         List<Attendance> attendances = this.attendanceStatusService.getAttendanceStatus(event.id);
         long rejectedAttendees = attendances.stream().filter(a -> a.getStatus() == AttendanceStatus.REJECTED).count();
-        Set<User> attendees = this.eventAccessService.getAttendees(event.id);
-        if (attendees.size() - rejectedAttendees >= event.getMinimalAttendees()) {
+        if (attendances.size() - rejectedAttendees >= event.getMinimalAttendees()) {
             event.setEventStatus(EventStatus.PLANNED);
             return;
         }
-        String messageTitle = String.format("Es sind zu wenig Leitende bei %s", event.getName());
-        String messageBody = String.format("""
-                Es werden für %s mindestens %s Leitende benötigt.
-                Es haben sich aber bereits %s Leitende abgemeldet,
-                sodass nicht mehr ausreichend Leitende zur Verfügung stehen.
-                """, event.getName(), event.getMinimalAttendees(), rejectedAttendees);
-        event.setEventStatus(EventStatus.NOT_ENOUGH_ATTENDEES);
 
-        for (User user : this.eventAccessService.getAttendees(event.id)) {
-            this.notify(user,
-                    messageTitle,
-                    messageBody,
-                    NotificationCategory.ATTENDANCE_ALERT
-            );
-        }
+        this.webPushService.sendNotEnoughAttendeesNotification(event, attendances, attendances.stream().map(Attendance::getUser).collect(Collectors.toSet()));
     }
 }
