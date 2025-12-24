@@ -272,10 +272,10 @@ self.addEventListener('notificationclick', function (event) {
         try {
             if (data.event) {
                 const eventData = JSON.parse(data.event);
-                urlToOpen = `/events/${eventData.id}`;
+                urlToOpen = `/event/${eventData.id}`;
             } else if (data.new_event) {
                 const eventData = JSON.parse(data.new_event);
-                urlToOpen = `/events/${eventData.id}`;
+                urlToOpen = `/event/${eventData.id}`;
             } else if (data.group) {
                 const groupData = JSON.parse(data.group);
                 urlToOpen = `/groups/${groupData.id}`;
