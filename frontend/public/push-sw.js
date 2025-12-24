@@ -58,8 +58,8 @@ async function handleNotification(data) {
     switch (type) {
         case 'EVENT_MOVED':
             const movedEvent = JSON.parse(data.new_event);
-            title = `${movedEvent.title} wurde verschoben`;
-            body = `${movedEvent.title} geht jetzt vom ${formatTimeRange(movedEvent.start, movedEvent.end)}`;
+            title = `${movedEvent.name} wurde verschoben`;
+            body = `${movedEvent.name} geht jetzt vom ${formatTimeRange(movedEvent.start, movedEvent.end)}`;
             tag = `event-moved-${movedEvent.id}`;
             if (attendanceStatus === "APPROVED") {
                 actions = [
@@ -80,8 +80,8 @@ async function handleNotification(data) {
         case 'EVENT_CANCELLED':
             const cancelledEvent = JSON.parse(data.event);
             const whoCancelled = data.who_cancelled;
-            title = `${cancelledEvent.title} abgesagt`;
-            body = `"${cancelledEvent.title}" wurde von ${whoCancelled} abgesagt.`;
+            title = `${cancelledEvent.name} abgesagt`;
+            body = `"${cancelledEvent.name}" wurde von ${whoCancelled} abgesagt.`;
             tag = `event-cancelled-${cancelledEvent.id}`;
             break;
 
@@ -123,7 +123,7 @@ async function handleNotification(data) {
             const userName = data.user_name;
             const statusText = getStatusText(newStatus);
             title = 'Teilnahmestatus geändert';
-            body = `${userName} hat den Status für "${statusEvent.title}" auf "${statusText}" geändert.`;
+            body = `${userName} hat den Status für "${statusEvent.name}" auf "${statusText}" geändert.`;
             tag = `status-changed-${statusEvent.id}`;
             break;
 
@@ -133,7 +133,7 @@ async function handleNotification(data) {
             const rejected = data.rejected_attendances;
             const pending = data.pending_attendances;
             title = `Nicht genug Teilnehmer (${approved} / ${notEnoughEvent.minimal_attendees}`;
-            body = `"${notEnoughEvent.title}" hat nicht genug Zusagen (${approved} zugesagt, ${rejected} abgesagt, ${pending} ausstehend).`;
+            body = `"${notEnoughEvent.name}" hat nicht genug Zusagen (${approved} zugesagt, ${rejected} abgesagt, ${pending} ausstehend).`;
             if (notEnoughEvent.own_attendance_status === "REJECTED") {
                 body += ' Du hast bisher abgesagt. Falls du doch kannst, gib bitte so schnell wie möglich bescheid';
                 actions = [
@@ -156,7 +156,7 @@ async function handleNotification(data) {
 
         case 'EVENT_REMINDER':
             const reminderEvent = JSON.parse(data.event);
-            title = `Erinnerung: "${reminderEvent.title}" steht bald an!`;
+            title = `Erinnerung: "${reminderEvent.name}" steht bald an!`;
             body = `Du hast ${getStatusText(reminderEvent.own_attendance_status)}`;
             tag = `reminder-${reminderEvent.id}`;
             break;
