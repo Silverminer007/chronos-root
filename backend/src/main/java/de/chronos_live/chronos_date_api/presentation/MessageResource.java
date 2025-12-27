@@ -1,11 +1,10 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.EventAccessService;
 import de.chronos_live.chronos_date_api.application.MessageService;
 import de.chronos_live.chronos_date_api.application.UserService;
-import de.chronos_live.chronos_date_api.application.WebPushService;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.mapper.MessageMapper;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
@@ -17,7 +16,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import java.util.List;
 
-@Path("/api/v2/event/{id}/messages")
+@Path("/api/v2/appointments/{id}/messages")
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -29,33 +28,24 @@ public class MessageResource {
     @Inject
     JsonWebToken jwt;
     @Inject
-    EventAccessService eventAccessService;
-    @Inject
-    WebPushService webPushService;
-    @Inject
     MessageMapper messageMapper;
 
     @GET
     @Path("/")
-    public Response getMessagesForEvent(@PathParam("id") Long eventId) {
+    public Response getMessagesForEvent(@PathParam("id") Long appointmentId) {
         User user = this.userService.getUser(jwt.getSubject());
 
-        if (!this.eventAccessService.userHasAccessToEvent(user, eventId)) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-        List<Message> messages = this.messageService.getMessages(eventId);
+        List<Message> messages = this.messageService.getMessages(appointmentId, user.id);
         return Response.ok(messageMapper.toDtoList(messages)).build();
     }
 
     @POST
     @Path("/")
-    public Response sendMessage(@PathParam("id") Long eventId, @RequestBody MessageDto messageDto) {
+    public Response sendMessage(@PathParam("id") Long appointmentId, @RequestBody MessageDto messageDto) {
         User user = this.userService.getUser(jwt.getSubject());
-        if (!this.eventAccessService.userHasAccessToEvent(user, eventId)) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-        Message newMessage = this.messageService.sendMessage(eventId, messageDto.title(), messageDto.message(), user);
-        this.webPushService.sendEventMessageNotification(messageDto.title(), messageDto.message(), user, this.eventAccessService.getAttendees(eventId));
+
+        Message newMessage = this.messageService.sendMessage(appointmentId, messageDto.body(), user.id);
+
         return Response.ok(this.messageMapper.toDto(newMessage)).build();
     }
 }

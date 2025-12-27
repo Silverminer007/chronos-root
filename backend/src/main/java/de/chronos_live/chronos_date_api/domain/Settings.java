@@ -1,9 +1,7 @@
 package de.chronos_live.chronos_date_api.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -13,10 +11,31 @@ import lombok.EqualsAndHashCode;
 public class Settings extends PanacheEntity {
     @OneToOne(cascade = CascadeType.REMOVE)
     private User user;
-    private boolean eventChangedNotifications;
-    private boolean contactsNotifications;
-    private boolean groupMembershipNotifications;
-    private boolean messagesNotifications;
-    private boolean attendanceStatusChangedNotifications;
-    private boolean eventRemindersNotifications;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_moved")
+    private AppointmentNotificationSetting appointmentMoved;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_message")
+    private AppointmentNotificationSetting appointmentMessage;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_cancelled")
+    private AppointmentNotificationSetting appointmentCancelled;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_participant_added")
+    private AppointmentNotificationSetting appointmentParticipantAdded;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_participation_status_changed")
+    private AppointmentNotificationSetting appointmentParticipationStatusChanged;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_participation_invalid")
+    private AppointmentNotificationSetting appointmentParticipationInvalid;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_participation_status_pending")
+    private AppointmentNotificationSetting appointmentParticipationStatusPending;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "appointment_reminder")
+    private AppointmentNotificationSetting appointmentReminder;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "group_member_added")
+    private NotificationSetting groupMemberAdded;
 }

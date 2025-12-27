@@ -11,11 +11,12 @@ import java.time.Instant;
 @EqualsAndHashCode(callSuper = true)
 @Entity
 public class Message extends PanacheEntity {
-    private String title;
-    private String message;
+    private String body;
     @ManyToOne
-    private Event event;
+    @JoinColumn(name = "appointment_id")
+    private Appointment appointment;
     @ManyToOne
+    @JoinColumn(name = "sender_id")
     private User sender;
     private Instant timeStamp;
 }

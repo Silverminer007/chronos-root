@@ -2,11 +2,13 @@ package de.chronos_live.chronos_date_api.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.config.PushConfig;
 import de.chronos_live.chronos_date_api.domain.*;
-import de.chronos_live.chronos_date_api.mapper.EventMapper;
+import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -20,7 +22,7 @@ import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
+import java.util.function.Predicate;
 
 @ApplicationScoped
 @Transactional
@@ -29,6 +31,9 @@ public class WebPushService {
 
     @Inject
     PushSubscriptionService subscriptionService;
+
+    @Inject
+    SettingsService settingsService;
 
     private PushService push;
 
@@ -39,10 +44,19 @@ public class WebPushService {
     ObjectMapper objectMapper;
 
     @Inject
-    EventMapper eventMapper;
+    AppointmentMapper appointmentMapper;
 
     @Inject
     GroupMapper groupMapper;
+
+    @Inject
+    AppointmentParticipationQueryService appointmentParticipationQueryService;
+
+    @Inject
+    MessageQueryService messageQueryService;
+
+    @Inject
+    GroupQueryService groupQueryService;
 
     @jakarta.annotation.PostConstruct
     void init() {
@@ -62,6 +76,14 @@ public class WebPushService {
 
     public String getPublicKey() {
         return config.getPublicKey();
+    }
+
+    public void sendToUser(Long userId, String title, String body) {
+        JsonObject payload = Json.createObjectBuilder()
+                .add("title", title)
+                .add("body", body)
+                .build();
+        this.sendNotification(userId, payload.toString());
     }
 
     private void sendNotification(Long userId, String payload) {
@@ -85,132 +107,275 @@ public class WebPushService {
         });
     }
 
-    private String eventToJson(Event event) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(this.eventMapper.toDto(event));
+    private String getAndParseAppointment(Long appointmentId) {
+        Appointment appointment = Appointment.findById(appointmentId);
+        if (appointment == null) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(this.appointmentMapper.toDto(appointment));
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Failed to parse appointment while trying to send notification", e);
+            return null;
+        }
     }
 
-    private String groupToJson(Group group) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(this.groupMapper.toDto(group));
-    }
-    
-    private void sendToAdmin(String subject) {
-        
+    private String getAndParseGroup(Long groupId) {
+        Group group = Group.findById(groupId);
+        if (group == null) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(this.groupMapper.toDto(group));
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Failed to parse group while trying to send notification", e);
+            return null;
+        }
     }
 
-    public void sendToUser(Long userId, String title, String body) {
-        JsonObject payload = Json.createObjectBuilder()
-                .add("title", title)
-                .add("body", body)
-                .build();
-        this.sendNotification(userId, payload.toString());
-    }
+    private void sendToParticipants(Long appointmentId, Predicate<AppointmentParticipation> sendTest, String payload) {
+        List<AppointmentParticipation> appointmentParticipationList =
+                this.appointmentParticipationQueryService.getParticipants(appointmentId);
 
-    public void sendEventMessageNotification(String messageTitle, String messageBody, User sender, Set<User> recipients) {
-        // TODO Wir sollten wahrscheinlich noch Absender und zugehöriges Event irgendwie in die Nachricht einfügen
-        for (User recipient : recipients) {
-            if (Objects.equals(sender.id, recipient.id)) {
+        for (AppointmentParticipation participation : appointmentParticipationList) {
+            if (!sendTest.test(participation)) {
                 continue;
             }
-            sendToUser(recipient.id, messageTitle, messageBody);
+
+            this.sendNotification(participation.getUser().id, payload);
         }
     }
 
-    public void sendEventMovedNotification(Event newEvent, Event oldEvent, Set<User> users) {
-        String newEventJson;
-        String oldEventJson;
-        try {
-            newEventJson = eventToJson(newEvent);
-            oldEventJson = eventToJson(oldEvent);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    private void sendToMembers(Long groupId, Predicate<GroupMember> sendTest, String payload) {
+        List<GroupMember> groupMemberList = this.groupQueryService.getGroupMembers(groupId);
+
+        for (GroupMember groupMember : groupMemberList) {
+            if (!sendTest.test(groupMember)) {
+                continue;
+            }
+
+            this.sendNotification(groupMember.getUser().id, payload);
+        }
+    }
+
+    void onAppointmentMessageSent(@Observes MessageSentEvent event) {
+        Message message = this.messageQueryService.getMessage(event.messageId());
+        if (message == null) {
             return;
         }
+
+        String notificationTitle = "%s schreibt zu %s"
+                .formatted(message.getSender().getName(), message.getAppointment().getName());
+
+        JsonObject payload = Json.createObjectBuilder()
+                .add("title", notificationTitle)
+                .add("body", message.getBody())
+                .build();
+
+        this.sendToParticipants(message.getAppointment().id,
+                ap ->
+                        !Objects.equals(ap.getUser().id, message.getSender().id)
+                                || this.settingsService.sendAppointmentMessageSentNotification(ap),
+                payload.toString());
+    }
+
+    void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
+        User actingUser = User.findById(event.actingUserId());
+        if (actingUser == null) {
+            return;
+        }
+
+        String appointmentJson = getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
+            return;
+        }
+
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "EVENT_MOVED")
-                .add("new_event", newEventJson)
-                .add("old_event", oldEventJson)
+                .add("new_event", appointmentJson)
+                .add("old_start_time", event.oldStartTime().toString())
+                .add("old_end_time", event.oldEndTime().toString())
+                .add("acting_user_id", event.actingUserId())
+                .add("acting_user_name", actingUser.getName())
                 .build();
-        for (User user : users) {
-            this.sendNotification(user.id, payload.toString());
-        }
+
+        this.sendToParticipants(event.appointmentId(),
+                ap ->
+                        !Objects.equals(ap.getUser().id, event.actingUserId())
+                                || this.settingsService.sendAppointmentMovedNotification(ap),
+                payload.toString());
     }
 
-    public void sendEventCancelledNotification(Event event, User whoCancelled, Set<User> users) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
+        User actingUser = User.findById(event.actingUserId());
+        if (actingUser == null) {
             return;
         }
+
+        String appointmentJson = getAndParseAppointment(event.cancelledAppointmentId());
+        if (appointmentJson == null) {
+            return;
+        }
+
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "EVENT_CANCELLED")
-                .add("event", eventJson)
-                .add("who_cancelled", whoCancelled.getName())
+                .add("event", appointmentJson)
+                .add("who_cancelled", actingUser.getName())
                 .build();
-        for (User user : users) {
-            this.sendNotification(user.id, payload.toString());
-        }
+
+        this.sendToParticipants(event.cancelledAppointmentId(),
+                ap ->
+                        !Objects.equals(ap.getUser().id, event.actingUserId())
+                                || this.settingsService.sendAppointmentCancelledNotification(ap),
+                payload.toString());
     }
 
-    public void sendNewEventAttendeeNotification(Event event, String newAttendeeName, String attendeeType, String newAttendeeRole, Set<User> users) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentParticipantAdded(@Observes AppointmentParticipationAddedEvent event) {
+        User actingUser = User.findById(event.actingUserId());
+        if (actingUser == null) {
             return;
         }
+
+        User newParticipant = User.findById(event.targetUserId());
+        if (newParticipant == null) {
+            return;
+        }
+        String newParticipantRole =
+                this.appointmentParticipationQueryService
+                        .getUserRole(event.appointmentId(), event.targetUserId())
+                        .toString();
+
+        String appointmentJson = getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
+            return;
+        }
+
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "NEW_ATTENDEE")
-                .add("event", eventJson)
-                .add("new_attendee", newAttendeeName)
-                .add("attendee_type", attendeeType)
-                .add("attendee_role", newAttendeeRole)
+                .add("event", appointmentJson)
+                .add("new_attendee", newParticipant.getName())
+                .add("attendee_type", "user")
+                .add("attendee_role", newParticipantRole)
                 .build();
-        for (User user : users) {
-            this.sendNotification(user.id, payload.toString());
-        }
+
+        this.sendToParticipants(event.appointmentId(),
+                ap ->
+                        !Objects.equals(ap.getUser().id, event.actingUserId())
+                                || this.settingsService.sendAppointmentParticipantAddedEventNotification(ap),
+                payload.toString());
     }
 
-    public void sendNewEventInviteNotification() {
-    }
-
-    public void sendEventInviteAnsweredNotification() {
-    }
-
-    public void sendNewFriendshipInviteNotification() {
-    }
-
-    public void sendFriendshipInviteAnsweredNotification() {
-    }
-
-    public void sendFriendshipCancelledNotification() {
-    }
-
-    public void sendNewGroupMemberNotification(Group group, User newMember, Set<User> members) {
-        String groupJson;
-        try {
-            groupJson = groupToJson(group);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse group. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentGroupParticipantAdded(@Observes AppointmentGroupParticipationAddedEvent event) {
+        User actingUser = User.findById(event.actingUserId());
+        if (actingUser == null) {
             return;
         }
+
+        Group newGroupParticipant = Group.findById(event.groupId());
+        if (newGroupParticipant == null) {
+            return;
+        }
+
+        String appointmentJson = getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
+            return;
+        }
+
+        JsonObject payload = Json.createObjectBuilder()
+                .add("type", "NEW_ATTENDEE")
+                .add("event", appointmentJson)
+                .add("new_attendee", newGroupParticipant.getGroupName())
+                .add("attendee_type", "group")
+                .build();
+
+        this.sendToParticipants(event.appointmentId(),
+                ap ->
+                        !Objects.equals(ap.getUser().id, event.actingUserId())
+                                || this.settingsService.sendAppointmentParticipantAddedEventNotification(ap),
+                payload.toString());
+    }
+
+    void onFriendshipRequestSent(@Observes FriendshipRequestSentEvent event) {
+        JsonObject payload = Json.createObjectBuilder()
+                .add("type", "NEW_FRIENDSHIP_REQUEST")
+                .add("requester_id", event.requesterId())
+                .add("requester_name", event.requesterName())
+                .add("request_id", event.requestId())
+                .build();
+
+        this.sendNotification(event.addresseeId(), payload.toString());
+    }
+
+    void onFriendshipAccepted(@Observes FriendshipAcceptedEvent event) {
+        User addressee = User.findById(event.addresseeId());
+        if (addressee == null) {
+            return;
+        }
+
+        JsonObject payload = Json.createObjectBuilder()
+                .add("type", "FRIENDSHIP_ACCEPTED")
+                .add("addressee_id", event.addresseeId())
+                .add("addressee_name", addressee.getName())
+                .build();
+
+        this.sendNotification(event.addresseeId(), payload.toString());
+    }
+
+    void onFriendshipDeclined(@Observes FriendshipDeclinedEvent event) {
+        User addressee = User.findById(event.addresseeId());
+        if (addressee == null) {
+            return;
+        }
+
+        JsonObject payload = Json.createObjectBuilder()
+                .add("type", "FRIENDSHIP_DECLINED")
+                .add("addressee_id", event.addresseeId())
+                .add("addressee_name", addressee.getName())
+                .build();
+
+        this.sendNotification(event.addresseeId(), payload.toString());
+    }
+
+    void onFriendshipRemoved(@Observes FriendshipRemovedEvent event) {
+        User actingUser = User.findById(event.actingUserId());
+        if (actingUser == null) {
+            return;
+        }
+
+        JsonObject payload = Json.createObjectBuilder()
+                .add("type", "FRIENDSHIP_REMOVED")
+                .add("acting_user_id", event.actingUserId())
+                .add("acting_user_name", actingUser.getName())
+                .build();
+
+        this.sendNotification(event.friendId(), payload.toString());
+    }
+
+    void onGroupMemberAdded(@Observes GroupMemberAddedEvent event) {
+        User newMember = User.findById(event.newMemberId());
+        if (newMember == null) {
+            return;
+        }
+
+        String groupJson = getAndParseGroup(event.groupId());
+        if (groupJson == null) {
+            return;
+        }
+
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "NEW_GROUP_MEMBER")
                 .add("group", groupJson)
                 .add("new_member", newMember.getName())
                 .build();
-        for (User user : members) {
-            if (Objects.equals(user.id, newMember.id)) {
-                continue;
-            }
-            this.sendNotification(user.id, payload.toString());
-        }
+        this.sendToMembers(
+                event.groupId(),
+                gm ->
+                        !Objects.equals(event.actingUserId(), gm.getUser().id)
+                                || this.settingsService.sendGroupMemberAddedNotification(gm),
+                payload.toString());
+
         JsonObject newMemberMessage = Json.createObjectBuilder()
                 .add("type", "ADDED_TO_GROUP")
                 .add("group", groupJson)
@@ -219,121 +384,105 @@ public class WebPushService {
         this.sendNotification(newMember.id, newMemberMessage.toString());
     }
 
-    public void sendLeftGroupNotification(Group group, User oldMember, Set<User> members) {
-        String groupJson;
-        try {
-            groupJson = groupToJson(group);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse group. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+        User actingUser = User.findById(event.actingUserId());
+        if (actingUser == null) {
             return;
         }
-        JsonObject payload = Json.createObjectBuilder()
-                .add("type", "GROUP_MEMBER_LEFT")
-                .add("group", groupJson)
-                .add("old_member", oldMember.getName())
-                .build();
-        for (User user : members) {
-            this.sendNotification(user.id, payload.toString());
-        }
-    }
 
-    public void sendAttendanceStatusChangedNotification(Event event, Attendance attendance, Set<User> users) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+        String appointmentJson = getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
             return;
         }
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "ATTENDANCE_STATUS_CHANGED")
-                .add("event", eventJson)
-                .add("new_attendance_status", attendance.getStatus().toString())
-                .add("user_name", attendance.getUser().getName())
+                .add("event", appointmentJson)
+                .add("new_attendance_status", event.newParticipationStatus().toString())
+                .add("user_name", actingUser.getName())
                 .build();
-        for (User user : users) {
-            this.sendNotification(user.id, payload.toString());
-        }
+
+        this.sendToParticipants(event.appointmentId(),
+                ap ->
+                        !Objects.equals(event.actingUserId(), ap.getUser().id)
+                                || this.settingsService.sendAppointmentParticipationStatusChangedNotification(ap),
+                payload.toString());
     }
 
-    public void sendNotEnoughAttendeesNotification(Event event, List<Attendance> attendanceList, Set<User> users) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentParticipationInvalid(@Observes AppointmentParticipationInvalidEvent event) {
+        String appointmentJson = this.getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
             return;
         }
-        long approved = attendanceList.stream().filter(a -> a.getStatus().equals(AttendanceStatus.APPROVED)).count();
-        long rejected = attendanceList.stream().filter(a -> a.getStatus().equals(AttendanceStatus.REJECTED)).count();
-        long pending = attendanceList.stream().filter(a -> a.getStatus().equals(AttendanceStatus.PENDING)).count();
+
+        ParticipationStatistik participationStatistik =
+                this.appointmentParticipationQueryService.getParticipationStatistik(event.appointmentId());
+
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "NOT_ENOUGH_ATTENDEES")
-                .add("event", eventJson)
-                .add("approved_attendances", approved)
-                .add("rejected_attendances", rejected)
-                .add("pending_attendances", pending)
+                .add("event", appointmentJson)
+                .add("approved_attendances", participationStatistik.approvedCount())
+                .add("rejected_attendances", participationStatistik.rejectedCount())
+                .add("pending_attendances",
+                        participationStatistik.participantCount()
+                                - participationStatistik.approvedCount()
+                                - participationStatistik.rejectedCount())
                 .build();
-        for (User user : users) {
-            this.sendNotification(user.id, payload.toString());
-        }
+        this.sendToParticipants(event.appointmentId(),
+                this.settingsService::sendAppointmentParticipationInvalidNotification,
+                payload.toString());
     }
 
-    public void sendAttendanceStatusPendingReminderNotification(Event event, Set<User> recipients) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentParticipationStatusPendingReminder(@Observes AppointmentParticipationStatusPendingReminderEvent event) {
+        String appointmentJson = this.getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
             return;
         }
+
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "ATTENDANCE_STATUS_PENDING")
-                .add("event", eventJson)
+                .add("event", appointmentJson)
                 .build();
-        for(User recipient : recipients) {
-            this.sendNotification(recipient.id, payload.toString());
-        }
+
+        this.sendToParticipants(event.appointmentId(),
+                this.settingsService::sendAppointmentParticipationStatusPendingReminderNotification,
+                payload.toString());
     }
 
-    public void sendEventReminderNotification(Event event, Set<User> users) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentReminder(@Observes AppointmentReminderEvent event) {
+        String appointmentJson = this.getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
             return;
         }
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "EVENT_REMINDER")
-                .add("event", eventJson)
+                .add("event", appointmentJson)
                 .build();
-        for (User user : users) {
-            this.sendNotification(user.id, payload.toString());
-        }
+
+        this.sendToParticipants(event.appointmentId(),
+                this.settingsService::sendAppointmentReminderNotification,
+                payload.toString());
     }
 
-    public void sendAttendanceStatusRecheckNotification(Event event, List<Attendance> attendances) {
-        String eventJson;
-        try {
-            eventJson = eventToJson(event);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse event. Trying to send notification", e);
-            this.sendToAdmin("Failed to send notification");
+    void onAppointmentParticipationStatusRecheckRequested(@Observes AppointmentParticipationStatusRecheckRequestedEvent event) {
+        String appointmentJson = this.getAndParseAppointment(event.appointmentId());
+        if (appointmentJson == null) {
             return;
         }
-        for (Attendance attendance : attendances) {
+        List<AppointmentParticipation> appointmentParticipationList =
+                this.appointmentParticipationQueryService.getParticipants(event.appointmentId());
+
+        for (AppointmentParticipation participation : appointmentParticipationList) {
+            if (!this.settingsService.sendAppointmentParticipationStatusRecheckRequestedNotification(participation)) {
+                continue;
+            }
+
             JsonObject payload = Json.createObjectBuilder()
                     .add("type", "ATTENDANCE_STATUS_RECHECK")
-                    .add("event", eventJson)
-                    .add("attendance_status", attendance.getStatus().toString())
+                    .add("event", appointmentJson)
+                    .add("attendance_status", participation.getStatus().toString())
                     .build();
-            this.sendNotification(attendance.getUser().id, payload.toString());
+
+            this.sendNotification(participation.getUser().id, payload.toString());
         }
     }
 }

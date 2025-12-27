@@ -4,6 +4,8 @@ import de.chronos_live.chronos_date_api.application.PushSubscriptionService;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.application.WebPushService;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.dto.PushSubscriptionDto;
+import de.chronos_live.chronos_date_api.dto.PushSubscriptionStatusDto;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;

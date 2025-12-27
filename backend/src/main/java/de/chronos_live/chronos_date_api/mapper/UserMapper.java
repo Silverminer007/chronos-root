@@ -1,7 +1,7 @@
 package de.chronos_live.chronos_date_api.mapper;
 
 import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.presentation.UserDto;
+import de.chronos_live.chronos_date_api.dto.UserDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;

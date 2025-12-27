@@ -1,9 +1,11 @@
 package de.chronos_live.chronos_date_api.presentation;
 
+import de.chronos_live.chronos_date_api.application.GroupQueryService;
 import de.chronos_live.chronos_date_api.application.GroupService;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.UserMapper;
 import jakarta.annotation.security.PermitAll;
@@ -15,8 +17,6 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 
 @Path("/api/v2/groups")
 @PermitAll
@@ -27,6 +27,8 @@ public class GroupsResource {
     UserService userService;
     @Inject
     GroupService groupService;
+    @Inject
+    GroupQueryService groupQueryService;
     @Inject
     JsonWebToken jwt;
 
@@ -39,99 +41,55 @@ public class GroupsResource {
     @Path("/")
     public Response getGroups(@QueryParam("members") Boolean members, @QueryParam("search") String search) {
         User user = this.userService.getUser(jwt.getSubject());
-        List<Group> groups;
-        if(search == null) {
-            groups = this.groupService.getGroups(user);
-        } else {
-            groups = this.groupService.searchGroups(user, search);
-        }
-
-        if (members == null || !members) {
-            return Response.ok(groupMapper.toDtoListWithOwner(groups, user.id)).build();
-        }
-        return Response.ok(groupMapper.toDtoWithMembersListWithOwner(groups, user.id)).build();
+        List<Group> groups = this.groupQueryService.searchGroups(user, search, members != null && members);
+        return Response.ok(groupMapper.toDtoList(groups)).build();
     }
 
     @POST
     @Path("/")
     public Response postGroup(@RequestBody GroupDto groupDto) {
         User user = this.userService.getUser(jwt.getSubject());
-
-        try {
-            Group group = new Group();
-            group.setGroupName(groupDto.name());
-            this.groupService.createGroup(user, group);
-            return Response.ok(groupMapper.toDtoWithOwner(group, user.id)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+        Group createdGroup = this.groupService.createGroup(user.id, groupDto);
+        return Response.ok(groupMapper.toDto(createdGroup)).build();
     }
 
     @DELETE
     @Path("/{group}")
     public Response deleteGroup(@PathParam("group") Long groupId) {
         User user = this.userService.getUser(jwt.getSubject());
-        try {
-            this.groupService.deleteGroup(user, groupId);
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+        this.groupService.deleteGroup(user.id, groupId);
         return Response.noContent().build();
     }
 
     @PATCH
     @Path("/{group}")
     public Response patchGroup(@PathParam("group") Long groupId, @RequestBody GroupDto groupDto) {
-        if (groupDto.id() != null && !Objects.equals(groupId, groupDto.id())) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
         User user = this.userService.getUser(jwt.getSubject());
-        try {
-            this.groupService.editGroupName(user, groupId, groupDto.name());
-            return Response.noContent().build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
-    }
-
-    @POST
-    @Path("/{group}/users")
-    public Response postUsers(@PathParam("group") Long groupId, @RequestBody UserDto userDto) {
-        User user = this.userService.getUser(jwt.getSubject());
-
-        User groupUser = userMapper.toEntity(userDto);
-        try {
-            this.groupService.addGroupMember(user, groupId, groupUser);
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
-        return Response.noContent().build();
+        Group updatedGroup = this.groupService.editGroup(user.id, groupId, groupDto);
+        return Response.ok(this.groupMapper.toDto(updatedGroup)).build();
     }
 
     @GET
     @Path("/{group}/users")
     public Response getUsers(@PathParam("group") Long groupId) {
         User user = this.userService.getUser(jwt.getSubject());
+        List<User> users = this.groupService.getGroupUsers(user.id, groupId);
+        return Response.ok(userMapper.toDtoList(users.stream().toList())).build();
+    }
 
-        try {
-            Set<User> users = this.groupService.getGroupUsers(user, groupId);
-            return Response.ok(userMapper.toDtoList(users.stream().toList())).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+    @POST
+    @Path("/{groupId}/user/{userId}")
+    public Response postUsers(@PathParam("groupId") Long groupId, @PathParam("userId") Long userId) {
+        User user = this.userService.getUser(jwt.getSubject());
+        this.groupService.addGroupMember(user.id, groupId, userId);
+        return Response.noContent().build();
     }
 
     @DELETE
-    @Path("/{group}/users")
-    public Response deleteUsers(@PathParam("group") Long groupId, @RequestBody UserDto userDto) {
+    @Path("/{groupId}/user/{userId}")
+    public Response deleteUsers(@PathParam("groupId") Long groupId, @PathParam("userId") Long userId) {
         User user = this.userService.getUser(jwt.getSubject());
-
-        User groupUser = userMapper.toEntity(userDto);
-        try {
-            this.groupService.removeGroupMember(user, groupId, groupUser);
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+        this.groupService.removeGroupMember(user.id, groupId, userId);
         return Response.noContent().build();
     }
 }

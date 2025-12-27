@@ -15,6 +15,7 @@ public class User extends PanacheEntity {
     private String lastName;
     private String email;
     private String oidcId;
+    private String profilePictureUrl;
 
     public String getName() {
         return firstName + " " + lastName;

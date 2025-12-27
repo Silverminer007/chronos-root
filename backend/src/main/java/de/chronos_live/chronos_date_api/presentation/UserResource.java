@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.presentation;
 
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.dto.PrincipalDto;
 import de.chronos_live.chronos_date_api.mapper.PrincipalMapper;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;

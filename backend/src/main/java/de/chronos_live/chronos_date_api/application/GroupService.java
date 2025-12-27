@@ -1,8 +1,15 @@
 package de.chronos_live.chronos_date_api.application;
 
+import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.domain.Group;
+import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.dto.GroupDto;
+import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import de.chronos_live.chronos_date_api.exception.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -12,91 +19,98 @@ import java.util.*;
 @Transactional
 public class GroupService {
     @Inject
-    ContactService contactService;
+    AuthorizationService authorizationService;
     @Inject
-    WebPushService webPushService;
+    Event<GroupMemberAddedEvent> groupMemberAddedEvent;
+    @Inject
+    Event<GroupMemberRemovedEvent> groupMemberRemovedEvent;
+    @Inject
+    Event<GroupCreatedEvent> groupCreatedEvent;
+    @Inject
+    Event<GroupDeletedEvent> groupDeletedEvent;
+    @Inject
+    Event<GroupNameChangedEvent> groupNameChangedEvent;
 
-    public List<Group> getGroups(User user) {
-        return Group.find("?1 MEMBER OF members", user).list();
+    void onGroupCreated(@Observes GroupCreatedEvent groupCreatedEvent) {
+        GroupMember groupMember = new GroupMember();
+        User user = new User();
+        user.id = groupCreatedEvent.actingUserId();
+        Group group = new Group();
+        group.id = groupCreatedEvent.groupId();
+        groupMember.setGroup(group);
+        groupMember.setUser(user);
+        groupMember.persist();
     }
 
-    public List<Group> searchGroups(User user, String searchQuery) {
-        searchQuery = "%" + searchQuery + "%";
-        return Group.find("?1 MEMBER OF members AND lower(groupName) LIKE lower(?2)", user, searchQuery).list();
+    public void addGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
+        this.authorizationService.requireAddGroupMember(groupId, actingUserId, targetUserId);
+        if(GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId).count() > 0) {
+            throw new ValidationException("user", "This user is already a member of this group");
+        }
+        if(Group.findById(groupId) == null) {
+            throw new ResourceNotFoundException("group", groupId);
+        }
+        GroupMember groupMember = new GroupMember();
+        User user = new User();
+        user.id = targetUserId;
+        Group group = new Group();
+        group.id = groupId;
+        groupMember.setGroup(group);
+        groupMember.setUser(user);
+        groupMember.persist();
+        this.groupMemberAddedEvent.fireAsync(new GroupMemberAddedEvent(actingUserId, targetUserId, actingUserId));
     }
 
-    public void addGroupMember(User user, Long groupId, User newMember) {
-        Group group = Group.findById(groupId);
-        if (group == null) {
-            throw new IllegalArgumentException("Group not found");
-        }
-        if (!group.getOwner().equals(user)) {
-            throw new IllegalArgumentException("User is not the owner of the group");
-        }
-        if(this.contactService.getContacts(user).stream().noneMatch(c -> Objects.equals(c.id, newMember.id))) {
-            throw new IllegalArgumentException("You can only add users who are in your contacts");
-        }
-        group.getMembers().add(newMember);
-        this.webPushService.sendNewGroupMemberNotification(group, newMember, group.getMembers());
+    public void removeGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
+        this.authorizationService.requireRemoveGroupMember(groupId, actingUserId, targetUserId);
+        GroupMember groupMember = (GroupMember) GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId)
+                .firstResultOptional().orElseThrow(() -> new ValidationException("This user is not member of this group"));
+        groupMember.delete();
+        this.groupMemberRemovedEvent.fireAsync(new GroupMemberRemovedEvent(groupId, targetUserId, actingUserId));
     }
 
-    public void removeGroupMember(User user, Long groupId, User oldMember) {
-        Group group = Group.findById(groupId);
-        if (group == null) {
-            throw new IllegalArgumentException("Group not found");
-        }
-        if (!group.getOwner().equals(user)) {
-            throw new IllegalArgumentException("User is not the owner of the group");
-        }
-        group.getMembers().remove(oldMember);
+    public List<User> getGroupUsers(Long requestingUserId, Long groupId) {
+        this.authorizationService.requireReadGroupMembers(groupId, requestingUserId);
+        return GroupMember.list("SELECT gm.user FROM GroupMember gm WHERE gm.group.id = ?1", groupId);
     }
 
-    public Set<User> getGroupUsers(User user, Long groupId) {
-        Group group = Group.findById(groupId);
-        if (group == null) {
-            throw new IllegalArgumentException("Group not found");
+    public Group createGroup(Long actingUserId, GroupDto createGroupDto) {
+        Group group = new Group();
+        if (createGroupDto.getName() == null || createGroupDto.getName().isBlank()) {
+            throw new ValidationException("Group name is required");
         }
-        if (group.getMembers() == null || !group.getMembers().stream().map(m -> m.id).toList().contains(user.id)) {
-            throw new IllegalArgumentException("User is not a member of the group");
-        }
-        return group.getMembers();
-    }
+        group.setGroupName(createGroupDto.getName());
 
-    public void createGroup(User user, Group group) {
-        if (group.getGroupName() == null || group.getGroupName().isBlank()) {
-            throw new IllegalArgumentException("Group name is required");
-        }
-        if (group.getMembers() == null) {
-            group.setMembers(new HashSet<>());
-        }
-        group.getMembers().add(user);
-
+        User user = new User();
+        user.id = actingUserId;
         group.setOwner(user);
         group.persist();
+
+        this.groupCreatedEvent.fireAsync(new GroupCreatedEvent(group.id, user.id));
+        return group;
     }
 
-    public void editGroupName(User user, Long groupId, String newName) {
-        if (newName == null || newName.isBlank()) {
-            throw new IllegalArgumentException("Group name is required");
+    public Group editGroup(Long actingUserId, Long groupId, GroupDto groupDto) {
+        this.authorizationService.requireEditGroup(groupId, actingUserId);
+        if (groupDto.getName() == null || groupDto.getName().isBlank()) {
+            throw new ValidationException("Group name is required");
         }
-        Group g = Group.findById(groupId);
-        if (g == null) {
-            throw new IllegalArgumentException("Group not found");
-        }
-        if (!g.getOwner().equals(user)) {
-            throw new IllegalArgumentException("User is not the owner of the group");
-        }
-        g.setGroupName(newName);
-    }
-
-    public void deleteGroup(User user, Long groupId) {
         Group group = Group.findById(groupId);
         if (group == null) {
-            throw new IllegalArgumentException("Group not found");
+            throw new ResourceNotFoundException("group", groupId);
         }
-        if (!group.getOwner().equals(user)) {
-            throw new IllegalArgumentException("User is not the owner of the group");
+        this.groupNameChangedEvent.fireAsync(new GroupNameChangedEvent(groupId, group.getGroupName(), groupDto.getName(), actingUserId));
+        group.setGroupName(groupDto.getName());
+        return group;
+    }
+
+    public void deleteGroup(Long actingUserId, Long groupId) {
+        this.authorizationService.requireDeleteGroup(groupId, actingUserId);
+        Group group = Group.findById(groupId);
+        if (group == null) {
+            throw new ResourceNotFoundException("group", groupId);
         }
         Group.deleteById(group.id);
+        this.groupDeletedEvent.fireAsync(new GroupDeletedEvent(groupId, actingUserId));
     }
 }
