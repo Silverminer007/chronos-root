@@ -9,6 +9,7 @@ import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.FriendDto;
 import de.chronos_live.chronos_date_api.dto.FriendshipRequestDto;
+import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
@@ -41,6 +42,22 @@ public class FriendshipService {
 
     @Inject
     Event<FriendshipRemovedEvent> friendshipRemovedEvent;
+
+    public void sendFriendshipRequest(Long requesterId, Long addresseeId, String email) {
+        if (addresseeId == null) {
+            if (email == null) {
+                throw new BadRequestException("You must either set addressee_id or email");
+            }
+
+            User addressee =
+                    (User) User.find("email = ?1", email)
+                            .firstResultOptional()
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException("Es wurde kein User mit der E-Mail Adresse " + email + " gefunden"));
+            addresseeId = addressee.id;
+        }
+        this.sendFriendshipRequest(requesterId, addresseeId);
+    }
 
     /**
      * Sendet eine Freundschaftsanfrage
@@ -96,7 +113,7 @@ public class FriendshipService {
 
         // Event feuern
         User requester = User.findById(requesterId);
-        this.friendshipRequestEvent.fireAsync(new FriendshipRequestSentEvent(
+        this.friendshipRequestEvent.fire(new FriendshipRequestSentEvent(
                 request.id,
                 requesterId,
                 addresseeId,
@@ -131,7 +148,7 @@ public class FriendshipService {
         request.setRespondedAt(Instant.now());
 
         // Event feuern
-        this.friendshipAcceptedEvent.fireAsync(new FriendshipAcceptedEvent(
+        this.friendshipAcceptedEvent.fire(new FriendshipAcceptedEvent(
                 request.id,
                 request.getRequesterId(),
                 request.getAddresseeId()
@@ -245,7 +262,7 @@ public class FriendshipService {
 
         // Lade User-Daten
         Map<Long, User> users = User.findByIds(friendIds).stream()
-                .collect(Collectors.toMap(u -> ((User)u).id, u -> (User) u));
+                .collect(Collectors.toMap(u -> ((User) u).id, u -> (User) u));
 
         // Erstelle Mapping: friendId -> friendship (für friendsSince)
         Map<Long, FriendshipRequest> friendshipMap = friendships.stream()
@@ -262,11 +279,11 @@ public class FriendshipService {
                     if (friend == null) return null;
 
                     FriendDto dto = new FriendDto();
-                    dto.setUserId(friend.id);
+                    dto.setUser_id(friend.id);
                     dto.setName(friend.getName());
                     dto.setEmail(friend.getEmail());
-                    dto.setProfilePictureUrl(friend.getProfilePictureUrl());
-                    dto.setFriendsSince(friendshipMap.get(friendId).getRespondedAt().toString());
+                    dto.setProfile_picture_url(friend.getProfilePictureUrl());
+                    dto.setFriends_since(friendshipMap.get(friendId).getRespondedAt().toString());
                     return dto;
                 })
                 .filter(Objects::nonNull)
@@ -317,7 +334,7 @@ public class FriendshipService {
 
         // Lade User-Daten
         Map<Long, User> users = User.findByIds(userIds).stream()
-                .collect(Collectors.toMap(u -> ((User)u).id, u -> (User) u));
+                .collect(Collectors.toMap(u -> ((User) u).id, u -> (User) u));
 
         // Baue DTOs
         return requests.stream()
@@ -334,12 +351,19 @@ public class FriendshipService {
                     dto.setProfilePictureUrl(otherUser.getProfilePictureUrl());
                     dto.setStatus(r.getStatus());
                     dto.setCreatedAt(r.getCreatedAt().toString());
-                    dto.setRespondedAt(r.getRespondedAt().toString());
+                    dto.setRespondedAt(r.getRespondedAt() == null ? null : r.getRespondedAt().toString());
                     dto.setIncoming(incoming);
                     return dto;
                 })
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendshipRequestDto::getCreatedAt).reversed())
                 .collect(Collectors.toList());
+    }
+
+    public List<UserDto> findNonFriends(String search, Long userId) {
+        return this.friendshipRepo.findNonFriends(search, userId)
+                .stream()
+                .map(u -> new UserDto(u.id, u.getFirstName(), u.getLastName()))
+                .toList();
     }
 }

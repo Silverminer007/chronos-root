@@ -5,17 +5,16 @@ import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.FriendDto;
 import de.chronos_live.chronos_date_api.dto.FriendshipRequestDto;
-import de.chronos_live.chronos_date_api.dto.SendFriendshipRequestDto;
+import de.chronos_live.chronos_date_api.dto.UserDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import java.util.List;
 
-@Path("/friendships")
+@Path("/api/v2/friendships")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class FriendshipResource {
@@ -29,15 +28,25 @@ public class FriendshipResource {
     @Inject
     JsonWebToken jwt;
 
+    @GET
+    @Path("/suggestions")
+    public Response findSuggestions(@QueryParam("search") String search) {
+        User user = this.userService.getUser(jwt.getSubject());
+
+        List<UserDto> suggestions = this.friendshipService.findNonFriends(search, user.id);
+
+        return Response.ok(suggestions).build();
+    }
+
     /**
      * Sendet Freundschaftsanfrage
      */
     @POST
     @Path("/requests")
-    public Response sendRequest(@RequestBody SendFriendshipRequestDto dto) {
+    public Response sendRequest(@QueryParam("email") String email, @QueryParam("adresse_id") Long addresseeId) {
         User user = this.userService.getUser(jwt.getSubject());
 
-        friendshipService.sendFriendshipRequest(user.id, dto.getAddresseeId());
+        friendshipService.sendFriendshipRequest(user.id, addresseeId, email);
 
         return Response.status(201).build();
     }

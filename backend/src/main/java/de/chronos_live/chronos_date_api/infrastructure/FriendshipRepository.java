@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.infrastructure;
 
 import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
 import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
+import de.chronos_live.chronos_date_api.domain.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -90,5 +91,24 @@ public class FriendshipRepository implements PanacheRepository<FriendshipRequest
                 "status = ?1 and (requesterId = ?2 or addresseeId = ?2)",
                 FriendshipStatus.ACCEPTED, userId
         ).list();
+    }
+
+    public List<User> findNonFriends(String search, Long userId) {
+        Set<Long> friendIds = getFriendIds(userId);
+        Set<Long> excludedIds = new java.util.HashSet<>(friendIds);
+        excludedIds.add(userId);
+
+        String searchPattern = "%" + search.toLowerCase() + "%";
+
+        return getEntityManager()
+                .createQuery(
+                        "SELECT u FROM User u WHERE " +
+                                "u.id NOT IN :excludedIds AND " +
+                                "(LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE :search " +
+                                "OR LOWER(u.email) LIKE :search)",
+                        User.class)
+                .setParameter("excludedIds", excludedIds)
+                .setParameter("search", searchPattern)
+                .getResultList();
     }
 }
