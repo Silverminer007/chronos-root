@@ -54,7 +54,7 @@ public class AppointmentService {
         appointment.setLastUpdate(Instant.now());
         appointment.persist();
 
-        this.appointmentCreatedEvent.fireAsync(new AppointmentCreatedEvent(appointment.id, creatorId));
+        this.appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorId));
 
         return appointment;
     }
@@ -62,7 +62,7 @@ public class AppointmentService {
     public Appointment updateAppointment(Long appointmentId, Long actingUserId, UpdateAppointmentDto updateAppointmentDto) {
         this.authorizationService.requireUpdateAppointment(appointmentId, actingUserId);
 
-        Appointment appointment = Appointment.findById(appointmentId);
+        Appointment appointment = this.getAppointment(appointmentId, actingUserId, true, true, true);
 
         if (updateAppointmentDto.getName() != null) {
             if (updateAppointmentDto.getName().isBlank()) {
@@ -94,7 +94,7 @@ public class AppointmentService {
             throw new ValidationException("end", "Start date cannot be after end date");
         }
         if(!oldStartTime.equals(newStartTime) || !oldEndTime.equals(newEndTime)) {
-            this.appointmentMovedEvent.fireAsync(new AppointmentMovedEvent(appointment.id,
+            this.appointmentMovedEvent.fire(new AppointmentMovedEvent(appointment.id,
                     oldStartTime, oldEndTime, actingUserId));
         }
         appointment.setStartTime(newStartTime);
@@ -104,7 +104,7 @@ public class AppointmentService {
         }
         appointment.setLastUpdate(Instant.now());
 
-        this.appointmentEditedEvent.fireAsync(
+        this.appointmentEditedEvent.fire(
                 new AppointmentEditedEvent(appointmentId)
         );
 
@@ -119,7 +119,7 @@ public class AppointmentService {
             return;
         }
         appointment.setStatus(AppointmentStatus.DELETED);
-        this.appointmentDeletedEvent.fireAsync(new AppointmentDeletedEvent(appointment.id, actingUserId));
+        this.appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserId));
     }
 
     public void cancelAppointment(Long appointmentId, Long actingUserId) {
@@ -130,14 +130,26 @@ public class AppointmentService {
             return;
         }
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        this.appointmentCancelledEvent.fireAsync(new AppointmentCancelledEvent(appointment.id, actingUserId));
+        this.appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserId));
     }
 
     public Appointment getAppointment(Long appointmentId, Long requestingUserId,
                                          boolean messages, boolean participants, boolean groupParticipants) {
         this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
 
-        return this.appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
+        Appointment appointment = this.appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
 
+        // Set unfetched collections to null to prevent LazyInitializationException in mapper
+        if (!messages) {
+            appointment.setMessages(null);
+        }
+        if (!participants) {
+            appointment.setParticipants(null);
+        }
+        if (!groupParticipants) {
+            appointment.setGroupParticipants(null);
+        }
+
+        return appointment;
     }
 }

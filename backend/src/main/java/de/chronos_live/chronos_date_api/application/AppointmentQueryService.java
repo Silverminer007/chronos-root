@@ -16,16 +16,18 @@ public class AppointmentQueryService {
     AppointmentRepository appointmentRepository;
 
     public Appointment getAppointment(Long appointmentId, boolean messages, boolean participants, boolean groupParticipants) {
-        String sqlQuery = "SELECT a FROM appointment WHERE id = ?1 AND status != ?2";
+        String sqlQuery = "SELECT a FROM Appointment a";
         if (messages) {
-            sqlQuery += " JOIN FETCH a.messages";
+            sqlQuery += " LEFT JOIN FETCH a.messages";
         }
         if (participants) {
-            sqlQuery += " JOIN FETCH a.participants";
+            sqlQuery += " LEFT JOIN FETCH a.participants p LEFT JOIN FETCH p.user";
         }
+
         if (groupParticipants) {
-            sqlQuery += " JOIN FETCH a.groupParticipants";
+            sqlQuery += " LEFT JOIN FETCH a.groupParticipants gp LEFT JOIN FETCH gp.group g LEFT JOIN FETCH g.members";
         }
+        sqlQuery += " WHERE a.id = ?1 AND a.status != ?2";
         return (Appointment) Appointment.find(sqlQuery, appointmentId, AppointmentStatus.DELETED).firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException("appointment", appointmentId));
     }
@@ -34,23 +36,26 @@ public class AppointmentQueryService {
                                     Instant after, Instant before,
                                     int page, int pageSize,
                                     boolean messages, boolean participants, boolean groupParticipants) {
-        String sqlQuery = "SELECT ap FROM appointment_participation WHERE user_id = ?5 JOIN ap.appointment a";
-        sqlQuery += " WHERE endTime > ?1 AND startTime < ?2 AND status != ?3";
-        if (query != null) {
-            sqlQuery += " AND (lower(name) LIKE lower(?4) OR lower(description) LIKE lower(?4) OR lower(venue) LIKE lower(?4))";
-        }
+        String sqlQuery = "SELECT a FROM AppointmentParticipation ap JOIN ap.appointment a";
         if (messages) {
-            sqlQuery += " JOIN FETCH a.messages";
+            sqlQuery += " LEFT JOIN FETCH a.messages";
         }
         if (participants) {
-            sqlQuery += " JOIN FETCH a.participants";
+            sqlQuery += " LEFT JOIN FETCH a.participants part LEFT JOIN FETCH part.user";
         }
         if (groupParticipants) {
-            sqlQuery += " JOIN FETCH a.groupParticipants";
+            sqlQuery += " LEFT JOIN FETCH a.groupParticipants";
         }
-        sqlQuery += " ORDER BY startTime";
+        sqlQuery += " WHERE ap.user.id = ?1 AND a.endTime > ?2 AND a.startTime < ?3 AND a.status != ?4";
+        if (query != null) {
+            sqlQuery += " AND (lower(a.name) LIKE lower(?5) OR lower(a.description) LIKE lower(?5) OR lower(a.venue) LIKE lower(?5))";
+        }
+        sqlQuery += " ORDER BY a.startTime";
 
-        return Appointment.find(sqlQuery, after, before, AppointmentStatus.DELETED, query).list();
+        if (query != null) {
+            return Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED, "%" + query + "%").page(page, pageSize).list();
+        }
+        return Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED).page(page, pageSize).list();
     }
 
     public List<Appointment> getNonCancelledAppointmentsStartingAt(Instant at) {
@@ -86,7 +91,7 @@ public class AppointmentQueryService {
             int maxAppointmentLength,
             int offsetWeeks
     ) {
-        return this.appointmentRepository.findMatchingWeekendAppointments(baseMinutes, maxDays, maxAppointmentLength, offsetWeeks);
+        return this.appointmentRepository.findMatchingWeekdayAppointments(baseMinutes, maxDays, maxAppointmentLength, offsetWeeks);
     }
 
     public List<Appointment> findMatchingWeekendAppointments(
