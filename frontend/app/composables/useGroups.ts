@@ -4,9 +4,9 @@ export function useGroups() {
     async function searchGroups(searchQuery: string) {
         loading.value = true
 
-        const data = await $fetch(`/api/groups/`, {
+        const data = await $fetch(`/api/v2/groups/`, {
             query: {
-                search: searchQuery,
+                search: searchQuery
             }
         })
 
