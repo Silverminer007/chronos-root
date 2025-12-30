@@ -8,6 +8,7 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
@@ -110,8 +111,9 @@ public class MessageService {
 
         Message message = new Message();
         message.setBody(messageText);
-        User user = new User();
-        user.id = actingUserId;
+        User user = (User) User
+                .findByIdOptional(actingUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("user", actingUserId));
         message.setSender(user);
         message.setAppointment(appointment);
         message.setTimeStamp(Instant.now());

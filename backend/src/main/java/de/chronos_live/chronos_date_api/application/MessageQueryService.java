@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Message;
+import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
@@ -13,6 +14,10 @@ public class MessageQueryService {
     }
 
     public Message getMessage(Long messageId) {
-        return Message.findById(messageId);
+        return (Message) Message
+                .find("SELECT m FROM Message m JOIN FETCH m.sender JOIN FETCH m.appointment WHERE m.id = ?1",
+                        messageId)
+                .firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFoundException("message", messageId));
     }
 }

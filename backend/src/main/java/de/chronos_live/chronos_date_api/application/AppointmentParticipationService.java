@@ -36,6 +36,7 @@ public class AppointmentParticipationService {
 
     public void onAppointmentCreated(@Observes AppointmentCreatedEvent appointmentCreatedEvent) {
         AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
+        appointmentParticipation.setStatus(ParticipationStatus.PENDING);
         appointmentParticipation.setRole(UserRole.RESPONSIBLE);
         Appointment appointment = new Appointment();
         appointment.id = appointmentCreatedEvent.appointmentId();
@@ -63,6 +64,7 @@ public class AppointmentParticipationService {
                 continue;
             }
             AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
+            appointmentParticipation.setStatus(ParticipationStatus.PENDING);
             appointmentParticipation.setRole(appointmentGroupParticipation.getRole());
             appointmentParticipation.setAppointment(appointmentGroupParticipation.getAppointment());
             appointmentParticipation.setGroupParticipationId(groupMemberAddedEvent.groupId());
@@ -85,6 +87,7 @@ public class AppointmentParticipationService {
         }
 
         AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
+        appointmentParticipation.setStatus(ParticipationStatus.PENDING);
         appointmentParticipation.setRole(role);
         Appointment appointment = new Appointment();
         appointment.id = appointmentId;
