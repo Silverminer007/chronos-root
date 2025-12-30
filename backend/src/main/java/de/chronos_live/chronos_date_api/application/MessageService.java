@@ -30,7 +30,7 @@ public class MessageService {
     @Inject
     Event<MessageSentEvent> messageSentEvent;
 
-    void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
         User user = User.findById(event.actingUserId());
 
@@ -45,7 +45,7 @@ public class MessageService {
         message.persist();
     }
 
-    void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
+    public void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
         Appointment appointment = Appointment.findById(event.cancelledAppointmentId());
         User user = User.findById(event.actingUserId());
 
@@ -60,7 +60,7 @@ public class MessageService {
         message.persist();
     }
 
-    void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
+    public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
         User user = User.findById(event.actingUserId());
 
@@ -117,7 +117,7 @@ public class MessageService {
         message.setTimeStamp(Instant.now());
         message.persist();
 
-        this.messageSentEvent.fireAsync(new MessageSentEvent(message.id));
+        this.messageSentEvent.fire(new MessageSentEvent(message.id));
 
         return message;
     }

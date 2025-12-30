@@ -25,7 +25,7 @@ public class AppointmentReminderService {
 
         List<Appointment> appointments = this.appointmentQueryService.getNonCancelledAppointmentsStartingAt(in30Minutes);
         for (Appointment appointment : appointments) {
-            this.appointmentReminderEvent.fireAsync(
+            this.appointmentReminderEvent.fire(
                     new AppointmentReminderEvent(appointment.id)
             );
         }

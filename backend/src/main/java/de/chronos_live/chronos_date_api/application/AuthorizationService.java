@@ -123,7 +123,7 @@ public class AuthorizationService {
         if(this.groupQueryService.isGroupMember(groupId, requestingUserId)) {
             return;
         }
-        throw new ForbiddenException("You can only add members to group you are a member of");
+        throw new ForbiddenException("You are not a member of this group");
     }
 
     public void requireEditGroup(Long groupId, Long actingUserId) {

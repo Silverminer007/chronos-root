@@ -30,31 +30,31 @@ public class AppointmentParticipationStatusPendingReminderService {
                         /*The Appointment has a length of at least*/24/*hours*/,
                         /*Everyone shall have answered until*/8/*weeks before appointment starts*/);
         for (Appointment appointment : longAppointments) {
-            this.appointmentParticipationStatusPendingReminderEvent.fireAsync(
+            this.appointmentParticipationStatusPendingReminderEvent.fire(
                     new AppointmentParticipationStatusPendingReminderEvent(appointment.id)
             );
         }
 
         List<Appointment> shortWeekdayAppointments =
-                this.appointmentQueryService.findMatchingAppointments(
+                this.appointmentQueryService.findMatchingWeekdayAppointments(
                         /*Checking every*/15/*Minutes*/,
                         /*Starting*/60 * 24 * 7 * 2 /*Minutes before the event starts*/,
                         /*The Appointment has a length of at max*/24/*hours*/,
                         /*Everyone shall have answered until*/1/*week before appointment starts*/);
         for (Appointment appointment : shortWeekdayAppointments) {
-            this.appointmentParticipationStatusPendingReminderEvent.fireAsync(
+            this.appointmentParticipationStatusPendingReminderEvent.fire(
                     new AppointmentParticipationStatusPendingReminderEvent(appointment.id)
             );
         }
 
         List<Appointment> shortWeekendAppointments =
-                this.appointmentQueryService.findMatchingAppointments(
+                this.appointmentQueryService.findMatchingWeekendAppointments(
                         /*Checking every*/15/*Minutes*/,
                         /*Starting*/60 * 24 * 7 * 4 /*Minutes before the event starts*/,
                         /*The Appointment has a length of at max*/24/*hours*/,
                         /*Everyone shall have answered until*/2/*weeks before appointment starts*/);
         for (Appointment appointment : shortWeekendAppointments) {
-            this.appointmentParticipationStatusPendingReminderEvent.fireAsync(
+            this.appointmentParticipationStatusPendingReminderEvent.fire(
                     new AppointmentParticipationStatusPendingReminderEvent(appointment.id)
             );
         }

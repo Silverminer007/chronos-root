@@ -84,12 +84,12 @@ public class AppointmentParticipationValidationService {
 
         appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
 
-        this.appointmentParticipationInvalidEvent.fireAsync(
+        this.appointmentParticipationInvalidEvent.fire(
                 new AppointmentParticipationInvalidEvent(appointment.id)
         );
     }
 
-    void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
 
         if (appointment.getStartTime().isBefore(Instant.now())) {
@@ -115,7 +115,7 @@ public class AppointmentParticipationValidationService {
 
             appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
 
-            this.appointmentParticipationInvalidEvent.fireAsync(
+            this.appointmentParticipationInvalidEvent.fire(
                     new AppointmentParticipationInvalidEvent(appointment.id)
             );
         } else {
@@ -127,7 +127,7 @@ public class AppointmentParticipationValidationService {
         }
     }
 
-    void onAppointmentEdited(@Observes AppointmentEditedEvent event) {
+    public void onAppointmentEdited(@Observes AppointmentEditedEvent event) {
         // Falls sich die mindest Teilnehmenden Zahl geändert hat
         Appointment appointment = Appointment.findById(event.appointmentId());
 
@@ -164,7 +164,7 @@ public class AppointmentParticipationValidationService {
             }
         }
         appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
-        this.appointmentParticipationInvalidEvent.fireAsync(
+        this.appointmentParticipationInvalidEvent.fire(
                 new AppointmentParticipationInvalidEvent(appointment.id)
         );
     }

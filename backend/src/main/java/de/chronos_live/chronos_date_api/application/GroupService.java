@@ -7,6 +7,7 @@ import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
@@ -31,7 +32,8 @@ public class GroupService {
     @Inject
     Event<GroupNameChangedEvent> groupNameChangedEvent;
 
-    void onGroupCreated(@Observes GroupCreatedEvent groupCreatedEvent) {
+    public void onGroupCreated(@Observes GroupCreatedEvent groupCreatedEvent) {
+        Log.info("Group was created, adding creator to it");
         GroupMember groupMember = new GroupMember();
         User user = new User();
         user.id = groupCreatedEvent.actingUserId();
@@ -58,7 +60,7 @@ public class GroupService {
         groupMember.setGroup(group);
         groupMember.setUser(user);
         groupMember.persist();
-        this.groupMemberAddedEvent.fireAsync(new GroupMemberAddedEvent(actingUserId, targetUserId, actingUserId));
+        this.groupMemberAddedEvent.fire(new GroupMemberAddedEvent(actingUserId, targetUserId, actingUserId));
     }
 
     public void removeGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
@@ -66,7 +68,7 @@ public class GroupService {
         GroupMember groupMember = (GroupMember) GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId)
                 .firstResultOptional().orElseThrow(() -> new ValidationException("This user is not member of this group"));
         groupMember.delete();
-        this.groupMemberRemovedEvent.fireAsync(new GroupMemberRemovedEvent(groupId, targetUserId, actingUserId));
+        this.groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, targetUserId, actingUserId));
     }
 
     public List<User> getGroupUsers(Long requestingUserId, Long groupId) {
@@ -86,7 +88,7 @@ public class GroupService {
         group.setOwner(user);
         group.persist();
 
-        this.groupCreatedEvent.fireAsync(new GroupCreatedEvent(group.id, user.id));
+        this.groupCreatedEvent.fire(new GroupCreatedEvent(group.id, user.id));
         return group;
     }
 
@@ -99,7 +101,7 @@ public class GroupService {
         if (group == null) {
             throw new ResourceNotFoundException("group", groupId);
         }
-        this.groupNameChangedEvent.fireAsync(new GroupNameChangedEvent(groupId, group.getGroupName(), groupDto.getName(), actingUserId));
+        this.groupNameChangedEvent.fire(new GroupNameChangedEvent(groupId, group.getGroupName(), groupDto.getName(), actingUserId));
         group.setGroupName(groupDto.getName());
         return group;
     }
@@ -111,6 +113,6 @@ public class GroupService {
             throw new ResourceNotFoundException("group", groupId);
         }
         Group.deleteById(group.id);
-        this.groupDeletedEvent.fireAsync(new GroupDeletedEvent(groupId, actingUserId));
+        this.groupDeletedEvent.fire(new GroupDeletedEvent(groupId, actingUserId));
     }
 }

@@ -10,10 +10,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 
 @ApplicationScoped
+@Transactional
 public class AppointmentParticipationService {
     @Inject
     AuthorizationService authorizationService;
@@ -32,7 +34,7 @@ public class AppointmentParticipationService {
     @Inject
     Event<AppointmentGroupParticipationRemovedEvent> appointmentGroupParticipationRemovedEvent;
 
-    void onAppointmentCreated(@Observes AppointmentCreatedEvent appointmentCreatedEvent) {
+    public void onAppointmentCreated(@Observes AppointmentCreatedEvent appointmentCreatedEvent) {
         AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
         appointmentParticipation.setRole(UserRole.RESPONSIBLE);
         Appointment appointment = new Appointment();
@@ -44,7 +46,7 @@ public class AppointmentParticipationService {
         appointmentParticipation.persist();
     }
 
-    void onGroupMemberAdded(@Observes GroupMemberAddedEvent groupMemberAddedEvent) {
+    public void onGroupMemberAdded(@Observes GroupMemberAddedEvent groupMemberAddedEvent) {
         User newMember = new User();
         newMember.id = groupMemberAddedEvent.newMemberId();
 
@@ -69,7 +71,7 @@ public class AppointmentParticipationService {
         }
     }
 
-    void onGroupMemberRemoved(@Observes GroupMemberRemovedEvent event) {
+    public void onGroupMemberRemoved(@Observes GroupMemberRemovedEvent event) {
         AppointmentParticipation
                 .delete("groupParticipationId = ?1 AND user.id = ?2", event.groupId(), event.removedMemberId());
     }
@@ -92,7 +94,7 @@ public class AppointmentParticipationService {
         appointmentParticipation.setUser(targetUser);
         appointmentParticipation.persist();
 
-        this.appointmentParticipationAddedEvent.fireAsync(
+        this.appointmentParticipationAddedEvent.fire(
                 new AppointmentParticipationAddedEvent(appointmentId, targetUserId, actingUserId)
         );
     }
@@ -124,6 +126,7 @@ public class AppointmentParticipationService {
                 continue;
             }
             AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
+            appointmentParticipation.setStatus(ParticipationStatus.PENDING);
             appointmentParticipation.setRole(role);
             appointmentParticipation.setAppointment(appointment);
             appointmentParticipation.setUser(user);
@@ -131,7 +134,7 @@ public class AppointmentParticipationService {
             appointmentParticipation.persist();
         }
 
-        this.appointmentGroupParticipationAddedEvent.fireAsync(
+        this.appointmentGroupParticipationAddedEvent.fire(
                 new AppointmentGroupParticipationAddedEvent(appointmentId, groupId, actingUserId)
         );
     }
@@ -153,7 +156,7 @@ public class AppointmentParticipationService {
         if (newRole.equals(appointmentParticipation.getRole())) {
             throw new ValidationException("this is already the users role");
         }
-        this.appointmentParticipationRoleChangedEvent.fireAsync(new AppointmentParticipationRoleChangedEvent(
+        this.appointmentParticipationRoleChangedEvent.fire(new AppointmentParticipationRoleChangedEvent(
                 appointmentId,
                 targetUserId,
                 actingUserId,
@@ -172,7 +175,7 @@ public class AppointmentParticipationService {
             throw new ValidationException("This user is not a participant of this event");
         }
 
-        this.appointmentParticipationRemovedEvent.fireAsync(
+        this.appointmentParticipationRemovedEvent.fire(
                 new AppointmentParticipationRemovedEvent(appointmentId, targetUserId, actingUserId)
         );
     }
@@ -189,7 +192,7 @@ public class AppointmentParticipationService {
 
         AppointmentParticipation.delete("groupParticipationId = ?1 AND appointment.id = ?2", groupId, appointmentId);
 
-        this.appointmentGroupParticipationRemovedEvent.fireAsync(
+        this.appointmentGroupParticipationRemovedEvent.fire(
                 new AppointmentGroupParticipationRemovedEvent(appointmentId, groupId, actingUserId)
         );
     }
@@ -215,7 +218,7 @@ public class AppointmentParticipationService {
             throw new ValidationException("this is already your participation status");
         }
 
-        this.appointmentParticipationStatusChangedEvent.fireAsync(
+        this.appointmentParticipationStatusChangedEvent.fire(
                 new AppointmentParticipationStatusChangedEvent(appointmentId, userId, status, appointmentParticipation.getStatus())
         );
 
@@ -235,17 +238,17 @@ public class AppointmentParticipationService {
                     UserParticipantDto dto = new UserParticipantDto();
 
                     User user = ap.getUser();
-                    dto.setUserId(user.id);
+                    dto.setUser_id(user.id);
                     dto.setName(user.getName());
-                    dto.setProfilePictureUrl(user.getProfilePictureUrl());
+                    dto.setProfile_picture_url(user.getProfilePictureUrl());
 
                     dto.setRole(ap.getRole());
                     dto.setStatus(ap.getStatus());
 
                     if (ap.getGroupParticipationId() != null) {
                         Group group = Group.findById(ap.getGroupParticipationId());
-                        dto.setViaGroupId(group.id);
-                        dto.setViaGroupName(group.getGroupName());
+                        dto.setVia_group_id(group.id);
+                        dto.setVia_group_name(group.getGroupName());
                     }
 
                     return dto;
@@ -257,7 +260,7 @@ public class AppointmentParticipationService {
 
         List<AppointmentGroupParticipation> appointmentGroupParticipationList =
                 AppointmentGroupParticipation.list(
-                        "SELECT agp FROM appointment_group_participations agp " +
+                        "SELECT agp FROM AppointmentGroupParticipation agp " +
                                 "JOIN agp.group g JOIN g.members m " +
                                 "WHERE agp.appointment.id = ?1 AND m.user.id = ?2",
                         appointmentId, requestingUserId);
