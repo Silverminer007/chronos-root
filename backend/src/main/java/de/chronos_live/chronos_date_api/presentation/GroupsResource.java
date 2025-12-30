@@ -39,9 +39,9 @@ public class GroupsResource {
 
     @GET
     @Path("/")
-    public Response getGroups(@QueryParam("members") Boolean members, @QueryParam("search") String search) {
+    public Response getGroups(@QueryParam("search") String search) {
         User user = this.userService.getUser(jwt.getSubject());
-        List<Group> groups = this.groupQueryService.searchGroups(user, search, members != null && members);
+        List<Group> groups = this.groupQueryService.searchGroups(user, search);
         return Response.ok(groupMapper.toDtoList(groups)).build();
     }
 

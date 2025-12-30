@@ -66,7 +66,10 @@ public class AppointmentsResource {
 
         List<Appointment> appointmentList =
                 this.appointmentQueryService.search(user.id, search, after, before,
-                        page, size, messages, participants, groups);
+                        page, size,
+                        messages != null && messages,
+                        participants != null && participants,
+                        groups != null && groups);
         return Response.ok(this.appointmentMapper.toDtoList(appointmentList)).build();
     }
 
