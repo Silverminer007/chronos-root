@@ -159,7 +159,7 @@
 
 <script setup lang="ts">
 import {ref, computed, watch} from 'vue';
-import {useEventsStore} from '~/stores/events';
+import {useAppointmentsStore} from '~/stores/appointments';
 import {useToast} from 'primevue/usetoast';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -167,11 +167,11 @@ import Textarea from 'primevue/textarea';
 import DatePicker from 'primevue/datepicker';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
-import type {Event} from '~/types';
+import type {Appointment} from '~/types';
 
 interface Props {
   visible: boolean;
-  event: Event | null;
+  appointment: Appointment | null;
 }
 
 const props = defineProps<Props>();
@@ -180,7 +180,7 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
-const eventStore = useEventsStore();
+const appointmentStore = useAppointmentsStore();
 const toast = useToast();
 
 const isVisible = computed({
@@ -213,14 +213,14 @@ const isValid = computed(() => {
 });
 
 const hasChanges = computed(() => {
-  if (!props.event) return false;
+  if (!props.appointment) return false;
 
-  return formData.value.name !== props.event.name ||
-      formData.value.description !== (props.event.description || '') ||
-      formData.value.venue !== (props.event.venue || '') ||
-      formData.value.minimalAttendees !== props.event.minimal_attendees ||
-      (formData.value.start && formData.value.start.toISOString() !== props.event.start) ||
-      (formData.value.end && formData.value.end.toISOString() !== props.event.end);
+  return formData.value.name !== props.appointment.name ||
+      formData.value.description !== (props.appointment.description || '') ||
+      formData.value.venue !== (props.appointment.venue || '') ||
+      formData.value.minimalAttendees !== props.appointment.minimal_attendees ||
+      (formData.value.start && formData.value.start.toISOString() !== props.appointment.start) ||
+      (formData.value.end && formData.value.end.toISOString() !== props.appointment.end);
 });
 
 const validateForm = () => {
@@ -254,7 +254,7 @@ const validateForm = () => {
 };
 
 const saveChanges = async () => {
-  if (!validateForm() || !props.event) {
+  if (!validateForm() || !props.appointment) {
     return;
   }
 
@@ -270,7 +270,7 @@ const saveChanges = async () => {
       minimal_attendees: formData.value.minimalAttendees || 0
     };
 
-    await eventStore.updateEvent(props.event.id, updates);
+    await appointmentStore.updateAppointment(props.appointment.id, updates);
 
     toast.add({
       severity: 'success',
@@ -285,8 +285,8 @@ const saveChanges = async () => {
     // Emit saved event
     emit('saved');
 
-    // Reload event
-    await eventStore.getEventById(props.event.id);
+    // Reload appointment
+    await appointmentStore.fetchAppointment(props.appointment.id);
 
   } catch (err) {
     toast.add({
@@ -300,16 +300,16 @@ const saveChanges = async () => {
   }
 };
 
-const loadEventData = () => {
-  if (!props.event) return;
+const loadAppointmentData = () => {
+  if (!props.appointment) return;
 
   formData.value = {
-    name: props.event.name,
-    description: props.event.description || '',
-    start: new Date(props.event.start),
-    end: new Date(props.event.end),
-    venue: props.event.venue || '',
-    minimalAttendees: props.event.minimal_attendees || null
+    name: props.appointment.name,
+    description: props.appointment.description || '',
+    start: new Date(props.appointment.start),
+    end: new Date(props.appointment.end),
+    venue: props.appointment.venue || '',
+    minimalAttendees: props.appointment.minimal_attendees || null
   };
 
   errors.value = {
@@ -323,10 +323,10 @@ const closeDialog = () => {
   isVisible.value = false;
 };
 
-// Load event data when dialog opens
+// Load appointment data when dialog opens
 watch(() => props.visible, (newVal) => {
   if (newVal) {
-    loadEventData();
+    loadAppointmentData();
   }
 });
 </script>

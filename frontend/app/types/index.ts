@@ -1,41 +1,42 @@
-export interface Event {
+export interface Appointment {
     id: number,
     name: string,
     description: string,
     start: string,
     end: string,
     venue: string,
-    status: "PLANNED" | "CANCELLED" | "DELETED" | "NOT_ENOUGH_ATTENDEES",
+    status: AppointmentStatus,
     minimal_attendees: number,
-    attendances: Attendance[],
-    userAttendees: UserAttendee[],
-    groupAttendees: GroupAttendee[],
-    messages: Message[],
-    own_attendance_status: "PENDING" | "APPROVED" | "REJECTED"
+    participants: UserParticipant[],
+    group_participants: ParticipantGroup[],
+    messages: Message[]
 }
 
-export interface Attendance {
-    user_name: string,
+export type Role = "NONE" | "GUEST" | "ATTENDANT" | "HELPER" | "RESPONSIBLE";
+export type ParticipationStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type AppointmentStatus =  "PLANNED" | "CANCELLED" | "DELETED" | "NOT_ENOUGH_ATTENDEES";
+
+export interface UserParticipant {
     user_id: number,
-    status: "PENDING" | "APPROVED" | "REJECTED",
-    id: number
+    name: string,
+    profile_picture_url: string,
+    role: Role,
+    status: ParticipationStatus,
+    via_group_id: number | null,
+    via_group_name: string | null,
+}
+
+// For displaying groups in the UI (derived from participants)
+export interface ParticipantGroup {
+    id: number,
+    name: string,
+    members: User[]
 }
 
 export interface Group {
     id: number,
     name: string,
-    owner: boolean,
-    members: User[],
-}
-
-export interface GroupAttendee {
-    group: Group,
-    role: "ATTENDANT" | "RESPONSIBLE" | "GUEST";
-}
-
-export interface UserAttendee {
-    user: User,
-    role: "ATTENDANT" | "RESPONSIBLE" | "GUEST";
+    members: User[];
 }
 
 export interface User {
@@ -44,12 +45,31 @@ export interface User {
     last_name: string,
 }
 
+export interface Friend {
+    user_id: number,
+    name: string,
+    email: string,
+    profile_picture_url: string,
+    friends_since: string;
+}
+
+export interface FriendshipRequest {
+    requestId: number;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    profilePictureUrl: string;
+    status: "PENDING" | "ACCEPTED" | "DECLINED";
+    createdAt: string;
+    respondedAt: string;
+    isIncoming: boolean;
+}
+
 export interface Message {
     id: number;
     sender_id: number;
-    event_id: number;
     sender_name: string;
-    title: string;
+    appointment_id: number;
     body: string;
     timestamp: string;
 }

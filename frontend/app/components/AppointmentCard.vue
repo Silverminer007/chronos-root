@@ -1,19 +1,75 @@
 <script setup lang="ts">
-import type {Event} from '~/types';
+import type {Appointment} from '~/types';
 import {useDateFormatter} from '~/composables/useDateFormatter';
 import {useAuthStore} from "~/stores/auth";
+import {useAppointmentsStore} from "~/stores/appointments";
 import {useToast} from "primevue/usetoast";
 
-const {event} = defineProps<{
-  event: Event
+const {appointment} = defineProps<{
+  appointment: Appointment
 }>()
 
 const toast = useToast()
-const eventsStore = useEventsStore();
+const appointmentStore = useAppointmentsStore();
 const {formatTimeRange, formatDate} = useDateFormatter();
 const {user} = useAuthStore()
 
 const messageDialog = ref<boolean>(false);
+
+// Get approved participants
+const approvedParticipants = computed(() =>
+    appointment.participants?.filter(p => p.status === 'APPROVED') || []
+);
+
+// Check if current user has approved
+const hasApproved = computed(() =>
+    appointment.participants?.some(p => p.user_id === user?.id && p.status === 'APPROVED') || false
+);
+
+// Check if current user has rejected
+const hasRejected = computed(() =>
+    appointment.participants?.some(p => p.user_id === user?.id && p.status === 'REJECTED') || false
+);
+
+async function handleApprove() {
+  if (!user) return;
+  try {
+    await appointmentStore.approveAppointment(appointment.id);
+    toast.add({
+      severity: 'success',
+      summary: 'Zusage bestätigt',
+      life: 3000
+    });
+  } catch (err) {
+    console.error(err);
+    toast.add({
+      severity: 'error',
+      summary: 'Fehler',
+      detail: 'Teilnahmestatus konnte nicht aktualisiert werden',
+      life: 3000
+    });
+  }
+}
+
+async function handleReject() {
+  if (!user) return;
+  try {
+    await appointmentStore.rejectAppointment(appointment.id);
+    toast.add({
+      severity: 'success',
+      summary: 'Absage registriert',
+      life: 3000
+    });
+  } catch (err) {
+    console.error(err);
+    toast.add({
+      severity: 'error',
+      summary: 'Fehler',
+      detail: 'Teilnahmestatus konnte nicht aktualisiert werden',
+      life: 3000
+    });
+  }
+}
 
 async function sendMessage(messageSubject: string, messageBody: string) {
   if (!user) {
@@ -22,7 +78,7 @@ async function sendMessage(messageSubject: string, messageBody: string) {
 
   messageDialog.value = false;
   try {
-    await eventsStore.sendMessage(event.id, messageSubject, messageBody, user);
+    await appointmentStore.sendMessage(appointment.id, messageBody);
     toast.add({
       severity: 'success',
       summary: 'Nachricht versendet',
@@ -45,8 +101,8 @@ async function sendMessage(messageSubject: string, messageBody: string) {
   <Toast/>
   <MessageDialog
       :visible="messageDialog"
-      :eventTitle="`${event.name} ${formatDate(event.start)}`"
-      :recipientCount="event.attendances.length"
+      :eventTitle="`${appointment.name} ${formatDate(appointment.start)}`"
+      :recipientCount="appointment.participants?.length || 0"
       @close="messageDialog = false"
       @send="sendMessage($event.subject, $event.message)"
   />
@@ -54,11 +110,11 @@ async function sendMessage(messageSubject: string, messageBody: string) {
   <div
       class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-all duration-300">
     <!-- Status Banner -->
-    <div v-if="event.status === 'CANCELLED'" class="bg-red-600 px-4 py-2 flex items-center gap-2">
+    <div v-if="appointment.status === 'CANCELLED'" class="bg-red-600 px-4 py-2 flex items-center gap-2">
       <i class="pi pi-exclamation-triangle text-white"></i>
-      <span class="text-white font-medium text-sm">Event abgesagt</span>
+      <span class="text-white font-medium text-sm">Termin abgesagt</span>
     </div>
-    <div v-else-if="event.status === 'NOT_ENOUGH_ATTENDEES'" class="bg-yellow-500 px-4 py-2 flex items-center gap-2">
+    <div v-else-if="appointment.status === 'NOT_ENOUGH_ATTENDEES'" class="bg-yellow-500 px-4 py-2 flex items-center gap-2">
       <i class="pi pi-exclamation-triangle text-white"></i>
       <span class="text-white font-medium text-sm">Zu wenig Teilnehmende</span>
     </div>
@@ -66,48 +122,48 @@ async function sendMessage(messageSubject: string, messageBody: string) {
     <!-- Card Content -->
     <div class="p-6">
       <!-- Header -->
-      <NuxtLink :to="`/event/${event.id}`" class="block group">
+      <NuxtLink :to="`/appointment/${appointment.id}`" class="block group">
         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
           <div class="flex-1 min-w-0">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors mb-1">
-              {{ event.name }}
+              {{ appointment.name }}
             </h3>
             <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <i class="pi pi-calendar text-xs"></i>
-              <span>{{ formatTimeRange(event.start, event.end) }}</span>
+              <span>{{ formatTimeRange(appointment.start, appointment.end) }}</span>
             </div>
-            <div v-if="event.venue" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <div v-if="appointment.venue" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
               <i class="pi pi-map-marker text-xs"></i>
-              <span>{{ event.venue }}</span>
+              <span>{{ appointment.venue }}</span>
             </div>
           </div>
 
-          <!-- Attendance Count & Avatars -->
+          <!-- Participation Count & Avatars -->
           <div class="flex items-center gap-3 shrink-0">
-            <div v-if="event.minimal_attendees" class="text-right">
+            <div v-if="appointment.minimal_attendees" class="text-right">
               <div class="text-2xl font-bold text-gray-900 dark:text-white">
-                {{ eventsStore.getApprovedAttendances(event).length }}<span
-                  class="text-gray-400">/{{ event.minimal_attendees }}</span>
+                {{ approvedParticipants.length }}<span
+                  class="text-gray-400">/{{ appointment.minimal_attendees }}</span>
               </div>
               <div class="text-xs text-gray-500 dark:text-gray-400">Zusagen</div>
             </div>
 
             <!-- Avatar Stack -->
-            <div v-if="eventsStore.getApprovedAttendances(event).length > 0" class="flex -space-x-2">
+            <div v-if="approvedParticipants.length > 0" class="flex -space-x-2">
               <div
-                  v-for="(attendance, index) in eventsStore.getApprovedAttendances(event).slice(0, 4)"
-                  :key="attendance.id"
-                  v-tooltip.top="attendance.user_name"
+                  v-for="(participant, index) in approvedParticipants.slice(0, 4)"
+                  :key="participant.user_id"
+                  v-tooltip.top="participant.name"
                   class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white dark:border-neutral-800 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 font-semibold text-sm transition-transform hover:scale-110 hover:z-10"
                   :style="{ zIndex: 10 - index }"
               >
-                {{ attendance?.user_name?.charAt(0) }}
+                {{ participant.name?.charAt(0) || '?' }}
               </div>
               <div
-                  v-if="eventsStore.getApprovedAttendances(event).length > 4"
+                  v-if="approvedParticipants.length > 4"
                   class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white dark:border-neutral-800 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400 font-semibold text-xs"
               >
-                +{{ eventsStore.getApprovedAttendances(event).length - 4 }}
+                +{{ approvedParticipants.length - 4 }}
               </div>
             </div>
           </div>
@@ -115,17 +171,17 @@ async function sendMessage(messageSubject: string, messageBody: string) {
       </NuxtLink>
 
       <!-- Description -->
-      <p v-if="event.description" class="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
-        {{ event.description }}
+      <p v-if="appointment.description" class="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+        {{ appointment.description }}
       </p>
 
       <!-- Action Buttons -->
       <div class="flex flex-wrap gap-2">
         <button
-            :disabled="eventsStore.hasApproved(event)"
-            @click.stop="eventsStore.updateAttendanceStatus(event.id, 'APPROVED', user?.id)"
+            :disabled="hasApproved"
+            @click.stop="handleApprove"
             class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-            :class="eventsStore.hasApproved(event)
+            :class="hasApproved
               ? 'bg-green-600 text-white'
               : 'border-2 border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/20'"
         >
@@ -142,10 +198,10 @@ async function sendMessage(messageSubject: string, messageBody: string) {
         </button>
 
         <button
-            :disabled="eventsStore.hasRejected(event)"
-            @click.stop="eventsStore.updateAttendanceStatus(event.id, 'REJECTED', user?.id)"
+            :disabled="hasRejected"
+            @click.stop="handleReject"
             class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-            :class="eventsStore.hasRejected(event)
+            :class="hasRejected
               ? 'bg-red-600 text-white'
               : 'border-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-900/20'"
         >

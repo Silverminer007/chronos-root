@@ -1,15 +1,16 @@
 <template>
-  <div v-if="eventStore.loading" class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
+  <div v-if="appointmentsStore.loading"
+       class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
     <div class="text-center">
       <i class="pi pi-spin pi-spinner text-4xl text-purple-600 dark:text-purple-400 mb-4"></i>
-      <p class="text-gray-600 dark:text-gray-400">Event wird geladen...</p>
+      <p class="text-gray-600 dark:text-gray-400">Termin wird geladen...</p>
     </div>
   </div>
 
   <div v-else-if="error" class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
     <div class="text-center max-w-md mx-auto p-6">
       <i class="pi pi-exclamation-circle text-4xl text-red-600 dark:text-red-400 mb-4"></i>
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Event nicht gefunden</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Termin nicht gefunden</h2>
       <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
       <button
           @click="goBack"
@@ -20,30 +21,32 @@
     </div>
   </div>
 
-  <div v-else-if="event" class="min-h-screen bg-gray-50 dark:bg-neutral-900">
+  <div v-else-if="appointment" class="min-h-screen bg-gray-50 dark:bg-neutral-900">
     <!-- Header -->
-    <EventHeader :event="event"/>
+    <AppointmentHeader :appointment="appointment"/>
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 sm:px-6 py-6 max-w-6xl">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column: Event Details & Actions -->
+        <!-- Left Column: Appointment Details & Actions -->
         <div class="lg:col-span-2 space-y-6">
-          <EventDetailsCard :event="event" class="order-1"/>
-          <OwnAttendanceStatusCard :event="event" class="order-2"/>
+          <AppointmentDetailsCard :appointment="appointment" class="order-1"/>
+          <OwnParticipationStatusCard :appointment="appointment" class="order-2"/>
 
-          <!-- Mobile: Attendees Cards here (order-3 & order-4) -->
-          <AttendeesAttendanceStatusCard :event="event" class="order-3 lg:hidden"/>
-          <AttendeesRolesCard :event="event" class="order-4 lg:hidden"/>
+          <!-- Mobile: Participants Cards here (order-3 & order-4) -->
+          <ParticipantsStatusCard :appointment="appointment" class="order-3 lg:hidden"/>
+          <div class="order-4 lg:hidden">
+            <GroupParticipantsCard :appointment="appointment"/>
+          </div>
 
-          <EventResponsibleActions :event="event" class="order-5"/>
-          <MessagesCard :event="event" class="order-6"/>
+          <AppointmentResponsibleActions :appointment="appointment" class="order-5"/>
+          <MessagesCard :appointment="appointment" class="order-6"/>
         </div>
 
-        <!-- Right Column: Attendees & Roles (Desktop only) -->
+        <!-- Right Column: Participants & Groups (Desktop only) -->
         <div class="hidden lg:block lg:col-span-1 space-y-6">
-          <AttendeesAttendanceStatusCard :event="event"/>
-          <AttendeesRolesCard :event="event"/>
+          <ParticipantsStatusCard :appointment="appointment"/>
+          <GroupParticipantsCard :appointment="appointment"/>
         </div>
       </div>
     </main>
@@ -54,14 +57,13 @@
 <script setup lang="ts">
 import {ref, computed, onMounted} from 'vue';
 import {useRoute} from 'vue-router';
-import {useEventsStore} from '~/stores/events';
-import AttendeesRolesCard from "~/components/AttendeesRolesCard.vue";
+import {useAppointmentsStore} from '~/stores/appointments';
 
 const route = useRoute();
-const eventStore = useEventsStore();
+const appointmentsStore = useAppointmentsStore();
 
-const eventId = computed(() => Number(route.params.eventId));
-const event = computed(() => eventStore.currentEvent);
+const appointmentId = computed(() => Number(route.params.appointmentId));
+const appointment = computed(() => appointmentsStore.currentAppointment);
 const error = ref('');
 
 const goBack = () => {
@@ -69,9 +71,9 @@ const goBack = () => {
 };
 
 onMounted(async () => {
-  await eventStore.getEventById(eventId.value);
-  if (eventStore.error) {
-    error.value = 'Event konnte nicht geladen werden';
+  await appointmentsStore.fetchAppointment(appointmentId.value);
+  if (appointmentsStore.error) {
+    error.value = 'Termin konnte nicht geladen werden';
   } else {
     error.value = '';
   }

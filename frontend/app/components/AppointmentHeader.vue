@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type {Event} from '~/types';
+import type {Appointment} from '~/types';
 
 defineProps<{
-  event: Event;
+  appointment: Appointment;
 }>();
 const goBack = () => {
   navigateTo('/agenda');
@@ -21,7 +21,7 @@ const goBack = () => {
         </button>
         <div class="flex-1 min-w-0">
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-            {{ event.name }}
+            {{ appointment.name }}
           </h1>
         </div>
       </div>

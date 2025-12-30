@@ -146,7 +146,7 @@
         />
         <Button
             label="Termin erstellen"
-            @click="createEvent"
+            @click="createAppointment"
             :loading="saving"
             :disabled="!isValid"
         >
@@ -161,7 +161,7 @@
 
 <script setup lang="ts">
 import {ref, computed, watch} from 'vue';
-import {useEventsStore} from '~/stores/events';
+import {useAppointmentsStore} from '~/stores/appointments';
 import {useToast} from 'primevue/usetoast';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -180,7 +180,7 @@ const emit = defineEmits<{
   created: [];
 }>();
 
-const eventStore = useEventsStore();
+const appointmentStore = useAppointmentsStore();
 const toast = useToast();
 
 const isVisible = computed({
@@ -243,7 +243,7 @@ const validateForm = () => {
   return valid;
 };
 
-const createEvent = async () => {
+const createAppointment = async () => {
   if (!validateForm()) {
     return;
   }
@@ -251,7 +251,7 @@ const createEvent = async () => {
   saving.value = true;
 
   try {
-    const eventData = {
+    const appointmentData = {
       name: formData.value.name.trim(),
       description: formData.value.description.trim() || null,
       start: formData.value.start!.toISOString(),
@@ -260,12 +260,12 @@ const createEvent = async () => {
       minimal_attendees: formData.value.minimalAttendees || 0
     };
 
-    const newEvent = await eventStore.createEvent(eventData);
+    const newAppointment = await appointmentStore.createAppointment(appointmentData);
 
     toast.add({
       severity: 'success',
       summary: 'Termin erstellt',
-      detail: `"${eventData.name}" wurde erfolgreich erstellt`,
+      detail: `"${appointmentData.name}" wurde erfolgreich erstellt`,
       life: 3000
     });
 
@@ -278,7 +278,7 @@ const createEvent = async () => {
     // Emit created event
     emit('created');
 
-    navigateTo(`/event/${newEvent.id}`);
+    navigateTo(`/appointment/${newAppointment.id}`);
   } catch (err) {
     toast.add({
       severity: 'error',

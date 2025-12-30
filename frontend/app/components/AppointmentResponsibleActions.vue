@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import Toast from "primevue/toast";
 import {computed, ref} from "vue";
-import type {Event} from "~/types";
+import type {Appointment} from "~/types";
 import {useAuthStore} from "~/stores/auth";
 import {useToast} from "primevue/usetoast";
 
 const authStore = useAuthStore();
 const toast = useToast();
 
-const {event} = defineProps<{
-  event: Event
+const {appointment} = defineProps<{
+  appointment: Appointment
 }>()
 
 const actionsLoading = ref(false);
@@ -17,9 +17,9 @@ const showCancelDialog = ref(false);
 const showRecheckDialog = ref(false);
 
 const isResponsible = computed(() => {
-  if (!event || !authStore.user?.id) return false;
-  return event.userAttendees?.some(
-      ua => ua.user.id === authStore.user?.id && ua.role === 'RESPONSIBLE'
+  if (!appointment || !authStore.user?.id) return false;
+  return appointment.participants?.some(
+      p => p.user_id === authStore.user?.id && p.role === 'RESPONSIBLE'
   );
 });
 
@@ -46,13 +46,13 @@ const handleRequestRecheck = async () => {
   }
 };
 
-const handleCancelEvent = async () => {
+const handleCancelAppointment = async () => {
   actionsLoading.value = true;
   try {
-    // TODO: API call to cancel event
+    // TODO: API call to cancel appointment
     toast.add({
       severity: 'success',
-      summary: 'Event abgesagt',
+      summary: 'Termin abgesagt',
       detail: 'Alle Teilnehmer wurden benachrichtigt',
       life: 3000
     });
@@ -60,7 +60,7 @@ const handleCancelEvent = async () => {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
-      detail: 'Event konnte nicht abgesagt werden',
+      detail: 'Termin konnte nicht abgesagt werden',
       life: 3000
     });
   } finally {
@@ -92,23 +92,23 @@ const requestRecheck = () => {
 
       <button
           @click="showCancelDialog = true"
-          :disabled="actionsLoading || event.status === 'CANCELLED'"
+          :disabled="actionsLoading || appointment.status === 'CANCELLED'"
           class="w-full px-6 py-3 rounded-lg font-medium transition-all border-2 border-red-600 dark:border-red-500 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <i class="pi pi-times-circle"></i>
-        <span>Event absagen</span>
+        <span>Termin absagen</span>
       </button>
     </div>
   </div>
-  <!-- Cancel Event Dialog -->
+  <!-- Cancel Appointment Dialog -->
   <ConfirmDialog
       :visible="showCancelDialog"
-      title="Event absagen"
-      message="Möchtest du dieses Event wirklich absagen? Alle Teilnehmer werden benachrichtigt."
-      confirm-text="Event absagen"
+      title="Termin absagen"
+      message="Möchtest du diesen Termin wirklich absagen? Alle Teilnehmer werden benachrichtigt."
+      confirm-text="Termin absagen"
       confirm-color="red"
       @close="showCancelDialog = false"
-      @confirm="handleCancelEvent"
+      @confirm="handleCancelAppointment"
   />
 
   <!-- Recheck Dialog -->

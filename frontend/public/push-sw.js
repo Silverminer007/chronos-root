@@ -56,11 +56,11 @@ async function handleNotification(data) {
     let actions = []; // Quick Actions
 
     switch (type) {
-        case 'EVENT_MOVED':
-            const movedEvent = JSON.parse(data.new_event);
-            title = `${movedEvent.name} wurde verschoben`;
-            body = `${movedEvent.name} geht jetzt vom ${formatTimeRange(movedEvent.start, movedEvent.end)}`;
-            tag = `event-moved-${movedEvent.id}`;
+        case 'APPOINTMENT_MOVED':
+            const movedAppointment = JSON.parse(data.appointment);
+            title = `${movedAppointment.name} wurde verschoben`;
+            body = `${movedAppointment.name} geht jetzt vom ${formatTimeRange(movedAppointment.start, movedAppointment.end)}`;
+            tag = `appointment-moved-${movedAppointment.id}`;
             if (attendanceStatus === "APPROVED") {
                 actions = [
                     {action: 'reject', title: '✗ Absagen', icon: '/icons/cross.png'}
@@ -77,21 +77,21 @@ async function handleNotification(data) {
             }
             break;
 
-        case 'EVENT_CANCELLED':
-            const cancelledEvent = JSON.parse(data.event);
+        case 'APPOINTMENT_CANCELLED':
+            const cancelledAppointment = JSON.parse(data.appointment);
             const whoCancelled = data.who_cancelled;
-            title = `${cancelledEvent.name} abgesagt`;
-            body = `"${cancelledEvent.name}" wurde von ${whoCancelled} abgesagt.`;
-            tag = `event-cancelled-${cancelledEvent.id}`;
+            title = `${cancelledAppointment.name} abgesagt`;
+            body = `"${cancelledAppointment.name}" wurde von ${whoCancelled} abgesagt.`;
+            tag = `appointment-cancelled-${cancelledAppointment.id}`;
             break;
 
         case 'NEW_ATTENDEE':
-            const attendeeEvent = JSON.parse(data.event);
+            const attendeeAppointment = JSON.parse(data.appointment);
             const newAttendee = data.new_attendee;
             const attendeeType = data.attendee_type;
-            title = `${newAttendee} ist jetzt ${getRoleName(attendeeType)} bei ${attendeeEvent.name}`;
+            title = `${newAttendee} ist jetzt ${getRoleName(attendeeType)} bei ${attendeeAppointment.name}`;
             body = `Für weitere Informationen tippe auf diese Nachricht`;
-            tag = `new-attendee-${attendeeEvent.id}`;
+            tag = `new-attendee-${attendeeAppointment.id}`;
             break;
 
         case 'NEW_GROUP_MEMBER':
@@ -118,55 +118,55 @@ async function handleNotification(data) {
             break;
 
         case 'ATTENDANCE_STATUS_CHANGED':
-            const statusEvent = JSON.parse(data.event);
+            const statusAppointment = JSON.parse(data.appointment);
             const newStatus = data.new_attendance_status;
             const userName = data.user_name;
             const statusText = getStatusText(newStatus);
             title = 'Teilnahmestatus geändert';
-            body = `${userName} hat den Status für "${statusEvent.name}" auf "${statusText}" geändert.`;
-            tag = `status-changed-${statusEvent.id}`;
+            body = `${userName} hat den Status für "${statusAppointment.name}" auf "${statusText}" geändert.`;
+            tag = `status-changed-${statusAppointment.id}`;
             break;
 
         case 'NOT_ENOUGH_ATTENDEES':
-            const notEnoughEvent = JSON.parse(data.event);
+            const notEnoughAppointment = JSON.parse(data.appointment);
             const approved = data.approved_attendances;
             const rejected = data.rejected_attendances;
             const pending = data.pending_attendances;
-            title = `Nicht genug Teilnehmer (${approved} / ${notEnoughEvent.minimal_attendees}`;
-            body = `"${notEnoughEvent.name}" hat nicht genug Zusagen (${approved} zugesagt, ${rejected} abgesagt, ${pending} ausstehend).`;
-            if (notEnoughEvent.own_attendance_status === "REJECTED") {
+            title = `Nicht genug Teilnehmer (${approved} / ${notEnoughAppointment.minimal_attendees}`;
+            body = `"${notEnoughAppointment.name}" hat nicht genug Zusagen (${approved} zugesagt, ${rejected} abgesagt, ${pending} ausstehend).`;
+            if (notEnoughAppointment.own_attendance_status === "REJECTED") {
                 body += ' Du hast bisher abgesagt. Falls du doch kannst, gib bitte so schnell wie möglich bescheid';
                 actions = [
                     {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'}
                 ];
             }
-            tag = `not-enough-${notEnoughEvent.id}`;
+            tag = `not-enough-${notEnoughAppointment.id}`;
             break;
 
         case 'ATTENDANCE_STATUS_PENDING':
-            const pendingEvent = JSON.parse(data.event);
-            title = `Deine Rückmeldung zu ${pendingEvent.name} fehlt noch`;
+            const pendingAppointment = JSON.parse(data.appointment);
+            title = `Deine Rückmeldung zu ${pendingAppointment.name} fehlt noch`;
             body = `Bitte melde dich so schnell wie möglich.`;
             actions = [
                 {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'},
                 {action: 'reject', title: '✗ Absagen', icon: '/icons/cross.png'}
             ];
-            tag = `pending-${pendingEvent.id}`;
+            tag = `pending-${pendingAppointment.id}`;
             break;
 
-        case 'EVENT_REMINDER':
-            const reminderEvent = JSON.parse(data.event);
-            title = `Erinnerung: "${reminderEvent.name}" steht bald an!`;
-            body = `Du hast ${getStatusText(reminderEvent.own_attendance_status)}`;
-            tag = `reminder-${reminderEvent.id}`;
+        case 'APPOINTMENT_REMINDER':
+            const reminderAppointment = JSON.parse(data.appointment);
+            title = `Erinnerung: "${reminderAppointment.name}" steht bald an!`;
+            body = `Du hast ${getStatusText(reminderAppointment.own_attendance_status)}`;
+            tag = `reminder-${reminderAppointment.id}`;
             break;
 
         case 'ATTENDANCE_STATUS_RECHECK':
-            const recheckEvent = JSON.parse(data.event);
+            const recheckAppointment = JSON.parse(data.appointment);
             const attendanceStatus = data.attendance_status;
             const recheckStatusText = getStatusText(attendanceStatus);
-            title = `Rückmeldung zu ${recheckEvent.name} überprüfen`;
-            body = `Du hast bisher ${recheckStatusText} zu ${recheckEvent.name}. Ist das noch aktuell?`;
+            title = `Rückmeldung zu ${recheckAppointment.name} überprüfen`;
+            body = `Du hast bisher ${recheckStatusText} zu ${recheckAppointment.name}. Ist das noch aktuell?`;
             if (attendanceStatus === "APPROVED") {
                 actions = [
                     {action: 'none', title: '✓ Ja', icon: '/icons/check.png'},
@@ -178,7 +178,7 @@ async function handleNotification(data) {
                     {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'}
                 ];
             }
-            tag = `recheck-${recheckEvent.id}`;
+            tag = `recheck-${recheckAppointment.id}`;
             break;
 
         default:
@@ -270,12 +270,9 @@ self.addEventListener('notificationclick', function (event) {
     // Bestimme die URL basierend auf dem Benachrichtigungstyp
     if (data) {
         try {
-            if (data.event) {
-                const eventData = JSON.parse(data.event);
-                urlToOpen = `/event/${eventData.id}`;
-            } else if (data.new_event) {
-                const eventData = JSON.parse(data.new_event);
-                urlToOpen = `/event/${eventData.id}`;
+            if (data.appointment) {
+                const appointmentData = JSON.parse(data.appointment);
+                urlToOpen = `/appointment/${appointmentData.id}`;
             } else if (data.group) {
                 const groupData = JSON.parse(data.group);
                 urlToOpen = `/groups/${groupData.id}`;

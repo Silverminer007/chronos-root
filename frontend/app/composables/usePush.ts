@@ -10,14 +10,14 @@ export function usePush() {
         const registration = await navigator.serviceWorker.ready;
 
         // Hole Public Key vom Backend
-        const vapidPublicKey = await $fetch<string>("/api/push/public-key");
+        const vapidPublicKey = await $fetch<string>("/api/v2/push/public-key");
 
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: base64ToUint8Array(vapidPublicKey),
         });
 
-        await $fetch("/api/push/subscribe", {
+        await $fetch("/api/v2/push/subscribe", {
             method: "POST",
             body: {
                 endpoint: subscription.endpoint,
@@ -59,7 +59,7 @@ export function usePush() {
             if (!existing) {
                 await subscribe();
             } else {
-                const subscriptionStatus = await $fetch("/api/push/status", {
+                const subscriptionStatus = await $fetch("/api/v2/push/status", {
                     method: "GET",
                     query: {
                         endpoint: existing.endpoint,

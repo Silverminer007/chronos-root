@@ -1,28 +1,39 @@
 <script setup lang="ts">
 import Toast from "primevue/toast";
-import type {Event} from "~/types";
-import {useEventsStore} from "~/stores/events";
+import type {Appointment} from "~/types";
+import {useAppointmentsStore} from "~/stores/appointments";
 import {useAuthStore} from "~/stores/auth";
-import {ref} from "vue";
+import {ref, computed} from "vue";
 import {useToast} from "primevue/usetoast";
 
-const eventStore = useEventsStore();
+const appointmentStore = useAppointmentsStore();
 const authStore = useAuthStore();
 const toast = useToast();
 
-const {event} = defineProps<{ event: Event }>();
+const {appointment} = defineProps<{ appointment: Appointment }>();
 
 const updating = ref(false);
 
-const updateAttendance = async (status: 'APPROVED' | 'REJECTED') => {
-  if (!event || !authStore.user?.id || updating.value) return;
+// Eigenen Teilnahmestatus aus participants berechnen
+const ownParticipationStatus = computed(() => {
+  if (!authStore.user?.id || !appointment.participants) return 'PENDING';
+  const participation = appointment.participants.find(p => p.user_id === authStore.user!.id);
+  return participation?.status || 'PENDING';
+});
+
+const updateParticipation = async (action: 'approve' | 'reject') => {
+  if (!appointment || !authStore.user?.id || updating.value) return;
 
   updating.value = true;
   try {
-    await eventStore.updateAttendanceStatus(event.id, status, authStore.user?.id);
+    if (action === 'approve') {
+      await appointmentStore.approveAppointment(appointment.id);
+    } else {
+      await appointmentStore.rejectAppointment(appointment.id);
+    }
     toast.add({
       severity: 'success',
-      summary: status === 'APPROVED' ? 'Zusage bestätigt' : 'Absage registriert',
+      summary: action === 'approve' ? 'Zusage bestätigt' : 'Absage registriert',
       life: 3000
     });
   } catch (err) {
@@ -46,10 +57,10 @@ const updateAttendance = async (status: 'APPROVED' | 'REJECTED') => {
 
     <div class="flex flex-col sm:flex-row gap-3">
       <button
-          @click="updateAttendance('APPROVED')"
-          :disabled="event.own_attendance_status === 'APPROVED' || updating"
+          @click="updateParticipation('approve')"
+          :disabled="ownParticipationStatus === 'APPROVED' || updating"
           class="flex-1 px-6 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-          :class="event.own_attendance_status === 'APPROVED'
+          :class="ownParticipationStatus === 'APPROVED'
                   ? 'bg-green-600 text-white'
                   : 'border-2 border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/20'"
       >
@@ -58,10 +69,10 @@ const updateAttendance = async (status: 'APPROVED' | 'REJECTED') => {
       </button>
 
       <button
-          @click="updateAttendance('REJECTED')"
-          :disabled="event.own_attendance_status === 'REJECTED' || updating"
+          @click="updateParticipation('reject')"
+          :disabled="ownParticipationStatus === 'REJECTED' || updating"
           class="flex-1 px-6 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-          :class="event.own_attendance_status === 'REJECTED'
+          :class="ownParticipationStatus === 'REJECTED'
                   ? 'bg-red-600 text-white'
                   : 'border-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-900/20'"
       >
@@ -70,7 +81,7 @@ const updateAttendance = async (status: 'APPROVED' | 'REJECTED') => {
       </button>
     </div>
 
-    <div v-if="event.own_attendance_status === 'PENDING'"
+    <div v-if="ownParticipationStatus === 'PENDING'"
          class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
       <div class="flex gap-3">
         <i class="pi pi-exclamation-triangle text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
@@ -79,7 +90,7 @@ const updateAttendance = async (status: 'APPROVED' | 'REJECTED') => {
             Bitte bestätige deine Teilnahme
           </p>
           <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-            Deine Rückmeldung hilft bei der Planung des Events.
+            Deine Rückmeldung hilft bei der Planung des Termins.
           </p>
         </div>
       </div>
