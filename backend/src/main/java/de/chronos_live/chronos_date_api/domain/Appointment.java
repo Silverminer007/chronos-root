@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Set;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -24,13 +24,16 @@ public class Appointment extends PanacheEntity {
     private Instant lastUpdate, createdAt;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "appointment")
-    private List<Message> messages;
+    @EqualsAndHashCode.Exclude
+    private Set<Message> messages;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "appointment")
-    private List<AppointmentParticipation> participants;
+    @EqualsAndHashCode.Exclude
+    private Set<AppointmentParticipation> participants;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "appointment")
-    private List<AppointmentGroupParticipation> groupParticipants;
+    @EqualsAndHashCode.Exclude
+    private Set<AppointmentGroupParticipation> groupParticipants;
 
     public Appointment(Appointment appointment) {
         this.name = appointment.name;
