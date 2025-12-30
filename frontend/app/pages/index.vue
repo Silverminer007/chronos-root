@@ -64,9 +64,9 @@
                 <div class="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500"></div>
               </div>
               <div class="space-y-3 sm:space-y-4">
-                <EventDemoCard :event="demoEvent1"/>
-                <EventDemoCard :event="demoEvent2"/>
-                <EventDemoCard :event="demoEvent3"/>
+                <AppointmentDemoCard :appointment="demoAppointment1"/>
+                <AppointmentDemoCard :appointment="demoAppointment2"/>
+                <AppointmentDemoCard :appointment="demoAppointment3"/>
               </div>
             </div>
           </div>
@@ -159,7 +159,7 @@ const scrollToFeatures = () => {
   }
 };
 import {useAuthStore} from "~/stores/auth";
-import type {Event} from '~/types'
+import type {Appointment} from '~/types'
 import {DateTime} from "luxon"
 
 const {fetchUser, authenticated} = useAuthStore()
@@ -168,7 +168,7 @@ if (authenticated) {
   navigateTo('/agenda');
 }
 
-const demoEvent1 = ref<Event>({
+const demoAppointment1 = ref<Appointment>({
   id: 0,
   name: "Sommerfest",
   description: "Sommerfest mit allen Mitgliedern",
@@ -177,77 +177,22 @@ const demoEvent1 = ref<Event>({
   status: "PLANNED",
   venue: "",
   minimal_attendees: 8,
-  attendances: [
-    {
-      id: 0,
-      status: "REJECTED",
-      user_name: "A",
-      user_id: 12345
-    },
-    {
-      id: 1,
-      status: "APPROVED",
-      user_name: "B",
-      user_id: 12345
-    },
-    {
-      id: 2,
-      status: "APPROVED",
-      user_name: "C",
-      user_id: 12345
-    },
-    {
-      id: 3,
-      status: "APPROVED",
-      user_name: "D",
-      user_id: 12345
-    },
-    {
-      id: 4,
-      status: "APPROVED",
-      user_name: "E",
-      user_id: 12345
-    },
-    {
-      id: 5,
-      status: "APPROVED",
-      user_name: "F",
-      user_id: 12345
-    },
-    {
-      id: 6,
-      status: "APPROVED",
-      user_name: "G",
-      user_id: 12345
-    },
-    {
-      id: 7,
-      status: "APPROVED",
-      user_name: "H",
-      user_id: 12345
-    },
-    {
-      id: 8,
-      status: "APPROVED",
-      user_name: "I",
-      user_id: 12345
-    },
-    {
-      id: 9,
-      status: "APPROVED",
-      user_name: "J",
-      user_id: 12345
-    },
-    {
-      id: 10,
-      status: "APPROVED",
-      user_name: "K",
-      user_id: 12345
-    }
+  participants: [
+    { user_id: 1, name: "A", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: 2, name: "B", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 3, name: "C", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 6, name: "F", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 7, name: "G", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 8, name: "H", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 9, name: "I", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 10, name: "J", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 11, name: "K", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
   ],
-  own_attendance_status: "REJECTED"
+  messages: []
 });
-const demoEvent2 = ref<Event>({
+const demoAppointment2 = ref<Appointment>({
   id: 1,
   name: "Team-Meeting",
   description: "Wir müssen reflektieren, wie das Sommerfest gelaufen ist",
@@ -256,41 +201,16 @@ const demoEvent2 = ref<Event>({
   status: "CANCELLED",
   venue: "",
   minimal_attendees: 5,
-  attendances: [
-    {
-      id: 0,
-      status: "APPROVED",
-      user_name: "A",
-      user_id: 12345
-    },
-    {
-      id: 1,
-      status: "APPROVED",
-      user_name: "B",
-      user_id: 12345
-    },
-    {
-      id: 2,
-      status: "REJECTED",
-      user_name: "C",
-      user_id: 12345
-    },
-    {
-      id: 3,
-      status: "APPROVED",
-      user_name: "D",
-      user_id: 12345
-    },
-    {
-      id: 4,
-      status: "APPROVED",
-      user_name: "E",
-      user_id: 12345
-    }
+  participants: [
+    { user_id: 1, name: "A", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 2, name: "B", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 3, name: "C", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
   ],
-  own_attendance_status: "APPROVED"
+  messages: []
 });
-const demoEvent3 = ref<Event>({
+const demoAppointment3 = ref<Appointment>({
   id: 2,
   name: "Gruppenstunde",
   description: "",
@@ -299,39 +219,14 @@ const demoEvent3 = ref<Event>({
   status: "NOT_ENOUGH_ATTENDEES",
   venue: "",
   minimal_attendees: 2,
-  attendances: [
-    {
-      id: 0,
-      status: "APPROVED",
-      user_name: "A",
-      user_id: 12345
-    },
-    {
-      id: 1,
-      status: "REJECTED",
-      user_name: "B",
-      user_id: 12345
-    },
-    {
-      id: 2,
-      status: "REJECTED",
-      user_name: "C",
-      user_id: 12345
-    },
-    {
-      id: 3,
-      status: "REJECTED",
-      user_name: "D",
-      user_id: 12345
-    },
-    {
-      id: 4,
-      status: "REJECTED",
-      user_name: "E",
-      user_id: 12345
-    }
+  participants: [
+    { user_id: 1, name: "A", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: 2, name: "B", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: 3, name: "C", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null }
   ],
-  own_attendance_status: "APPROVED"
+  messages: []
 });
 </script>
 

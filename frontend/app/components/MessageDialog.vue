@@ -9,7 +9,7 @@
           </div>
           <div>
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">Nachricht senden</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ eventTitle }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ appointmentTitle }}</p>
           </div>
         </div>
         <button
@@ -36,20 +36,6 @@
               </p>
             </div>
           </div>
-        </div>
-
-        <!-- Betreff -->
-        <div>
-          <label for="subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Betreff
-          </label>
-          <input
-              id="subject"
-              v-model="subject"
-              type="text"
-              placeholder="z.B. Wichtige Information zum Termin"
-              class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900/50 outline-none transition-all"
-          />
         </div>
 
         <!-- Nachricht -->
@@ -103,7 +89,7 @@ import { ref, computed } from 'vue';
 
 interface Props {
   visible: boolean;
-  eventTitle: string;
+  appointmentTitle: string;
   recipientCount: number;
 }
 
@@ -111,16 +97,14 @@ defineProps<Props>();
 
 const emit = defineEmits<{
   close: [];
-  send: [data: { subject: string; message: string; }];
+  send: [data: { message: string; }];
 }>();
 
-const subject = ref('');
 const message = ref('');
 const sending = ref(false);
 
 const isValid = computed(() => {
-  return subject.value.trim().length > 0 &&
-      message.value.trim().length >= 0 &&
+  return message.value.trim().length > 0 &&
       message.value.length <= 500;
 });
 
@@ -134,12 +118,10 @@ const send = async () => {
   sending.value = true;
 
   emit('send', {
-    subject: subject.value,
     message: message.value
   });
 
   // Reset form
-  subject.value = '';
   message.value = '';
   sending.value = false;
 };

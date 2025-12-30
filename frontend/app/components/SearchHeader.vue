@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import {ref} from "vue";
 import {useAuthStore} from "~/stores/auth";
+import {useAppointmentsStore} from "~/stores/appointments";
 import Menu from 'primevue/menu';
 
-const {search} = useEventsStore()
+const {search} = useAppointmentsStore()
 const {logout, user, authenticated} = useAuthStore()
 
 const searchQuery = ref("");
@@ -17,6 +18,20 @@ const items = ref([
         icon: 'pi pi-user',
         command: () => {
           navigateTo('/profile')
+        }
+      },
+      {
+        label: 'Freunde',
+        icon: 'pi pi-users',
+        command: () => {
+          navigateTo('/friends')
+        }
+      },
+      {
+        label: 'Gruppen',
+        icon: 'pi pi-sitemap',
+        command: () => {
+          navigateTo('/groups')
         }
       },
       {

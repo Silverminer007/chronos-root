@@ -1,37 +1,35 @@
 <script setup lang="ts">
-import type {Event} from "~/types";
+import type {Appointment} from "~/types";
 import {computed, ref} from "vue";
-import {useAuthStore} from "~/stores/auth";
-import {useEventsStore} from "~/stores/events";
+import {useAppointmentsStore} from "~/stores/appointments";
 import {useDateFormatter} from "~/composables/useDateFormatter";
 import {useToast} from "primevue/usetoast";
 import Toast from "primevue/toast";
 
-const authStore = useAuthStore();
-const eventStore = useEventsStore();
+const appointmentsStore = useAppointmentsStore();
 const {formatDateTime} = useDateFormatter();
 
 const toast = useToast();
 
-const {event} = defineProps<{
-  event: Event;
+const {appointment} = defineProps<{
+  appointment: Appointment;
 }>();
 
 const showMessageDialog = ref(false);
 
 const sortedMessages = computed(() => {
-  if (!event) return [];
-  return [...event.messages].sort((a, b) =>
+  if (!appointment) return [];
+  return [...appointment.messages].sort((a, b) =>
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 });
 
 
 const handleSendMessage = async (data: { subject: string; message: string }) => {
-  if (!event) return;
+  if (!appointment) return;
 
   try {
-    await eventStore.sendMessage(event.id, data.subject, data.message, authStore.user);
+    await appointmentsStore.sendMessage(appointment.id, data.message);
     toast.add({
       severity: 'success',
       summary: 'Nachricht versendet',
@@ -89,7 +87,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
         </div>
       </div>
 
-      <div v-if="event.messages.length === 0" class="p-12 text-center">
+      <div v-if="appointment.messages.length === 0" class="p-12 text-center">
         <i class="pi pi-inbox text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
         <p class="text-gray-500 dark:text-gray-400">Noch keine Nachrichten</p>
       </div>
@@ -97,8 +95,8 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
   </div>
   <MessageDialog
       :visible="showMessageDialog"
-      :event-title="event.name"
-      :recipient-count="event.attendances.length"
+      :event-title="appointment.name"
+      :recipient-count="appointment.participants?.length || 0"
       @close="showMessageDialog = false"
       @send="handleSendMessage"
   />
