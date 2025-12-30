@@ -39,7 +39,9 @@
             <GroupParticipantsCard :appointment="appointment"/>
           </div>
 
-          <AppointmentResponsibleActions :appointment="appointment" class="order-5"/>
+          <div class="hidden">
+            <AppointmentResponsibleActions :appointment="appointment" class="order-5"/>
+          </div>
           <MessagesCard :appointment="appointment" class="order-6"/>
         </div>
 
