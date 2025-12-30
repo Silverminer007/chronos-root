@@ -12,15 +12,15 @@ import lombok.NoArgsConstructor;
 public class UserParticipantDto {
 
     // User-Daten
-    private Long userId;
+    private Long user_id;
     private String name;
-    private String profilePictureUrl;
+    private String profile_picture_url;
 
     // Participation-Daten
     private UserRole role;
     private ParticipationStatus status;
 
     // Gruppen-Kontext (optional)
-    private Long viaGroupId;        // Wurde über Gruppe hinzugefügt?
-    private String viaGroupName;    // Name der Gruppe
+    private Long via_group_id;        // Wurde über Gruppe hinzugefügt?
+    private String via_group_name;    // Name der Gruppe
 }

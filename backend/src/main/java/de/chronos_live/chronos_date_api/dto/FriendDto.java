@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FriendDto {
-    private Long userId;
+    private Long user_id;
     private String name;
     private String email;
-    private String profilePictureUrl;
-    private String friendsSince;
+    private String profile_picture_url;
+    private String friends_since;
 }
