@@ -73,3 +73,19 @@ export interface Message {
     body: string;
     timestamp: string;
 }
+
+// Notification settings types
+export type AppointmentNotificationSetting = "DISABLED" | "ALL" | "ATTENDANT" | "HELPER" | "RESPONSIBLE";
+export type GroupNotificationSetting = "DISABLED" | "ENABLED";
+
+export interface NotificationSettings {
+    appointment_moved: AppointmentNotificationSetting;
+    appointment_message: AppointmentNotificationSetting;
+    appointment_cancelled: AppointmentNotificationSetting;
+    appointment_participant_added: AppointmentNotificationSetting;
+    appointment_participation_status_changed: AppointmentNotificationSetting;
+    appointment_participation_invalid: AppointmentNotificationSetting;
+    appointment_participation_status_pending: AppointmentNotificationSetting;
+    appointment_reminder: AppointmentNotificationSetting;
+    group_member_added: GroupNotificationSetting;
+}
