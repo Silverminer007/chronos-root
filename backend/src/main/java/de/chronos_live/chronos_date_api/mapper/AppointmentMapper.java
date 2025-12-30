@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "cdi")
+@Mapper(componentModel = "cdi", uses = {AppointmentParticipationMapper.class, AppointmentGroupParticipationMapper.class, MessageMapper.class})
 public interface AppointmentMapper {
 
     // ============================
@@ -18,6 +18,8 @@ public interface AppointmentMapper {
     @Mapping(target = "end", expression = "java(appointment.getEndTime() != null ? appointment.getEndTime().toString() : null)")
     @Mapping(target = "minimal_attendees", source = "minimalAttendees")
     @Mapping(target = "group_participants", source = "groupParticipants")
+    @Mapping(target = "participants", source = "participants")
+    @Mapping(target = "messages", source = "messages")
     AppointmentDto toDto(Appointment appointment);
 
     List<AppointmentDto> toDtoList(List<Appointment> appointments);

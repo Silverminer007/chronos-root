@@ -7,15 +7,18 @@ import org.mapstruct.*;
 import java.util.List;
 
 @Mapper(
-        componentModel = "cdi"
+        componentModel = "cdi",
+        uses = {GroupMemberMapper.class}
 )
 public interface GroupMapper {
 
     @Mapping(target = "name", source = "groupName")
+    @Mapping(target = "members", source = "members")
     GroupDto toDto(Group group);
 
     List<GroupDto> toDtoList(List<Group> groups);
 
     @Mapping(target = "groupName", source = "name")
+    @Mapping(target = "members", source = "members")
     Group toEntity(GroupDto dto);
 }
