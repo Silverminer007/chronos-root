@@ -21,8 +21,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         error: null as string | null,
         pagination: {
             page: 0,
-            size: 20,
-            total: 0
+            size: 20
         }
     }),
 
@@ -124,23 +123,26 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (filters.start) params.append('start', filters.start)
                 if (filters.end) params.append('end', filters.end)
                 if (filters.search) params.append('search', filters.search)
-                if (filters.page !== undefined) params.append('page', filters.page.toString())
-                if (filters.size !== undefined) params.append('size', filters.size.toString())
+                if (filters.page !== undefined) {
+                    params.append('page', filters.page.toString())
+                    this.pagination.page = filters.page
+                }
+                if (filters.size !== undefined) {
+                    params.append('size', filters.size.toString())
+                    this.pagination.size = filters.size
+                }
                 if (filters.participants) params.append('participants', 'true')
                 if (filters.messages) params.append('messages', 'true')
                 if (filters.groups) params.append('groups', 'true')
 
                 const response = await $fetch(`/api/v2/appointments?${params.toString()}`)
+                console.log(response)
 
-                this.appointments = response.content || response
-
-                if (response.page !== undefined) {
-                    this.pagination = {
-                        page: response.page.number,
-                        size: response.page.size,
-                        total: response.page.totalElements
-                    }
+                if (!this.appointments || this.appointments.length === 0) {
+                    this.appointments = [];
                 }
+                this.appointments = this.appointments.concat(response.content || response);
+                console.log(this.appointments);
             } catch (err: any) {
                 this.error = err.message || 'Fehler beim Laden der Appointments'
                 throw err
