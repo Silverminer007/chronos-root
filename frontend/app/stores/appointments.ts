@@ -136,13 +136,11 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (filters.groups) params.append('groups', 'true')
 
                 const response = await $fetch(`/api/v2/appointments?${params.toString()}`)
-                console.log(response)
 
                 if (!this.appointments || this.appointments.length === 0) {
                     this.appointments = [];
                 }
                 this.appointments = this.appointments.concat(response.content || response);
-                console.log(this.appointments);
             } catch (err: any) {
                 this.error = err.message || 'Fehler beim Laden der Appointments'
                 throw err
