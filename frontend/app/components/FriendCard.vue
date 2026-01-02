@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {Friend} from '~/types';
 import {DateTime} from 'luxon';
+import ConfirmDialog from '~/components/ConfirmDialog.vue';
 
 const props = defineProps<{
   friend: Friend;

@@ -206,7 +206,7 @@ const handleCancelRequest = async (requestId: number) => {
             <div class="space-y-3">
               <FriendRequestCard
                   v-for="request in friendshipsStore.incomingRequests"
-                  :key="request.id"
+                  :key="request.requestId"
                   :request="request"
                   type="incoming"
                   @accept="handleAcceptRequest"
@@ -232,7 +232,7 @@ const handleCancelRequest = async (requestId: number) => {
             <div class="space-y-3">
               <FriendRequestCard
                   v-for="request in friendshipsStore.outgoingRequests"
-                  :key="request.id"
+                  :key="request.requestId"
                   :request="request"
                   type="outgoing"
                   @cancel="handleCancelRequest"
