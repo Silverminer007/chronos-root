@@ -429,6 +429,7 @@ export const useAppointmentsStore = defineStore('appointments', {
 
         // Suche
         search(query: string) {
+            this.appointments = [];
             return this.fetchAgenda({
                 search: query,
                 participants: true,
