@@ -71,7 +71,7 @@ async function handleReject() {
   }
 }
 
-async function sendMessage(messageSubject: string, messageBody: string) {
+async function sendMessage(messageBody: string) {
   if (!user) {
     return;
   }
@@ -101,10 +101,10 @@ async function sendMessage(messageSubject: string, messageBody: string) {
   <Toast/>
   <MessageDialog
       :visible="messageDialog"
-      :eventTitle="`${appointment.name} ${formatDate(appointment.start)}`"
+      :appointmentTitle="`${appointment.name} ${formatDate(appointment.start)}`"
       :recipientCount="appointment.participants?.length || 0"
       @close="messageDialog = false"
-      @send="sendMessage($event.subject, $event.message)"
+      @send="sendMessage($event.message)"*
   />
 
   <div
