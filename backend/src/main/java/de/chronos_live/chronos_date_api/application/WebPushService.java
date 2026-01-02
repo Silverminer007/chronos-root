@@ -444,7 +444,8 @@ public class WebPushService {
                 .build();
 
         this.sendToParticipants(event.appointmentId(),
-                this.settingsService::sendAppointmentParticipationStatusPendingReminderNotification,
+                ap -> ParticipationStatus.PENDING.equals(ap.getStatus())
+                        && this.settingsService.sendAppointmentParticipationStatusPendingReminderNotification(ap),
                 payload.toString());
     }
 
