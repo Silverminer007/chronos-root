@@ -36,7 +36,7 @@ public class AppointmentParticipationStatusConfirmationService {
             if (appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
             }
-            this.appointmentParticipationStatusConfirmationEvent.fire(
+            this.appointmentParticipationStatusConfirmationEvent.fireAsync(
                     new AppointmentParticipationStatusConfirmationEvent(appointment.id)
             );
         }
@@ -50,7 +50,7 @@ public class AppointmentParticipationStatusConfirmationService {
             if (weekdays.contains(appointment.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {
                 continue;
             }
-            this.appointmentParticipationStatusConfirmationEvent.fire(
+            this.appointmentParticipationStatusConfirmationEvent.fireAsync(
                     new AppointmentParticipationStatusConfirmationEvent(appointment.id)
             );
         }

@@ -54,7 +54,7 @@ public class AppointmentService {
         appointment.setLastUpdate(Instant.now());
         appointment.persist();
 
-        this.appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorId));
+        this.appointmentCreatedEvent.fireAsync(new AppointmentCreatedEvent(appointment.id, creatorId));
 
         return appointment;
     }
@@ -94,7 +94,7 @@ public class AppointmentService {
             throw new ValidationException("end", "Start date cannot be after end date");
         }
         if(!oldStartTime.equals(newStartTime) || !oldEndTime.equals(newEndTime)) {
-            this.appointmentMovedEvent.fire(new AppointmentMovedEvent(appointment.id,
+            this.appointmentMovedEvent.fireAsync(new AppointmentMovedEvent(appointment.id,
                     oldStartTime, oldEndTime, actingUserId));
         }
         appointment.setStartTime(newStartTime);
@@ -104,7 +104,7 @@ public class AppointmentService {
         }
         appointment.setLastUpdate(Instant.now());
 
-        this.appointmentEditedEvent.fire(
+        this.appointmentEditedEvent.fireAsync(
                 new AppointmentEditedEvent(appointmentId)
         );
 
@@ -119,7 +119,7 @@ public class AppointmentService {
             return;
         }
         appointment.setStatus(AppointmentStatus.DELETED);
-        this.appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserId));
+        this.appointmentDeletedEvent.fireAsync(new AppointmentDeletedEvent(appointment.id, actingUserId));
     }
 
     public void cancelAppointment(Long appointmentId, Long actingUserId) {
@@ -130,7 +130,7 @@ public class AppointmentService {
             return;
         }
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        this.appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserId));
+        this.appointmentCancelledEvent.fireAsync(new AppointmentCancelledEvent(appointment.id, actingUserId));
     }
 
     public Appointment getAppointment(Long appointmentId, Long requestingUserId,

@@ -8,7 +8,7 @@ import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -160,7 +160,7 @@ public class WebPushService {
         }
     }
 
-    public void onAppointmentMessageSent(@Observes MessageSentEvent event) {
+    public void onAppointmentMessageSent(@ObservesAsync MessageSentEvent event) {
         Message message = this.messageQueryService.getMessage(event.messageId());
         if (message == null) {
             return;
@@ -181,7 +181,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
+    public void onAppointmentMoved(@ObservesAsync AppointmentMovedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -208,7 +208,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
+    public void onAppointmentCancelled(@ObservesAsync AppointmentCancelledEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -232,7 +232,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipantAdded(@Observes AppointmentParticipationAddedEvent event) {
+    public void onAppointmentParticipantAdded(@ObservesAsync AppointmentParticipationAddedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -267,7 +267,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentGroupParticipantAdded(@Observes AppointmentGroupParticipationAddedEvent event) {
+    public void onAppointmentGroupParticipantAdded(@ObservesAsync AppointmentGroupParticipationAddedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -297,7 +297,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onFriendshipRequestSent(@Observes FriendshipRequestSentEvent event) {
+    public void onFriendshipRequestSent(@ObservesAsync FriendshipRequestSentEvent event) {
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "NEW_FRIENDSHIP_REQUEST")
                 .add("requester_id", event.requesterId())
@@ -308,7 +308,7 @@ public class WebPushService {
         this.sendNotification(event.addresseeId(), payload.toString());
     }
 
-    public void onFriendshipAccepted(@Observes FriendshipAcceptedEvent event) {
+    public void onFriendshipAccepted(@ObservesAsync FriendshipAcceptedEvent event) {
         User addressee = User.findById(event.addresseeId());
         if (addressee == null) {
             return;
@@ -323,7 +323,7 @@ public class WebPushService {
         this.sendNotification(event.addresseeId(), payload.toString());
     }
 
-    public void onFriendshipDeclined(@Observes FriendshipDeclinedEvent event) {
+    public void onFriendshipDeclined(@ObservesAsync FriendshipDeclinedEvent event) {
         User addressee = User.findById(event.addresseeId());
         if (addressee == null) {
             return;
@@ -338,7 +338,7 @@ public class WebPushService {
         this.sendNotification(event.addresseeId(), payload.toString());
     }
 
-    public void onFriendshipRemoved(@Observes FriendshipRemovedEvent event) {
+    public void onFriendshipRemoved(@ObservesAsync FriendshipRemovedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -353,7 +353,7 @@ public class WebPushService {
         this.sendNotification(event.friendId(), payload.toString());
     }
 
-    public void onGroupMemberAdded(@Observes GroupMemberAddedEvent event) {
+    public void onGroupMemberAdded(@ObservesAsync GroupMemberAddedEvent event) {
         User newMember = User.findById(event.newMemberId());
         if (newMember == null) {
             return;
@@ -384,7 +384,7 @@ public class WebPushService {
         this.sendNotification(newMember.id, newMemberMessage.toString());
     }
 
-    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -408,7 +408,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipationInvalid(@Observes AppointmentParticipationInvalidEvent event) {
+    public void onAppointmentParticipationInvalid(@ObservesAsync AppointmentParticipationInvalidEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;
@@ -432,7 +432,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipationStatusPendingReminder(@Observes AppointmentParticipationStatusPendingReminderEvent event) {
+    public void onAppointmentParticipationStatusPendingReminder(@ObservesAsync AppointmentParticipationStatusPendingReminderEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;
@@ -448,7 +448,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentReminder(@Observes AppointmentReminderEvent event) {
+    public void onAppointmentReminder(@ObservesAsync AppointmentReminderEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;
@@ -463,7 +463,7 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipationStatusRecheckRequested(@Observes AppointmentParticipationStatusRecheckRequestedEvent event) {
+    public void onAppointmentParticipationStatusRecheckRequested(@ObservesAsync AppointmentParticipationStatusRecheckRequestedEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;

@@ -10,7 +10,7 @@ import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
-import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 
 import java.time.DayOfWeek;
@@ -84,12 +84,12 @@ public class AppointmentParticipationValidationService {
 
         appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
 
-        this.appointmentParticipationInvalidEvent.fire(
+        this.appointmentParticipationInvalidEvent.fireAsync(
                 new AppointmentParticipationInvalidEvent(appointment.id)
         );
     }
 
-    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
 
         if (appointment.getStartTime().isBefore(Instant.now())) {
@@ -115,7 +115,7 @@ public class AppointmentParticipationValidationService {
 
             appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
 
-            this.appointmentParticipationInvalidEvent.fire(
+            this.appointmentParticipationInvalidEvent.fireAsync(
                     new AppointmentParticipationInvalidEvent(appointment.id)
             );
         } else {
@@ -127,7 +127,7 @@ public class AppointmentParticipationValidationService {
         }
     }
 
-    public void onAppointmentEdited(@Observes AppointmentEditedEvent event) {
+    public void onAppointmentEdited(@ObservesAsync AppointmentEditedEvent event) {
         // Falls sich die mindest Teilnehmenden Zahl geändert hat
         Appointment appointment = Appointment.findById(event.appointmentId());
 
@@ -164,7 +164,7 @@ public class AppointmentParticipationValidationService {
             }
         }
         appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
-        this.appointmentParticipationInvalidEvent.fire(
+        this.appointmentParticipationInvalidEvent.fireAsync(
                 new AppointmentParticipationInvalidEvent(appointment.id)
         );
     }

@@ -11,7 +11,7 @@ import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
-import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -31,7 +31,7 @@ public class MessageService {
     @Inject
     Event<MessageSentEvent> messageSentEvent;
 
-    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
         User user = User.findById(event.actingUserId());
 
@@ -46,7 +46,7 @@ public class MessageService {
         message.persist();
     }
 
-    public void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
+    public void onAppointmentCancelled(@ObservesAsync AppointmentCancelledEvent event) {
         Appointment appointment = Appointment.findById(event.cancelledAppointmentId());
         User user = User.findById(event.actingUserId());
 
@@ -61,7 +61,7 @@ public class MessageService {
         message.persist();
     }
 
-    public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
+    public void onAppointmentMoved(@ObservesAsync AppointmentMovedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
         User user = User.findById(event.actingUserId());
 
@@ -119,7 +119,7 @@ public class MessageService {
         message.setTimeStamp(Instant.now());
         message.persist();
 
-        this.messageSentEvent.fire(new MessageSentEvent(message.id));
+        this.messageSentEvent.fireAsync(new MessageSentEvent(message.id));
 
         return message;
     }
