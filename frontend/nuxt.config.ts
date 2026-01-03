@@ -30,7 +30,7 @@ export default defineNuxtConfig({
         ],
     },
 
-    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@sentry/nuxt/module'],
+    modules: ['@primevue/nuxt-module', '@pinia/nuxt'],
 
     primevue: {
         options: {
@@ -91,15 +91,5 @@ export default defineNuxtConfig({
                 }
             }
         }
-    },
-
-    sentry: {
-        org: 'justus-henze',
-        project: 'chronos-nuxt',
-        autoInjectServerSentry: 'top-level-import',
-    },
-
-    sourcemap: {
-        client: 'hidden',
     },
 })
