@@ -3,76 +3,103 @@ import {ChronosTheme} from "./theme";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: {enabled: true},
+    compatibilityDate: '2025-07-15',
+    devtools: {enabled: true},
 
-  runtimeConfig: {
-      auth: {
-          issuer: "",          // wird per ENV überschrieben
-          clientId: "",
-          redirectUri: "",
-      },
+    runtimeConfig: {
+        auth: {
+            issuer: "",          // wird per ENV überschrieben
+            clientId: "",
+            redirectUri: "",
+        },
 
-      // Optional: API Endpoint zu Quarkus
-      quarkusUrl: ""
-  },
+        // Optional: API Endpoint zu Quarkus
+        quarkusUrl: ""
+    },
 
-  devServer: {
-      port: 3000,
-      host: '0.0.0.0' // do not put localhost (only accessible from the host machine)
-  },
+    devServer: {
+        port: 3000,
+        host: '0.0.0.0' // do not put localhost (only accessible from the host machine)
+    },
 
-  css: ["./app/assets/css/main.css",],
+    css: ["./app/assets/css/main.css",],
 
-  vite: {
-      plugins: [
-          tailwindcss(),
-      ],
-  },
+    vite: {
+        plugins: [
+            tailwindcss(),
+        ],
+    },
 
-  modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@sentry/nuxt/module'],
+    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@sentry/nuxt/module'],
 
-  primevue: {
-      options: {
-          theme: {
-              preset: ChronosTheme
-          }
-      },
-      directives: {
-          include: ['Tooltip']
-      },
-  },
+    primevue: {
+        options: {
+            theme: {
+                preset: ChronosTheme
+            }
+        },
+        directives: {
+            include: ['Tooltip']
+        },
+    },
 
-  app: {
-      head: {
-          link: [
-              {
-                  rel: 'manifest',
-                  href: '/manifest.webmanifest'
-              },
-              {
-                  rel: 'icon',
-                  href: '/icons/icon-192.png',
-                  sizes: '192x192',
-                  type: 'image/png'
-              },
-              {
-                  rel: 'icon',
-                  href: '/icons/icon-512.png',
-                  sizes: '512x512',
-                  type: 'image/png'
-              }
-          ]
-      }
-  },
+    app: {
+        head: {
+            link: [
+                {
+                    rel: 'manifest',
+                    href: '/manifest.webmanifest'
+                },
+                {
+                    rel: 'icon',
+                    href: '/icons/icon-192.png',
+                    sizes: '192x192',
+                    type: 'image/png'
+                },
+                {
+                    rel: 'icon',
+                    href: '/icons/icon-512.png',
+                    sizes: '512x512',
+                    type: 'image/png'
+                }
+            ]
+        }
+    },
 
-  sentry: {
-    org: 'justus-henze',
-    project: 'chronos-nuxt',
-    autoInjectServerSentry: 'top-level-import',
-  },
+    nitro: {
+        compressPublicAssets: true,
 
-  sourcemap: {
-    client: 'hidden',
-  },
+        routeRules: {
+            // Icons für 1 Jahr cachen
+            '/icons/**': {
+                headers: {
+                    'cache-control': 'public, max-age=31536000, immutable'
+                }
+            },
+
+            // Bilder
+            '/images/**': {
+                headers: {
+                    'cache-control': 'public, max-age=2592000' // 30 Tage
+                }
+            },
+
+            // Favicon mit kürzerem Cache
+            '/favicon.*': {
+                headers: {
+                    'cache-control': 'public, max-age=86400' // 1 Tag
+                }
+            }
+        }
+    },
+
+    sentry: {
+        org: 'justus-henze',
+        project: 'chronos-nuxt',
+        autoInjectServerSentry: 'top-level-import',
+    },
+
+    sourcemap: {
+        client: 'hidden',
+    },
 })
