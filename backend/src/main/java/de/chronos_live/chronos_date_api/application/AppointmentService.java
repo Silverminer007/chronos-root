@@ -49,6 +49,10 @@ public class AppointmentService {
         if (appointment.getEndTime().isBefore(appointment.getStartTime())) {
             throw new ValidationException("end", "End date cannot be before start date");
         }
+        if (createAppointmentDto.getMinimal_attendees() != null && createAppointmentDto.getMinimal_attendees() < 0) {
+            throw new ValidationException("minimal_attendees", "Minimal attendees must be positive");
+        }
+        appointment.setMinimalAttendees(createAppointmentDto.getMinimal_attendees());
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatedAt(Instant.now());
         appointment.setLastUpdate(Instant.now());
@@ -93,7 +97,7 @@ public class AppointmentService {
         if (newEndTime.isBefore(newEndTime)) {
             throw new ValidationException("end", "Start date cannot be after end date");
         }
-        if(!oldStartTime.equals(newStartTime) || !oldEndTime.equals(newEndTime)) {
+        if (!oldStartTime.equals(newStartTime) || !oldEndTime.equals(newEndTime)) {
             this.appointmentMovedEvent.fireAsync(new AppointmentMovedEvent(appointment.id,
                     oldStartTime, oldEndTime, actingUserId));
         }
@@ -134,7 +138,7 @@ public class AppointmentService {
     }
 
     public Appointment getAppointment(Long appointmentId, Long requestingUserId,
-                                         boolean messages, boolean participants, boolean groupParticipants) {
+                                      boolean messages, boolean participants, boolean groupParticipants) {
         this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
 
         Appointment appointment = this.appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
