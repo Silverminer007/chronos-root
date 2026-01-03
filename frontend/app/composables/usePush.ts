@@ -1,8 +1,19 @@
 import {base64ToUint8Array} from "~/utils/base64";
 
 export function usePush() {
+    function isPushAvailable() {
+        return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && typeof Notification !== "undefined";
+    }
+
+    async function requestPermission() {
+        if(isPushAvailable()) {
+            return await Notification.requestPermission()
+        }
+        return 'denied'
+    }
+
     const subscribe = async () => {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        if (!isPushAvailable()) {
             console.warn("Push not supported");
             return null;
         }
@@ -22,8 +33,8 @@ export function usePush() {
             body: {
                 endpoint: subscription.endpoint,
                 keys: {
-                    p256dh: subscription.toJSON().keys.p256dh,
-                    auth: subscription.toJSON().keys.auth
+                    p256dh: subscription.toJSON()?.keys?.p256dh,
+                    auth: subscription.toJSON()?.keys?.auth
                 }
             }
         });
@@ -36,27 +47,23 @@ export function usePush() {
 
     const permission = ref<NotificationPermission>('default')
 
-    if (process.client) {
+    if (import.meta.client && isPushAvailable()) {
         permission.value = Notification.permission
     }
 
     function isPushEnabled() {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        if (!isPushAvailable()) {
             return false;
         }
         return Notification.permission === 'granted' &&
             localStorage.getItem('pushPromptAnswer') === 'granted';
     }
 
-    function isPushAvailable() {
-        return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    }
-
     async function shouldAsk() {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        if (!isPushAvailable()) {
             return false;
         }
-        if (!process.client) return false
+        if (!import.meta.client) return false
 
         // Already decided by the browser
         if (Notification.permission === 'denied') return false
@@ -100,7 +107,7 @@ export function usePush() {
     }
 
     function markAsked(newAnswer: 'granted' | 'denied' | 'dismissed') {
-        if (!process.client) return
+        if (!import.meta.client) return
         localStorage.setItem(SHOWN_AT_STORAGE_KEY, Date.now().toString())
         const savedAnswer = localStorage.getItem(ANSWER_STORAGE_KEY)
         if (!savedAnswer || savedAnswer === 'dismissed') {
@@ -114,6 +121,7 @@ export function usePush() {
         markAsked,
         subscribe,
         isPushEnabled,
-        isPushAvailable
+        isPushAvailable,
+        requestPermission
     }
 }

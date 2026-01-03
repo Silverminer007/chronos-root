@@ -9,7 +9,7 @@ await fetchUser();
 
 const settingsStore = useSettingsStore();
 const toast = useToast();
-const {permission, subscribe, markAsked, isPushEnabled, isPushAvailable} = usePush();
+const {permission, subscribe, markAsked, isPushEnabled, isPushAvailable, requestPermission} = usePush();
 
 const pushEnabled = ref(false);
 const pushAvailable = ref(false);
@@ -26,7 +26,7 @@ onMounted(async () => {
 const handleTogglePush = async () => {
   if (!pushEnabled.value) {
     try {
-      const result = await Notification.requestPermission();
+      const result = await requestPermission();
       if (result === 'granted') {
         await subscribe();
         markAsked('granted');
