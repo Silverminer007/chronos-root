@@ -68,7 +68,7 @@ const handleSearch = () => {
       <div class="flex items-center justify-between h-16 gap-4">
         <!-- Logo -->
         <NuxtLink to="/agenda" class="flex items-center gap-3 shrink-0">
-          <img src="/icon.png" alt="Chronos" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
+          <img src="/icons/icon.png" alt="Chronos" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
           <span class="text-xl sm:text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent hidden sm:block">
             Chronos
           </span>

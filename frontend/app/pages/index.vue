@@ -13,7 +13,7 @@
       <header class="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <nav class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-            <img src="/icon.png" alt="Chronos Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg shadow-lg" />
+            <img src="/icons/icon.png" alt="Chronos Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg shadow-lg" />
             <span class="text-xl sm:text-2xl font-bold text-white">Chronos</span>
           </div>
           <div class="flex gap-2 sm:gap-3 shrink-0">
@@ -190,6 +190,7 @@ const demoAppointment1 = ref<Appointment>({
     { user_id: 10, name: "J", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
     { user_id: 11, name: "K", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
   ],
+  group_participants: [],
   messages: []
 });
 const demoAppointment2 = ref<Appointment>({
@@ -208,6 +209,7 @@ const demoAppointment2 = ref<Appointment>({
     { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
     { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
   ],
+  group_participants: [],
   messages: []
 });
 const demoAppointment3 = ref<Appointment>({
@@ -226,6 +228,7 @@ const demoAppointment3 = ref<Appointment>({
     { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
     { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null }
   ],
+  group_participants: [],
   messages: []
 });
 </script>
