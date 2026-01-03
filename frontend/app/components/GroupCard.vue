@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {Group} from '~/types';
+import ConfirmDialog from "~/components/ConfirmDialog.vue";
 
 const props = defineProps<{
   group: Group;

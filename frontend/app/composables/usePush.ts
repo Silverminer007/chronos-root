@@ -2,7 +2,7 @@ import {base64ToUint8Array} from "~/utils/base64";
 
 export function usePush() {
     const subscribe = async () => {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
             console.warn("Push not supported");
             return null;
         }
@@ -40,7 +40,22 @@ export function usePush() {
         permission.value = Notification.permission
     }
 
+    function isPushEnabled() {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+            return false;
+        }
+        return Notification.permission === 'granted' &&
+            localStorage.getItem('pushPromptAnswer') === 'granted';
+    }
+
+    function isPushAvailable() {
+        return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    }
+
     async function shouldAsk() {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+            return false;
+        }
         if (!process.client) return false
 
         // Already decided by the browser
@@ -65,7 +80,7 @@ export function usePush() {
                         endpoint: existing.endpoint,
                     }
                 });
-                if(!subscriptionStatus.exists) {
+                if (!subscriptionStatus.exists) {
                     console.warn("Server lost push subscription, reconnecting");
                     await existing.unsubscribe();
                     await subscribe();
@@ -88,7 +103,7 @@ export function usePush() {
         if (!process.client) return
         localStorage.setItem(SHOWN_AT_STORAGE_KEY, Date.now().toString())
         const savedAnswer = localStorage.getItem(ANSWER_STORAGE_KEY)
-        if(!savedAnswer || savedAnswer === 'dismissed') {
+        if (!savedAnswer || savedAnswer === 'dismissed') {
             localStorage.setItem(ANSWER_STORAGE_KEY, newAnswer)
         }
     }
@@ -97,6 +112,8 @@ export function usePush() {
         permission,
         shouldAsk,
         markAsked,
-        subscribe
+        subscribe,
+        isPushEnabled,
+        isPushAvailable
     }
 }
