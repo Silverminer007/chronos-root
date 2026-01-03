@@ -2,7 +2,7 @@
   <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
     <div class="flex items-center gap-4">
       <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center shrink-0">
-        <i class="pi pi-bell text-purple-600 dark:text-purple-400 text-xl"></i>
+        <Icon name="lucide:bell" class=" text-purple-600 dark:text-purple-400 text-xl" />
       </div>
 
       <div class="flex-1">
@@ -33,7 +33,7 @@
     <div v-if="permission === 'denied'"
          class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
       <p class="text-sm text-yellow-800 dark:text-yellow-200">
-        <i class="pi pi-info-circle mr-2"></i>
+        <Icon name="lucide:info" class=" mr-2" />
         Push-Benachrichtigungen wurden im Browser blockiert.
         Bitte ändere die Berechtigung in den Browsereinstellungen.
       </p>

@@ -31,7 +31,7 @@
       <section class="container mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center">
         <div class="max-w-4xl mx-auto">
           <div class="inline-flex items-center gap-2 bg-white/20 dark:bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-2 rounded-full mb-4 sm:mb-6">
-            <i class="pi pi-bolt text-white text-sm sm:text-base"></i>
+            <Icon name="lucide:zap" class=" text-white text-sm sm:text-base" />
             <span class="text-white text-xs sm:text-sm font-medium">Für Jugendverbände gemacht</span>
           </div>
 
@@ -91,7 +91,7 @@
               class="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-600 rounded-xl p-5 sm:p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl"
           >
             <div class="w-12 h-12 sm:w-14 sm:h-14 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-              <i :class="feature.icon" class="text-purple-600 dark:text-purple-400 text-xl sm:text-2xl"></i>
+              <Icon :name="feature.icon" class="text-purple-600 dark:text-purple-400 text-xl sm:text-2xl" />
             </div>
             <h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
               {{ feature.title }}
@@ -132,22 +132,22 @@ definePageMeta({
 })
 const features = [
   {
-    icon: 'pi pi-calendar',
+    icon: 'lucide:calendar',
     title: 'Termine organisieren',
     description: 'Erstelle und verwalte alle Team-Termine an einem zentralen Ort. Nie wieder durcheinander.'
   },
   {
-    icon: 'pi pi-users',
+    icon: 'lucide:users',
     title: 'Verfügbarkeit abfragen',
     description: 'Sehe auf einen Blick, wer teilnehmen kann und ob genug Helfer dabei sind.'
   },
   {
-    icon: 'pi pi-bell',
+    icon: 'lucide:bell',
     title: 'Push-Benachrichtigungen',
     description: 'Automatische Erinnerungen an wichtige Termine und laufende Abfragen.'
   },
   {
-    icon: 'pi pi-check-circle',
+    icon: 'lucide:check-circle',
     title: 'Einfache Zusagen',
     description: 'Schnell und unkompliziert zu- oder absagen – in Sekunden erledigt.'
   }

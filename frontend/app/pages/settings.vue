@@ -107,14 +107,14 @@ const handleUpdateSetting = (key: keyof typeof settingsStore.settings, value: st
               :disabled="settingsStore.saving"
               class="hidden sm:flex px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <i :class="settingsStore.saving ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i>
+            <Icon :name="settingsStore.saving ? 'lucide:loader-2' : 'lucide:save'" :class="{ 'animate-spin': settingsStore.saving }" />
             <span>Speichern</span>
           </button>
         </div>
 
         <!-- Loading State -->
         <div v-if="settingsStore.loading" class="text-center py-16">
-          <i class="pi pi-spin pi-spinner text-4xl text-purple-600 dark:text-purple-400 mb-4"></i>
+          <Icon name="lucide:loader-2" class="animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
           <p class="text-gray-600 dark:text-gray-400">Wird geladen...</p>
         </div>
 
@@ -122,7 +122,7 @@ const handleUpdateSetting = (key: keyof typeof settingsStore.settings, value: st
         <div v-else-if="settingsStore.error && !settingsStore.settings"
              class="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
           <div class="flex items-center gap-3">
-            <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+            <Icon name="lucide:triangle-alert" class=" text-red-600 dark:text-red-400 text-xl" />
             <div>
               <p class="font-semibold text-red-900 dark:text-red-200">Fehler beim Laden</p>
               <p class="text-sm text-red-700 dark:text-red-300">{{ settingsStore.error }}</p>
@@ -162,7 +162,7 @@ const handleUpdateSetting = (key: keyof typeof settingsStore.settings, value: st
         :disabled="settingsStore.saving"
         class="fixed bottom-6 right-6 w-14 h-14 sm:hidden rounded-full flex items-center justify-center text-white shadow-2xl bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all transform hover:scale-110 z-50 disabled:opacity-50"
     >
-      <i :class="settingsStore.saving ? 'pi pi-spin pi-spinner text-xl' : 'pi pi-save text-xl'"></i>
+      <Icon :name="settingsStore.saving ? 'lucide:loader-2' : 'lucide:save'" class="text-xl" :class="{ 'animate-spin': settingsStore.saving }" />
     </button>
 
     <Toast/>

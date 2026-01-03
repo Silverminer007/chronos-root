@@ -64,7 +64,7 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
                   ? 'bg-green-600 text-white'
                   : 'border-2 border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/20'"
       >
-        <i class="pi pi-check"></i>
+        <Icon name="lucide:check" />
         <span>Zusagen</span>
       </button>
 
@@ -76,7 +76,7 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
                   ? 'bg-red-600 text-white'
                   : 'border-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-900/20'"
       >
-        <i class="pi pi-times"></i>
+        <Icon name="lucide:x" />
         <span>Absagen</span>
       </button>
     </div>
@@ -84,7 +84,7 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
     <div v-if="ownParticipationStatus === 'PENDING'"
          class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
       <div class="flex gap-3">
-        <i class="pi pi-exclamation-triangle text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
+        <Icon name="lucide:triangle-alert" class=" text-yellow-600 dark:text-yellow-400 mt-0.5" />
         <div class="flex-1">
           <p class="text-sm font-medium text-yellow-900 dark:text-yellow-200">
             Bitte bestätige deine Teilnahme

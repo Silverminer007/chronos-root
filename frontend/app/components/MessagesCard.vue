@@ -57,7 +57,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
             @click="showMessageDialog = true"
             class="px-4 py-2 rounded-lg font-medium text-white transition-all bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 dark:from-purple-500 dark:to-pink-400 flex items-center justify-center gap-2"
         >
-          <i class="pi pi-send"></i>
+          <Icon name="lucide:send" />
           <span>Nachricht senden</span>
         </button>
       </div>
@@ -72,7 +72,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
         <div class="flex gap-4">
           <div
               class="w-10 h-10 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center shrink-0">
-            <i class="pi pi-user text-purple-600 dark:text-purple-400"></i>
+            <Icon name="lucide:user" class=" text-purple-600 dark:text-purple-400" />
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
@@ -88,7 +88,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
       </div>
 
       <div v-if="appointment.messages.length === 0" class="p-12 text-center">
-        <i class="pi pi-inbox text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+        <Icon name="lucide:inbox" class=" text-4xl text-gray-300 dark:text-gray-600 mb-4" />
         <p class="text-gray-500 dark:text-gray-400">Noch keine Nachrichten</p>
       </div>
     </div>

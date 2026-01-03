@@ -8,7 +8,7 @@
               class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
               :class="getIconBackgroundClass()"
           >
-            <i :class="getIconClass()" class="text-xl"></i>
+            <Icon :name="getIconName()" class="text-xl" :class="getIconColorClass()" />
           </div>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ title }}</h2>
         </div>
@@ -33,7 +33,7 @@
             :class="getConfirmButtonClass()"
             @click="confirm"
         >
-          <i :class="getConfirmIcon()"></i>
+          <Icon :name="getConfirmIconName()" />
           <span>{{ confirmText }}</span>
         </button>
       </div>
@@ -68,11 +68,20 @@ const getIconBackgroundClass = () => {
   return classes[props.confirmColor];
 };
 
-const getIconClass = () => {
+const getIconName = () => {
+  const icons = {
+    red: 'lucide:triangle-alert',
+    purple: 'lucide:circle-help',
+    green: 'lucide:check-circle'
+  };
+  return icons[props.confirmColor];
+};
+
+const getIconColorClass = () => {
   const classes = {
-    red: 'pi pi-exclamation-triangle text-red-600 dark:text-red-400',
-    purple: 'pi pi-question-circle text-purple-600 dark:text-purple-400',
-    green: 'pi pi-check-circle text-green-600 dark:text-green-400'
+    red: 'text-red-600 dark:text-red-400',
+    purple: 'text-purple-600 dark:text-purple-400',
+    green: 'text-green-600 dark:text-green-400'
   };
   return classes[props.confirmColor];
 };
@@ -86,11 +95,11 @@ const getConfirmButtonClass = () => {
   return classes[props.confirmColor];
 };
 
-const getConfirmIcon = () => {
+const getConfirmIconName = () => {
   const icons = {
-    red: 'pi pi-times-circle',
-    purple: 'pi pi-check',
-    green: 'pi pi-check'
+    red: 'lucide:x-circle',
+    purple: 'lucide:check',
+    green: 'lucide:check'
   };
   return icons[props.confirmColor];
 };

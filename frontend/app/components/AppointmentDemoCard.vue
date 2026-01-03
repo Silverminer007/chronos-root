@@ -65,11 +65,11 @@ async function sendMessage(messageBody: string) {
       class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-all duration-300">
     <!-- Status Banner -->
     <div v-if="appointment.status === 'CANCELLED'" class="bg-red-600 px-4 py-2 flex items-center gap-2">
-      <i class="pi pi-exclamation-triangle text-white"></i>
+      <Icon name="lucide:triangle-alert" class=" text-white" />
       <span class="text-white font-medium text-sm">Termin abgesagt</span>
     </div>
     <div v-else-if="appointment.status === 'NOT_ENOUGH_ATTENDEES'" class="bg-yellow-500 px-4 py-2 flex items-center gap-2">
-      <i class="pi pi-exclamation-triangle text-white"></i>
+      <Icon name="lucide:triangle-alert" class=" text-white" />
       <span class="text-white font-medium text-sm">Zu wenig Teilnehmende</span>
     </div>
 
@@ -83,11 +83,11 @@ async function sendMessage(messageBody: string) {
               {{ appointment.name }}
             </h3>
             <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <i class="pi pi-calendar text-xs"></i>
+              <Icon name="lucide:calendar" class=" text-xs" />
               <span>{{ formatTimeRange(appointment.start, appointment.end) }}</span>
             </div>
             <div v-if="appointment.venue" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
-              <i class="pi pi-map-marker text-xs"></i>
+              <Icon name="lucide:map-pin" class=" text-xs" />
               <span>{{ appointment.venue }}</span>
             </div>
           </div>
@@ -139,7 +139,7 @@ async function sendMessage(messageBody: string) {
               ? 'bg-green-600 text-white'
               : 'border-2 border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/20'"
         >
-          <i class="pi pi-check text-sm"></i>
+          <Icon name="lucide:check" class=" text-sm" />
           <span class="hidden sm:inline">Zusagen</span>
         </button>
 
@@ -147,7 +147,7 @@ async function sendMessage(messageBody: string) {
             @click="messageDialog = true"
             class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-medium transition-all border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center justify-center gap-2"
         >
-          <i class="pi pi-send text-sm"></i>
+          <Icon name="lucide:send" class=" text-sm" />
           <span class="hidden sm:inline">Nachricht</span>
         </button>
 
@@ -159,7 +159,7 @@ async function sendMessage(messageBody: string) {
               ? 'bg-red-600 text-white'
               : 'border-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-900/20'"
         >
-          <i class="pi pi-times text-sm"></i>
+          <Icon name="lucide:x" class=" text-sm" />
           <span class="hidden sm:inline">Absagen</span>
         </button>
       </div>

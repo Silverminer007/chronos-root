@@ -140,20 +140,29 @@ const getRoleBadgeClass = (role: string) => {
   return classes[role] || classes.GUEST;
 };
 
-const getStatusIcon = (status: string) => {
+const getStatusIconName = (status: string) => {
   const icons: Record<string, string> = {
-    APPROVED: 'pi pi-check text-green-600 dark:text-green-400',
-    REJECTED: 'pi pi-times text-red-600 dark:text-red-400',
-    PENDING: 'pi pi-clock text-yellow-600 dark:text-yellow-400'
+    APPROVED: 'lucide:check',
+    REJECTED: 'lucide:x',
+    PENDING: 'lucide:clock'
   };
   return icons[status] || '';
 };
 
+const getStatusIconClass = (status: string) => {
+  const classes: Record<string, string> = {
+    APPROVED: 'text-green-600 dark:text-green-400',
+    REJECTED: 'text-red-600 dark:text-red-400',
+    PENDING: 'text-yellow-600 dark:text-yellow-400'
+  };
+  return classes[status] || '';
+};
+
 const roleOptions = [
-  { value: 'RESPONSIBLE', label: 'Organisator', icon: 'pi pi-star-fill', color: 'purple' },
-  { value: 'ATTENDANT', label: 'Teilnehmer', icon: 'pi pi-user', color: 'blue' },
-  { value: 'HELPER', label: 'Helfer', icon: 'pi pi-wrench', color: 'green' },
-  { value: 'GUEST', label: 'Gast', icon: 'pi pi-eye', color: 'gray' }
+  { value: 'RESPONSIBLE', label: 'Organisator', icon: 'lucide:star', color: 'purple' },
+  { value: 'ATTENDANT', label: 'Teilnehmer', icon: 'lucide:user', color: 'blue' },
+  { value: 'HELPER', label: 'Helfer', icon: 'lucide:wrench', color: 'green' },
+  { value: 'GUEST', label: 'Gast', icon: 'lucide:eye', color: 'gray' }
 ];
 
 const getRoleButtonClass = (role: string) => {
@@ -197,7 +206,7 @@ const getRoleIconClass = (role: string) => {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 bg-linear-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-lg flex items-center justify-center">
-            <i class="pi pi-users text-indigo-600 dark:text-indigo-400"></i>
+            <Icon name="lucide:users" class=" text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">Gruppen</h3>
@@ -213,7 +222,7 @@ const getRoleIconClass = (role: string) => {
             class="w-10 h-10 flex items-center justify-center rounded-lg bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white transition-all shadow-md hover:shadow-lg"
             title="Gruppe hinzufügen"
         >
-          <i class="pi pi-plus"></i>
+          <Icon name="lucide:plus" />
         </button>
       </div>
     </div>
@@ -221,7 +230,7 @@ const getRoleIconClass = (role: string) => {
     <!-- Empty State -->
     <div v-if="groups.length === 0" class="p-8 text-center">
       <div class="w-16 h-16 bg-gray-100 dark:bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
-        <i class="pi pi-users text-2xl text-gray-400 dark:text-gray-500"></i>
+        <Icon name="lucide:users" class=" text-2xl text-gray-400 dark:text-gray-500" />
       </div>
       <p class="text-gray-500 dark:text-gray-400">Keine Gruppen eingeladen</p>
       <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
@@ -232,7 +241,7 @@ const getRoleIconClass = (role: string) => {
           @click="openAddDialog"
           class="mt-4 px-4 py-2 rounded-lg font-medium text-purple-600 dark:text-purple-400 border-2 border-purple-600 dark:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
       >
-        <i class="pi pi-plus mr-2"></i>
+        <Icon name="lucide:plus" class=" mr-2" />
         Gruppe hinzufügen
       </button>
     </div>
@@ -251,7 +260,7 @@ const getRoleIconClass = (role: string) => {
         >
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
-              <i class="pi pi-users text-indigo-600 dark:text-indigo-400"></i>
+              <Icon name="lucide:users" class=" text-indigo-600 dark:text-indigo-400" />
             </div>
             <div class="text-left">
               <p class="font-medium text-gray-900 dark:text-white">{{ group.name }}</p>
@@ -262,10 +271,10 @@ const getRoleIconClass = (role: string) => {
               </div>
             </div>
           </div>
-          <i
-              class="pi text-gray-400 transition-transform duration-200"
-              :class="isExpanded(group.id) ? 'pi-chevron-up' : 'pi-chevron-down'"
-          ></i>
+          <Icon
+              :name="isExpanded(group.id) ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+              class="text-gray-400 transition-transform duration-200"
+          />
         </button>
 
         <!-- Group Members (Expandable) -->
@@ -287,7 +296,7 @@ const getRoleIconClass = (role: string) => {
                 </div>
                 <span class="text-sm text-gray-700 dark:text-gray-300">{{ participant.name }}</span>
               </div>
-              <i :class="getStatusIcon(participant.status)" class="text-sm"></i>
+              <Icon :name="getStatusIconName(participant.status)" :class="getStatusIconClass(participant.status)" class="text-sm" />
             </div>
           </div>
         </div>
@@ -302,7 +311,7 @@ const getRoleIconClass = (role: string) => {
       <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-linear-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl flex items-center justify-center shrink-0">
-            <i class="pi pi-users text-indigo-600 dark:text-indigo-400 text-xl"></i>
+            <Icon name="lucide:users" class=" text-indigo-600 dark:text-indigo-400 text-xl" />
           </div>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Gruppe hinzufügen</h2>
         </div>
@@ -310,7 +319,7 @@ const getRoleIconClass = (role: string) => {
             @click="closeAddDialog"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
         >
-          <i class="pi pi-times text-gray-500 dark:text-gray-400 text-lg"></i>
+          <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
       </div>
 
@@ -322,7 +331,7 @@ const getRoleIconClass = (role: string) => {
             Gruppe suchen
           </label>
           <div class="relative">
-            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <Icon name="lucide:search" class=" absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 v-model="searchQuery"
                 type="text"
@@ -346,7 +355,7 @@ const getRoleIconClass = (role: string) => {
                 class="p-3 rounded-lg border-2 transition-all text-center"
                 :class="getRoleButtonClass(option.value)"
             >
-              <i :class="[option.icon, getRoleIconClass(option.value)]" class="mb-1"></i>
+              <Icon :name="option.icon" :class="getRoleIconClass(option.value)" class="mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">{{ option.label }}</p>
             </button>
           </div>
@@ -359,12 +368,12 @@ const getRoleIconClass = (role: string) => {
           </h3>
 
           <div v-if="searchLoading" class="text-center py-8">
-            <i class="pi pi-spin pi-spinner text-2xl text-purple-600 dark:text-purple-400"></i>
+            <Icon name="lucide:loader-2" class="animate-spin text-2xl text-purple-600 dark:text-purple-400" />
             <p class="text-gray-500 dark:text-gray-400 mt-2">Wird gesucht...</p>
           </div>
 
           <div v-else-if="searchResults.length === 0" class="text-center py-8">
-            <i class="pi pi-search text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
+            <Icon name="lucide:search" class=" text-3xl text-gray-300 dark:text-gray-600 mb-2" />
             <p class="text-gray-500 dark:text-gray-400">Keine Gruppen gefunden</p>
           </div>
 
@@ -377,7 +386,7 @@ const getRoleIconClass = (role: string) => {
                 :class="selectedGroup?.id === result.id ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500' : ''"
             >
               <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center shrink-0">
-                <i class="pi pi-users text-indigo-600 dark:text-indigo-400"></i>
+                <Icon name="lucide:users" class=" text-indigo-600 dark:text-indigo-400" />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 dark:text-white truncate">{{ result.name }}</p>
@@ -385,7 +394,7 @@ const getRoleIconClass = (role: string) => {
                   {{ result.member_count }} Mitglieder
                 </p>
               </div>
-              <i v-if="selectedGroup?.id === result.id" class="pi pi-check text-purple-600 dark:text-purple-400"></i>
+              <Icon v-if="selectedGroup?.id === result.id" name="lucide:check" class="text-purple-600 dark:text-purple-400" />
             </button>
           </div>
         </div>
@@ -395,7 +404,7 @@ const getRoleIconClass = (role: string) => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center shrink-0">
-                <i class="pi pi-users text-indigo-600 dark:text-indigo-400"></i>
+                <Icon name="lucide:users" class=" text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ selectedGroup.name }}</p>
@@ -406,7 +415,7 @@ const getRoleIconClass = (role: string) => {
                 @click="selectedGroup = null"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
             >
-              <i class="pi pi-times"></i>
+              <Icon name="lucide:x" />
             </button>
           </div>
         </div>
@@ -427,7 +436,7 @@ const getRoleIconClass = (role: string) => {
             :disabled="!selectedGroup || adding"
             @click="addGroup"
         >
-          <i :class="adding ? 'pi pi-spin pi-spinner' : 'pi pi-plus'"></i>
+          <Icon :name="adding ? 'lucide:loader-2' : 'lucide:plus'" :class="{ 'animate-spin': adding }" />
           <span>Hinzufügen</span>
         </button>
       </div>

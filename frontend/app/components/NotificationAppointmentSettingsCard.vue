@@ -4,7 +4,7 @@
     <div class="p-6 border-b border-gray-200 dark:border-neutral-700">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg flex items-center justify-center shrink-0">
-          <i class="pi pi-calendar text-purple-600 dark:text-purple-400"></i>
+          <Icon name="lucide:calendar" class=" text-purple-600 dark:text-purple-400" />
         </div>
         <div>
           <h3 class="text-lg font-bold text-gray-900 dark:text-white">
@@ -24,7 +24,7 @@
            class="p-6">
         <!-- Notification Type Header -->
         <div class="flex items-start gap-3 mb-4">
-          <i :class="['pi', notificationType.icon, 'text-gray-400 dark:text-gray-500 mt-0.5']"></i>
+          <Icon :name="notificationType.icon" class="text-gray-400 dark:text-gray-500 mt-0.5" />
           <div>
             <p class="font-medium text-gray-900 dark:text-white">
               {{ notificationType.label }}
@@ -43,7 +43,7 @@
               @click="emit('update', notificationType.key, option.value)"
               :class="getButtonClasses(option, settings[notificationType.key] === option.value)"
           >
-            <i :class="['pi', option.icon, getIconClasses(option, settings[notificationType.key] === option.value)]"></i>
+            <Icon :name="option.icon" :class="getIconClasses(option, settings[notificationType.key] === option.value)" />
             <p class="text-xs font-medium text-gray-900 dark:text-white hidden sm:block">
               {{ option.label }}
             </p>
@@ -70,58 +70,58 @@ const notificationTypes = [
     key: 'appointment_moved' as keyof NotificationSettings,
     label: 'Termin verschoben',
     description: 'Wenn ein Termin zeitlich verschoben wird',
-    icon: 'pi-calendar-clock'
+    icon: 'lucide:calendar-clock'
   },
   {
     key: 'appointment_message' as keyof NotificationSettings,
     label: 'Neue Nachricht',
     description: 'Wenn eine Nachricht in einem Termin gesendet wird',
-    icon: 'pi-envelope'
+    icon: 'lucide:mail'
   },
   {
     key: 'appointment_cancelled' as keyof NotificationSettings,
     label: 'Termin abgesagt',
     description: 'Wenn ein Termin abgesagt wird',
-    icon: 'pi-times-circle'
+    icon: 'lucide:x-circle'
   },
   {
     key: 'appointment_participant_added' as keyof NotificationSettings,
     label: 'Teilnehmer hinzugefügt',
     description: 'Wenn du zu einem Termin eingeladen wirst',
-    icon: 'pi-user-plus'
+    icon: 'lucide:user-plus'
   },
   {
     key: 'appointment_participation_status_changed' as keyof NotificationSettings,
     label: 'Teilnahmestatus geändert',
     description: 'Wenn jemand zu- oder absagt',
-    icon: 'pi-check-circle'
+    icon: 'lucide:check-circle'
   },
   {
     key: 'appointment_participation_invalid' as keyof NotificationSettings,
     label: 'Nicht genug Teilnehmer',
     description: 'Wenn ein Termin nicht genug Zusagen hat',
-    icon: 'pi-exclamation-triangle'
+    icon: 'lucide:triangle-alert'
   },
   {
     key: 'appointment_participation_status_pending' as keyof NotificationSettings,
     label: 'Rückmeldung ausstehend',
     description: 'Erinnerung zur Rückmeldung',
-    icon: 'pi-clock'
+    icon: 'lucide:clock'
   },
   {
     key: 'appointment_reminder' as keyof NotificationSettings,
     label: 'Terminerinnerung',
     description: 'Erinnerung vor dem Termin',
-    icon: 'pi-bell'
+    icon: 'lucide:bell'
   }
 ];
 
 const roleOptions: { value: AppointmentNotificationSetting; label: string; icon: string; color: string }[] = [
-  {value: 'DISABLED', label: 'Aus', icon: 'pi-ban', color: 'gray'},
-  {value: 'ALL', label: 'Alle', icon: 'pi-users', color: 'purple'},
-  {value: 'ATTENDANT', label: 'Teiln.', icon: 'pi-user', color: 'blue'},
-  {value: 'HELPER', label: 'Helfer', icon: 'pi-wrench', color: 'green'},
-  {value: 'RESPONSIBLE', label: 'Orga.', icon: 'pi-star-fill', color: 'orange'}
+  {value: 'DISABLED', label: 'Aus', icon: 'lucide:ban', color: 'gray'},
+  {value: 'ALL', label: 'Alle', icon: 'lucide:users', color: 'purple'},
+  {value: 'ATTENDANT', label: 'Teiln.', icon: 'lucide:user', color: 'blue'},
+  {value: 'HELPER', label: 'Helfer', icon: 'lucide:wrench', color: 'green'},
+  {value: 'RESPONSIBLE', label: 'Orga.', icon: 'lucide:star', color: 'orange'}
 ];
 
 const getButtonClasses = (option: typeof roleOptions[0], isSelected: boolean) => {

@@ -49,20 +49,20 @@ const getStatusClass = (status: string) => {
             class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
             title="Termin bearbeiten"
         >
-          <i class="pi pi-pencil"></i>
+          <Icon name="lucide:pencil" />
         </button>
       </div>
       <div class="flex flex-wrap gap-4 text-white/90 text-sm">
         <div class="flex items-center gap-2">
-          <i class="pi pi-calendar"></i>
+          <Icon name="lucide:calendar" />
           <span>{{ formatDate(appointment.start) }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <i class="pi pi-clock"></i>
+          <Icon name="lucide:clock" />
           <span>{{ formatTime(appointment.start) }} - {{ formatTime(appointment.end) }}</span>
         </div>
         <div v-if="appointment.venue" class="flex items-center gap-2">
-          <i class="pi pi-map-marker"></i>
+          <Icon name="lucide:map-pin" />
           <span>{{ appointment.venue }}</span>
         </div>
       </div>
@@ -75,7 +75,7 @@ const getStatusClass = (status: string) => {
       </div>
 
       <div class="flex items-center gap-2 text-sm">
-        <i class="pi pi-users text-gray-400"></i>
+        <Icon name="lucide:users" class=" text-gray-400" />
         <span class="text-gray-600 dark:text-gray-400">
                   Mindestens {{ appointment.minimal_attendees }} Teilnehmer erforderlich
                 </span>

@@ -68,7 +68,7 @@ watch(() => props.visible, (newVal) => {
       <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center shrink-0">
-            <i class="pi pi-user-plus text-purple-600 dark:text-purple-400 text-xl"></i>
+            <Icon name="lucide:user-plus" class=" text-purple-600 dark:text-purple-400 text-xl" />
           </div>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Freund hinzufügen</h2>
         </div>
@@ -76,7 +76,7 @@ watch(() => props.visible, (newVal) => {
             @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
         >
-          <i class="pi pi-times text-gray-500 dark:text-gray-400 text-lg"></i>
+          <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
       </div>
 
@@ -87,7 +87,7 @@ watch(() => props.visible, (newVal) => {
             E-Mail-Adresse
           </label>
           <div class="relative">
-            <i class="pi pi-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <Icon name="lucide:mail" class=" absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 v-model="email"
                 type="email"
@@ -120,7 +120,7 @@ watch(() => props.visible, (newVal) => {
             :disabled="!isValidEmail || loading"
             @click="sendRequest"
         >
-          <i :class="loading ? 'pi pi-spin pi-spinner' : 'pi pi-send'"></i>
+          <Icon :name="loading ? 'lucide:loader-2' : 'lucide:send'" :class="{ 'animate-spin': loading }" />
           <span>Anfrage senden</span>
         </button>
       </div>

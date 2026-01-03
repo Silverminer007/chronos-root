@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center shrink-0">
-            <i class="pi pi-send text-purple-600 dark:text-purple-400 text-xl"></i>
+            <Icon name="lucide:send" class=" text-purple-600 dark:text-purple-400 text-xl" />
           </div>
           <div>
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">Nachricht senden</h2>
@@ -17,7 +17,7 @@
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
             aria-label="Schließen"
         >
-          <i class="pi pi-times text-gray-500 dark:text-gray-400 text-lg"></i>
+          <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
       </div>
 
@@ -26,7 +26,7 @@
         <!-- Empfänger Info -->
         <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
           <div class="flex items-start gap-3">
-            <i class="pi pi-info-circle text-purple-600 dark:text-purple-400 text-lg mt-0.5"></i>
+            <Icon name="lucide:info" class=" text-purple-600 dark:text-purple-400 text-lg mt-0.5" />
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-purple-900 dark:text-purple-200 mb-1">
                 Empfänger
@@ -75,8 +75,8 @@
             :disabled="!isValid || sending"
             @click="send"
         >
-          <i v-if="sending" class="pi pi-spin pi-spinner"></i>
-          <i v-else class="pi pi-send"></i>
+          <Icon v-if="sending" name="lucide:loader-2" class="animate-spin" />
+          <Icon v-else name="lucide:send" />
           <span>{{ sending ? 'Wird gesendet...' : 'Nachricht senden' }}</span>
         </button>
       </div>

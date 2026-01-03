@@ -95,11 +95,11 @@ const getStatusLabel = (status: string) => {
   return labels[status] || status;
 };
 
-const getStatusIcon = (status: string) => {
+const getStatusIconName = (status: string) => {
   const icons: Record<string, string> = {
-    APPROVED: 'pi pi-check',
-    REJECTED: 'pi pi-times',
-    PENDING: 'pi pi-clock'
+    APPROVED: 'lucide:check',
+    REJECTED: 'lucide:x',
+    PENDING: 'lucide:clock'
   };
   return icons[status] || '';
 };
@@ -125,7 +125,7 @@ const getStatusBadgeClass = (status: string) => {
             @click="showAddDialog = true"
             class="w-8 h-8 flex items-center justify-center rounded-lg bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white transition-all shadow-sm"
         >
-          <i class="pi pi-plus text-sm"></i>
+          <Icon name="lucide:plus" class=" text-sm" />
         </button>
       </div>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -166,14 +166,14 @@ const getStatusBadgeClass = (status: string) => {
                   v-if="participant.via_group_name"
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400"
               >
-                <i class="pi pi-users mr-1 text-xs"></i>
+                <Icon name="lucide:users" class=" mr-1 text-xs" />
                 {{ participant.via_group_name }}
               </span>
               <span
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                   :class="getStatusBadgeClass(participant.status)"
               >
-                <i :class="getStatusIcon(participant.status)" class="text-xs"></i>
+                <Icon :name="getStatusIconName(participant.status)" class="text-xs" />
                 {{ getStatusLabel(participant.status) }}
               </span>
             </div>

@@ -43,7 +43,7 @@ const confirmDelete = () => {
     <div class="flex items-start gap-4">
       <div
           class="w-12 h-12 bg-linear-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl flex items-center justify-center shrink-0">
-        <i class="pi pi-users text-blue-600 dark:text-blue-400 text-xl"></i>
+        <Icon name="lucide:users" class=" text-blue-600 dark:text-blue-400 text-xl" />
       </div>
 
       <div class="flex-1 min-w-0">
@@ -54,7 +54,7 @@ const confirmDelete = () => {
               class="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
               title="Gruppe löschen"
           >
-            <i class="pi pi-trash text-sm"></i>
+            <Icon name="lucide:trash-2" class=" text-sm" />
           </button>
         </div>
 
@@ -87,7 +87,7 @@ const confirmDelete = () => {
         </div>
       </div>
 
-      <i class="pi pi-chevron-right text-gray-400 dark:text-gray-500 shrink-0"></i>
+      <Icon name="lucide:chevron-right" class=" text-gray-400 dark:text-gray-500 shrink-0" />
     </div>
   </NuxtLink>
 

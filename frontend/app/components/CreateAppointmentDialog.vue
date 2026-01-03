@@ -10,7 +10,7 @@
       <div class="flex items-center gap-3">
         <div
             class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center">
-          <i class="pi pi-calendar-plus text-purple-600 dark:text-purple-400 text-xl"></i>
+          <Icon name="lucide:calendar-plus" class=" text-purple-600 dark:text-purple-400 text-xl" />
         </div>
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Neuen Termin erstellen</h2>
       </div>
@@ -98,7 +98,7 @@
             class="w-full"
         >
           <template #prepend>
-            <i class="pi pi-map-marker"></i>
+            <Icon name="lucide:map-pin" />
           </template>
         </InputText>
       </div>
@@ -123,7 +123,7 @@
       <!-- Add Users/Groups Later Info -->
       <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
         <div class="flex gap-3">
-          <i class="pi pi-info-circle text-blue-600 dark:text-blue-400 mt-0.5"></i>
+          <Icon name="lucide:info" class=" text-blue-600 dark:text-blue-400 mt-0.5" />
           <div class="flex-1">
             <p class="text-sm font-medium text-blue-900 dark:text-blue-200">
               Weitere Teilnehmer hinzufügen
@@ -151,7 +151,7 @@
             :disabled="!isValid"
         >
           <template #icon>
-            <i class="pi pi-check mr-2"></i>
+            <Icon name="lucide:check" class=" mr-2" />
           </template>
         </Button>
       </div>

@@ -2,14 +2,14 @@
   <div v-if="appointmentsStore.loading"
        class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
     <div class="text-center">
-      <i class="pi pi-spin pi-spinner text-4xl text-purple-600 dark:text-purple-400 mb-4"></i>
+      <i class="pi animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
       <p class="text-gray-600 dark:text-gray-400">Termin wird geladen...</p>
     </div>
   </div>
 
   <div v-else-if="error" class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
     <div class="text-center max-w-md mx-auto p-6">
-      <i class="pi pi-exclamation-circle text-4xl text-red-600 dark:text-red-400 mb-4"></i>
+      <Icon name="lucide:alert-circle" class=" text-4xl text-red-600 dark:text-red-400 mb-4" />
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Termin nicht gefunden</h2>
       <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
       <button

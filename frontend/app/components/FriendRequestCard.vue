@@ -74,7 +74,7 @@ const handleCancel = async () => {
             :disabled="loading"
             class="px-3 py-2 rounded-lg font-medium text-sm text-white bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 transition-all disabled:opacity-50"
         >
-          <i class="pi pi-check mr-1"></i>
+          <Icon name="lucide:check" class=" mr-1" />
           Annehmen
         </button>
         <button
@@ -82,7 +82,7 @@ const handleCancel = async () => {
             :disabled="loading"
             class="px-3 py-2 rounded-lg font-medium text-sm text-red-600 dark:text-red-400 border-2 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50"
         >
-          <i class="pi pi-times mr-1"></i>
+          <Icon name="lucide:x" class=" mr-1" />
           Ablehnen
         </button>
       </div>

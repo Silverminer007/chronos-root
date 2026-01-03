@@ -47,7 +47,7 @@ const handleRemove = () => {
           class="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
           title="Freundschaft beenden"
       >
-        <i class="pi pi-trash"></i>
+        <Icon name="lucide:trash-2" />
       </button>
     </div>
   </div>

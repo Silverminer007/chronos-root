@@ -86,7 +86,7 @@ const requestRecheck = () => {
           :disabled="actionsLoading"
           class="w-full px-6 py-3 rounded-lg font-medium transition-all border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <i :class="actionsLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"></i>
+        <Icon :name="actionsLoading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ 'animate-spin': actionsLoading }" />
         <span>Teilnahme erneut abfragen</span>
       </button>
 
@@ -95,7 +95,7 @@ const requestRecheck = () => {
           :disabled="actionsLoading || appointment.status === 'CANCELLED'"
           class="w-full px-6 py-3 rounded-lg font-medium transition-all border-2 border-red-600 dark:border-red-500 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <i class="pi pi-times-circle"></i>
+        <Icon name="lucide:x-circle" />
         <span>Termin absagen</span>
       </button>
     </div>

@@ -34,7 +34,7 @@ function close() {
     <div class="w-full max-w-md bg-white dark:bg-neutral-800 rounded-xl shadow-2xl p-6 sm:p-8 transform transition-all">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-          <i class="pi pi-download text-purple-600 dark:text-purple-400 text-xl"></i>
+          <Icon name="lucide:download" class=" text-purple-600 dark:text-purple-400 text-xl" />
         </div>
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">App installieren</h2>
       </div>

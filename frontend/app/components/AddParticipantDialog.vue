@@ -7,7 +7,7 @@
         <div class="flex items-center gap-3">
           <div
               class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center shrink-0">
-            <i class="pi pi-user-plus text-purple-600 dark:text-purple-400 text-xl"></i>
+            <Icon name="lucide:user-plus" class=" text-purple-600 dark:text-purple-400 text-xl" />
           </div>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Teilnehmer hinzufügen</h2>
         </div>
@@ -15,7 +15,7 @@
             @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
         >
-          <i class="pi pi-times text-gray-500 dark:text-gray-400 text-lg"></i>
+          <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
       </div>
 
@@ -27,7 +27,7 @@
             {{ 'Person suchen' }}
           </label>
           <div class="relative">
-            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <Icon name="lucide:search" class=" absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 v-model="searchQuery"
                 type="text"
@@ -51,7 +51,7 @@
                 ? 'border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
             >
-              <i class="pi pi-star-fill text-purple-600 dark:text-purple-400 mb-1"></i>
+              <Icon name="lucide:star" class=" text-purple-600 dark:text-purple-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Organisator</p>
             </button>
             <button
@@ -61,7 +61,7 @@
                 ? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
             >
-              <i class="pi pi-user text-blue-600 dark:text-blue-400 mb-1"></i>
+              <Icon name="lucide:user" class=" text-blue-600 dark:text-blue-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Teilnehmer</p>
             </button>
             <button
@@ -71,7 +71,7 @@
                 ? 'border-green-600 dark:border-green-400 bg-green-50 dark:bg-green-900/20'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
             >
-              <i class="pi pi-wrench text-green-600 dark:text-green-400 mb-1"></i>
+              <Icon name="lucide:wrench" class=" text-green-600 dark:text-green-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Helfer</p>
             </button>
             <button
@@ -81,7 +81,7 @@
                 ? 'border-gray-600 dark:border-gray-400 bg-gray-50 dark:bg-gray-800/50'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
             >
-              <i class="pi pi-eye text-gray-600 dark:text-gray-400 mb-1"></i>
+              <Icon name="lucide:eye" class=" text-gray-600 dark:text-gray-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Gast</p>
             </button>
           </div>
@@ -94,12 +94,12 @@
           </h3>
 
           <div v-if="searching" class="text-center py-8">
-            <i class="pi pi-spin pi-spinner text-2xl text-purple-600 dark:text-purple-400"></i>
+            <Icon name="lucide:loader-2" class="animate-spin text-2xl text-purple-600 dark:text-purple-400" />
             <p class="text-gray-500 dark:text-gray-400 mt-2">Wird gesucht...</p>
           </div>
 
           <div v-else-if="searchResults.length === 0" class="text-center py-8">
-            <i class="pi pi-search text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
+            <Icon name="lucide:search" class=" text-3xl text-gray-300 dark:text-gray-600 mb-2" />
             <p class="text-gray-500 dark:text-gray-400">Keine Ergebnisse gefunden</p>
           </div>
 
@@ -114,9 +114,7 @@
                   class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-linear-to-br
                   from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30"
               >
-                <i
-                    class='pi pi-user text-purple-600 dark:text-purple-400'
-                ></i>
+                <Icon name="lucide:user" class="text-purple-600 dark:text-purple-400" />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 dark:text-white truncate">{{ result.name }}</p>
@@ -135,9 +133,7 @@
                   class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-linear-to-br
                    from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30"
               >
-                <i
-                    class="pi pi-user text-purple-600 dark:text-purple-400"
-                ></i>
+                <Icon name="lucide:user" class="text-purple-600 dark:text-purple-400" />
               </div>
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ selectedItem.name }}</p>
@@ -148,7 +144,7 @@
                 @click="selectedItem = null"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
             >
-              <i class="pi pi-times"></i>
+              <Icon name="lucide:x" />
             </button>
           </div>
         </div>
@@ -169,7 +165,7 @@
             :disabled="!selectedItem"
             @click="add"
         >
-          <i class="pi pi-plus"></i>
+          <Icon name="lucide:plus" />
           <span>Hinzufügen</span>
         </button>
       </div>

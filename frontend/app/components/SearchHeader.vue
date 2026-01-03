@@ -15,28 +15,28 @@ const items = ref([
     items: [
       {
         label: 'Profil',
-        icon: 'pi pi-user',
+        iconName: 'lucide:user',
         command: () => {
           navigateTo('/profile')
         }
       },
       {
         label: 'Freunde',
-        icon: 'pi pi-users',
+        iconName: 'lucide:users',
         command: () => {
           navigateTo('/friends')
         }
       },
       {
         label: 'Gruppen',
-        icon: 'pi pi-sitemap',
+        iconName: 'lucide:network',
         command: () => {
           navigateTo('/groups')
         }
       },
       {
         label: 'Einstellungen',
-        icon: 'pi pi-cog',
+        iconName: 'lucide:settings',
         command: () => {
           navigateTo('/settings')
         }
@@ -46,7 +46,7 @@ const items = ref([
       },
       {
         label: 'Abmelden',
-        icon: 'pi pi-sign-out',
+        iconName: 'lucide:log-out',
         command: () => logout(),
       }
     ]
@@ -77,7 +77,7 @@ const handleSearch = () => {
         <!-- Search Bar -->
         <div class="flex-1 max-w-2xl">
           <div class="relative">
-            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+            <Icon name="lucide:search" class=" absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
                 v-model="searchQuery"
                 @input="handleSearch"
@@ -94,7 +94,7 @@ const handleSearch = () => {
           <button
               class="hidden sm:flex w-10 h-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors relative"
           >
-            <i class="pi pi-bell text-gray-600 dark:text-gray-400"></i>
+            <Icon name="lucide:bell" class=" text-gray-600 dark:text-gray-400" />
             <!-- Notification Badge -->
             <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
@@ -114,7 +114,7 @@ const handleSearch = () => {
             <span class="hidden md:block font-medium text-gray-900 dark:text-white">
               {{ user?.first_name }}
             </span>
-            <i class="pi pi-chevron-down text-xs text-gray-400 hidden md:block"></i>
+            <Icon name="lucide:chevron-down" class=" text-xs text-gray-400 hidden md:block" />
           </button>
         </div>
 
@@ -131,6 +131,12 @@ const handleSearch = () => {
 
     <!-- User Menu Popup -->
     <Menu ref="menu" id="user_menu" :model="items" :popup="true" class="w-56">
+      <template #item="{ item }">
+        <a v-if="!item.separator" class="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer" @click="item.command">
+          <Icon v-if="item.iconName" :name="item.iconName" class="text-gray-600 dark:text-gray-400" />
+          <span class="text-gray-900 dark:text-white">{{ item.label }}</span>
+        </a>
+      </template>
       <template #start>
         <div class="p-3 border-b border-gray-200 dark:border-neutral-700">
           <div class="flex items-center gap-3">

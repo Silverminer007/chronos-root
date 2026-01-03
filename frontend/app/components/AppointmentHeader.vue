@@ -17,7 +17,7 @@ const goBack = () => {
             @click="goBack"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
         >
-          <i class="pi pi-arrow-left text-gray-600 dark:text-gray-400"></i>
+          <Icon name="lucide:arrow-left" class=" text-gray-600 dark:text-gray-400" />
         </button>
         <div class="flex-1 min-w-0">
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">

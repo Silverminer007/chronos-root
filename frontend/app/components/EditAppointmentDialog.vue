@@ -9,7 +9,7 @@
     <template #header>
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center">
-          <i class="pi pi-pencil text-purple-600 dark:text-purple-400 text-xl"></i>
+          <Icon name="lucide:pencil" class=" text-purple-600 dark:text-purple-400 text-xl" />
         </div>
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Termin bearbeiten</h2>
       </div>
@@ -97,7 +97,7 @@
             class="w-full"
         >
           <template #prepend>
-            <i class="pi pi-map-marker"></i>
+            <Icon name="lucide:map-pin" />
           </template>
         </InputText>
       </div>
@@ -121,7 +121,7 @@
       <!-- Changes Info -->
       <div v-if="hasChanges" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
         <div class="flex gap-3">
-          <i class="pi pi-info-circle text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
+          <Icon name="lucide:info" class=" text-yellow-600 dark:text-yellow-400 mt-0.5" />
           <div class="flex-1">
             <p class="text-sm font-medium text-yellow-900 dark:text-yellow-200">
               Änderungen vorhanden
@@ -149,7 +149,7 @@
             :disabled="!isValid || !hasChanges"
         >
           <template #icon>
-            <i class="pi pi-check mr-2"></i>
+            <Icon name="lucide:check" class=" mr-2" />
           </template>
         </Button>
       </div>

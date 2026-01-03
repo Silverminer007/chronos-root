@@ -65,7 +65,7 @@ watch(() => props.visible, (newVal) => {
       <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-linear-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl flex items-center justify-center shrink-0">
-            <i class="pi pi-user-plus text-blue-600 dark:text-blue-400 text-xl"></i>
+            <Icon name="lucide:user-plus" class=" text-blue-600 dark:text-blue-400 text-xl" />
           </div>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Mitglied hinzufügen</h2>
         </div>
@@ -73,7 +73,7 @@ watch(() => props.visible, (newVal) => {
             @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
         >
-          <i class="pi pi-times text-gray-500 dark:text-gray-400 text-lg"></i>
+          <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
       </div>
 
@@ -85,7 +85,7 @@ watch(() => props.visible, (newVal) => {
             Freund suchen
           </label>
           <div class="relative">
-            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <Icon name="lucide:search" class=" absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 v-model="searchQuery"
                 type="text"
@@ -106,12 +106,12 @@ watch(() => props.visible, (newVal) => {
           </h3>
 
           <div v-if="searching" class="text-center py-6">
-            <i class="pi pi-spin pi-spinner text-xl text-blue-600 dark:text-blue-400"></i>
+            <i class="pi animate-spin text-xl text-blue-600 dark:text-blue-400" />
             <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Wird gesucht...</p>
           </div>
 
           <div v-else-if="filteredResults.length === 0" class="text-center py-6">
-            <i class="pi pi-search text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+            <Icon name="lucide:search" class=" text-2xl text-gray-300 dark:text-gray-600 mb-2" />
             <p class="text-gray-500 dark:text-gray-400 text-sm">Keine Freunde gefunden</p>
           </div>
 
@@ -132,7 +132,7 @@ watch(() => props.visible, (newVal) => {
                 <p class="font-medium text-gray-900 dark:text-white truncate">{{ result.name }}</p>
                 <p v-if="result.email" class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ result.email }}</p>
               </div>
-              <i v-if="selectedUser?.user_id === result.user_id" class="pi pi-check text-blue-500"></i>
+              <Icon v-if="selectedUser?.user_id === result.user_id" name="lucide:check" class="text-blue-500" />
             </button>
           </div>
         </div>
@@ -153,7 +153,7 @@ watch(() => props.visible, (newVal) => {
                 @click="selectedUser = null"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors"
             >
-              <i class="pi pi-times"></i>
+              <Icon name="lucide:x" />
             </button>
           </div>
         </div>
@@ -173,7 +173,7 @@ watch(() => props.visible, (newVal) => {
             :disabled="!selectedUser"
             @click="add"
         >
-          <i class="pi pi-plus"></i>
+          <Icon name="lucide:plus" />
           <span>Hinzufügen</span>
         </button>
       </div>

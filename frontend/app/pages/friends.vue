@@ -109,7 +109,7 @@ const handleCancelRequest = async (requestId: number) => {
               @click="showAddDialog = true"
               class="hidden sm:flex px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg items-center gap-2"
           >
-            <i class="pi pi-plus"></i>
+            <Icon name="lucide:plus" />
             <span>Hinzufügen</span>
           </button>
         </div>
@@ -123,7 +123,7 @@ const handleCancelRequest = async (requestId: number) => {
                 ? 'bg-linear-to-r from-purple-600 to-pink-500 text-white shadow-lg'
                 : 'bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-700'"
           >
-            <i class="pi pi-users mr-2"></i>
+            <Icon name="lucide:users" class=" mr-2" />
             Freunde
             <span class="ml-2 px-2 py-0.5 rounded-full text-xs" :class="activeTab === 'friends' ? 'bg-white/20' : 'bg-gray-100 dark:bg-neutral-700'">
               {{ friendshipsStore.friendsCount }}
@@ -136,7 +136,7 @@ const handleCancelRequest = async (requestId: number) => {
                 ? 'bg-linear-to-r from-purple-600 to-pink-500 text-white shadow-lg'
                 : 'bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-700'"
           >
-            <i class="pi pi-inbox mr-2"></i>
+            <Icon name="lucide:inbox" class=" mr-2" />
             Anfragen
             <span
                 v-if="friendshipsStore.totalRequestsCount > 0"
@@ -150,14 +150,14 @@ const handleCancelRequest = async (requestId: number) => {
 
         <!-- Loading State -->
         <div v-if="friendshipsStore.loading" class="text-center py-16">
-          <i class="pi pi-spin pi-spinner text-4xl text-purple-600 dark:text-purple-400 mb-4"></i>
+          <i class="pi animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
           <p class="text-gray-600 dark:text-gray-400">Wird geladen...</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="friendshipsStore.error" class="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
           <div class="flex items-center gap-3">
-            <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+            <Icon name="lucide:triangle-alert" class=" text-red-600 dark:text-red-400 text-xl" />
             <div>
               <p class="font-semibold text-red-900 dark:text-red-200">Fehler beim Laden</p>
               <p class="text-sm text-red-700 dark:text-red-300">{{ friendshipsStore.error }}</p>
@@ -177,7 +177,7 @@ const handleCancelRequest = async (requestId: number) => {
           <!-- Empty State -->
           <div v-if="friendshipsStore.friends.length === 0" class="text-center py-16 px-6">
             <div class="w-20 h-20 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i class="pi pi-users text-3xl text-purple-600 dark:text-purple-400"></i>
+              <Icon name="lucide:users" class=" text-3xl text-purple-600 dark:text-purple-400" />
             </div>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Noch keine Freunde</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-6">Füge Freunde hinzu, um Termine gemeinsam zu planen.</p>
@@ -185,7 +185,7 @@ const handleCancelRequest = async (requestId: number) => {
                 @click="showAddDialog = true"
                 class="px-6 py-3 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <Icon name="lucide:plus" class=" mr-2" />
               Freund hinzufügen
             </button>
           </div>
@@ -196,7 +196,7 @@ const handleCancelRequest = async (requestId: number) => {
           <!-- Incoming Requests -->
           <div>
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <i class="pi pi-arrow-down text-green-500"></i>
+              <Icon name="lucide:arrow-down" class=" text-green-500" />
               Eingehende Anfragen
               <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
                 ({{ friendshipsStore.incomingRequestsCount }})
@@ -222,7 +222,7 @@ const handleCancelRequest = async (requestId: number) => {
           <!-- Outgoing Requests -->
           <div>
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <i class="pi pi-arrow-up text-blue-500"></i>
+              <Icon name="lucide:arrow-up" class=" text-blue-500" />
               Ausgehende Anfragen
               <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
                 ({{ friendshipsStore.outgoingRequestsCount }})
@@ -252,7 +252,7 @@ const handleCancelRequest = async (requestId: number) => {
         @click="showAddDialog = true"
         class="fixed bottom-6 right-6 w-14 h-14 sm:hidden rounded-full flex items-center justify-center text-white shadow-2xl bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all transform hover:scale-110 z-50"
     >
-      <i class="pi pi-plus text-xl"></i>
+      <Icon name="lucide:plus" class=" text-xl" />
     </button>
 
     <!-- Send Request Dialog -->
