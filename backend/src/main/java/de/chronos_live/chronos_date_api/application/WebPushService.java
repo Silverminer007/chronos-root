@@ -7,6 +7,7 @@ import de.chronos_live.chronos_date_api.config.PushConfig;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
@@ -87,6 +88,7 @@ public class WebPushService {
     }
 
     private void sendNotification(Long userId, String payload) {
+        Log.debugf("[Notifications] Sending notification to user with ID [%d] %s", userId, payload);
         var subs = subscriptionService.getAllForUser(userId);
 
         subs.forEach(sub -> {
