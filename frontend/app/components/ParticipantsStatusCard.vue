@@ -125,7 +125,7 @@ const getStatusBadgeClass = (status: string) => {
             @click="showAddDialog = true"
             class="w-8 h-8 flex items-center justify-center rounded-lg bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white transition-all shadow-sm"
         >
-          <Icon name="lucide:plus" class=" text-sm" />
+          <Icon name="lucide:plus"/>
         </button>
       </div>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -166,14 +166,14 @@ const getStatusBadgeClass = (status: string) => {
                   v-if="participant.via_group_name"
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400"
               >
-                <Icon name="lucide:users" class=" mr-1 text-xs" />
+                <Icon name="lucide:users" class=" mr-1 text-xs"/>
                 {{ participant.via_group_name }}
               </span>
               <span
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                   :class="getStatusBadgeClass(participant.status)"
               >
-                <Icon :name="getStatusIconName(participant.status)" class="text-xs" />
+                <Icon :name="getStatusIconName(participant.status)" class="text-xs"/>
                 {{ getStatusLabel(participant.status) }}
               </span>
             </div>
