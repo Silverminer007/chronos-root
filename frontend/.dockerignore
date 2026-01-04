@@ -1,0 +1,12 @@
+node_modules
+.nuxt
+.output
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+*.log
+.env*
+.vscode
+.idea
