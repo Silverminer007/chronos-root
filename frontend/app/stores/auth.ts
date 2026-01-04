@@ -12,11 +12,9 @@ export const useAuthStore = defineStore('auth', () => {
             if (data.value) {
                 user.value = data.value
             } else {
-                console.error('Fehler beim Abrufen der UserInfo')
                 user.value = null
             }
         } catch (err) {
-            console.error('Fehler beim Abrufen der UserInfo:', err)
             user.value = null
         }
     }
