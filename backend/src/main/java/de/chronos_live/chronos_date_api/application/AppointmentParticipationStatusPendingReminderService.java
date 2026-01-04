@@ -7,6 +7,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @ApplicationScoped
@@ -58,5 +62,36 @@ public class AppointmentParticipationStatusPendingReminderService {
                     new AppointmentParticipationStatusPendingReminderEvent(appointment.id)
             );
         }
+    }
+
+    @Scheduled(cron = "0 0 17 * * ?")
+    void sendEventAttendanceStatusPendingReminderAfterTargetTime() {
+        List<Appointment> appointmentList = this.appointmentQueryService
+                .getNonCancelledAppointmentsStartingBetween(
+                        Instant.now(),
+                        Instant.now().plus(8, ChronoUnit.WEEKS)
+                );
+
+        for(Appointment appointment : appointmentList) {
+            if(appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) < 24) {
+                if(isWeekdayAtUTC(appointment.getStartTime())) {
+                    if(Instant.now().until(appointment.getStartTime(), ChronoUnit.WEEKS) > 1) {
+                        continue;
+                    }
+                } else {
+                    if(Instant.now().until(appointment.getStartTime(), ChronoUnit.WEEKS) > 2) {
+                        continue;
+                    }
+                }
+            }
+            this.appointmentParticipationStatusPendingReminderEvent.fireAsync(
+                    new AppointmentParticipationStatusPendingReminderEvent(appointment.id)
+            );
+        }
+    }
+
+    private boolean isWeekdayAtUTC(Instant instant) {
+        List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
+        return weekdays.contains(instant.atZone(ZoneOffset.UTC).getDayOfWeek());
     }
 }
