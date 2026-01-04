@@ -12,6 +12,7 @@
 
 <script setup>
 import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
 import { usePush } from "~/composables/usePush.ts"
 
 const { shouldAsk, markAsked, subscribe } = usePush()
