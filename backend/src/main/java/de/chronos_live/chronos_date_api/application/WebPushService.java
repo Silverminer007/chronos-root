@@ -404,7 +404,7 @@ public class WebPushService {
         this.sendToParticipants(event.appointmentId(),
                 ap ->
                         !Objects.equals(event.actingUserId(), ap.getUser().id)
-                                || this.settingsService.sendAppointmentParticipationStatusChangedNotification(ap),
+                                && this.settingsService.sendAppointmentParticipationStatusChangedNotification(ap),
                 payload.toString());
     }
 
