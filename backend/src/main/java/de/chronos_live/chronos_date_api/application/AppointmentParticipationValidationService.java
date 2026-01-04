@@ -50,7 +50,7 @@ public class AppointmentParticipationValidationService {
         }
 
         Instant in1Weeks = Instant.now().plusSeconds(60 * 60 * 24 * 7);
-        Instant in1WeeksAnd14Minutes = in8Weeks.plusSeconds(60 * 14);
+        Instant in1WeeksAnd14Minutes = in1Weeks.plusSeconds(60 * 14);
         List<Appointment> weekdayAppointments = this.appointmentQueryService.getPlannedAppointmentsStartingBetween(in1Weeks, in1WeeksAnd14Minutes);
         for (Appointment appointment : weekdayAppointments) {
             if (!this.isWeekdayAtUTC(appointment.getStartTime())) {
@@ -60,7 +60,7 @@ public class AppointmentParticipationValidationService {
         }
 
         Instant in2Weeks = Instant.now().plusSeconds(60 * 60 * 24 * 7 * 2);
-        Instant in2WeeksAnd14Minutes = in8Weeks.plusSeconds(60 * 14);
+        Instant in2WeeksAnd14Minutes = in2Weeks.plusSeconds(60 * 14);
         List<Appointment> weekendAppointments = this.appointmentQueryService.getPlannedAppointmentsStartingBetween(in2Weeks, in2WeeksAnd14Minutes);
         for (Appointment appointment : weekendAppointments) {
             if (this.isWeekdayAtUTC(appointment.getStartTime())) {
@@ -79,6 +79,10 @@ public class AppointmentParticipationValidationService {
                 this.appointmentParticipationQueryService.getParticipationStatistik(appointment.id);
 
         if (participationStatistik.approvedCount() >= appointment.getMinimalAttendees()) {
+            return;
+        }
+
+        if(appointment.getStatus().equals(AppointmentStatus.NOT_ENOUGH_ATTENDEES)) {
             return;
         }
 
