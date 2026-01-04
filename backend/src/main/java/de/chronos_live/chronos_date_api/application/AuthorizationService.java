@@ -29,8 +29,8 @@ public class AuthorizationService {
     public void requireUpdateAppointment(Long appointmentId, Long actingUserId) {
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
-        if(!UserRole.RESPONSIBLE.equals(role)) {
-            throw new ForbiddenException("You have to be responsible for this appointment");
+        if(role.ordinal() < UserRole.ATTENDANT.ordinal()) {
+            throw new ForbiddenException("You have to be at least attendant of this appointment");
         }
     }
 
