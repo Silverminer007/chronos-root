@@ -1,10 +1,42 @@
-import {getCookie, setCookie} from "h3"
+import {getCookie, setCookie, deleteCookie} from "h3"
 import {decodeJwt} from "../utils/decodeJwt"
 import {$fetch} from "ofetch"
 
+// Cache refreshed tokens during SSR to avoid race conditions
+// When multiple parallel requests try to refresh with the same token,
+// only the first succeeds (Keycloak refresh token rotation)
+// Key: first 32 chars of refresh token, Value: { accessToken, timestamp }
+const tokenCache = new Map<string, { accessToken: string, timestamp: number }>()
+const CACHE_TTL = 10000 // 10 seconds - enough for SSR to complete
+
+function getCacheKey(refreshToken: string): string {
+    return refreshToken.substring(0, 32)
+}
+
+function getCachedToken(refreshToken: string): string | null {
+    const key = getCacheKey(refreshToken)
+    const cached = tokenCache.get(key)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.accessToken
+    }
+    // Cleanup expired entry
+    if (cached) {
+        tokenCache.delete(key)
+    }
+    return null
+}
+
+function setCachedToken(refreshToken: string, accessToken: string) {
+    const key = getCacheKey(refreshToken)
+    tokenCache.set(key, { accessToken, timestamp: Date.now() })
+}
+
 export default defineEventHandler(async (event) => {
+    const url = event.node.req.url || ''
     const access = getCookie(event, "kc_access")
     const refresh = getCookie(event, "kc_refresh")
+
+    console.log(`[Middleware] ${url} | access: ${access ? 'yes' : 'no'}, refresh: ${refresh ? 'yes' : 'no'}`)
 
     // Ohne Refresh Token können wir nichts tun
     if (!refresh) {
@@ -15,6 +47,14 @@ export default defineEventHandler(async (event) => {
         } else {
             return;
         }
+    }
+
+    // Check if we have a recently refreshed token in cache
+    // This handles parallel SSR requests that would otherwise race
+    const cachedToken = getCachedToken(refresh)
+    if (cachedToken) {
+        event.context.accessToken = cachedToken
+        return
     }
 
     const config = useRuntimeConfig()
@@ -32,7 +72,7 @@ export default defineEventHandler(async (event) => {
 
     const now = Math.floor(Date.now() / 1000)
 
-    // 🧠 Token erneuern, wenn weniger als 30 Sekunden übrig sind
+    // Token erneuern, wenn weniger als 30 Sekunden übrig sind
     const expiresIn = jwt.exp - now
     const threshold = 30
 
@@ -43,7 +83,7 @@ export default defineEventHandler(async (event) => {
     event.context.accessToken = access
 })
 
-async function refreshTokens(event, config, refreshToken) {
+async function refreshTokens(event: any, config: any, refreshToken: string) {
     try {
         console.log("Trying to refresh tokens")
         const tokenResponse = await $fetch(
@@ -58,6 +98,9 @@ async function refreshTokens(event, config, refreshToken) {
             }
         )
 
+        // Cache the new token for parallel requests
+        setCachedToken(refreshToken, tokenResponse.access_token)
+
         // Neue Tokens setzen
         setCookie(event, "kc_access", tokenResponse.access_token, {
             httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 60 * 5
@@ -67,11 +110,25 @@ async function refreshTokens(event, config, refreshToken) {
             httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 60 * 60 * 24 * 30
         })
         event.context.accessToken = tokenResponse.access_token
-        console.log("Token refresh succesful")
+        console.log("Token refresh successful")
 
     } catch (err) {
         console.error("Token refresh failed", err)
+
+        // Check if another request already refreshed - use cached token
+        const cachedToken = getCachedToken(refreshToken)
+        if (cachedToken) {
+            event.context.accessToken = cachedToken
+            console.log("Using cached token from parallel refresh")
+            return
+        }
+
         deleteCookie(event, "kc_access")
         deleteCookie(event, "kc_refresh")
+
+        // Redirect to login for page requests, let API calls fail with 401
+        if (!event.node.req.originalUrl?.startsWith('/api')) {
+            return sendRedirect(event, '/', 301)
+        }
     }
 }

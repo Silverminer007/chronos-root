@@ -13,6 +13,10 @@ export interface AppointmentFilters {
     groups?: boolean
 }
 
+export interface FetchOptions {
+    headers?: Record<string, string>
+}
+
 export const useAppointmentsStore = defineStore('appointments', {
     state: () => ({
         appointments: [] as Appointment[],
@@ -113,7 +117,7 @@ export const useAppointmentsStore = defineStore('appointments', {
 
     actions: {
         // Agenda abrufen
-        async fetchAgenda(filters: AppointmentFilters = {}) {
+        async fetchAgenda(filters: AppointmentFilters = {}, options: FetchOptions = {}) {
             this.loading = true
             this.error = null
 
@@ -135,7 +139,9 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (filters.messages) params.append('messages', 'true')
                 if (filters.groups) params.append('groups', 'true')
 
-                const response = await $fetch(`/api/v2/appointments?${params.toString()}`)
+                const response = await $fetch(`/api/v2/appointments?${params.toString()}`, {
+                    headers: options.headers
+                })
 
                 if (!this.appointments || this.appointments.length === 0) {
                     this.appointments = [];
@@ -147,6 +153,7 @@ export const useAppointmentsStore = defineStore('appointments', {
             } finally {
                 this.loading = false
             }
+            return this.appointments;
         },
 
         // Einzelnes Appointment abrufen
@@ -408,12 +415,12 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         // Initiale Appointments laden (für Agenda-Seite)
-        async loadInitialAppointments() {
+        async loadInitialAppointments(options: FetchOptions = {}) : Promise<Appointment[]> {
             return this.fetchAgenda({
                 participants: true,
                 page: 0,
                 size: 20
-            })
+            }, options)
         },
 
         // Weitere Appointments laden (Paginierung)

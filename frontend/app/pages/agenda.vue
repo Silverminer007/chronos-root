@@ -5,7 +5,10 @@ import {useAppointmentsStore} from "~/stores/appointments";
 const {fetchUser} = useAuthStore()
 await fetchUser()
 const appointmentsStore = useAppointmentsStore()
-callOnce('appointments', () => appointmentsStore.loadInitialAppointments())
+
+// Get request headers for SSR - $fetch in Pinia stores doesn't have request context
+const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+await useAsyncData('appointments', () => appointmentsStore.loadInitialAppointments({ headers }))
 
 const showCreateDialog = ref(false);
 </script>
