@@ -188,7 +188,7 @@ const emit = defineEmits<{
   add: [data: { id: number; role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER' }];
 }>();
 
-const {searchContacts, loading: searching} = useFriends();
+const {searchFriends, loading: searching} = useFriends();
 
 const searchQuery = ref('');
 const selectedRole = ref<'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER'>('ATTENDANT');
@@ -201,7 +201,7 @@ const handleSearch = async () => {
     return;
   }
 
-  searchResults.value = await searchContacts(searchQuery.value);
+  searchResults.value = await searchFriends(searchQuery.value);
 };
 
 const selectResult = (result: any) => {
@@ -229,7 +229,7 @@ const add = () => {
   if (!selectedItem.value) return;
 
   emit('add', {
-    id: selectedItem.value.id,
+    id: selectedItem.value.user_id,
     role: selectedRole.value
   });
 

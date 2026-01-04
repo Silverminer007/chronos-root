@@ -21,13 +21,9 @@ const isResponsible = computed(() => {
   );
 });
 
-const handleAddParticipant = async (data: { type: 'user' | 'group'; id: number; role: string }) => {
+const handleAddParticipant = async (data: { id: number; role: string }) => {
   try {
-    if (data.type === 'user') {
-      await appointmentsStore.addParticipant(appointment.id, data.id, data.role);
-    } else {
-      await appointmentsStore.addGroupParticipant(appointment.id, data.id, data.role);
-    }
+    await appointmentsStore.addParticipant(appointment.id, data.id, data.role);
     toast.add({
       severity: 'success',
       summary: 'Teilnehmer hinzugefügt',

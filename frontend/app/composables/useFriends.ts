@@ -24,6 +24,6 @@ export function useFriends() {
 
     return {
         loading,
-        searchContacts: searchFriends
+        searchFriends
     }
 }

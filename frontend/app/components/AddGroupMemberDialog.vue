@@ -12,7 +12,7 @@ const emit = defineEmits<{
   add: [userId: number];
 }>();
 
-const {searchContacts, loading: searching} = useFriends();
+const {searchFriends, loading: searching} = useFriends();
 
 const searchQuery = ref('');
 const searchResults = ref<any[]>([]);
@@ -29,7 +29,7 @@ const handleSearch = async () => {
     return;
   }
 
-  searchResults.value = await searchContacts(searchQuery.value);
+  searchResults.value = await searchFriends(searchQuery.value);
 };
 
 const selectUser = (user: any) => {
