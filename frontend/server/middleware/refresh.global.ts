@@ -32,11 +32,8 @@ function setCachedToken(refreshToken: string, accessToken: string) {
 }
 
 export default defineEventHandler(async (event) => {
-    const url = event.node.req.url || ''
     const access = getCookie(event, "kc_access")
     const refresh = getCookie(event, "kc_refresh")
-
-    console.log(`[Middleware] ${url} | access: ${access ? 'yes' : 'no'}, refresh: ${refresh ? 'yes' : 'no'}`)
 
     // Ohne Refresh Token können wir nichts tun
     if (!refresh) {
@@ -85,7 +82,6 @@ export default defineEventHandler(async (event) => {
 
 async function refreshTokens(event: any, config: any, refreshToken: string) {
     try {
-        console.log("Trying to refresh tokens")
         const tokenResponse = await $fetch(
             `${config.auth.issuer}/protocol/openid-connect/token`,
             {
@@ -110,7 +106,6 @@ async function refreshTokens(event: any, config: any, refreshToken: string) {
             httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 60 * 60 * 24 * 30
         })
         event.context.accessToken = tokenResponse.access_token
-        console.log("Token refresh successful")
 
     } catch (err) {
         console.error("Token refresh failed", err)
@@ -119,7 +114,6 @@ async function refreshTokens(event: any, config: any, refreshToken: string) {
         const cachedToken = getCachedToken(refreshToken)
         if (cachedToken) {
             event.context.accessToken = cachedToken
-            console.log("Using cached token from parallel refresh")
             return
         }
 
