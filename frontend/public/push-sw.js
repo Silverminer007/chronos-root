@@ -32,6 +32,12 @@ function formatTimeRange(start, end) {
     return `${startDateTime.toFormat('EEE D t')} Uhr bis ${endDateTime.toFormat('EEE D t')} Uhr`;
 }
 
+function formatDate(start) {
+    const startDateTime = DateTime.fromISO(start);
+
+    return startDateTime.toFormat('D');
+}
+
 function getRoleName(roleId) {
     switch (roleId) {
         case "GUEST":
@@ -55,17 +61,19 @@ async function handleNotification(data) {
     let notificationData = data;
     let actions = []; // Quick Actions
 
+    const appointment = JSON.parse(data.appointment);
+    const ownAttendanceStatus = await getOwnAttendanceStatus(appointment.id);
+
     switch (type) {
         case 'APPOINTMENT_MOVED':
-            const movedAppointment = JSON.parse(data.appointment);
-            title = `${movedAppointment.name} wurde verschoben`;
-            body = `${movedAppointment.name} geht jetzt vom ${formatTimeRange(movedAppointment.start, movedAppointment.end)}`;
-            tag = `appointment-moved-${movedAppointment.id}`;
-            if (attendanceStatus === "APPROVED") {
+            title = `${data.acting_user_name} hat ${appointment.name} verschoben`;
+            body = `${appointment.name} geht jetzt vom ${formatTimeRange(appointment.start, appointment.end)}`;
+            tag = `appointment-moved-${appointment.id}`;
+            if (ownAttendanceStatus === "APPROVED") {
                 actions = [
                     {action: 'reject', title: '✗ Absagen', icon: '/icons/cross.png'}
                 ];
-            } else if (attendanceStatus === "REJECTED") {
+            } else if (ownAttendanceStatus === "REJECTED") {
                 actions = [
                     {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'}
                 ];
@@ -78,20 +86,18 @@ async function handleNotification(data) {
             break;
 
         case 'APPOINTMENT_CANCELLED':
-            const cancelledAppointment = JSON.parse(data.appointment);
             const whoCancelled = data.who_cancelled;
-            title = `${cancelledAppointment.name} abgesagt`;
-            body = `"${cancelledAppointment.name}" wurde von ${whoCancelled} abgesagt.`;
-            tag = `appointment-cancelled-${cancelledAppointment.id}`;
+            title = `${appointment.name} hat abgesagt`;
+            body = `"${appointment.name}" wurde von ${whoCancelled} abgesagt.`;
+            tag = `appointment-cancelled-${appointment.id}`;
             break;
 
-        case 'NEW_ATTENDEE':
-            const attendeeAppointment = JSON.parse(data.appointment);
+        case 'NEW_PARTICIPANT':
             const newAttendee = data.new_attendee;
-            const attendeeType = data.attendee_type;
-            title = `${newAttendee} ist jetzt ${getRoleName(attendeeType)} bei ${attendeeAppointment.name}`;
-            body = `Für weitere Informationen tippe auf diese Nachricht`;
-            tag = `new-attendee-${attendeeAppointment.id}`;
+            const actingUserName = data.acting_user_name;
+            title = `Neuer Teilnehmer`;
+            body = `${actingUserName} hat ${newAttendee} zu ${appointment.name} am ${formatDate(appointment.start)} hinzugefügt`;
+            tag = `new-attendee-${appointment.id}`;
             break;
 
         case 'NEW_GROUP_MEMBER':
@@ -117,57 +123,52 @@ async function handleNotification(data) {
             tag = `member-left-${leftGroup.id}`;
             break;
 
-        case 'ATTENDANCE_STATUS_CHANGED':
-            const statusAppointment = JSON.parse(data.appointment);
-            const newStatus = data.new_attendance_status;
+        case 'PARTICIPATION_STATUS_CHANGED':
+            const newStatus = data.new_participation_status;
             const userName = data.user_name;
             const statusText = getStatusText(newStatus);
             title = 'Teilnahmestatus geändert';
-            body = `${userName} hat den Status für "${statusAppointment.name}" auf "${statusText}" geändert.`;
-            tag = `status-changed-${statusAppointment.id}`;
+            body = `${userName} hat den Status für "${appointment.name}" am ${formatDate(appointment.start)} auf "${statusText}" geändert.`;
+            tag = `status-changed-${appointment.id}`;
             break;
 
-        case 'NOT_ENOUGH_ATTENDEES':
-            const notEnoughAppointment = JSON.parse(data.appointment);
-            const approved = data.approved_attendances;
-            const rejected = data.rejected_attendances;
-            const pending = data.pending_attendances;
-            title = `Nicht genug Teilnehmer (${approved} / ${notEnoughAppointment.minimal_attendees}`;
-            body = `"${notEnoughAppointment.name}" hat nicht genug Zusagen (${approved} zugesagt, ${rejected} abgesagt, ${pending} ausstehend).`;
-            if (notEnoughAppointment.own_attendance_status === "REJECTED") {
+        case 'APPOINTMENT_PARTICIPATION_INVALID':
+            const approved = data.approved_participation;
+            const rejected = data.rejected_participation;
+            const pending = data.pending_participation;
+            title = `Nicht genug Teilnehmer (${approved} / ${appointment.minimal_attendees}`;
+            body = `"${appointment.name}" hat nicht genug Zusagen (${approved} zugesagt, ${rejected} abgesagt, ${pending} ausstehend).`;
+            if (ownAttendanceStatus === "REJECTED") {
                 body += ' Du hast bisher abgesagt. Falls du doch kannst, gib bitte so schnell wie möglich bescheid';
                 actions = [
                     {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'}
                 ];
             }
-            tag = `not-enough-${notEnoughAppointment.id}`;
+            tag = `not-enough-${appointment.id}`;
             break;
 
-        case 'ATTENDANCE_STATUS_PENDING':
-            const pendingAppointment = JSON.parse(data.appointment);
-            title = `Deine Rückmeldung zu ${pendingAppointment.name} fehlt noch`;
-            body = `Bitte melde dich so schnell wie möglich.`;
+        case 'PARTICIPATION_STATUS_PENDING':
+            title = `Deine Rückmeldung fehlt noch`;
+            body = `Deine Rückmeldung zu ${appointment.name} am ${formatDate(appointment.start)} fehlt noch.`;
             actions = [
                 {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'},
                 {action: 'reject', title: '✗ Absagen', icon: '/icons/cross.png'}
             ];
-            tag = `pending-${pendingAppointment.id}`;
+            tag = `pending-${appointment.id}`;
             break;
 
-        case 'APPOINTMENT_REMINDER':
-            const reminderAppointment = JSON.parse(data.appointment);
-            title = `Erinnerung: "${reminderAppointment.name}" steht bald an!`;
-            body = `Du hast ${getStatusText(reminderAppointment.own_attendance_status)}`;
-            tag = `reminder-${reminderAppointment.id}`;
+        case 'PARTICIPATION_REMINDER':
+            title = `Erinnerung: "${appointment.name}" steht bald an!`;
+            body = `Du hast ${getStatusText(ownAttendanceStatus)}`;
+            tag = `reminder-${appointment.id}`;
             break;
 
-        case 'ATTENDANCE_STATUS_RECHECK':
-            const recheckAppointment = JSON.parse(data.appointment);
-            const attendanceStatus = data.attendance_status;
-            const recheckStatusText = getStatusText(attendanceStatus);
-            title = `Rückmeldung zu ${recheckAppointment.name} überprüfen`;
-            body = `Du hast bisher ${recheckStatusText} zu ${recheckAppointment.name}. Ist das noch aktuell?`;
-            if (attendanceStatus === "APPROVED") {
+        case 'PARTICIPATION_STATUS_RECHECK':
+            const participationStatus = data.participation_status;
+            const recheckStatusText = getStatusText(participationStatus);
+            title = `Rückmeldung überprüfen`;
+            body = `Du hast bisher ${recheckStatusText} zu ${appointment.name} am ${formatDate(appointment.start)}. Ist das noch aktuell?`;
+            if (participationStatus === "APPROVED") {
                 actions = [
                     {action: 'none', title: '✓ Ja', icon: '/icons/check.png'},
                     {action: 'reject', title: '✗ Absagen', icon: '/icons/cross.png'}
@@ -178,7 +179,7 @@ async function handleNotification(data) {
                     {action: 'approve', title: '✓ Zusagen', icon: '/icons/check.png'}
                 ];
             }
-            tag = `recheck-${recheckAppointment.id}`;
+            tag = `recheck-${appointment.id}`;
             break;
 
         default:
@@ -227,9 +228,9 @@ self.addEventListener('notificationclick', function (event) {
     if (action === 'approve' || action === 'reject') {
         event.notification.close();
 
-        const eventId = data.eventId;
-        if (!eventId) {
-            console.error('Keine Event-ID gefunden');
+        const appointmentId = data.appointment.id;
+        if (!appointmentId) {
+            console.error('Keine Appointment-ID gefunden');
             return;
         }
 
@@ -237,7 +238,7 @@ self.addEventListener('notificationclick', function (event) {
 
         // Backend-Request ausführen
         event.waitUntil(
-            updateAttendanceStatus(eventId, status)
+            updateAttendanceStatus(appointmentId, status)
                 .then(() => {
                     console.log(`Status erfolgreich auf ${status} gesetzt`);
                     // Optional: Erfolgs-Benachrichtigung anzeigen
@@ -304,17 +305,13 @@ self.addEventListener('notificationclick', function (event) {
     );
 });
 
-// Funktion zum Aktualisieren des Attendance-Status
-async function updateAttendanceStatus(eventId, status) {
-    const response = await fetch(`${API_BASE_URL}/api/event/${eventId}/attendance`, {
-        method: 'POST',
+async function getOwnAttendanceStatus(appointmentId) {
+    const response = await fetch(`${API_BASE_URL}/api/event/${appointmentId}/participants/status`, {
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         },
-        credentials: 'include',
-        body: JSON.stringify({
-            status: status
-        })
+        credentials: 'include'
     });
 
     if (!response.ok) {
@@ -322,6 +319,36 @@ async function updateAttendanceStatus(eventId, status) {
     }
 
     return response.json();
+}
+
+// Funktion zum Aktualisieren des Attendance-Status
+async function updateAttendanceStatus(appointmentId, status) {
+    if (status === 'APPROVED') {
+        const response = await fetch(`${API_BASE_URL}/api/appointments/${appointmentId}/participants/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    } else {
+        const response = await fetch(`${API_BASE_URL}/api/appointments/${appointmentId}/participants/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    }
+
 }
 
 // Optional: Installation und Aktivierung des Service Workers
