@@ -69,7 +69,7 @@ public class AppointmentParticipationStatusPendingReminderService {
         List<Appointment> appointmentList = this.appointmentQueryService
                 .getNonCancelledAppointmentsStartingBetween(
                         Instant.now(),
-                        Instant.now().plus(8, ChronoUnit.WEEKS)
+                        Instant.now().plusSeconds(60 * 60 * 24 * 7 * 8)
                 );
 
         for(Appointment appointment : appointmentList) {
