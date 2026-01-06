@@ -1,9 +1,6 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationInvalidEvent;
-import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationStatusConfirmationEvent;
-import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationStatusPendingReminderEvent;
-import de.chronos_live.chronos_date_api.application.events.AppointmentReminderEvent;
+import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -27,6 +24,10 @@ public class DebugLoggingService {
 
     public void onAppointmentReminder(@ObservesAsync AppointmentReminderEvent event) {
         Log.debugf("[Notifications] onAppointmentReminder Appointment ID %s", event.appointmentId());
+    }
+
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+        Log.debugf("[Notifications] onAppointmentParticipationStatusChanged Appointment ID %s", event.appointmentId());
     }
 
     public void onAppointmentParticipationPendingReminder(@ObservesAsync AppointmentParticipationStatusPendingReminderEvent event) {
