@@ -255,11 +255,12 @@ public class WebPushService {
         }
 
         JsonObject payload = Json.createObjectBuilder()
-                .add("type", "NEW_ATTENDEE")
+                .add("type", "NEW_PARTICIPANT")
                 .add("appointment", appointmentJson)
-                .add("new_attendee", newParticipant.getName())
-                .add("attendee_type", "user")
-                .add("attendee_role", newParticipantRole)
+                .add("new_participant", newParticipant.getName())
+                .add("participant_type", "user")
+                .add("participant_role", newParticipantRole)
+                .add("acting_user_name", actingUser.getName())
                 .build();
 
         this.sendToParticipants(event.appointmentId(),
@@ -286,10 +287,11 @@ public class WebPushService {
         }
 
         JsonObject payload = Json.createObjectBuilder()
-                .add("type", "NEW_ATTENDEE")
+                .add("type", "NEW_PARTICIPANT")
                 .add("appointment", appointmentJson)
-                .add("new_attendee", newGroupParticipant.getGroupName())
-                .add("attendee_type", "group")
+                .add("new_participant", newGroupParticipant.getGroupName())
+                .add("participant_type", "group")
+                .add("acting_user_name", actingUser.getName())
                 .build();
 
         this.sendToParticipants(event.appointmentId(),
@@ -397,9 +399,9 @@ public class WebPushService {
             return;
         }
         JsonObject payload = Json.createObjectBuilder()
-                .add("type", "ATTENDANCE_STATUS_CHANGED")
+                .add("type", "PARTICIPATION_STATUS_CHANGED")
                 .add("appointment", appointmentJson)
-                .add("new_attendance_status", event.newParticipationStatus().toString())
+                .add("new_participation_status", event.newParticipationStatus().toString())
                 .add("user_name", actingUser.getName())
                 .build();
 
@@ -420,11 +422,11 @@ public class WebPushService {
                 this.appointmentParticipationQueryService.getParticipationStatistik(event.appointmentId());
 
         JsonObject payload = Json.createObjectBuilder()
-                .add("type", "NOT_ENOUGH_ATTENDEES")
+                .add("type", "APPOINTMENT_PARTICIPATION_INVALID")
                 .add("appointment", appointmentJson)
-                .add("approved_attendances", participationStatistik.approvedCount())
-                .add("rejected_attendances", participationStatistik.rejectedCount())
-                .add("pending_attendances",
+                .add("approved_participation", participationStatistik.approvedCount())
+                .add("rejected_participation", participationStatistik.rejectedCount())
+                .add("pending_participation",
                         participationStatistik.participantCount()
                                 - participationStatistik.approvedCount()
                                 - participationStatistik.rejectedCount())
@@ -441,7 +443,7 @@ public class WebPushService {
         }
 
         JsonObject payload = Json.createObjectBuilder()
-                .add("type", "ATTENDANCE_STATUS_PENDING")
+                .add("type", "PARTICIPATION_STATUS_PENDING")
                 .add("appointment", appointmentJson)
                 .build();
 
@@ -457,7 +459,7 @@ public class WebPushService {
             return;
         }
         JsonObject payload = Json.createObjectBuilder()
-                .add("type", "APPOINTMENT_REMINDER")
+                .add("type", "PARTICIPATION_REMINDER")
                 .add("appointment", appointmentJson)
                 .build();
 
@@ -480,9 +482,9 @@ public class WebPushService {
             }
 
             JsonObject payload = Json.createObjectBuilder()
-                    .add("type", "ATTENDANCE_STATUS_RECHECK")
+                    .add("type", "PARTICIPATION_STATUS_RECHECK")
                     .add("appointment", appointmentJson)
-                    .add("attendance_status", participation.getStatus().toString())
+                    .add("participation_status", participation.getStatus().toString())
                     .build();
 
             this.sendNotification(participation.getUser().id, payload.toString());
