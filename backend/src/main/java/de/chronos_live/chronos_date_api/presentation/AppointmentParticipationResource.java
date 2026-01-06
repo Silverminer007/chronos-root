@@ -1,5 +1,6 @@
 package de.chronos_live.chronos_date_api.presentation;
 
+import de.chronos_live.chronos_date_api.application.AppointmentParticipationQueryService;
 import de.chronos_live.chronos_date_api.application.AppointmentParticipationService;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
@@ -29,6 +30,8 @@ public class AppointmentParticipationResource {
     @Inject
     AppointmentParticipationService appointmentParticipationService;
     @Inject
+    AppointmentParticipationQueryService appointmentParticipationQueryService;
+    @Inject
     JsonWebToken jwt;
 
     @GET
@@ -39,6 +42,16 @@ public class AppointmentParticipationResource {
         List<UserParticipantDto> userParticipantDtoList =
                 this.appointmentParticipationService.getParticipants(appointmentId, user.id);
         return Response.ok(userParticipantDtoList).build();
+    }
+
+    @GET
+    @Path("/status")
+    public Response getParticipationStatus(@PathParam("id") Long appointmentId) {
+        User user = this.userService.getUser(jwt.getSubject());
+
+        ParticipationStatus participationStatus =
+                this.appointmentParticipationQueryService.getUserStatus(appointmentId, user.id);
+        return Response.ok(participationStatus.toString()).build();
     }
 
     @POST

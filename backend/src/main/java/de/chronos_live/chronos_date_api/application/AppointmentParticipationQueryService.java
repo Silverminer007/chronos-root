@@ -19,6 +19,15 @@ public class AppointmentParticipationQueryService {
                 .orElse(UserRole.NONE);
     }
 
+    public ParticipationStatus getUserStatus(Long appointmentId, Long userId) {
+        return AppointmentParticipation
+                .find("appointment.id = ?1 AND user.id = ?2", appointmentId, userId)
+                .firstResultOptional()
+                .map(ap ->
+                        ((AppointmentParticipation) ap).getStatus())
+                .orElse(ParticipationStatus.PENDING);
+    }
+
     public List<AppointmentParticipation> getParticipants(Long appointmentId) {
         return AppointmentParticipation.list("appointment.id = ?1", appointmentId);
     }
