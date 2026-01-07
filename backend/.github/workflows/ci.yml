@@ -2,7 +2,7 @@ name: 🧪 CI & 🚀 Release Pipeline
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
   pull_request:
 
 permissions:
@@ -53,11 +53,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: ⚙️ Set up Node.js
+        if: github.ref == 'refs/heads/master'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: 📦 Install Semantic Release
+        if: github.ref == 'refs/heads/master'
         run: |
           npm install -g semantic-release \
             @semantic-release/commit-analyzer \
@@ -65,6 +67,7 @@ jobs:
             @semantic-release/github
 
       - name: 🚀 Run Semantic Release (GitHub only)
+        if: github.ref == 'refs/heads/master'
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,6 +78,7 @@ jobs:
             @semantic-release/github
 
       - name: 🧾 Get latest release version
+        if: github.ref == 'refs/heads/master'
         id: get_version
         run: |
           VERSION=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
@@ -99,13 +103,23 @@ jobs:
           docker build -f src/main/docker/Dockerfile.jvm -t $IMAGE:latest .
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-      - name: 📦 Push Docker Image
-        run: |          
+      - name: 📦 Push Docker Image (master)
+        if: github.ref == 'refs/heads/master'
+        run: |
           echo "Pushing $IMAGE:latest ..."
           docker push $IMAGE:latest
-          
+
           echo "Tagging as $IMAGE:v$VERSION ..."
           docker tag $IMAGE:latest $IMAGE:v$VERSION
-          
+
           echo "Pushing $IMAGE:v$VERSION ..."
           docker push $IMAGE:v$VERSION
+
+      - name: 📦 Push Docker Image (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          echo "Tagging as $IMAGE:develop ..."
+          docker tag $IMAGE:latest $IMAGE:develop
+
+          echo "Pushing $IMAGE:develop ..."
+          docker push $IMAGE:develop
