@@ -35,11 +35,11 @@ public class DebugLoggingService {
 
         Instant targetTime = appointment.getStartTime();
         if(appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) >= 24) {
-            targetTime = targetTime.minus(8, ChronoUnit.WEEKS);
+            targetTime = targetTime.minusSeconds(60 * 60 * 24 * 7 * 8);
         } else if (isWeekdayAtUTC(appointment.getStartTime())) {
-            targetTime = targetTime.minus(2, ChronoUnit.WEEKS);
+            targetTime = targetTime.minusSeconds(60 * 60 * 24 * 7 * 2);
         } else {
-            targetTime = targetTime.minus(1, ChronoUnit.WEEKS);
+            targetTime = targetTime.minusSeconds(60 * 60 * 24 * 7);
         }
 
         long minutesUntilAppointment = Instant.now().until(targetTime, ChronoUnit.MINUTES);
