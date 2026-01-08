@@ -35,10 +35,8 @@ public class GroupService {
     public void onGroupCreated(@ObservesAsync GroupCreatedEvent groupCreatedEvent) {
         Log.info("Group was created, adding creator to it");
         GroupMember groupMember = new GroupMember();
-        User user = new User();
-        user.id = groupCreatedEvent.actingUserId();
-        Group group = new Group();
-        group.id = groupCreatedEvent.groupId();
+        User user = User.findById(groupCreatedEvent.actingUserId());
+        Group group = Group.findById(groupCreatedEvent.groupId());
         groupMember.setGroup(group);
         groupMember.setUser(user);
         groupMember.persist();
@@ -53,10 +51,8 @@ public class GroupService {
             throw new ResourceNotFoundException("group", groupId);
         }
         GroupMember groupMember = new GroupMember();
-        User user = new User();
-        user.id = targetUserId;
-        Group group = new Group();
-        group.id = groupId;
+        User user = User.findById(targetUserId);
+        Group group = Group.findById(groupId);
         groupMember.setGroup(group);
         groupMember.setUser(user);
         groupMember.persist();
@@ -83,8 +79,7 @@ public class GroupService {
         }
         group.setGroupName(createGroupDto.getName());
 
-        User user = new User();
-        user.id = actingUserId;
+        User user = User.findById(actingUserId);
         group.setOwner(user);
         group.persist();
 

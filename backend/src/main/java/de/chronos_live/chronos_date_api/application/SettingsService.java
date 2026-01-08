@@ -30,8 +30,7 @@ public class SettingsService {
     public Settings getOrCreateSettings(Long userId) {
         return (Settings) Settings.find("user.id", userId).firstResultOptional().orElseGet(() -> {
             Settings setting = this.getDefaultSetting();
-            User user = new User();
-            user.id = userId;
+            User user = User.findById(userId);
             setting.setUser(user);
             setting.persist();
             return setting;

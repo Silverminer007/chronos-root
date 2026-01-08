@@ -38,18 +38,15 @@ public class AppointmentParticipationService {
         AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
         appointmentParticipation.setStatus(ParticipationStatus.PENDING);
         appointmentParticipation.setRole(UserRole.RESPONSIBLE);
-        Appointment appointment = new Appointment();
-        appointment.id = appointmentCreatedEvent.appointmentId();
-        User creator = new User();
-        creator.id = appointmentCreatedEvent.creatorId();
+        Appointment appointment = Appointment.findById(appointmentCreatedEvent.appointmentId());
+        User creator = User.findById(appointmentCreatedEvent.creatorId());
         appointmentParticipation.setAppointment(appointment);
         appointmentParticipation.setUser(creator);
         appointmentParticipation.persist();
     }
 
     public void onGroupMemberAdded(@ObservesAsync GroupMemberAddedEvent groupMemberAddedEvent) {
-        User newMember = new User();
-        newMember.id = groupMemberAddedEvent.newMemberId();
+        User newMember = User.findById(groupMemberAddedEvent.newMemberId());
 
         List<AppointmentGroupParticipation> groupParticipationList =
                 AppointmentGroupParticipation.find("group.id = ?1", groupMemberAddedEvent.groupId()).list();
@@ -89,10 +86,8 @@ public class AppointmentParticipationService {
         AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
         appointmentParticipation.setStatus(ParticipationStatus.PENDING);
         appointmentParticipation.setRole(role);
-        Appointment appointment = new Appointment();
-        appointment.id = appointmentId;
-        User targetUser = new User();
-        targetUser.id = targetUserId;
+        Appointment appointment = Appointment.findById(appointmentId);
+        User targetUser = User.findById(targetUserId);
         appointmentParticipation.setAppointment(appointment);
         appointmentParticipation.setUser(targetUser);
         appointmentParticipation.persist();
@@ -112,11 +107,9 @@ public class AppointmentParticipationService {
 
         AppointmentGroupParticipation appointmentGroupParticipation = new AppointmentGroupParticipation();
 
-        Appointment appointment = new Appointment();
-        appointment.id = appointmentId;
+        Appointment appointment = Appointment.findById(appointmentId);
 
-        Group group = new Group();
-        group.id = groupId;
+        Group group = Group.findById(groupId);
 
         appointmentGroupParticipation.setGroup(group);
         appointmentGroupParticipation.setAppointment(appointment);
