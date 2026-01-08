@@ -22,7 +22,7 @@ public class AppointmentParticipationStatusPendingReminderService {
     Event<AppointmentParticipationStatusPendingReminderEvent> appointmentParticipationStatusPendingReminderEvent;
 
     @Scheduled(cron = "0 */15 * * * ?")
-    void sendEventAttendanceStatusPendingReminder() {
+    void sendAppointmentParticipationStatusPendingReminder() {
         // Wenn mehr als 24h -> 2 Monate vorher
         // Wenn Mo - Do -> 1 Woche vorher
         // Wenn Fr - So -> 2 Wochen vorher
@@ -75,11 +75,11 @@ public class AppointmentParticipationStatusPendingReminderService {
         for(Appointment appointment : appointmentList) {
             if(appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) < 24) {
                 if(isWeekdayAtUTC(appointment.getStartTime())) {
-                    if(Instant.now().until(appointment.getStartTime(), ChronoUnit.WEEKS) > 1) {
+                    if(Instant.now().until(appointment.getStartTime(), ChronoUnit.DAYS) * 7 > 1) {
                         continue;
                     }
                 } else {
-                    if(Instant.now().until(appointment.getStartTime(), ChronoUnit.WEEKS) > 2) {
+                    if(Instant.now().until(appointment.getStartTime(), ChronoUnit.DAYS) * 7 > 2) {
                         continue;
                     }
                 }
