@@ -21,8 +21,6 @@ public class NotFoundExceptionMapper
 
     @Override
     public Response toResponse(NotFoundException exception) {
-        Log.warn("Resource not found: " + exception.getMessage());
-
         ErrorResponse error = ErrorResponse.builder()
                 .status(404)
                 .error("Not Found")
