@@ -51,10 +51,6 @@ public class UserResource {
     @PATCH
     public Response patchUser(@RequestBody PrincipalDto userDto) {
         if (userDto != null) {
-            User user = userService.getUser(jwt.getSubject());
-            if (!Objects.equals(user.id, userDto.id())) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
             User newUser = this.userService.updateUser(mapper.toEntity(userDto));
             return Response.ok(mapper.toDto(newUser)).build();
         }
