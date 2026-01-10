@@ -37,8 +37,8 @@ public class UserService {
         });
     }
 
-    public User updateUser(User user) {
-        User oldUser = (User) User.find("oidcId = ?1", user.getOidcId()).firstResultOptional()
+    public User updateUser(User user, String oidcId) {
+        User oldUser = (User) User.find("oidcId = ?1", oidcId).firstResultOptional()
                 .orElseThrow(() -> new IllegalArgumentException("This user does not exist yet"));
         if (user.getFirstName() != null) {
             oldUser.setFirstName(user.getFirstName());

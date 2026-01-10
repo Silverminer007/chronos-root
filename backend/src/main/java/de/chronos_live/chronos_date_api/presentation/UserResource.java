@@ -51,7 +51,7 @@ public class UserResource {
     @PATCH
     public Response patchUser(@RequestBody PrincipalDto userDto) {
         if (userDto != null) {
-            User newUser = this.userService.updateUser(mapper.toEntity(userDto));
+            User newUser = this.userService.updateUser(mapper.toEntity(userDto), jwt.getSubject());
             return Response.ok(mapper.toDto(newUser)).build();
         }
         try {
@@ -60,7 +60,7 @@ public class UserResource {
             user.setLastName(jwt.getClaim("family_name"));
             user.setEmail(jwt.getClaim("email"));
             user.setOidcId(jwt.getSubject());
-            User newUser = this.userService.updateUser(user);
+            User newUser = this.userService.updateUser(user, jwt.getSubject());
             return Response.ok(mapper.toDto(newUser)).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
