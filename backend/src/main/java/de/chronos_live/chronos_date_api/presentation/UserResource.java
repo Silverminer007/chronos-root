@@ -34,18 +34,14 @@ public class UserResource {
 
     @POST
     public Response createUser() {
-        try {
-            User user =
-                    this.userService.createUser(
-                            jwt.getClaim("given_name"),
-                            jwt.getClaim("family_name"),
-                            jwt.getClaim("email"),
-                            jwt.getSubject()
-                    );
-            return Response.ok(mapper.toDto(user)).build();
-        } catch (NullPointerException | IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+        User user =
+                this.userService.createUser(
+                        jwt.getClaim("given_name"),
+                        jwt.getClaim("family_name"),
+                        jwt.getClaim("email"),
+                        jwt.getSubject()
+                );
+        return Response.ok(mapper.toDto(user)).build();
     }
 
     @PATCH

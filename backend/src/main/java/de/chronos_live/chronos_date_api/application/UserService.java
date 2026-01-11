@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -10,13 +11,17 @@ import java.util.Objects;
 @Transactional
 public class UserService {
     public User createUser(String firstName, String lastName, String email, String oidcId) {
-        Objects.requireNonNull(firstName);
-        Objects.requireNonNull(lastName);
-        Objects.requireNonNull(email);
-        Objects.requireNonNull(oidcId);
+        try {
+            Objects.requireNonNull(firstName);
+            Objects.requireNonNull(lastName);
+            Objects.requireNonNull(email);
+            Objects.requireNonNull(oidcId);
+        } catch (NullPointerException e) {
+            throw new BadRequestException(e.getMessage());
+        }
 
-        if(User.find("oidcId = ?1", oidcId).firstResultOptional().isPresent()) {
-            throw new IllegalArgumentException("This user already exists");
+        if (User.find("oidcId = ?1", oidcId).firstResultOptional().isPresent()) {
+            throw new BadRequestException("This user already exists");
         }
 
         User user = new User();
@@ -39,7 +44,7 @@ public class UserService {
 
     public User updateUser(User user, String oidcId) {
         User oldUser = (User) User.find("oidcId = ?1", oidcId).firstResultOptional()
-                .orElseThrow(() -> new IllegalArgumentException("This user does not exist yet"));
+                .orElseThrow(() -> new BadRequestException("This user does not exist yet"));
         if (user.getFirstName() != null) {
             oldUser.setFirstName(user.getFirstName());
         }
