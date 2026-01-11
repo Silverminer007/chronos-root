@@ -33,6 +33,9 @@ public class FriendshipResource {
     public Response findSuggestions(@QueryParam("search") String search) {
         User user = this.userService.getUser(jwt.getSubject());
 
+        if (search == null) {
+            search = "";
+        }
         List<UserDto> suggestions = this.friendshipService.findNonFriends(search, user.id);
 
         return Response.ok(suggestions).build();
