@@ -9,7 +9,8 @@ import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.ObservesAsync;
+import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -65,10 +66,15 @@ public class WebPushService {
             Security.addProvider(new BouncyCastleProvider());
         }
         try {
+            if (config.getPublicKey().isEmpty() || config.getPrivateKey().isEmpty() || config.getMailto().isEmpty()) {
+                push = null;
+                Log.warn("VAPID Keys are not set. No Push Notifications will be sent. Please set VAPID_PUBLIC, VAPID_PRIVATE and VAPID_MAILTO environment variables");
+                return;
+            }
             push = new PushService(
-                    config.getPublicKey(),
-                    config.getPrivateKey(),
-                    config.getMailto()
+                    config.getPublicKey().orElse(""),
+                    config.getPrivateKey().orElse(""),
+                    config.getMailto().orElse("")
             );
         } catch (GeneralSecurityException e) {
             throw new RuntimeException("Failed to initialize WebPushService", e);
@@ -76,7 +82,7 @@ public class WebPushService {
     }
 
     public String getPublicKey() {
-        return config.getPublicKey();
+        return config.getPublicKey().orElse("");
     }
 
     public void sendToUser(Long userId, String title, String body) {
@@ -88,6 +94,10 @@ public class WebPushService {
     }
 
     private void sendNotification(Long userId, String payload) {
+        if (push == null) {
+            LOGGER.warn("Omitting Push notification, because VAPID Keys are not set");
+            return;
+        }
         Log.debugf("[Notifications] Sending notification to user with ID [%d] %s", userId, payload);
         var subs = subscriptionService.getAllForUser(userId);
 
@@ -162,7 +172,8 @@ public class WebPushService {
         }
     }
 
-    public void onAppointmentMessageSent(@ObservesAsync MessageSentEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentMessageSent(@Observes(during = TransactionPhase.AFTER_SUCCESS) MessageSentEvent event) {
         Message message = this.messageQueryService.getMessage(event.messageId());
         if (message == null) {
             return;
@@ -183,7 +194,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentMoved(@ObservesAsync AppointmentMovedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentMoved(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentMovedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -210,7 +222,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentCancelled(@ObservesAsync AppointmentCancelledEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentCancelled(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentCancelledEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -234,7 +247,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipantAdded(@ObservesAsync AppointmentParticipationAddedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentParticipantAdded(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationAddedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -270,7 +284,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentGroupParticipantAdded(@ObservesAsync AppointmentGroupParticipationAddedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentGroupParticipantAdded(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentGroupParticipationAddedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -301,7 +316,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onFriendshipRequestSent(@ObservesAsync FriendshipRequestSentEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onFriendshipRequestSent(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipRequestSentEvent event) {
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "NEW_FRIENDSHIP_REQUEST")
                 .add("requester_id", event.requesterId())
@@ -312,7 +328,8 @@ public class WebPushService {
         this.sendNotification(event.addresseeId(), payload.toString());
     }
 
-    public void onFriendshipAccepted(@ObservesAsync FriendshipAcceptedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onFriendshipAccepted(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipAcceptedEvent event) {
         User addressee = User.findById(event.addresseeId());
         if (addressee == null) {
             return;
@@ -327,7 +344,8 @@ public class WebPushService {
         this.sendNotification(event.addresseeId(), payload.toString());
     }
 
-    public void onFriendshipDeclined(@ObservesAsync FriendshipDeclinedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onFriendshipDeclined(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipDeclinedEvent event) {
         User addressee = User.findById(event.addresseeId());
         if (addressee == null) {
             return;
@@ -342,7 +360,8 @@ public class WebPushService {
         this.sendNotification(event.addresseeId(), payload.toString());
     }
 
-    public void onFriendshipRemoved(@ObservesAsync FriendshipRemovedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onFriendshipRemoved(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipRemovedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -357,7 +376,8 @@ public class WebPushService {
         this.sendNotification(event.friendId(), payload.toString());
     }
 
-    public void onGroupMemberAdded(@ObservesAsync GroupMemberAddedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onGroupMemberAdded(@Observes(during = TransactionPhase.AFTER_SUCCESS) GroupMemberAddedEvent event) {
         User newMember = User.findById(event.newMemberId());
         if (newMember == null) {
             return;
@@ -388,7 +408,8 @@ public class WebPushService {
         this.sendNotification(newMember.id, newMemberMessage.toString());
     }
 
-    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentParticipationStatusChanged(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationStatusChangedEvent event) {
         User actingUser = User.findById(event.actingUserId());
         if (actingUser == null) {
             return;
@@ -412,7 +433,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipationInvalid(@ObservesAsync AppointmentParticipationInvalidEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentParticipationInvalid(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationInvalidEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;
@@ -436,7 +458,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipationStatusPendingReminder(@ObservesAsync AppointmentParticipationStatusPendingReminderEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentParticipationStatusPendingReminder(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationStatusPendingReminderEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;
@@ -453,7 +476,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentReminder(@ObservesAsync AppointmentReminderEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentReminder(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentReminderEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;
@@ -468,7 +492,8 @@ public class WebPushService {
                 payload.toString());
     }
 
-    public void onAppointmentParticipationStatusRecheckRequested(@ObservesAsync AppointmentParticipationStatusRecheckRequestedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentParticipationStatusRecheckRequested(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationStatusRecheckRequestedEvent event) {
         String appointmentJson = this.getAndParseAppointment(event.appointmentId());
         if (appointmentJson == null) {
             return;

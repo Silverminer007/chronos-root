@@ -4,7 +4,7 @@ import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.ObservesAsync;
+import jakarta.enterprise.event.Observes;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -14,23 +14,23 @@ import java.util.List;
 
 @ApplicationScoped
 public class DebugLoggingService {
-    public void onAppointmentParticipationStatusConfirmation(@ObservesAsync AppointmentParticipationStatusConfirmationEvent event) {
+    public void onAppointmentParticipationStatusConfirmation(@Observes AppointmentParticipationStatusConfirmationEvent event) {
         Log.debugf("[Notifications] onAppointmentParticipationStatusConfirmation Appointment ID %s", event.appointmentId());
     }
 
-    public void onAppointmentParticipationInvalid(@ObservesAsync AppointmentParticipationInvalidEvent event) {
+    public void onAppointmentParticipationInvalid(@Observes AppointmentParticipationInvalidEvent event) {
         Log.debugf("[Notifications] onAppointmentParticipationInvalid Appointment ID %s", event.appointmentId());
     }
 
-    public void onAppointmentReminder(@ObservesAsync AppointmentReminderEvent event) {
+    public void onAppointmentReminder(@Observes AppointmentReminderEvent event) {
         Log.debugf("[Notifications] onAppointmentReminder Appointment ID %s", event.appointmentId());
     }
 
-    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
         Log.debugf("[Notifications] onAppointmentParticipationStatusChanged Appointment ID %s", event.appointmentId());
     }
 
-    public void onAppointmentParticipationPendingReminder(@ObservesAsync AppointmentParticipationStatusPendingReminderEvent event) {
+    public void onAppointmentParticipationPendingReminder(@Observes AppointmentParticipationStatusPendingReminderEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
 
         Instant targetTime = appointment.getStartTime();

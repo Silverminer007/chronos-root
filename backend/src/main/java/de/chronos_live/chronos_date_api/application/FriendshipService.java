@@ -113,7 +113,7 @@ public class FriendshipService {
 
         // Event feuern
         User requester = User.findById(requesterId);
-        this.friendshipRequestEvent.fireAsync(new FriendshipRequestSentEvent(
+        this.friendshipRequestEvent.fire(new FriendshipRequestSentEvent(
                 request.id,
                 requesterId,
                 addresseeId,
@@ -148,7 +148,7 @@ public class FriendshipService {
         request.setRespondedAt(Instant.now());
 
         // Event feuern
-        this.friendshipAcceptedEvent.fireAsync(new FriendshipAcceptedEvent(
+        this.friendshipAcceptedEvent.fire(new FriendshipAcceptedEvent(
                 request.id,
                 request.getRequesterId(),
                 request.getAddresseeId()
@@ -182,7 +182,7 @@ public class FriendshipService {
         request.setRespondedAt(Instant.now());
 
         // Event feuern
-        this.friendshipDeclinedEvent.fireAsync(new FriendshipDeclinedEvent(
+        this.friendshipDeclinedEvent.fire(new FriendshipDeclinedEvent(
                 request.id,
                 request.getRequesterId(),
                 request.getAddresseeId()
@@ -238,7 +238,7 @@ public class FriendshipService {
         friendshipRepo.delete(friendship);
 
         // Event feuern
-        friendshipRemovedEvent.fireAsync(new FriendshipRemovedEvent(userId1, userId2));
+        friendshipRemovedEvent.fire(new FriendshipRemovedEvent(userId1, userId2));
 
         Log.info("Friendship removed");
     }

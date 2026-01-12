@@ -8,7 +8,9 @@ import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
+import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
+import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -34,7 +36,8 @@ public class AppointmentParticipationService {
     @Inject
     Event<AppointmentGroupParticipationRemovedEvent> appointmentGroupParticipationRemovedEvent;
 
-    public void onAppointmentCreated(@ObservesAsync AppointmentCreatedEvent appointmentCreatedEvent) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentCreatedEvent appointmentCreatedEvent) {
         AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
         appointmentParticipation.setStatus(ParticipationStatus.PENDING);
         appointmentParticipation.setRole(UserRole.RESPONSIBLE);
@@ -45,7 +48,8 @@ public class AppointmentParticipationService {
         appointmentParticipation.persist();
     }
 
-    public void onGroupMemberAdded(@ObservesAsync GroupMemberAddedEvent groupMemberAddedEvent) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onGroupMemberAdded(@Observes GroupMemberAddedEvent groupMemberAddedEvent) {
         User newMember = User.findById(groupMemberAddedEvent.newMemberId());
 
         List<AppointmentGroupParticipation> groupParticipationList =
@@ -70,7 +74,8 @@ public class AppointmentParticipationService {
         }
     }
 
-    public void onGroupMemberRemoved(@ObservesAsync GroupMemberRemovedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onGroupMemberRemoved(@Observes GroupMemberRemovedEvent event) {
         AppointmentParticipation
                 .delete("groupParticipationId = ?1 AND user.id = ?2", event.groupId(), event.removedMemberId());
     }
@@ -92,7 +97,7 @@ public class AppointmentParticipationService {
         appointmentParticipation.setUser(targetUser);
         appointmentParticipation.persist();
 
-        this.appointmentParticipationAddedEvent.fireAsync(
+        this.appointmentParticipationAddedEvent.fire(
                 new AppointmentParticipationAddedEvent(appointmentId, targetUserId, actingUserId)
         );
     }
@@ -130,7 +135,7 @@ public class AppointmentParticipationService {
             appointmentParticipation.persist();
         }
 
-        this.appointmentGroupParticipationAddedEvent.fireAsync(
+        this.appointmentGroupParticipationAddedEvent.fire(
                 new AppointmentGroupParticipationAddedEvent(appointmentId, groupId, actingUserId)
         );
     }
@@ -152,7 +157,7 @@ public class AppointmentParticipationService {
         if (newRole.equals(appointmentParticipation.getRole())) {
             throw new ValidationException("this is already the users role");
         }
-        this.appointmentParticipationRoleChangedEvent.fireAsync(new AppointmentParticipationRoleChangedEvent(
+        this.appointmentParticipationRoleChangedEvent.fire(new AppointmentParticipationRoleChangedEvent(
                 appointmentId,
                 targetUserId,
                 actingUserId,
@@ -171,7 +176,7 @@ public class AppointmentParticipationService {
             throw new ValidationException("This user is not a participant of this event");
         }
 
-        this.appointmentParticipationRemovedEvent.fireAsync(
+        this.appointmentParticipationRemovedEvent.fire(
                 new AppointmentParticipationRemovedEvent(appointmentId, targetUserId, actingUserId)
         );
     }
@@ -188,7 +193,7 @@ public class AppointmentParticipationService {
 
         AppointmentParticipation.delete("groupParticipationId = ?1 AND appointment.id = ?2", groupId, appointmentId);
 
-        this.appointmentGroupParticipationRemovedEvent.fireAsync(
+        this.appointmentGroupParticipationRemovedEvent.fire(
                 new AppointmentGroupParticipationRemovedEvent(appointmentId, groupId, actingUserId)
         );
     }
@@ -214,7 +219,7 @@ public class AppointmentParticipationService {
             throw new ValidationException("this is already your participation status");
         }
 
-        this.appointmentParticipationStatusChangedEvent.fireAsync(
+        this.appointmentParticipationStatusChangedEvent.fire(
                 new AppointmentParticipationStatusChangedEvent(appointmentId, userId, status, appointmentParticipation.getStatus())
         );
 

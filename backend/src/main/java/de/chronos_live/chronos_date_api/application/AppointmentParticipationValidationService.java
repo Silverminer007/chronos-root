@@ -10,8 +10,9 @@ import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
-import jakarta.enterprise.event.ObservesAsync;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -88,12 +89,13 @@ public class AppointmentParticipationValidationService {
 
         appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
 
-        this.appointmentParticipationInvalidEvent.fireAsync(
+        this.appointmentParticipationInvalidEvent.fire(
                 new AppointmentParticipationInvalidEvent(appointment.id)
         );
     }
 
-    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
 
         if (appointment.getStartTime().isBefore(Instant.now())) {
@@ -119,7 +121,7 @@ public class AppointmentParticipationValidationService {
 
             appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
 
-            this.appointmentParticipationInvalidEvent.fireAsync(
+            this.appointmentParticipationInvalidEvent.fire(
                     new AppointmentParticipationInvalidEvent(appointment.id)
             );
         } else {
@@ -131,10 +133,14 @@ public class AppointmentParticipationValidationService {
         }
     }
 
-    public void onAppointmentEdited(@ObservesAsync AppointmentEditedEvent event) {
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onAppointmentEdited(@Observes AppointmentEditedEvent event) {
         // Falls sich die mindest Teilnehmenden Zahl geändert hat
         Appointment appointment = Appointment.findById(event.appointmentId());
 
+        if(appointment.getMinimalAttendees() == null) {
+            return;
+        }
         if (appointment.getStartTime().isBefore(Instant.now())) {
             return;
         }
@@ -152,7 +158,7 @@ public class AppointmentParticipationValidationService {
             feedbackDeadlineInWeeks = 2;
         }
 
-        long weeksUntilAppointment = Instant.now().until(appointment.getStartTime(), ChronoUnit.WEEKS);
+        long weeksUntilAppointment = Instant.now().until(appointment.getStartTime(), ChronoUnit.DAYS) / 7;
 
         ParticipationStatistik participationStatistik =
                 this.appointmentParticipationQueryService.getParticipationStatistik(appointment.id);
@@ -168,7 +174,7 @@ public class AppointmentParticipationValidationService {
             }
         }
         appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
-        this.appointmentParticipationInvalidEvent.fireAsync(
+        this.appointmentParticipationInvalidEvent.fire(
                 new AppointmentParticipationInvalidEvent(appointment.id)
         );
     }
