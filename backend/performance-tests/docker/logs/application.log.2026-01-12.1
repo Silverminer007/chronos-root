@@ -1,0 +1,107 @@
+2026-01-12 20:07:55,926 INFO  [org.fly.cor.FlywayExecutor] (main) Database: jdbc:postgresql://localhost:5433/chronos_perf (PostgreSQL 16.11)
+2026-01-12 20:07:55,975 INFO  [org.fly.cor.int.sch.JdbcTableSchemaHistory] (main) Schema history table "public"."flyway_schema_history" does not exist yet
+2026-01-12 20:07:55,978 INFO  [org.fly.cor.int.com.DbValidate] (main) Successfully validated 5 migrations (execution time 00:00.019s)
+2026-01-12 20:07:55,989 INFO  [org.fly.cor.Flyway] (main) All configured schemas are empty; baseline operation skipped. A baseline or migration script with a lower version than the baseline version may execute if available. Check the Schemas parameter if this is not intended.
+2026-01-12 20:07:55,994 INFO  [org.fly.cor.int.sch.JdbcTableSchemaHistory] (main) Creating Schema History table "public"."flyway_schema_history" ...
+2026-01-12 20:07:56,049 INFO  [org.fly.cor.int.com.DbMigrate] (main) Current version of schema "public": << Empty Schema >>
+2026-01-12 20:07:56,074 INFO  [org.fly.cor.int.com.DbMigrate] (main) Migrating schema "public" to version "1.0.0 - initial schema"
+2026-01-12 20:07:56,216 INFO  [org.fly.cor.int.com.DbMigrate] (main) Migrating schema "public" to version "1.1.0 - new appointment system"
+2026-01-12 20:07:56,253 INFO  [org.fly.cor.int.sql.DefaultSqlScriptExecutor] (main) +--------+
+| setval |
++--------+
+| 1      |
++--------+
+
+2026-01-12 20:07:56,255 INFO  [org.fly.cor.int.sql.DefaultSqlScriptExecutor] (main) +--------+
+| setval |
++--------+
+| 1      |
++--------+
+
+2026-01-12 20:07:56,260 INFO  [org.fly.cor.int.sql.DefaultSqlScriptExecutor] (main) +--------+
+| setval |
++--------+
+| 1      |
++--------+
+
+2026-01-12 20:07:56,371 INFO  [org.fly.cor.int.com.DbMigrate] (main) Migrating schema "public" to version "1.2.0 - set settings defaults"
+2026-01-12 20:07:56,398 INFO  [org.fly.cor.int.com.DbMigrate] (main) Migrating schema "public" to version "1.3.0 - create sequences"
+2026-01-12 20:07:56,412 INFO  [org.fly.cor.int.com.DbMigrate] (main) Migrating schema "public" to version "1.4.0 - delete group members on group delete"
+2026-01-12 20:07:56,426 ERROR [org.fly.cor.int.com.DbMigrate] (main) Migration of schema "public" to version "1.4.0 - delete group members on group delete" failed! Changes successfully rolled back.
+2026-01-12 20:07:56,458 ERROR [io.qua.run.Application] (main) Failed to start application: java.lang.RuntimeException: Failed to start quarkus
+	at io.quarkus.runner.ApplicationImpl.doStart(Unknown Source)
+	at io.quarkus.runtime.Application.start(Application.java:101)
+	at io.quarkus.runtime.ApplicationLifecycleManager.run(ApplicationLifecycleManager.java:119)
+	at io.quarkus.runtime.Quarkus.run(Quarkus.java:80)
+	at io.quarkus.runtime.Quarkus.run(Quarkus.java:51)
+	at io.quarkus.runtime.Quarkus.run(Quarkus.java:144)
+	at io.quarkus.runner.GeneratedMain.main(Unknown Source)
+	at io.quarkus.bootstrap.runner.QuarkusEntryPoint.doRun(QuarkusEntryPoint.java:69)
+	at io.quarkus.bootstrap.runner.QuarkusEntryPoint.main(QuarkusEntryPoint.java:37)
+Caused by: org.flywaydb.core.internal.exception.FlywayMigrateException: Failed to execute script V1.4.0__delete_group_members_on_group_delete.sql
+-------------------------------------------------------------------------
+SQL State  : 42601
+Error Code : 0
+Message    : ERROR: syntax error at or near "CONSTRAINT"
+  Position: 6
+Location   : db/migration/V1.4.0__delete_group_members_on_group_delete.sql (/deployments/file:/deployments/app/chronos-date-api-1.0.0-SNAPSHOT.jar!/db/migration/V1.4.0__delete_group_members_on_group_delete.sql)
+Line       : 1
+Statement  : Run Flyway with -X option to see the actual statement causing the problem
+
+	at org.flywaydb.core.internal.command.DbMigrate.doMigrateGroup(DbMigrate.java:399)
+	at org.flywaydb.core.internal.command.DbMigrate.lambda$applyMigrations$1(DbMigrate.java:283)
+	at org.flywaydb.core.internal.jdbc.TransactionalExecutionTemplate.execute(TransactionalExecutionTemplate.java:59)
+	at org.flywaydb.core.internal.command.DbMigrate.applyMigrations(DbMigrate.java:282)
+	at org.flywaydb.core.internal.command.DbMigrate.migrateGroup(DbMigrate.java:255)
+	at org.flywaydb.core.internal.command.DbMigrate.lambda$migrateAll$0(DbMigrate.java:153)
+	at org.flywaydb.database.postgresql.PostgreSQLAdvisoryLockTemplate.execute(PostgreSQLAdvisoryLockTemplate.java:77)
+	at org.flywaydb.database.postgresql.PostgreSQLAdvisoryLockTemplate.lambda$execute$0(PostgreSQLAdvisoryLockTemplate.java:60)
+	at org.flywaydb.core.internal.jdbc.TransactionalExecutionTemplate.execute(TransactionalExecutionTemplate.java:59)
+	at org.flywaydb.database.postgresql.PostgreSQLAdvisoryLockTemplate.execute(PostgreSQLAdvisoryLockTemplate.java:60)
+	at org.flywaydb.database.postgresql.PostgreSQLConnection.lock(PostgreSQLConnection.java:105)
+	at org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory.lock(JdbcTableSchemaHistory.java:164)
+	at org.flywaydb.core.internal.command.DbMigrate.migrateAll(DbMigrate.java:153)
+	at org.flywaydb.core.internal.command.DbMigrate.migrate(DbMigrate.java:104)
+	at org.flywaydb.core.Flyway.lambda$migrate$3(Flyway.java:245)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:240)
+	at org.flywaydb.core.Flyway.migrate(Flyway.java:186)
+	at io.quarkus.flyway.runtime.FlywayRecorder.doStartActions(FlywayRecorder.java:150)
+	at io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505.deploy_0(Unknown Source)
+	at io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505.deploy(Unknown Source)
+	... 9 more
+Caused by: org.flywaydb.core.internal.sqlscript.FlywaySqlScriptException: Failed to execute script V1.4.0__delete_group_members_on_group_delete.sql
+-------------------------------------------------------------------------
+SQL State  : 42601
+Error Code : 0
+Message    : ERROR: syntax error at or near "CONSTRAINT"
+  Position: 6
+Location   : db/migration/V1.4.0__delete_group_members_on_group_delete.sql (/deployments/file:/deployments/app/chronos-date-api-1.0.0-SNAPSHOT.jar!/db/migration/V1.4.0__delete_group_members_on_group_delete.sql)
+Line       : 1
+Statement  : Run Flyway with -X option to see the actual statement causing the problem
+
+	at org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor.handleException(DefaultSqlScriptExecutor.java:255)
+	at org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor.executeStatement(DefaultSqlScriptExecutor.java:216)
+	at org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor.execute(DefaultSqlScriptExecutor.java:136)
+	at org.flywaydb.core.internal.resolver.sql.SqlMigrationExecutor.executeOnce(SqlMigrationExecutor.java:75)
+	at org.flywaydb.core.internal.resolver.sql.SqlMigrationExecutor.lambda$execute$0(SqlMigrationExecutor.java:66)
+	at org.flywaydb.core.internal.database.DefaultExecutionStrategy.execute(DefaultExecutionStrategy.java:31)
+	at org.flywaydb.core.internal.resolver.sql.SqlMigrationExecutor.execute(SqlMigrationExecutor.java:65)
+	at org.flywaydb.core.internal.command.DbMigrate.doMigrateGroup(DbMigrate.java:391)
+	... 28 more
+Caused by: org.postgresql.util.PSQLException: ERROR: syntax error at or near "CONSTRAINT"
+  Position: 6
+	at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2736)
+	at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2421)
+	at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:372)
+	at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:525)
+	at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:435)
+	at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:357)
+	at org.postgresql.jdbc.PgStatement.executeCachedSql(PgStatement.java:342)
+	at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:318)
+	at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:313)
+	at io.agroal.pool.wrapper.StatementWrapper.execute(StatementWrapper.java:222)
+	at org.flywaydb.core.internal.jdbc.JdbcTemplate.executeStatement(JdbcTemplate.java:215)
+	at org.flywaydb.core.internal.sqlscript.ParsedSqlStatement.execute(ParsedSqlStatement.java:88)
+	at org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor.executeStatement(DefaultSqlScriptExecutor.java:211)
+	... 34 more
+

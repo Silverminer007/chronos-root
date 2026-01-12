@@ -1,0 +1,965 @@
+{
+  "id": "chronos-perf",
+  "realm": "chronos-perf",
+  "enabled": true,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "sslRequired": "none",
+  "accessTokenLifespan": 3600,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Standard user role"
+      },
+      {
+        "name": "ADMIN_API",
+        "description": "Admin API role for push test endpoint"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "chronos-api",
+      "name": "Chronos API",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "chronos-api-secret",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "attributes": {
+        "access.token.lifespan": "3600"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "testuser1",
+      "email": "testuser1@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User1",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser2",
+      "email": "testuser2@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User2",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword2",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser3",
+      "email": "testuser3@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User3",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword3",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser4",
+      "email": "testuser4@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User4",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword4",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser5",
+      "email": "testuser5@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User5",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword5",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser6",
+      "email": "testuser6@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User6",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword6",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser7",
+      "email": "testuser7@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User7",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword7",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser8",
+      "email": "testuser8@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User8",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword8",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser9",
+      "email": "testuser9@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User9",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword9",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser10",
+      "email": "testuser10@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User10",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword10",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser11",
+      "email": "testuser11@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User11",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword11",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser12",
+      "email": "testuser12@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User12",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword12",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser13",
+      "email": "testuser13@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User13",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword13",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser14",
+      "email": "testuser14@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User14",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword14",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser15",
+      "email": "testuser15@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User15",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword15",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser16",
+      "email": "testuser16@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User16",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword16",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser17",
+      "email": "testuser17@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User17",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword17",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser18",
+      "email": "testuser18@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User18",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword18",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser19",
+      "email": "testuser19@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User19",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword19",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser20",
+      "email": "testuser20@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User20",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword20",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser21",
+      "email": "testuser21@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User21",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword21",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser22",
+      "email": "testuser22@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User22",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword22",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser23",
+      "email": "testuser23@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User23",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword23",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser24",
+      "email": "testuser24@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User24",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword24",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser25",
+      "email": "testuser25@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User25",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword25",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser26",
+      "email": "testuser26@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User26",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword26",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser27",
+      "email": "testuser27@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User27",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword27",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser28",
+      "email": "testuser28@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User28",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword28",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser29",
+      "email": "testuser29@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User29",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword29",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser30",
+      "email": "testuser30@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User30",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword30",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser31",
+      "email": "testuser31@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User31",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword31",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser32",
+      "email": "testuser32@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User32",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword32",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser33",
+      "email": "testuser33@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User33",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword33",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser34",
+      "email": "testuser34@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User34",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword34",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser35",
+      "email": "testuser35@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User35",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword35",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser36",
+      "email": "testuser36@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User36",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword36",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser37",
+      "email": "testuser37@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User37",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword37",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser38",
+      "email": "testuser38@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User38",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword38",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser39",
+      "email": "testuser39@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User39",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword39",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser40",
+      "email": "testuser40@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User40",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword40",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser41",
+      "email": "testuser41@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User41",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword41",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser42",
+      "email": "testuser42@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User42",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword42",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser43",
+      "email": "testuser43@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User43",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword43",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser44",
+      "email": "testuser44@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User44",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword44",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser45",
+      "email": "testuser45@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User45",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword45",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser46",
+      "email": "testuser46@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User46",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword46",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser47",
+      "email": "testuser47@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User47",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword47",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser48",
+      "email": "testuser48@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User48",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword48",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser49",
+      "email": "testuser49@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User49",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword49",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser50",
+      "email": "testuser50@chronos-perf.local",
+      "firstName": "Test",
+      "lastName": "User50",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword50",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  postgres-perf:
+    image: postgres:16-alpine
+    container_name: chronos-perf-postgres
+    network_mode: host
+    environment:
+      POSTGRES_USER: chronos_perf
+      POSTGRES_PASSWORD: chronos_perf_password
+      POSTGRES_DB: chronos_perf
+      PGPORT: 5433
+    volumes:
+      - postgres_perf_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos_perf -d chronos_perf -p 5433"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: chronos-perf-keycloak-db
+    network_mode: host
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_DB: keycloak
+      PGPORT: 5434
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak -p 5434"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak-perf:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: chronos-perf-keycloak
+    network_mode: host
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://localhost:5434/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_PORT: 8180
+    command:
+      - start-dev
+      - --import-realm
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro,z
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000;echo -e 'GET /health/ready HTTP/1.1\r\nhost: http://localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  chronos-api:
+    #image: ghcr.io/silverminer007/chronos-date-api:latest
+    build:
+      context: ../..
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: chronos-perf-api
+    network_mode: host
+    environment:
+      AUTH_SERVER_URL: http://localhost:8180/realms/chronos-perf
+      AUTH_SERVER_CLIENT_ID: chronos-api
+      AUTH_SERVER_CLIENT_SECRET: chronos-api-secret
+      DB_USER: chronos_perf
+      DB_PASSWORD: chronos_perf_password
+      DB_URL: jdbc:postgresql://localhost:5433/chronos_perf
+      VAPID_PUBLIC: DummyPublicKey
+      QUARKUS_LOG_LEVEL: INFO
+      QUARKUS_LOG_CATEGORY__DE_CHRONOS__LEVEL: DEBUG
+    volumes:
+      - ./logs/:/deployments/logs:Z
+    depends_on:
+      postgres-perf:
+        condition: service_healthy
+      keycloak-perf:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 2000M
+
+  k6:
+    image: grafana/k6:latest
+    container_name: chronos-perf-k6
+    network_mode: host
+    volumes:
+      - ../k6:/scripts:ro,z
+      - ../results:/results:z
+    environment:
+      K6_VUS: ${K6_VUS:-50}
+      K6_DURATION: ${K6_DURATION:-2m}
+      API_BASE_URL: http://localhost:8080
+      KEYCLOAK_URL: http://localhost:8180
+      KEYCLOAK_REALM: chronos-perf
+      KEYCLOAK_CLIENT_ID: chronos-api
+      KEYCLOAK_CLIENT_SECRET: chronos-api-secret
+    command: ["run", "/scripts/main.js"]
+    depends_on:
+      chronos-api:
+        condition: service_healthy
+      keycloak-perf:
+        condition: service_healthy
+
+volumes:
+  postgres_perf_data:
+  keycloak_db_data:
