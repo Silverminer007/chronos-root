@@ -49,7 +49,7 @@ export function testPush() {
           'GET push status is 200': (r) => r.status === 200,
           'GET push status shows subscribed': (r) => {
             const body = parseJsonBody(r);
-            return body && body.subscribed === true;
+            return body && body.exists === true;
           },
         });
         thinkTime(0.2, 0.4);
