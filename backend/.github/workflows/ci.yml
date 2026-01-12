@@ -156,6 +156,42 @@ jobs:
       - name: 🧪 Run K6 Performance Tests
         run: |
           cd performance-tests/docker
+
+          # Start infrastructure services
+          docker compose up -d postgres-perf keycloak-db keycloak-perf
+
+          # Wait for PostgreSQL
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if docker exec chronos-perf-postgres pg_isready -U chronos_perf > /dev/null 2>&1; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            sleep 2
+          done
+
+          # Wait for Keycloak
+          echo "Waiting for Keycloak..."
+          for i in {1..60}; do
+            if curl -sf http://localhost:8180/health/ready > /dev/null 2>&1; then
+              echo "Keycloak is ready"
+              break
+            fi
+            sleep 5
+          done
+
+          # Start and wait for API
+          docker compose up -d --build chronos-api
+          echo "Waiting for Chronos API..."
+          for i in {1..60}; do
+            if curl -sf http://localhost:8080/q/health/ready > /dev/null 2>&1; then
+              echo "Chronos API is ready"
+              break
+            fi
+            sleep 3
+          done
+
+          # Run K6 tests
           docker compose run --rm \
             -e K6_VUS=30 \
             -e K6_DURATION=1m \
@@ -184,4 +220,4 @@ jobs:
         if: always()
         run: |
           cd performance-tests/docker
-          docker compose -f docker-compose.perf.yml --profile test down -v --remove-orphans || true
+          docker compose down -v --remove-orphans || true
