@@ -3,10 +3,12 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.User;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @ApplicationScoped
 public class GroupQueryService {
@@ -27,11 +29,7 @@ public class GroupQueryService {
     }
 
     public boolean isGroupOwner(Long groupId, Long userId) {
-        return Group
-                .findByIdOptional(groupId)
-                .map(g ->
-                        Objects.equals(((Group) g).getOwner().id, userId))
-                .orElse(false);
+        return Group.count("id = ?1 AND owner.id = ?2", groupId, userId) > 0;
     }
 
     public List<GroupMember> getGroupMembers(Long groupId) {
