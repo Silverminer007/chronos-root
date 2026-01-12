@@ -3,6 +3,7 @@ results/
 
 # Log files
 *.log
+docker/logs/
 
 # Local environment overrides
 .env.local
