@@ -66,6 +66,8 @@ public class GroupsResource {
     public Response patchGroup(@PathParam("group") Long groupId, @RequestBody GroupDto groupDto) {
         User user = this.userService.getUser(jwt.getSubject());
         Group updatedGroup = this.groupService.editGroup(user.id, groupId, groupDto);
+        updatedGroup.setMembers(null);
+        updatedGroup.setOwner(null);
         return Response.ok(this.groupMapper.toDto(updatedGroup)).build();
     }
 
