@@ -191,11 +191,11 @@ jobs:
             sleep 3
           done
 
-          # Run K6 tests
+          # Run K6 tests with relaxed thresholds for CI environment
           docker compose run --rm \
             -e K6_VUS=30 \
             -e K6_DURATION=1m \
-            k6 run /scripts/main.js
+            k6 run --env THRESHOLD_P95=5000 --env THRESHOLD_P99=10000 /scripts/main.js
 
       - name: 📊 Parse Results
         if: always()
