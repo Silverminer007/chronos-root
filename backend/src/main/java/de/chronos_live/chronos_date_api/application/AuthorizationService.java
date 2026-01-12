@@ -127,14 +127,14 @@ public class AuthorizationService {
     }
 
     public void requireEditGroup(Long groupId, Long actingUserId) {
-        if(!this.groupQueryService.isGroupOwner(groupId, actingUserId)) {
+        if(this.groupQueryService.isGroupOwner(groupId, actingUserId)) {
             return;
         }
         throw new ForbiddenException("Only the group owner can edit a group");
     }
 
     public void requireDeleteGroup(Long groupId, Long actingUserId) {
-        if(!this.groupQueryService.isGroupOwner(groupId, actingUserId)) {
+        if(this.groupQueryService.isGroupOwner(groupId, actingUserId)) {
             return;
         }
         throw new ForbiddenException("Only the group owner can delete a group");
