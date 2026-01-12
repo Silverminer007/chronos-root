@@ -20,14 +20,17 @@ public class UserService {
             throw new BadRequestException(e.getMessage());
         }
 
-        if (User.find("oidcId = ?1", oidcId).firstResultOptional().isPresent()) {
-            throw new BadRequestException("This user already exists");
-        }
-
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setEmail(email);
+
+        if (User.find("oidcId = ?1", oidcId).firstResultOptional().isPresent()) {
+            // Update User if the user already exists
+            return this.updateUser(user, oidcId);
+        }
+
+        // Save the user to database otherwise
         user.setOidcId(oidcId);
         user.persist();
         return user;
