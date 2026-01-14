@@ -239,6 +239,29 @@ jobs:
 
             # Upload to the release
             gh release upload "$RELEASE_TAG" performance-results.zip --clobber || echo "Failed to upload results to release"
+
+            # Append performance results to release notes
+            if [ -f report.md ]; then
+              echo "Appending performance results to release notes"
+
+              # Get current release body
+              CURRENT_BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
+
+              # Create new body with performance results
+              NEW_BODY=$(cat <<PERF_EOF
+$CURRENT_BODY
+
+---
+
+## 🚀 Performance Test Results
+
+$(cat report.md)
+PERF_EOF
+)
+
+              # Update release with new body
+              gh release edit "$RELEASE_TAG" --notes "$NEW_BODY"
+            fi
           else
             echo "No release found or no results to upload"
           fi
