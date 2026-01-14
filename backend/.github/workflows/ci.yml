@@ -248,16 +248,13 @@ jobs:
               CURRENT_BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
 
               # Create new body with performance results
-              NEW_BODY=$(cat <<PERF_EOF
-$CURRENT_BODY
+              NEW_BODY="$CURRENT_BODY
 
----
+          ---
 
-## 🚀 Performance Test Results
+          ## 🚀 Performance Test Results
 
-$(cat report.md)
-PERF_EOF
-)
+          $(cat report.md)"
 
               # Update release with new body
               gh release edit "$RELEASE_TAG" --notes "$NEW_BODY"
