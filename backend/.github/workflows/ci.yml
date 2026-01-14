@@ -157,6 +157,10 @@ jobs:
         run: |
           cd performance-tests/docker
 
+          # Ensure results directory exists and is writable
+          mkdir -p ../results
+          chmod 777 ../results
+
           # Start infrastructure services
           docker compose up -d postgres-perf keycloak-db keycloak-perf
 
@@ -196,6 +200,10 @@ jobs:
             -e K6_VUS=30 \
             -e K6_DURATION=1m \
             k6 run --env THRESHOLD_P95=5000 --env THRESHOLD_P99=10000 /scripts/main.js || true
+
+          # Debug: List results directory
+          echo "Results directory contents:"
+          ls -la ../results/ || echo "Results directory is empty or doesn't exist"
 
       - name: 📊 Parse Results
         if: always()
