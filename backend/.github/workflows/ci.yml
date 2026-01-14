@@ -224,6 +224,27 @@ jobs:
           path: performance-tests/results/
           retention-days: 30
 
+      - name: 📎 Attach Results to Release
+        if: github.ref == 'refs/heads/master'
+        run: |
+          # Get the latest release tag
+          RELEASE_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+
+          if [ -n "$RELEASE_TAG" ] && [ -f performance-tests/results/k6-results.json ]; then
+            echo "Uploading performance results to release $RELEASE_TAG"
+
+            # Create a zip of all results
+            cd performance-tests/results
+            zip -r performance-results.zip *.json *.txt *.md 2>/dev/null || true
+
+            # Upload to the release
+            gh release upload "$RELEASE_TAG" performance-results.zip --clobber || echo "Failed to upload results to release"
+          else
+            echo "No release found or no results to upload"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 🧹 Cleanup
         if: always()
         run: |
