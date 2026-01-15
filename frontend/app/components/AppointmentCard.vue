@@ -99,7 +99,6 @@ async function sendMessage(messageBody: string) {
 </script>
 
 <template>
-  <Toast/>
   <LazyMessageDialog
       :visible="messageDialog"
       :appointmentTitle="`${appointment.name} ${formatDate(appointment.start)}`"
