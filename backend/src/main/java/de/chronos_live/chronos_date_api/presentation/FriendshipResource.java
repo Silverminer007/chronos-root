@@ -6,6 +6,7 @@ import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.FriendDto;
 import de.chronos_live.chronos_date_api.dto.FriendshipRequestDto;
 import de.chronos_live.chronos_date_api.dto.UserDto;
+import io.micrometer.core.annotation.Timed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -30,13 +31,18 @@ public class FriendshipResource {
 
     @GET
     @Path("/suggestions")
-    public Response findSuggestions(@QueryParam("search") String search) {
+    @Timed(value = "api.friendships.suggestions", description = "Time to find friendship suggestions")
+    public Response findSuggestions(
+            @QueryParam("search") String search,
+            @QueryParam("limit") @DefaultValue("20") int limit) {
         User user = this.userService.getUser(jwt.getSubject());
 
-        if (search == null) {
-            search = "";
+        List<UserDto> suggestions;
+        if (search == null || search.trim().length() < 2) {
+            suggestions = this.friendshipService.findRecentNonFriends(user.id, 5);
+        } else {
+            suggestions = this.friendshipService.findNonFriends(search.trim(), user.id, limit);
         }
-        List<UserDto> suggestions = this.friendshipService.findNonFriends(search, user.id);
 
         return Response.ok(suggestions).build();
     }

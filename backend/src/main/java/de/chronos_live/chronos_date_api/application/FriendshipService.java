@@ -15,6 +15,7 @@ import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import de.chronos_live.chronos_date_api.infrastructure.FriendshipRepository;
+import io.micrometer.core.annotation.Timed;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -360,8 +361,17 @@ public class FriendshipService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserDto> findNonFriends(String search, Long userId) {
-        return this.friendshipRepo.findNonFriends(search, userId)
+    @Timed(value = "service.friendships.findNonFriends", description = "Time to find non-friends in service layer")
+    public List<UserDto> findNonFriends(String search, Long userId, int limit) {
+        return this.friendshipRepo.findNonFriends(search, userId, limit)
+                .stream()
+                .map(u -> new UserDto(u.id, u.getFirstName(), u.getLastName()))
+                .toList();
+    }
+
+    @Timed(value = "service.friendships.findRecentNonFriends", description = "Time to find recent non-friends in service layer")
+    public List<UserDto> findRecentNonFriends(Long userId, int limit) {
+        return this.friendshipRepo.findRecentNonFriends(userId, limit)
                 .stream()
                 .map(u -> new UserDto(u.id, u.getFirstName(), u.getLastName()))
                 .toList();

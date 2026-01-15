@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.util.Objects;
 
 @ApplicationScoped
@@ -32,6 +33,8 @@ public class UserService {
 
         // Save the user to database otherwise
         user.setOidcId(oidcId);
+        user.setCreatedAt(Instant.now());
+        user.setLastUpdate(Instant.now());
         user.persist();
         return user;
     }
@@ -40,6 +43,8 @@ public class UserService {
         return (User) User.find("oidcId = ?1", oidcId).firstResultOptional().orElseGet(() -> {
             User user = new User();
             user.setOidcId(oidcId);
+            user.setCreatedAt(Instant.now());
+            user.setLastUpdate(Instant.now());
             user.persist();
             return user;
         });
@@ -58,6 +63,7 @@ public class UserService {
             // TODO E-Mail auch in Keycloak updated
             oldUser.setEmail(user.getEmail());
         }
+        oldUser.setLastUpdate(Instant.now());
         return oldUser;
     }
 }
