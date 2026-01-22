@@ -85,7 +85,7 @@ public class GroupService {
         group.setOwner(user);
         group.persist();
 
-        this.groupCreatedEvent.fire(new GroupCreatedEvent(group.id, user.id));
+        this.groupCreatedEvent.fire(new GroupCreatedEvent(group.id, actingUserId));
         return group;
     }
 

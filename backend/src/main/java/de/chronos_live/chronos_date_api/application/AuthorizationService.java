@@ -2,8 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
-import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
-import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -17,8 +16,15 @@ public class AuthorizationService {
     GroupQueryService groupQueryService;
     @Inject
     FriendshipQueryService friendshipQueryService;
+    @Inject
+    PrincipalContext principalContext;
+
+    private boolean isAdminRequest() {
+        return principalContext.isAdminRequest();
+    }
 
     public void requireReadAppointment(Long appointmentId, Long requestingUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, requestingUserId);
 
         if(UserRole.NONE.equals(role)) {
@@ -27,6 +33,7 @@ public class AuthorizationService {
     }
 
     public void requireUpdateAppointment(Long appointmentId, Long actingUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(role.ordinal() < UserRole.ATTENDANT.ordinal()) {
@@ -35,6 +42,7 @@ public class AuthorizationService {
     }
 
     public void requireDeleteAppointment(Long appointmentId, Long actingUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -43,6 +51,7 @@ public class AuthorizationService {
     }
 
     public void requireCancelAppointment(Long appointmentId, Long actingUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -51,6 +60,7 @@ public class AuthorizationService {
     }
 
     public void requireAddUserToAppointment(Long appointmentId, Long actingUserId, Long targetUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -63,6 +73,7 @@ public class AuthorizationService {
     }
 
     public void requireAddGroupToAppointment(Long appointmentId, Long actingUserId, Long groupId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -75,6 +86,7 @@ public class AuthorizationService {
     }
 
     public void requireChangeParticipantRoleAtAppointment(Long appointmentId, Long actingUserId, Long targetUserId, UserRole targetRole) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -83,6 +95,7 @@ public class AuthorizationService {
     }
 
     public void requireRemoveParticipantFromAppointment(Long appointmentId, Long actingUserId, Long targetUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -91,6 +104,7 @@ public class AuthorizationService {
     }
 
     public void requireRemoveGroupFromAppointment(Long appointmentId, Long actingUserId, Long groupId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, actingUserId);
 
         if(!UserRole.RESPONSIBLE.equals(role)) {
@@ -99,6 +113,7 @@ public class AuthorizationService {
     }
 
     public void requireAddGroupMember(Long groupId, Long actingUserId, Long targetUserId) {
+        if (isAdminRequest()) return;
         if(!this.groupQueryService.isGroupMember(groupId, actingUserId)) {
             throw new ForbiddenException("You can only add members to group you are a member of");
         }
@@ -109,6 +124,7 @@ public class AuthorizationService {
     }
 
     public void requireRemoveGroupMember(Long groupId, Long actingUserId, Long targetUserId) {
+        if (isAdminRequest()) return;
         if(Objects.equals(actingUserId, targetUserId)) {
             throw new ForbiddenException("You cannot remove yourself from a group");
         }
@@ -120,6 +136,7 @@ public class AuthorizationService {
     }
 
     public void requireReadGroupMembers(Long groupId, Long requestingUserId) {
+        if (isAdminRequest()) return;
         if(this.groupQueryService.isGroupMember(groupId, requestingUserId)) {
             return;
         }
@@ -127,6 +144,7 @@ public class AuthorizationService {
     }
 
     public void requireEditGroup(Long groupId, Long actingUserId) {
+        if (isAdminRequest()) return;
         if(this.groupQueryService.isGroupOwner(groupId, actingUserId)) {
             return;
         }
@@ -134,6 +152,7 @@ public class AuthorizationService {
     }
 
     public void requireDeleteGroup(Long groupId, Long actingUserId) {
+        if (isAdminRequest()) return;
         if(this.groupQueryService.isGroupOwner(groupId, actingUserId)) {
             return;
         }
@@ -141,6 +160,7 @@ public class AuthorizationService {
     }
 
     public void requireSendMessage(Long appointmentId, Long requestingUserId) {
+        if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, requestingUserId);
 
         if(UserRole.NONE.equals(role)) {

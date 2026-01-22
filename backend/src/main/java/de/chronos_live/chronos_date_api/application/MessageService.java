@@ -109,6 +109,10 @@ public class MessageService {
     }
 
     public Message sendMessage(Long appointmentId, String messageText, Long actingUserId) {
+        return this.sendMessage(appointmentId, messageText, actingUserId, Instant.now());
+    }
+
+    public Message sendMessage(Long appointmentId, String messageText, Long actingUserId, Instant timeStamp) {
         this.authorizationService.requireSendMessage(appointmentId, actingUserId);
         Appointment appointment = Appointment.findById(appointmentId);
 
@@ -119,7 +123,7 @@ public class MessageService {
                 .orElseThrow(() -> new ResourceNotFoundException("user", actingUserId));
         message.setSender(user);
         message.setAppointment(appointment);
-        message.setTimeStamp(Instant.now());
+        message.setTimeStamp(timeStamp);
         message.persist();
 
         this.messageSentEvent.fire(new MessageSentEvent(message.id));

@@ -7,6 +7,7 @@ import jakarta.transaction.Transactional;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 
 @ApplicationScoped
 @Transactional
@@ -31,8 +32,14 @@ public class UserService {
             return this.updateUser(user, oidcId);
         }
 
-        // Save the user to database otherwise
         user.setOidcId(oidcId);
+
+        Optional<User> userByEmail = User.find("email = ?1", email).firstResultOptional();
+        if (userByEmail.isPresent()) {
+            return this.updateUser(user, userByEmail.get().getOidcId());
+        }
+
+        // Save the user to database otherwise
         user.setCreatedAt(Instant.now());
         user.setLastUpdate(Instant.now());
         user.persist();
@@ -48,6 +55,13 @@ public class UserService {
             user.persist();
             return user;
         });
+    }
+
+    public Optional<User> getUser(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return User.find("id = ?1", id).firstResultOptional();
     }
 
     public User updateUser(User user, String oidcId) {
