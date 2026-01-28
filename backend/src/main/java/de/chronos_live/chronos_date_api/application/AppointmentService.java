@@ -36,10 +36,12 @@ public class AppointmentService {
         if (createAppointmentDto.getName().isBlank()) {
             throw new ValidationException("name", "Name cannot be blank");
         }
-        if (!createAppointmentDto.getDescription().isBlank()) {
+        if (createAppointmentDto.getDescription() != null &&
+                !createAppointmentDto.getDescription().isBlank()) {
             appointment.setDescription(createAppointmentDto.getDescription());
         }
-        if (!createAppointmentDto.getVenue().isBlank()) {
+        if (createAppointmentDto.getVenue() != null &&
+                !createAppointmentDto.getVenue().isBlank()) {
             appointment.setVenue(createAppointmentDto.getVenue());
         }
         appointment.setName(createAppointmentDto.getName());
