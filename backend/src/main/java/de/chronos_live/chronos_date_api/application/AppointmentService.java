@@ -2,7 +2,6 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.domain.*;
-import de.chronos_live.chronos_date_api.dto.AppointmentDto;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
@@ -36,6 +35,12 @@ public class AppointmentService {
         Appointment appointment = new Appointment();
         if (createAppointmentDto.getName().isBlank()) {
             throw new ValidationException("name", "Name cannot be blank");
+        }
+        if (!createAppointmentDto.getDescription().isBlank()) {
+            appointment.setDescription(createAppointmentDto.getDescription());
+        }
+        if (!createAppointmentDto.getVenue().isBlank()) {
+            appointment.setVenue(createAppointmentDto.getVenue());
         }
         appointment.setName(createAppointmentDto.getName());
         if (createAppointmentDto.getEnd() == null) {
