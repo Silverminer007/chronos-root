@@ -13,13 +13,13 @@ const menu = ref();
 const items = ref([
   {
     items: [
-      {
+      /*{
         label: 'Profil',
         iconName: 'lucide:user',
         command: () => {
           navigateTo('/profile')
         }
-      },
+      },*/
       {
         label: 'Freunde',
         iconName: 'lucide:users',
@@ -90,15 +90,6 @@ const handleSearch = () => {
 
         <!-- User Menu -->
         <div v-if="authenticated" class="flex items-center gap-3 shrink-0">
-          <!-- Notifications (optional) -->
-          <button
-              class="hidden sm:flex w-10 h-10 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors relative"
-          >
-            <Icon name="lucide:bell" class=" text-gray-600 dark:text-gray-400" />
-            <!-- Notification Badge -->
-            <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
           <!-- User Avatar -->
           <button
               @click="toggle"
