@@ -39,7 +39,9 @@ export default defineEventHandler(async (event) => {
     if (!refresh) {
         deleteCookie(event, "kc_access")
         deleteCookie(event, "kc_refresh")
-        if (!event.node.req.originalUrl?.startsWith('/api') && event.node.req.originalUrl !== '/') {
+        if (!event.node.req.originalUrl?.startsWith('/api')
+            && event.node.req.originalUrl !== '/'
+            && !event.node.req.originalUrl?.startsWith('/public')) {
             return sendRedirect(event, '/', 301);
         } else {
             return;
