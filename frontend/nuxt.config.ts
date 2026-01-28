@@ -14,7 +14,16 @@ export default defineNuxtConfig({
         },
 
         // Optional: API Endpoint zu Quarkus
-        quarkusUrl: ""
+        quarkusUrl: "",
+
+        public: {
+            // Impressum - set via NUXT_PUBLIC_IMPRESSUM_* environment variables
+            impressumName: "",
+            impressumStreet: "",
+            impressumCity: "",
+            impressumEmail: "",
+            impressumPhone: "",
+        }
     },
 
     devServer: {

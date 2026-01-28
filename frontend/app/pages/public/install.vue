@@ -289,10 +289,7 @@
         </div>
       </section>
 
-      <!-- Footer -->
-      <footer class="container mx-auto px-4 sm:px-6 py-6 sm:py-8 text-center text-white/70">
-        <p class="text-sm sm:text-base">&copy; {{ new Date().getUTCFullYear() }} Chronos. Terminplanung für Jugendverbände.</p>
-      </footer>
+      <LandingFooter />
     </div>
   </div>
 </template>
