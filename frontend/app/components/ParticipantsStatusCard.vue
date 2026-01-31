@@ -3,6 +3,7 @@ import type {Appointment, UserParticipant} from '~/types';
 import {useAppointmentsStore} from '~/stores/appointments';
 import {useAuthStore} from '~/stores/auth';
 import {useToast} from 'primevue/usetoast';
+import Menu from 'primevue/menu';
 
 const appointmentsStore = useAppointmentsStore();
 const authStore = useAuthStore();
@@ -13,6 +14,7 @@ const {appointment} = defineProps<{
 }>();
 
 const showAddDialog = ref(false);
+const participantMenuRefs = ref<Record<number, InstanceType<typeof Menu> | null>>({});
 
 const isResponsible = computed(() => {
   if (!appointment || !authStore.user?.id) return false;
@@ -35,6 +37,70 @@ const handleAddParticipant = async (data: { id: number; role: string }) => {
       severity: 'error',
       summary: 'Fehler',
       detail: 'Teilnehmer konnte nicht hinzugefügt werden',
+      life: 3000
+    });
+  }
+};
+
+const toggleParticipantMenu = (event: Event, userId: number) => {
+  participantMenuRefs.value[userId]?.toggle(event);
+};
+
+const getParticipantMenuItems = (participant: UserParticipant) => {
+  const roleItems = (['RESPONSIBLE', 'ATTENDANT', 'HELPER', 'GUEST'] as const)
+      .filter(r => r !== participant.role)
+      .map(role => ({
+        label: getRoleLabel(role) || 'Keine Rolle',
+        command: () => handleChangeRole(participant.user_id, role)
+      }));
+
+  return [
+    {
+      label: 'Rolle ändern',
+      items: roleItems
+    },
+    {separator: true},
+    {
+      label: 'Entfernen',
+      iconName: 'lucide:trash-2',
+      command: () => handleRemoveParticipant(participant)
+    }
+  ];
+};
+
+const handleChangeRole = async (userId: number, role: string) => {
+  try {
+    await appointmentsStore.changeParticipantRole(appointment.id, userId, role);
+    toast.add({
+      severity: 'success',
+      summary: 'Rolle geändert',
+      detail: 'Die Teilnehmerrolle wurde erfolgreich geändert',
+      life: 3000
+    });
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Fehler',
+      detail: 'Rolle konnte nicht geändert werden',
+      life: 3000
+    });
+  }
+};
+
+const handleRemoveParticipant = async (participant: UserParticipant) => {
+  try {
+    await appointmentsStore.removeParticipant(appointment.id, participant.user_id);
+    toast.add({
+      severity: 'success',
+      summary: 'Teilnehmer entfernt',
+      detail: `${participant.name} wurde entfernt`,
+      life: 3000
+    });
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Fehler',
+      detail: 'Teilnehmer konnte nicht entfernt werden',
       life: 3000
     });
   }
@@ -177,6 +243,32 @@ const getStatusBadgeClass = (status: string) => {
               </span>
             </div>
           </div>
+          <button
+              v-if="isResponsible && participant.role !== 'RESPONSIBLE'"
+              @click="toggleParticipantMenu($event, participant.user_id)"
+              class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0"
+          >
+            <Icon name="lucide:more-vertical"/>
+          </button>
+          <Menu
+              v-if="isResponsible && participant.role !== 'RESPONSIBLE'"
+              :ref="(el: any) => participantMenuRefs[participant.user_id] = el"
+              :model="getParticipantMenuItems(participant)"
+              :popup="true"
+              class="w-48"
+          >
+            <template #item="{ item }">
+              <a
+                  v-if="!item.separator"
+                  class="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer"
+                  :class="item.label === 'Entfernen' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'"
+                  @click="item.command?.()"
+              >
+                <Icon v-if="item.iconName" :name="item.iconName" class="text-sm"/>
+                <span>{{ item.label }}</span>
+              </a>
+            </template>
+          </Menu>
         </div>
       </div>
     </div>
