@@ -2,10 +2,13 @@
 import type {Appointment} from '~/types'
 import {useDateFormatter} from "~/composables/useDateFormatter";
 import EditAppointmentDialog from "~/components/EditAppointmentDialog.vue";
+import {useToast} from 'primevue/usetoast';
 
-defineProps<{
+const props = defineProps<{
   appointment: Appointment
 }>()
+
+const toast = useToast();
 
 const {formatDate, formatTime} = useDateFormatter();
 
@@ -19,6 +22,46 @@ const getStatusLabel = (status: string) => {
     PLANNED: 'Geplant'
   };
   return labels[status] || status;
+};
+
+const shareLink = async () => {
+  const url = `${window.location.origin}/appointment/${props.appointment.id}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: props.appointment.name,
+        text: 'Schau dir Mal diesen Termin an und stimme ab, ob du dabei sein kannst',
+        url
+      });
+    } catch (err) {
+      if ((err as DOMException).name !== 'AbortError') {
+        toast.add({
+          severity: 'error',
+          summary: 'Fehler',
+          detail: 'Teilen fehlgeschlagen',
+          life: 3000
+        });
+      }
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.add({
+        severity: 'success',
+        summary: 'Link kopiert',
+        detail: 'Der Termin-Link wurde in die Zwischenablage kopiert',
+        life: 3000
+      });
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: 'Fehler',
+        detail: 'Link konnte nicht kopiert werden',
+        life: 3000
+      });
+    }
+  }
 };
 
 const getStatusClass = (status: string) => {
@@ -44,13 +87,22 @@ const getStatusClass = (status: string) => {
         >
                   {{ getStatusLabel(appointment.status) }}
                 </span>
-        <button
-            @click="showEditDialog = true"
-            class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
-            title="Termin bearbeiten"
-        >
-          <Icon name="lucide:pencil" />
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+              @click="shareLink"
+              class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+              title="Link teilen"
+          >
+            <Icon name="lucide:share-2" />
+          </button>
+          <button
+              @click="showEditDialog = true"
+              class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+              title="Termin bearbeiten"
+          >
+            <Icon name="lucide:pencil" />
+          </button>
+        </div>
       </div>
       <div class="flex flex-wrap gap-4 text-white/90 text-sm">
         <div class="flex items-center gap-2">
