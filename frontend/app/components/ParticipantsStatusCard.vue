@@ -53,10 +53,13 @@ const totalCount = computed(() => {
 const sortedParticipants = computed(() => {
   if (!appointment?.participants) return [];
 
-  const order: Record<string, number> = {RESPONSIBLE: 0, ATTENDANT: 1, HELPER: 2, GUEST: 3, NONE: 4};
+  const rolePriority: Record<string, number> = {RESPONSIBLE: 0, ATTENDANT: 1, HELPER: 2, GUEST: 3, NONE: 4};
+  const statusPriority: Record<string, number> = {APPROVED: 0, REJECTED: 1, PENDING: 2};
   return [...appointment.participants].sort((a, b) => {
-    const roleOrder = (order[a.role] ?? 4) - (order[b.role] ?? 4);
+    const roleOrder = (rolePriority[a.role] ?? 4) - (rolePriority[b.role] ?? 4);
     if (roleOrder !== 0) return roleOrder;
+    const statusOrder = (statusPriority[a.status] ?? 2) - (statusPriority[b.status] ?? 2);
+    if (statusOrder !== 0) return statusOrder;
     return a.name.localeCompare(b.name);
   });
 });

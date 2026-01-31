@@ -27,7 +27,15 @@ const groups = computed(() => appointment.group_participants);
 
 // Get participants for a specific group
 const getGroupParticipants = (groupId: number) => {
-  return appointmentsStore.getParticipantsByGroup(appointment, groupId);
+  const participants = appointmentsStore.getParticipantsByGroup(appointment, groupId);
+  if (!participants) return [];
+
+  const statusPriority: Record<string, number> = {APPROVED: 0, REJECTED: 1, PENDING: 2};
+  return [...participants].sort((a, b) => {
+    const statusOrder = (statusPriority[a.status] ?? 2) - (statusPriority[b.status] ?? 2);
+    if (statusOrder !== 0) return statusOrder;
+    return a.name.localeCompare(b.name);
+  });
 };
 
 // Get approved count for a group
