@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.config.PushConfig;
 import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogRepository;
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import io.quarkus.logging.Log;
@@ -20,6 +21,7 @@ import nl.martijndwars.webpush.PushService;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.logging.Logger;
 
+import java.io.StringReader;
 import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.List;
@@ -58,6 +60,9 @@ public class WebPushService {
 
     @Inject
     GroupQueryService groupQueryService;
+
+    @Inject
+    PushNotificationLogRepository pushNotificationLogRepository;
 
     @jakarta.annotation.PostConstruct
     void init() {
@@ -111,19 +116,46 @@ public class WebPushService {
 
                 var response = push.send(notification);
                 int statusCode = response.getStatusLine().getStatusCode();
+                boolean success = statusCode >= 200 && statusCode < 300;
+
+                logNotification(userId, payload, sub.getEndpoint(), statusCode, success, null);
 
                 if (statusCode == 410 || statusCode == 404) {
                     Log.infof("[Notifications] Subscription expired (HTTP %d), removing endpoint %s", statusCode, sub.getEndpoint());
                     subscriptionService.deleteByEndpoint(sub.getEndpoint());
-                } else if (statusCode < 200 || statusCode >= 300) {
+                } else if (!success) {
                     Log.warnf("[Notifications] Push service returned HTTP %d for endpoint %s", statusCode, sub.getEndpoint());
                 }
 
             } catch (Exception e) {
                 Log.errorf(e, "[Notifications] Failed to send notification to endpoint %s", sub.getEndpoint());
+                logNotification(userId, payload, sub.getEndpoint(), null, false, e.getMessage());
                 subscriptionService.deleteByEndpoint(sub.getEndpoint());
             }
         });
+    }
+
+    private void logNotification(Long userId, String payload, String endpoint,
+                                  Integer httpStatusCode, boolean success, String errorMessage) {
+        try {
+            String notificationType = null;
+            try {
+                var jsonObject = Json.createReader(new StringReader(payload)).readObject();
+                if (jsonObject.containsKey("type")) {
+                    notificationType = jsonObject.getString("type");
+                }
+            } catch (Exception ignored) {
+            }
+
+            if (errorMessage != null && errorMessage.length() > 1000) {
+                errorMessage = errorMessage.substring(0, 1000);
+            }
+
+            pushNotificationLogRepository.log(userId, notificationType, payload,
+                    endpoint, httpStatusCode, success, errorMessage);
+        } catch (Exception e) {
+            Log.errorf(e, "[Notifications] Failed to persist audit log for endpoint %s", endpoint);
+        }
     }
 
     private String getAndParseAppointment(Long appointmentId) {
