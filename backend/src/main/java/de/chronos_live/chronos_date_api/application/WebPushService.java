@@ -27,7 +27,6 @@ import java.util.Objects;
 import java.util.function.Predicate;
 
 @ApplicationScoped
-@Transactional
 public class WebPushService {
     private static final Logger LOGGER = Logger.getLogger(WebPushService.class);
 
@@ -110,10 +109,18 @@ public class WebPushService {
                         payload
                 );
 
-                push.send(notification);
+                var response = push.send(notification);
+                int statusCode = response.getStatusLine().getStatusCode();
+
+                if (statusCode == 410 || statusCode == 404) {
+                    Log.infof("[Notifications] Subscription expired (HTTP %d), removing endpoint %s", statusCode, sub.getEndpoint());
+                    subscriptionService.deleteByEndpoint(sub.getEndpoint());
+                } else if (statusCode < 200 || statusCode >= 300) {
+                    Log.warnf("[Notifications] Push service returned HTTP %d for endpoint %s", statusCode, sub.getEndpoint());
+                }
 
             } catch (Exception e) {
-                // invalid endpoint -> löschen
+                Log.errorf(e, "[Notifications] Failed to send notification to endpoint %s", sub.getEndpoint());
                 subscriptionService.deleteByEndpoint(sub.getEndpoint());
             }
         });
