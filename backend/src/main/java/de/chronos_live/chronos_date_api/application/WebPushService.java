@@ -8,6 +8,7 @@ import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogRepository;
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
+import de.chronos_live.chronos_date_api.mapper.PushAppointmentMapper;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -47,7 +48,7 @@ public class WebPushService {
     ObjectMapper objectMapper;
 
     @Inject
-    AppointmentMapper appointmentMapper;
+    PushAppointmentMapper appointmentMapper;
 
     @Inject
     GroupMapper groupMapper;
