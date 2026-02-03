@@ -61,8 +61,8 @@ async function handleNotification(data) {
     let notificationData = data;
     let actions = []; // Quick Actions
 
-    const appointment = JSON.parse(data.appointment);
-    const ownAttendanceStatus = await getOwnAttendanceStatus(appointment.id);
+    const appointment = data.appointment ? JSON.parse(data.appointment) : undefined;
+    const ownAttendanceStatus = appointment ? await getOwnAttendanceStatus(appointment.id) : 'PENDING';
 
     switch (type) {
         case 'APPOINTMENT_MOVED':
