@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN last_seen TIMESTAMP(6) WITH TIME ZONE;
+UPDATE users SET last_seen = NOW();

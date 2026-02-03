@@ -1,4 +1,4 @@
-package de.chronos_live.chronos_date_api.application;
+package de.chronos_live.admin.application;
 
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;

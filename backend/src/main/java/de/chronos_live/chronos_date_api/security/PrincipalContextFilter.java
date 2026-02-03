@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.security;
 
 import de.chronos_live.chronos_date_api.application.UserService;
+import de.chronos_live.chronos_date_api.domain.User;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -23,16 +24,12 @@ public class PrincipalContextFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
-        principalContext.setPrincipal(
-                this.userService.getUser(
-                        jwt.getSubject()
-                )
-        );
-        Log.info("Requested for user " + principalContext.getPrincipal().getName());
+        User user = this.userService.getUser(jwt.getSubject());
+        this.userService.updateLastSeen(user);
+        principalContext.setPrincipal(user);
         String path = requestContext.getUriInfo().getPath();
         if (path.startsWith("api/v2/admin/") || path.startsWith("/api/v2/admin/")) {
             principalContext.setAdminRequest(true);
-            Log.info("Admin Requested for user " + principalContext.getPrincipal().getName());
         }
     }
 }

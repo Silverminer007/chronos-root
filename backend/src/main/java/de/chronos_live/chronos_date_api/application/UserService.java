@@ -57,6 +57,11 @@ public class UserService {
         });
     }
 
+    public void updateLastSeen(User user) {
+        User managed = User.findById(user.id);
+        managed.setLastSeen(Instant.now());
+    }
+
     public Optional<User> getUser(Long id) {
         if (id == null) {
             return Optional.empty();

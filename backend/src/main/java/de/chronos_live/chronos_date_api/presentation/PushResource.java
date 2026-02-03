@@ -34,9 +34,6 @@ public class PushResource {
     UserService userService;
 
     @Inject
-    PushNotificationLogRepository pushNotificationLogRepository;
-
-    @Inject
     JsonWebToken jwt;
 
     @GET
@@ -63,58 +60,5 @@ public class PushResource {
     @Path("/unsubscribe")
     public void unsubscribe(@QueryParam("endpoint") String endpoint) {
         subscriptionService.deleteByEndpoint(endpoint);
-    }
-
-    @POST
-    @Path("/test/{userId}")
-    @RolesAllowed("ADMIN_API")
-    public void sendTest(@PathParam("userId") Long userId) {
-        webPushService.sendToUser(
-                userId,
-                """
-                        "Testbenachrichtigung"
-                        """,
-                """
-                        "Push" funktioniert!
-                        """
-        );
-    }
-
-    @GET
-    @Path("/log")
-    @RolesAllowed("ADMIN_API")
-    public Response getNotificationLog(
-            @QueryParam("user_id") Long userId,
-            @QueryParam("from") String from,
-            @QueryParam("to") String to,
-            @QueryParam("success") Boolean success,
-            @QueryParam("notification_type") String notificationType,
-            @QueryParam("page") @DefaultValue("0") int page,
-            @QueryParam("size") @DefaultValue("50") int size) {
-
-        Instant fromInstant = from != null ? Instant.parse(from) : null;
-        Instant toInstant = to != null ? Instant.parse(to) : null;
-
-        List<PushNotificationLogDto> logs = pushNotificationLogRepository
-                .findFiltered(userId, fromInstant, toInstant, success, notificationType, page, size)
-                .stream()
-                .map(this::toDto)
-                .toList();
-
-        return Response.ok(logs).build();
-    }
-
-    private PushNotificationLogDto toDto(PushNotificationLog entry) {
-        return new PushNotificationLogDto(
-                entry.id,
-                entry.getUserId(),
-                entry.getNotificationType(),
-                entry.getPayload(),
-                entry.getEndpoint(),
-                entry.getHttpStatusCode(),
-                entry.isSuccess(),
-                entry.getErrorMessage(),
-                entry.getCreatedAt() != null ? entry.getCreatedAt().toInstant().toString() : null
-        );
     }
 }

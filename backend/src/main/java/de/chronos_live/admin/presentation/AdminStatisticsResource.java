@@ -1,6 +1,6 @@
-package de.chronos_live.chronos_date_api.presentation;
+package de.chronos_live.admin.presentation;
 
-import de.chronos_live.chronos_date_api.application.AdminStatisticsService;
+import de.chronos_live.admin.application.AdminStatisticsService;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -11,17 +11,17 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-@Path("/api/v2/admin")
+@Path("/api/v2/admin/statistics")
 @RolesAllowed("ADMIN_API")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class AdminDashboardResource {
+public class AdminStatisticsResource {
 
     @Inject
     AdminStatisticsService adminStatisticsService;
 
     @GET
-    @Path("/statistics")
+    @Path("/")
     public Response getStatistics() {
         AdminStatisticsDto statistics = adminStatisticsService.getStatistics();
         return Response.ok(statistics).build();

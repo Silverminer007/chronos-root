@@ -23,6 +23,8 @@ public class User extends PanacheEntity {
     private Instant createdAt;
     @Column(name = "last_update")
     private Instant lastUpdate;
+    @Column(name = "last_seen")
+    private Instant lastSeen;
 
     public String getName() {
         return firstName + " " + lastName;
