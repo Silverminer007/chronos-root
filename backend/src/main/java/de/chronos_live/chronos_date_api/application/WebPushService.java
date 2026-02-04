@@ -98,7 +98,7 @@ public class WebPushService {
         this.sendNotification(userId, payload.toString());
     }
 
-    private void sendNotification(Long userId, String payload) {
+    public void sendNotification(Long userId, String payload) {
         if (push == null) {
             LOGGER.warn("Omitting Push notification, because VAPID Keys are not set");
             return;

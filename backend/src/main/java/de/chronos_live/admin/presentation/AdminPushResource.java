@@ -10,6 +10,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import java.time.Instant;
 import java.util.List;
@@ -30,16 +31,20 @@ public class AdminPushResource {
     @POST
     @Path("/test/{userId}")
     @RolesAllowed("ADMIN_API")
-    public void sendTest(@PathParam("userId") Long userId) {
-        webPushService.sendToUser(
-                userId,
-                """
-                        "Testbenachrichtigung"
-                        """,
-                """
-                        "Push" funktioniert!
-                        """
-        );
+    public void sendTest(@PathParam("userId") Long userId, @RequestBody String payload) {
+        if(payload == null || payload.isEmpty()) {
+            webPushService.sendToUser(
+                    userId,
+                    """
+                            "Testbenachrichtigung"
+                            """,
+                    """
+                            "Push" funktioniert!
+                            """
+            );
+        } else {
+            webPushService.sendNotification(userId, payload);
+        }
     }
 
     @GET
