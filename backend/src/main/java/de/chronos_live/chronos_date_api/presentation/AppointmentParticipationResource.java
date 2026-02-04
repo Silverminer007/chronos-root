@@ -6,10 +6,7 @@ import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.domain.UserRole;
-import de.chronos_live.chronos_date_api.dto.AddGroupParticipantDto;
-import de.chronos_live.chronos_date_api.dto.AddParticipantDto;
-import de.chronos_live.chronos_date_api.dto.ParticipantRoleDto;
-import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
+import de.chronos_live.chronos_date_api.dto.*;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -51,7 +48,9 @@ public class AppointmentParticipationResource {
 
         ParticipationStatus participationStatus =
                 this.appointmentParticipationQueryService.getUserStatus(appointmentId, user.id);
-        return Response.ok(participationStatus.toString()).build();
+        AppointmentDto appointmentDto = new  AppointmentDto();
+        appointmentDto.setStatus(participationStatus.toString());
+        return Response.ok(appointmentDto).build();
     }
 
     @POST
