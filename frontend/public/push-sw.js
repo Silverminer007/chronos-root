@@ -1,7 +1,7 @@
 // public/push-sw.js
 importScripts('https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js');
 
-const API_BASE_URL = 'https://chronos-new-netlify.app';
+const API_BASE_URL = self.location.origin;
 
 const DateTime = luxon.DateTime;
 
@@ -306,7 +306,7 @@ self.addEventListener('notificationclick', function (event) {
 });
 
 async function getOwnAttendanceStatus(appointmentId) {
-    const response = await fetch(`${API_BASE_URL}/api/event/${appointmentId}/participants/status`, {
+    const response = await fetch(`${API_BASE_URL}/api/v2/appointments/${appointmentId}/participants/status`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -318,13 +318,13 @@ async function getOwnAttendanceStatus(appointmentId) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    return (await response.json()).status;
 }
 
 // Funktion zum Aktualisieren des Attendance-Status
 async function updateAttendanceStatus(appointmentId, status) {
     if (status === 'APPROVED') {
-        const response = await fetch(`${API_BASE_URL}/api/appointments/${appointmentId}/participants/approve`, {
+        const response = await fetch(`${API_BASE_URL}/api/v2/appointments/${appointmentId}/participants/approve`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -336,7 +336,7 @@ async function updateAttendanceStatus(appointmentId, status) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
     } else {
-        const response = await fetch(`${API_BASE_URL}/api/appointments/${appointmentId}/participants/reject`, {
+        const response = await fetch(`${API_BASE_URL}/api/v2/appointments/${appointmentId}/participants/reject`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
