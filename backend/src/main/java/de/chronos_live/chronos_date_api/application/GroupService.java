@@ -58,7 +58,7 @@ public class GroupService {
         groupMember.setGroup(group);
         groupMember.setUser(user);
         groupMember.persist();
-        this.groupMemberAddedEvent.fire(new GroupMemberAddedEvent(actingUserId, targetUserId, actingUserId));
+        this.groupMemberAddedEvent.fire(new GroupMemberAddedEvent(groupId, targetUserId, actingUserId));
     }
 
     public void removeGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
