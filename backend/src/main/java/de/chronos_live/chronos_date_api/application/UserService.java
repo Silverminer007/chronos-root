@@ -47,6 +47,9 @@ public class UserService {
     }
 
     public User getUser(String oidcId) {
+        if (oidcId == null) {
+            throw new BadRequestException("Authentication invalid");
+        }
         return (User) User.find("oidcId = ?1", oidcId).firstResultOptional().orElseGet(() -> {
             User user = new User();
             user.setOidcId(oidcId);
