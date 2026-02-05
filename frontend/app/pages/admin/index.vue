@@ -35,7 +35,7 @@ interface AdminUserResponse {
 }
 
 const {data: statistics, status} = await useFetch<AdminStatistics>('/api/v2/admin/statistics');
-const {data: usersData} = await useFetch<AdminUserResponse>('/api/v2/admin/user/', {params: {size: 10}});
+const {data: usersData} = await useFetch<AdminUserResponse>('/api/v2/admin/user/', {params: {size: 20}});
 
 const stats = computed(() => [
   {label: 'Registrierte Nutzer', icon: 'lucide:users', value: statistics.value?.users.total ?? 0},
@@ -49,7 +49,7 @@ const stats = computed(() => [
 const recentLogins = computed(() => usersData.value?.items ?? []);
 
 function getInitials(user: AdminUser): string {
-  return ((user.firstName[0] ?? '') + (user.lastName[0] ?? '')).toUpperCase();
+  return user && user.firstName && user.lastName ? ((user?.firstName[0] ?? '') + (user?.lastName[0] ?? '')).toUpperCase() : '';
 }
 
 function formatRelativeTime(dateStr: string): string {
