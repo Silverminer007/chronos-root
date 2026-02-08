@@ -9,9 +9,12 @@ import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -31,20 +34,30 @@ public class MessageService {
     @Inject
     Event<MessageSentEvent> messageSentEvent;
 
+    @Inject
+    MeterRegistry meterRegistry;
+
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
-        Appointment appointment = Appointment.findById(event.appointmentId());
-        User user = User.findById(event.actingUserId());
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            Appointment appointment = Appointment.findById(event.appointmentId());
+            User user = User.findById(event.actingUserId());
 
-        String messageText = "%s hat %s".formatted(user.getName(), event.newParticipationStatus().equals(ParticipationStatus.APPROVED)
-                ? "zugesagt" : "abgesagt");
+            String messageText = "%s hat %s".formatted(user.getName(), event.newParticipationStatus().equals(ParticipationStatus.APPROVED)
+                    ? "zugesagt" : "abgesagt");
 
-        Message message = new Message();
-        message.setBody(messageText);
-        message.setSender(user);
-        message.setAppointment(appointment);
-        message.setTimeStamp(Instant.now());
-        message.persist();
+            Message message = new Message();
+            message.setBody(messageText);
+            message.setSender(user);
+            message.setAppointment(appointment);
+            message.setTimeStamp(Instant.now());
+            message.persist();
+        } finally {
+            sample.stop(Timer.builder("observer.message.onParticipationStatusChanged")
+                    .description("Time for message creation on participation status change")
+                    .register(meterRegistry));
+        }
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)

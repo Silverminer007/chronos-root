@@ -3,6 +3,7 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -23,6 +24,7 @@ public class AuthorizationService {
         return principalContext.isAdminRequest();
     }
 
+    @Timed(value = "service.authorization.requireReadAppointment", description = "Time for read-appointment authorization check")
     public void requireReadAppointment(Long appointmentId, Long requestingUserId) {
         if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, requestingUserId);

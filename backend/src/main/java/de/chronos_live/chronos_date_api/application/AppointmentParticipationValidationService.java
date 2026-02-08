@@ -7,10 +7,13 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatistik;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -33,6 +36,9 @@ public class AppointmentParticipationValidationService {
 
     @Inject
     Event<AppointmentParticipationInvalidEvent> appointmentParticipationInvalidEvent;
+
+    @Inject
+    MeterRegistry meterRegistry;
 
     @Scheduled(cron = "0 */15 * * * ?")
     void sendNonMinimalAttendeesAlerts() {
@@ -95,41 +101,48 @@ public class AppointmentParticipationValidationService {
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
-        Appointment appointment = Appointment.findById(event.appointmentId());
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            Appointment appointment = Appointment.findById(event.appointmentId());
 
-        if (appointment.getStartTime().isBefore(Instant.now())) {
-            return;
-        }
-
-        if (AppointmentStatus.CANCELLED.equals(appointment.getStatus())
-                || AppointmentStatus.DELETED.equals(appointment.getStatus())) {
-            return;
-        }
-
-        if (ParticipationStatus.REJECTED.equals(event.newParticipationStatus())
-                && AppointmentStatus.NOT_ENOUGH_ATTENDEES.equals(appointment.getStatus())) {
-            return;
-        }
-
-        ParticipationStatistik participationStatistik =
-                this.appointmentParticipationQueryService.getParticipationStatistik(appointment.id);
-        if (AppointmentStatus.PLANNED.equals(appointment.getStatus())) {
-            if (participationStatistik.participantCount() - participationStatistik.rejectedCount() >= appointment.getMinimalAttendees()) {
+            if (appointment.getStartTime().isBefore(Instant.now())) {
                 return;
             }
 
-            appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
-
-            this.appointmentParticipationInvalidEvent.fire(
-                    new AppointmentParticipationInvalidEvent(appointment.id)
-            );
-        } else {
-            if (participationStatistik.participantCount() - participationStatistik.rejectedCount() < appointment.getMinimalAttendees()) {
+            if (AppointmentStatus.CANCELLED.equals(appointment.getStatus())
+                    || AppointmentStatus.DELETED.equals(appointment.getStatus())) {
                 return;
             }
 
-            appointment.setStatus(AppointmentStatus.PLANNED);
+            if (ParticipationStatus.REJECTED.equals(event.newParticipationStatus())
+                    && AppointmentStatus.NOT_ENOUGH_ATTENDEES.equals(appointment.getStatus())) {
+                return;
+            }
+
+            ParticipationStatistik participationStatistik =
+                    this.appointmentParticipationQueryService.getParticipationStatistik(appointment.id);
+            if (AppointmentStatus.PLANNED.equals(appointment.getStatus())) {
+                if (participationStatistik.participantCount() - participationStatistik.rejectedCount() >= appointment.getMinimalAttendees()) {
+                    return;
+                }
+
+                appointment.setStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES);
+
+                this.appointmentParticipationInvalidEvent.fire(
+                        new AppointmentParticipationInvalidEvent(appointment.id)
+                );
+            } else {
+                if (participationStatistik.participantCount() - participationStatistik.rejectedCount() < appointment.getMinimalAttendees()) {
+                    return;
+                }
+
+                appointment.setStatus(AppointmentStatus.PLANNED);
+            }
+        } finally {
+            sample.stop(Timer.builder("observer.participationValidation.onParticipationStatusChanged")
+                    .description("Time for participation validation on status change")
+                    .register(meterRegistry));
         }
     }
 

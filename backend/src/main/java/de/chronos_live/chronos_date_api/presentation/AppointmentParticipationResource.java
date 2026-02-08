@@ -7,6 +7,7 @@ import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.dto.*;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -55,6 +56,7 @@ public class AppointmentParticipationResource {
 
     @POST
     @Path("/approve")
+    @Timed(value = "api.participation.approve", description = "Time for the full approve participation request")
     public Response approveAppointment(@PathParam("id") Long appointmentId) {
         User user = this.userService.getUser(jwt.getSubject());
 
@@ -65,6 +67,7 @@ public class AppointmentParticipationResource {
 
     @POST
     @Path("/reject")
+    @Timed(value = "api.participation.reject", description = "Time for the full reject participation request")
     public Response rejectAppointment(@PathParam("id") Long appointmentId) {
         User user = this.userService.getUser(jwt.getSubject());
 

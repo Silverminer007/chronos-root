@@ -6,6 +6,7 @@ import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
@@ -199,6 +200,7 @@ public class AppointmentParticipationService {
     }
 
     // Teilnahmestatus ändern (User ändert seinen eigenen Status)
+    @Timed(value = "service.participation.changeStatus", description = "Time to change participation status including events")
     public void changeParticipationStatus(Long userId, Long appointmentId, ParticipationStatus status) {
         this.authorizationService.requireReadAppointment(appointmentId, userId);
 
@@ -219,11 +221,12 @@ public class AppointmentParticipationService {
             throw new ValidationException("this is already your participation status");
         }
 
-        this.appointmentParticipationStatusChangedEvent.fire(
-                new AppointmentParticipationStatusChangedEvent(appointmentId, userId, status, appointmentParticipation.getStatus())
-        );
-
         appointmentParticipation.setStatus(status);
+
+        AppointmentParticipationStatusChangedEvent event =
+                new AppointmentParticipationStatusChangedEvent(appointmentId, userId, status, appointmentParticipation.getStatus());
+        this.appointmentParticipationStatusChangedEvent.fire(event);
+        this.appointmentParticipationStatusChangedEvent.fireAsync(event);
     }
 
     // Alle Teilnehmer abrufen

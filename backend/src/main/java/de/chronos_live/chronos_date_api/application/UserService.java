@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.exception.BadRequestException;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -46,6 +47,7 @@ public class UserService {
         return user;
     }
 
+    @Timed(value = "service.user.getUser", description = "Time to resolve user from OIDC ID")
     public User getUser(String oidcId) {
         if (oidcId == null) {
             throw new BadRequestException("Authentication invalid");

@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -26,7 +27,7 @@ public class DebugLoggingService {
         Log.debugf("[Notifications] onAppointmentReminder Appointment ID %s", event.appointmentId());
     }
 
-    public void onAppointmentParticipationStatusChanged(@Observes AppointmentParticipationStatusChangedEvent event) {
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Log.debugf("[Notifications] onAppointmentParticipationStatusChanged Appointment ID %s", event.appointmentId());
     }
 

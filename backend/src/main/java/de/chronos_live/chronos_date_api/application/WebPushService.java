@@ -9,9 +9,12 @@ import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogReposi
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.PushAppointmentMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
@@ -64,6 +67,9 @@ public class WebPushService {
 
     @Inject
     PushNotificationLogRepository pushNotificationLogRepository;
+
+    @Inject
+    MeterRegistry meterRegistry;
 
     @jakarta.annotation.PostConstruct
     void init() {
@@ -449,28 +455,35 @@ public class WebPushService {
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onAppointmentParticipationStatusChanged(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationStatusChangedEvent event) {
-        User actingUser = User.findById(event.actingUserId());
-        if (actingUser == null) {
-            return;
-        }
+    public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            User actingUser = User.findById(event.actingUserId());
+            if (actingUser == null) {
+                return;
+            }
 
-        String appointmentJson = getAndParseAppointment(event.appointmentId());
-        if (appointmentJson == null) {
-            return;
-        }
-        JsonObject payload = Json.createObjectBuilder()
-                .add("type", "PARTICIPATION_STATUS_CHANGED")
-                .add("appointment", appointmentJson)
-                .add("new_participation_status", event.newParticipationStatus().toString())
-                .add("user_name", actingUser.getName())
-                .build();
+            String appointmentJson = getAndParseAppointment(event.appointmentId());
+            if (appointmentJson == null) {
+                return;
+            }
+            JsonObject payload = Json.createObjectBuilder()
+                    .add("type", "PARTICIPATION_STATUS_CHANGED")
+                    .add("appointment", appointmentJson)
+                    .add("new_participation_status", event.newParticipationStatus().toString())
+                    .add("user_name", actingUser.getName())
+                    .build();
 
-        this.sendToParticipants(event.appointmentId(),
-                ap ->
-                        !Objects.equals(event.actingUserId(), ap.getUser().id)
-                                && this.settingsService.sendAppointmentParticipationStatusChangedNotification(ap),
-                payload.toString());
+            this.sendToParticipants(event.appointmentId(),
+                    ap ->
+                            !Objects.equals(event.actingUserId(), ap.getUser().id)
+                                    && this.settingsService.sendAppointmentParticipationStatusChangedNotification(ap),
+                    payload.toString());
+        } finally {
+            sample.stop(Timer.builder("observer.webpush.onParticipationStatusChanged")
+                    .description("Time for sending push notifications on participation status change")
+                    .register(meterRegistry));
+        }
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
