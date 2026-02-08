@@ -12,6 +12,7 @@ import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,6 +28,7 @@ import java.time.Instant;
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN_API")
 @Path("/api/v2/admin/appointments")
+@Timed("api.admin.appointments")
 public class AdminAppointmentResource {
     @Inject
     PrincipalContext principalContext;

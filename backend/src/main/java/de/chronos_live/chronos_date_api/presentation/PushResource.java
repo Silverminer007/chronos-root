@@ -9,6 +9,7 @@ import de.chronos_live.chronos_date_api.dto.PushNotificationLogDto;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionDto;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionStatusDto;
 import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogRepository;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -22,6 +23,7 @@ import java.util.List;
 @Path("/api/v2/push")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Timed("api.push")
 public class PushResource {
 
     @Inject

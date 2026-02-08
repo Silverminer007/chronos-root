@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.application.WebPushService;
 import de.chronos_live.chronos_date_api.domain.PushNotificationLog;
 import de.chronos_live.chronos_date_api.dto.PushNotificationLogDto;
 import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogRepository;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -20,6 +21,7 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN_API")
 @Path("/api/v2/admin/push")
+@Timed("api.admin.push")
 public class AdminPushResource {
 
     @Inject

@@ -19,6 +19,7 @@ import java.util.List;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.participation")
 public class AppointmentParticipationService {
     @Inject
     AuthorizationService authorizationService;
@@ -200,7 +201,6 @@ public class AppointmentParticipationService {
     }
 
     // Teilnahmestatus ändern (User ändert seinen eigenen Status)
-    @Timed(value = "service.participation.changeStatus", description = "Time to change participation status including events")
     public void changeParticipationStatus(Long userId, Long appointmentId, ParticipationStatus status) {
         this.authorizationService.requireReadAppointment(appointmentId, userId);
 

@@ -9,6 +9,7 @@ import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,6 +25,7 @@ import java.util.List;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.message")
 public class MessageService {
     @Inject
     AuthorizationService authorizationService;

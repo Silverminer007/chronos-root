@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.User;
 import io.quarkus.logging.Log;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @ApplicationScoped
+@Timed("service.groupQuery")
 public class GroupQueryService {
 
     public List<Group> searchGroups(User user, String searchQuery) {

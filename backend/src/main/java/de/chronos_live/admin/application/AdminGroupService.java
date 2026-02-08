@@ -3,9 +3,11 @@ package de.chronos_live.admin.application;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.User;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
+@Timed("service.admin.group")
 public class AdminGroupService {
     public void addGroupMember(Long groupId, Long targetUserId) {
         if(GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId).count() > 0) {

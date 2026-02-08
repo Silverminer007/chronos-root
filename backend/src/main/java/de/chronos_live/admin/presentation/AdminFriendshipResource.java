@@ -2,6 +2,7 @@ package de.chronos_live.admin.presentation;
 
 import de.chronos_live.admin.application.AdminFriendshipService;
 import de.chronos_live.admin.dto.FriendGroupDto;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -18,6 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN_API")
 @Path("/api/v2/admin/friendship")
+@Timed("api.admin.friendships")
 public class AdminFriendshipResource {
     @Inject
     AdminFriendshipService adminFriendshipService;

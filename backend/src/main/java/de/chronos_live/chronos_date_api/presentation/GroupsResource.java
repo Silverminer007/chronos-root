@@ -8,6 +8,7 @@ import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.UserMapper;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -22,6 +23,7 @@ import java.util.List;
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Timed("api.groups")
 public class GroupsResource {
     @Inject
     UserService userService;

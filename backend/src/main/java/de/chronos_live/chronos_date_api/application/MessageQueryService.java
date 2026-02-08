@@ -2,11 +2,13 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 
 @ApplicationScoped
+@Timed("service.messageQuery")
 public class MessageQueryService {
 
     public List<Message> getMessages(Long appointmentId) {

@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.application.GroupService;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -18,6 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN_API")
 @Path("/api/v2/admin/groups")
+@Timed("api.admin.groups")
 public class AdminGroupResource {
     @Inject
     GroupService groupService;

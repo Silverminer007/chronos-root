@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.PrincipalDto;
 import de.chronos_live.chronos_date_api.mapper.PrincipalMapper;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -18,6 +19,7 @@ import java.util.Objects;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @PermitAll
+@Timed("api.user")
 public class UserResource {
     @Inject
     UserService userService;

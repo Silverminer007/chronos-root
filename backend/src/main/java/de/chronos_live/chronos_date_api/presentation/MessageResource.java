@@ -6,6 +6,7 @@ import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.mapper.MessageMapper;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -20,6 +21,7 @@ import java.util.List;
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Timed("api.messages")
 public class MessageResource {
     @Inject
     UserService userService;

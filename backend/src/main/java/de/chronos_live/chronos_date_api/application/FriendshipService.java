@@ -27,6 +27,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
+@Timed("service.friendship")
 public class FriendshipService {
 
     @Inject
@@ -361,7 +362,6 @@ public class FriendshipService {
                 .collect(Collectors.toList());
     }
 
-    @Timed(value = "service.friendships.findNonFriends", description = "Time to find non-friends in service layer")
     public List<UserDto> findNonFriends(String search, Long userId, int limit) {
         return this.friendshipRepo.findNonFriends(search, userId, limit)
                 .stream()
@@ -369,7 +369,6 @@ public class FriendshipService {
                 .toList();
     }
 
-    @Timed(value = "service.friendships.findRecentNonFriends", description = "Time to find recent non-friends in service layer")
     public List<UserDto> findRecentNonFriends(Long userId, int limit) {
         return this.friendshipRepo.findRecentNonFriends(userId, limit)
                 .stream()

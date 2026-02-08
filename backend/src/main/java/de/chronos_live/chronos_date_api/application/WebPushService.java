@@ -9,6 +9,7 @@ import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogReposi
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.PushAppointmentMapper;
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.quarkus.logging.Log;
@@ -33,6 +34,7 @@ import java.util.Objects;
 import java.util.function.Predicate;
 
 @ApplicationScoped
+@Timed("service.webpush")
 public class WebPushService {
     private static final Logger LOGGER = Logger.getLogger(WebPushService.class);
 

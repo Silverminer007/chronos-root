@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.user")
 public class UserService {
     public User createUser(String firstName, String lastName, String email, String oidcId) {
         try {
@@ -47,7 +48,6 @@ public class UserService {
         return user;
     }
 
-    @Timed(value = "service.user.getUser", description = "Time to resolve user from OIDC ID")
     public User getUser(String oidcId) {
         if (oidcId == null) {
             throw new BadRequestException("Authentication invalid");

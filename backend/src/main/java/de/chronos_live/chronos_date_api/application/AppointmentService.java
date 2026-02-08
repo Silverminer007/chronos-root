@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
@@ -14,6 +15,7 @@ import java.time.Instant;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.appointment")
 public class AppointmentService {
     @Inject
     AuthorizationService authorizationService;

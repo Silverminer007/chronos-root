@@ -3,6 +3,7 @@ package de.chronos_live.admin.application;
 import de.chronos_live.admin.dto.AdminUserDto;
 import de.chronos_live.admin.dto.AdminUserListResponse;
 import de.chronos_live.chronos_date_api.domain.User;
+import io.micrometer.core.annotation.Timed;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.admin.users")
 public class AdminUserService {
 
     public AdminUserListResponse listUsers(int page, int size, Instant lastSeenAfter, Instant lastSeenBefore) {

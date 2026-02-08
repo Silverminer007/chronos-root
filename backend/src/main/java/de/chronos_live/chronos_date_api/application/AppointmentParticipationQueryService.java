@@ -4,11 +4,13 @@ import de.chronos_live.chronos_date_api.domain.AppointmentParticipation;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatistik;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserRole;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 
 @ApplicationScoped
+@Timed("service.participationQuery")
 public class AppointmentParticipationQueryService {
     public UserRole getUserRole(Long appointmentId, Long userId) {
         return AppointmentParticipation

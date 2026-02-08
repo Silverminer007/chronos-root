@@ -6,6 +6,7 @@ import de.chronos_live.admin.dto.AdminUserListResponse;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.mapper.PrincipalMapper;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,6 +23,7 @@ import java.util.Optional;
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN_API")
 @Path("/api/v2/admin/user")
+@Timed("api.admin.users")
 public class AdminUserResource {
     @Inject
     UserService userService;

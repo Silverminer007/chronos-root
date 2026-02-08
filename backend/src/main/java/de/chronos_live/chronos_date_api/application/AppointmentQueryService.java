@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 
 @ApplicationScoped
+@Timed("service.appointmentQuery")
 public class AppointmentQueryService {
     @Inject
     AppointmentRepository appointmentRepository;

@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
 import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.infrastructure.FriendshipRepository;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
+@Timed("service.admin.friendship")
 public class AdminFriendshipService {
     @Inject
     FriendshipRepository friendshipRepo;

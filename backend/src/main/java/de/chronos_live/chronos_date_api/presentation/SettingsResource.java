@@ -6,6 +6,7 @@ import de.chronos_live.chronos_date_api.domain.Settings;
 import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.SettingsDto;
 import de.chronos_live.chronos_date_api.mapper.SettingsMapper;
+import io.micrometer.core.annotation.Timed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -15,6 +16,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 @Path("/api/v2/settings")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Timed("api.settings")
 public class SettingsResource {
 
     @Inject

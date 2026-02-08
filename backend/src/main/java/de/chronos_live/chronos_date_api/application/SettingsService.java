@@ -3,12 +3,14 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.SettingsDto;
 import de.chronos_live.chronos_date_api.mapper.SettingsMapper;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.settings")
 public class SettingsService {
     @Inject
     SettingsMapper settingsMapper;

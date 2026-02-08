@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.mapper.*;
+import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -21,6 +22,7 @@ import java.util.List;
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Timed("api.appointments")
 public class AppointmentsResource {
     @Inject
     AppointmentService appointmentService;

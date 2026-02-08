@@ -2,11 +2,13 @@ package de.chronos_live.admin.application;
 
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.admin.statistics")
 public class AdminStatisticsService {
 
     public AdminStatisticsDto getStatistics() {

@@ -8,6 +8,7 @@ import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import io.quarkus.logging.Log;
+import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
@@ -19,6 +20,7 @@ import java.util.*;
 
 @ApplicationScoped
 @Transactional
+@Timed("service.group")
 public class GroupService {
     @Inject
     AuthorizationService authorizationService;

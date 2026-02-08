@@ -10,6 +10,7 @@ import jakarta.inject.Inject;
 import java.util.Objects;
 
 @ApplicationScoped
+@Timed("service.authorization")
 public class AuthorizationService {
     @Inject
     AppointmentParticipationQueryService appointmentParticipationQueryService;
@@ -24,7 +25,6 @@ public class AuthorizationService {
         return principalContext.isAdminRequest();
     }
 
-    @Timed(value = "service.authorization.requireReadAppointment", description = "Time for read-appointment authorization check")
     public void requireReadAppointment(Long appointmentId, Long requestingUserId) {
         if (isAdminRequest()) return;
         UserRole role = this.appointmentParticipationQueryService.getUserRole(appointmentId, requestingUserId);

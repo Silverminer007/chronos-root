@@ -22,6 +22,7 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @PermitAll
+@Timed("api.participation")
 public class AppointmentParticipationResource {
     @Inject
     UserService userService;
@@ -56,7 +57,6 @@ public class AppointmentParticipationResource {
 
     @POST
     @Path("/approve")
-    @Timed(value = "api.participation.approve", description = "Time for the full approve participation request")
     public Response approveAppointment(@PathParam("id") Long appointmentId) {
         User user = this.userService.getUser(jwt.getSubject());
 
@@ -67,7 +67,6 @@ public class AppointmentParticipationResource {
 
     @POST
     @Path("/reject")
-    @Timed(value = "api.participation.reject", description = "Time for the full reject participation request")
     public Response rejectAppointment(@PathParam("id") Long appointmentId) {
         User user = this.userService.getUser(jwt.getSubject());
 

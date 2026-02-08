@@ -18,6 +18,7 @@ import java.util.List;
 @Path("/api/v2/friendships")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Timed("api.friendships")
 public class FriendshipResource {
 
     @Inject
@@ -31,7 +32,6 @@ public class FriendshipResource {
 
     @GET
     @Path("/suggestions")
-    @Timed(value = "api.friendships.suggestions", description = "Time to find friendship suggestions")
     public Response findSuggestions(
             @QueryParam("search") String search,
             @QueryParam("limit") @DefaultValue("20") int limit) {

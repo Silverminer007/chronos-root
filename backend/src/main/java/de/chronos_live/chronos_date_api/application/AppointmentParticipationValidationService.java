@@ -7,6 +7,7 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatistik;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.quarkus.scheduler.Scheduled;
@@ -24,6 +25,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @ApplicationScoped
+@Timed("service.participationValidation")
 public class AppointmentParticipationValidationService {
     @Inject
     AppointmentQueryService appointmentQueryService;
