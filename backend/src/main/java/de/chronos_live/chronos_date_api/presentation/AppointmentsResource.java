@@ -3,6 +3,7 @@ package de.chronos_live.chronos_date_api.presentation;
 import de.chronos_live.chronos_date_api.application.*;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
+import de.chronos_live.chronos_date_api.dto.PagedResponse;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.mapper.*;
 import io.micrometer.core.annotation.Timed;
@@ -15,8 +16,6 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Path("/api/v2/appointments")
 @PermitAll
@@ -66,13 +65,17 @@ public class AppointmentsResource {
             page = 0;
         }
 
-        List<Appointment> appointmentList =
+        AppointmentQueryService.SearchResult result =
                 this.appointmentQueryService.search(user.id, search, after, before,
                         page, size,
                         messages != null && messages,
                         participants != null && participants,
                         groups != null && groups);
-        return Response.ok(this.appointmentMapper.toDtoList(appointmentList)).build();
+        var response = new PagedResponse<>(
+                this.appointmentMapper.toDtoList(result.items()),
+                new PagedResponse.Meta(page, size, result.total())
+        );
+        return Response.ok(response).build();
     }
 
     @GET

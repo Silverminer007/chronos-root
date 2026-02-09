@@ -5,6 +5,7 @@ import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.micrometer.core.annotation.Timed;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -34,7 +35,10 @@ public class AppointmentQueryService {
                 .orElseThrow(() -> new ResourceNotFoundException("appointment", appointmentId));
     }
 
-    public List<Appointment> search(Long requestingUserId, String query,
+    public record SearchResult(List<Appointment> items, long total) {
+    }
+
+    public SearchResult search(Long requestingUserId, String query,
                                     Instant after, Instant before,
                                     int page, int pageSize,
                                     boolean messages, boolean participants, boolean groupParticipants) {
@@ -54,10 +58,15 @@ public class AppointmentQueryService {
         }
         sqlQuery += " ORDER BY a.startTime";
 
+        PanacheQuery<Appointment> panacheQuery;
         if (query != null) {
-            return Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED, "%" + query + "%").page(page, pageSize).list();
+            panacheQuery = Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED, "%" + query + "%");
+        } else {
+            panacheQuery = Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED);
         }
-        return Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED).page(page, pageSize).list();
+        long total = panacheQuery.count();
+        List<Appointment> items = panacheQuery.page(page, pageSize).list();
+        return new SearchResult(items, total);
     }
 
     public List<Appointment> getNonCancelledAppointmentsStartingAt(Instant at) {
