@@ -68,8 +68,13 @@ const appointmentId = computed(() => Number(route.params.appointmentId));
 const appointment = computed(() => appointmentsStore.currentAppointment);
 const error = ref('');
 
+const router = useRouter();
 const goBack = () => {
-  navigateTo('/agenda');
+  if (router.options.history.state.back) {
+    router.back();
+  } else {
+    navigateTo('/agenda');
+  }
 };
 
 onMounted(async () => {

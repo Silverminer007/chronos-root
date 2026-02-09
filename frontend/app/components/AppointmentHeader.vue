@@ -4,8 +4,13 @@ import type {Appointment} from '~/types';
 defineProps<{
   appointment: Appointment;
 }>();
+const router = useRouter();
 const goBack = () => {
-  navigateTo('/agenda');
+  if (router.options.history.state.back) {
+    router.back();
+  } else {
+    navigateTo('/agenda');
+  }
 };
 </script>
 
