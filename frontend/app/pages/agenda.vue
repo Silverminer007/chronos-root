@@ -52,7 +52,7 @@ const showCreateDialog = ref(false);
         </div>
 
         <!-- Load More Button -->
-        <div v-if="!appointmentsStore.loading && appointmentsStore.appointments.length > 0" class="flex justify-center pt-4">
+        <div v-if="!appointmentsStore.loading && appointmentsStore.hasMore" class="flex justify-center pt-4">
           <button
               @click="appointmentsStore.fetchAppointments"
               class="px-6 py-3 rounded-lg font-medium text-purple-600 dark:text-purple-400 border-2 border-purple-600 dark:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all flex items-center gap-2"

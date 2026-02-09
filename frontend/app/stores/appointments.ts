@@ -23,9 +23,11 @@ export const useAppointmentsStore = defineStore('appointments', {
         currentAppointment: null as Appointment | null,
         loading: false,
         error: null as string | null,
+        search: null as string | null,
         pagination: {
             page: 0,
-            size: 20
+            size: 20,
+            total: 0
         }
     }),
 
@@ -112,6 +114,11 @@ export const useAppointmentsStore = defineStore('appointments', {
         getDirectParticipants: () => {
             return (appointment: Appointment) =>
                 appointment.participants?.filter(p => p.via_group_id === null) || []
+        },
+
+        hasMore: (state) => {
+            const { page, size, total } = state.pagination;
+            return (page + 1) * size < total;
         }
     },
 
@@ -146,7 +153,14 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (!this.appointments || this.appointments.length === 0) {
                     this.appointments = [];
                 }
-                this.appointments = this.appointments.concat(response.content || response);
+                const items = response.data ?? response;
+                const meta = response.meta;
+                if (meta) {
+                    this.pagination.page = meta.page;
+                    this.pagination.size = meta.size;
+                    this.pagination.total = meta.total;
+                }
+                this.appointments = this.appointments.concat(items);
             } catch (err: any) {
                 this.error = err.message || 'Fehler beim Laden der Appointments'
                 throw err
@@ -426,6 +440,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Weitere Appointments laden (Paginierung)
         async fetchAppointments() {
             return this.fetchAgenda({
+                search: this.search,
                 participants: true,
                 page: this.pagination.page + 1,
                 size: this.pagination.size
