@@ -102,7 +102,7 @@ jobs:
           docker push $IMAGE:$VERSION
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
