@@ -41,7 +41,7 @@ jobs:
       - name: ✅ Test kubectl connection
         run: |
           echo "🔍 Testing Kubernetes connection..."
-          kubectl get nodes
+          kubectl get pods -n chronos-prod
 
       - name: 🎯 Determine deployment target
         id: deployment-info
