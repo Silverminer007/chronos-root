@@ -101,7 +101,7 @@ jobs:
           REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            VERSION=${{ needs.build.outputs.version }}  # v1.2.3
+            VERSION=v$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
           else
             VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"  # develop-a1b2c3d4
           fi
