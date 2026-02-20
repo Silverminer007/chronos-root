@@ -73,6 +73,22 @@ rules:
     resources: [ "events" ]
     verbs: [ "get", "list" ]
 
+  - apiGroups: [ "" ]
+    resources: [ "replicationcontrollers" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "apps" ]
+    resources: [ "daemonsets" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "apps" ]
+    resources: [ "statefulsets" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "batch" ]
+    resources: [ "jobs" ]
+    verbs: [ "get", "list" ]
+
 ---
 # ClusterRoleBinding für chronos namespace
 apiVersion: rbac.authorization.k8s.io/v1
@@ -124,7 +140,7 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: github-actions-deployer-monitoring
+  name: github-actions-deployer-chronos-staging
   namespace: chronos-staging
   labels:
     app: github-actions
