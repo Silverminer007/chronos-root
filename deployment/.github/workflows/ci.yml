@@ -107,7 +107,7 @@ jobs:
             --namespace $NAMESPACE \
             -f ./$VALUES_FILE \
             --install \
-            --wait \
+            --wait-for-jobs=false \
             --timeout=300s \
             --atomic \
             --debug
@@ -146,7 +146,8 @@ jobs:
           NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
           
           # Wait for rollout
-          kubectl rollout status deployment/chronos -n $NAMESPACE --timeout=300s
+          kubectl rollout status deployment/chronos-frontend -n $NAMESPACE --timeout=300s
+          kubectl rollout status deployment/chronos-backend -n $NAMESPACE --timeout=300s
           
           # Show pod status
           echo "📋 Pod Status:"
