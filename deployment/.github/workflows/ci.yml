@@ -110,8 +110,7 @@ jobs:
             --wait \
             --timeout=300s \
             --atomic \
-            --debug \
-            --verbose
+            --debug
 
           echo "✅ $ENVIRONMENT deployment completed!"
 
