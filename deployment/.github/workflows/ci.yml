@@ -70,24 +70,82 @@ jobs:
           echo "**Values file**: ${{ steps.deployment-info.outputs.values_file }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by**: ${{ github.event.client_payload.service || 'Config Change' }}" >> $GITHUB_STEP_SUMMARY
 
+      - name: 🔍 Debug before deployment
+        run: |
+          NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
+          VALUES_FILE=${{ steps.deployment-info.outputs.values_file }}
+
+          echo "## 🔍 Pre-deployment Checks"
+
+          # 1. Namespace checken/erstellen
+          echo "📋 Checking namespace..."
+          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+          kubectl get namespace $NAMESPACE
+
+          # 2. Values File checken
+          echo "📋 Checking values file..."
+          if [ ! -f "$VALUES_FILE" ]; then
+            echo "❌ Values file not found: $VALUES_FILE"
+            ls -la *.yaml
+            exit 1
+          fi
+          cat $VALUES_FILE
+
+          # 3. Helm Template Test (ohne Deployment)
+          echo "📋 Testing Helm template..."
+          helm template chronos . -f $VALUES_FILE --namespace $NAMESPACE --debug
+
+          # 4. Bestehende Resources checken
+          echo "📋 Checking existing resources..."
+          kubectl get all -n $NAMESPACE || echo "Namespace empty or doesn't exist"
+
       - name: 🚀 Deploy to Kubernetes
         run: |
           ENVIRONMENT=${{ steps.deployment-info.outputs.environment }}
           NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
           VALUES_FILE=${{ steps.deployment-info.outputs.values_file }}
-          
+
           echo "🚀 Deploying Chronos to $ENVIRONMENT..."
-          
-          # Helm deployment
+
+          # Helm deployment mit mehr Debugging
           helm upgrade chronos . \
             --namespace $NAMESPACE \
             -f ./$VALUES_FILE \
             --install \
             --wait \
             --timeout=300s \
-            --atomic
-          
+            --atomic \
+            --debug \
+            --verbose
+
           echo "✅ $ENVIRONMENT deployment completed!"
+
+      - name: 🔍 Debug on failure
+        if: failure()
+        run: |
+          NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
+
+          echo "## 🚨 Deployment Failed - Debug Info"
+
+          # Helm Status
+          echo "📋 Helm Status:"
+          helm status chronos -n $NAMESPACE || echo "No helm release found"
+
+          # Pod Status
+          echo "📋 Pod Status:"
+          kubectl get pods -n $NAMESPACE -o wide
+
+          # Events
+          echo "📋 Recent Events:"
+          kubectl get events -n $NAMESPACE --sort-by=.metadata.creationTimestamp --field-selector type=Warning
+
+          # Describe problematic pods
+          echo "📋 Pod Details:"
+          kubectl get pods -n $NAMESPACE | grep -v Running | tail -n +2 | awk '{print $1}' | xargs -I {} kubectl describe pod {} -n $NAMESPACE
+
+          # ImagePullSecrets checken
+          echo "📋 Secrets:"
+          kubectl get secrets -n $NAMESPACE
 
       - name: ✅ Verify deployment
         run: |
