@@ -98,6 +98,8 @@ jobs:
 
       - name: 🐳 Build & Push Docker Image
         run: |
+          REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
             VERSION=${{ needs.build.outputs.version }}  # v1.2.3
           else
