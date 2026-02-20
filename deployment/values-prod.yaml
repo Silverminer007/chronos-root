@@ -1,0 +1,171 @@
+namespace: chronos-prod
+
+secrets:
+  organisationId: 3e4b7901-bc75-4688-9a82-b3f600a40fa8
+  db:
+    password: fd4e1b82-e0eb-42d7-9472-b3f600ae128a
+  backend:
+    clientId: 957d13f2-6424-4529-ab33-b3f600ae7481
+    clientSecret: d19bfba9-efa4-4be2-ad99-b3f600ae87fd
+  frontend:
+    clientId: e1b1dddf-a1b7-4070-960e-b3f600aea19e
+  vapid:
+    publicKey: aefad867-54b7-4764-9f12-b3f600b42da2
+    privateKey: fa639799-a9ef-465a-81c1-b3f600b4454b
+    mailto: 0f9266a6-9989-424a-9d91-b3f600b45aa1
+  imagePullSecret: f02d5821-dfeb-4b53-8611-b3f600aeefde
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  host: cluster.chronos-live.de
+  tls:
+    secretName: chronos-tls-cert
+
+frontend:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  image:
+    repository: ghcr.io/silverminer007/chronos-nuxt
+    tag: latest
+    pullPolicy: Always
+  containerPort: 3000
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  env:
+    NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
+    NUXT_AUTH_REDIRECT_URI: https://cluster.chronos-live.de/api/auth/callback
+    NUXT_QUARKUS_URL: "http://chronos-backend"
+    NUXT_PUBLIC_IMPRESSUM_NAME: "Justus Henze"
+    NUXT_PUBLIC_IMPRESSUM_STREET: "Malmedystraße 3"
+    NUXT_PUBLIC_IMPRESSUM_CITY: "46145 Oberhausen"
+    NUXT_PUBLIC_IMPRESSUM_EMAIL: "henze5@gmx.de"
+  envFromSecrets:
+    - name: NUXT_AUTH_CLIENT_ID
+      secretName: chronos-secret
+      secretKey: frontend_client_id
+
+backend:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  image:
+    repository: ghcr.io/silverminer007/chronos-date-api
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  env:
+    DB_URL: "jdbc:postgresql://postgres:5432/chronos"
+    DB_USER: "postgres"
+    AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
+  envFromSecrets:
+    - name: DB_PASSWORD
+      secretName: chronos-secret
+      secretKey: database_password
+    - name: AUTH_SERVER_CLIENT_ID
+      secretName: chronos-secret
+      secretKey: backend_client_id
+    - name: AUTH_SERVER_CLIENT_SECRET
+      secretName: chronos-secret
+      secretKey: backend_client_secret
+    - name: VAPID_PUBLIC
+      secretName: chronos-secret
+      secretKey: vapid_public_key
+    - name: VAPID_PRIVATE
+      secretName: chronos-secret
+      secretKey: vapid_private_key
+    - name: VAPID_MAILTO
+      secretName: chronos-secret
+      secretKey: vapid_mailto
+  livenessProbe:
+    httpGet:
+      path: /q/health/live
+      port: 9000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /q/health/ready
+      port: 9000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+postgresql:
+  enabled: true
+  image:
+    tag: "16"
+  database: chronos
+  storage:
+    size: 10Gi
+    storageClass: hcloud-volumes
+  passwordSecret:
+    name: chronos-secret
+    key: database_password
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+metrics:
+  enabled: true
+  port: 9000
+  targetPort: 9000
+  path: /metrics
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+alerts:
+  enabled: true
+  rules:
+    podDown:
+      for: 2m
+    postgresDown:
+      for: 1m
+    highCPU:
+      threshold: 0.8
+      for: 5m
+    highMemory:
+      threshold: 0.9
+      for: 5m
+    postgresDiskFull:
+      threshold: 0.85
+      for: 2m
+    podRestarting:
+      threshold: 3
+    sslExpiry:
+      daysWarning: 7

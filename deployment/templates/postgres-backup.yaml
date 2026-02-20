@@ -1,0 +1,133 @@
+# postgres-backup-cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: postgres-backup
+spec:
+  schedule: "0 2 * * *"  # Jeden Tag um 2 Uhr nachts
+  successfulJobsHistoryLimit: 7  # Letzte 7 erfolgreiche Jobs behalten
+  failedJobsHistoryLimit: 3      # Letzte 3 fehlgeschlagene Jobs behalten
+  concurrencyPolicy: Forbid      # Keine parallelen Backups
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: postgres-backup
+            image: "postgres:{{ .Values.postgresql.image.tag }}"
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "🗄️ Starting PostgreSQL Backup - $(date)"
+              
+              # Wait for PostgreSQL to be ready
+              echo "Waiting for PostgreSQL..."
+              until pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER; do
+                echo "PostgreSQL not ready, waiting..."
+                sleep 5
+              done
+              
+              # Create backup filename with timestamp
+              BACKUP_FILE="chronos-backup-$(date +%Y%m%d-%H%M%S).sql"
+              BACKUP_PATH="/backup/$BACKUP_FILE"
+              
+              echo "📥 Creating backup: $BACKUP_FILE"
+              
+              # Create pg_dump
+              pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB \
+                --verbose \
+                --no-owner \
+                --no-privileges \
+                --format=custom \
+                --compress=9 \
+                > $BACKUP_PATH
+              
+              # Verify backup
+              if [ -s "$BACKUP_PATH" ]; then
+                BACKUP_SIZE=$(du -h "$BACKUP_PATH" | cut -f1)
+                echo "✅ Backup created successfully: $BACKUP_SIZE"
+                
+                # List all backups
+                echo "📋 Current backups:"
+                ls -lah /backup/chronos-backup-* | tail -5
+                
+                # Cleanup old backups (keep last 7 days)
+                echo "🧹 Cleaning up old backups..."
+                find /backup -name "chronos-backup-*.sql" -mtime +7 -delete
+                
+                echo "✅ Backup completed: $BACKUP_FILE"
+              else
+                echo "❌ Backup failed - file is empty or missing"
+                exit 1
+              fi
+            env:
+            - name: POSTGRES_HOST
+              value: "postgres"  # Service name
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_DB
+              value: "chronos"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chronos-secret
+                  key: database_password
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+
+---
+# PVC für Backup Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: postgres-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: hcloud-volumes  # Hetzner Volume für Backups
+  resources:
+    requests:
+      storage: 50Gi  # 50GB für Backups (adjust as needed)
+
+---
+# ServiceMonitor für Backup Monitoring (optional)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-backup-monitor
+  namespace: {{ .Values.namespace }}
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: postgres-backup
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 300s  # Check every 5 minutes

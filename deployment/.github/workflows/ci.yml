@@ -1,0 +1,107 @@
+name: 🚀 Deploy to Kubernetes
+
+on:
+  push:
+    branches: [ main ]
+  repository_dispatch:
+    types: [deploy-staging, deploy-production]
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to Kubernetes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: 📦 Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: 🔐 Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CA_CERT }}" | base64 -d > ca.crt
+          kubectl config set-cluster k3s-cluster \
+            --server=${{ secrets.KUBE_SERVER }} \
+            --certificate-authority=ca.crt
+          kubectl config set-credentials github-actions \
+            --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context k3s-context \
+            --cluster=k3s-cluster \
+            --user=github-actions
+          kubectl config use-context k3s-context
+
+      - name: ✅ Test kubectl connection
+        run: |
+          echo "🔍 Testing Kubernetes connection..."
+          kubectl get nodes
+
+      - name: 🎯 Determine deployment target
+        id: deployment-info
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            if [ "${{ github.event.action }}" = "deploy-production" ]; then
+              echo "environment=production" >> $GITHUB_OUTPUT
+              echo "namespace=chronos-prod" >> $GITHUB_OUTPUT
+              echo "values_file=values-prod.yaml" >> $GITHUB_OUTPUT
+            elif [ "${{ github.event.action }}" = "deploy-staging" ]; then
+              echo "environment=staging" >> $GITHUB_OUTPUT
+              echo "namespace=chronos-staging" >> $GITHUB_OUTPUT  
+              echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
+            fi
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "namespace=chronos-prod" >> $GITHUB_OUTPUT
+            echo "values_file=values-prod.yaml" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📋 Show deployment info
+        run: |
+          echo "## 🚀 Deployment Info" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ steps.deployment-info.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace**: ${{ steps.deployment-info.outputs.namespace }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Values file**: ${{ steps.deployment-info.outputs.values_file }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by**: ${{ github.event.client_payload.service || 'Config Change' }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚀 Deploy to Kubernetes
+        run: |
+          ENVIRONMENT=${{ steps.deployment-info.outputs.environment }}
+          NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
+          VALUES_FILE=${{ steps.deployment-info.outputs.values_file }}
+          
+          echo "🚀 Deploying Chronos to $ENVIRONMENT..."
+          
+          # Create namespace if it doesn't exist
+          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Helm deployment
+          helm upgrade chronos . \
+            --namespace $NAMESPACE \
+            -f ./$VALUES_FILE \
+            --install \
+            --wait \
+            --timeout=300s \
+            --atomic
+          
+          echo "✅ $ENVIRONMENT deployment completed!"
+
+      - name: ✅ Verify deployment
+        run: |
+          NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
+          
+          # Wait for rollout
+          kubectl rollout status deployment/chronos -n $NAMESPACE --timeout=300s
+          
+          # Show pod status
+          echo "📋 Pod Status:"
+          kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chronos
+          
+          # Show ingress
+          kubectl get ingress -n $NAMESPACE
