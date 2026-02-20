@@ -107,9 +107,6 @@ jobs:
             --namespace $NAMESPACE \
             -f ./$VALUES_FILE \
             --install \
-            --wait-for-jobs=false \
-            --timeout=300s \
-            --atomic \
             --debug
 
           echo "✅ $ENVIRONMENT deployment completed!"
