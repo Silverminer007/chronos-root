@@ -77,12 +77,7 @@ jobs:
 
           echo "## 🔍 Pre-deployment Checks"
 
-          # 1. Namespace checken/erstellen
-          echo "📋 Checking namespace..."
-          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-          kubectl get namespace $NAMESPACE
-
-          # 2. Values File checken
+          # 1. Values File checken
           echo "📋 Checking values file..."
           if [ ! -f "$VALUES_FILE" ]; then
             echo "❌ Values file not found: $VALUES_FILE"
@@ -91,11 +86,11 @@ jobs:
           fi
           cat $VALUES_FILE
 
-          # 3. Helm Template Test (ohne Deployment)
+          # 2. Helm Template Test (ohne Deployment)
           echo "📋 Testing Helm template..."
           helm template chronos . -f $VALUES_FILE --namespace $NAMESPACE --debug
 
-          # 4. Bestehende Resources checken
+          # 3. Bestehende Resources checken
           echo "📋 Checking existing resources..."
           kubectl get all -n $NAMESPACE || echo "Namespace empty or doesn't exist"
 
