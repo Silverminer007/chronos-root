@@ -77,15 +77,6 @@ jobs:
             @semantic-release/release-notes-generator \
             @semantic-release/github
 
-      - name: 🧾 Get latest release version
-        if: github.ref == 'refs/heads/master'
-        id: get_version
-        run: |
-          VERSION=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: 🧩 Build Native Image
         run: mvn -B clean package
 
@@ -112,6 +103,8 @@ jobs:
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📦 Re-tag Docker Image (latest)
         if: github.ref == 'refs/heads/master'
