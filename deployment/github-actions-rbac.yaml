@@ -30,7 +30,7 @@ rules:
   # ConfigMap und Secret Management
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
 
   # Ingress Management
   - apiGroups: ["networking.k8s.io"]
@@ -53,9 +53,21 @@ rules:
     verbs: ["get", "list", "create", "update", "patch"]
 
   # BitwardenSecret Management
-  - apiGroups: ["bitwarden.com"]
+  - apiGroups: ["k8s.bitwarden.com"]
     resources: ["bitwardensecrets"]
     verbs: ["get", "list", "create", "update", "patch"]
+
+  - apiGroups: [ "" ]
+    resources: [ "persistentvolumeclaims" ]
+    verbs: [ "get", "list", "create", "update", "patch" ]
+
+  - apiGroups: [ "batch" ]
+    resources: [ "cronjobs" ]
+    verbs: [ "get", "list", "create", "update", "patch" ]
+
+  - apiGroups: [ "monitoring.coreos.com" ]
+    resources: [ "prometheusrules" ]
+    verbs: [ "get", "list", "create", "update", "patch" ]
 
 ---
 # ClusterRoleBinding für chronos namespace
