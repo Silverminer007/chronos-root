@@ -98,7 +98,7 @@ jobs:
           fi
 
           IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-date-api
-          docker build -t $IMAGE:$VERSION .
+          docker build -f src/main/docker/Dokcerfile.jvm -t $IMAGE:$VERSION .
           docker push $IMAGE:$VERSION
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
