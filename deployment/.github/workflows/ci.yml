@@ -148,7 +148,7 @@ jobs:
           
           # Show pod status
           echo "📋 Pod Status:"
-          kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chronos
+          kubectl get pods -n $NAMESPACE
           
           # Show ingress
           kubectl get ingress -n $NAMESPACE
