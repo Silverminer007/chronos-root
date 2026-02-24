@@ -97,6 +97,10 @@ rules:
     resources: ["rolebindings"]
     verbs: ["get", "list", "create", "update", "patch"]
 
+  - apiGroups: [ "coordination.k8s.io" ]
+    resources: [ "leases" ]
+    verbs: [ "get", "list", "watch", "create", "update", "patch", "delete" ]
+
 ---
 # ClusterRoleBinding für chronos namespace
 apiVersion: rbac.authorization.k8s.io/v1
