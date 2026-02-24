@@ -92,6 +92,10 @@
             <version>1.83</version>
         </dependency>
         <!-- Hier alles für Web Push -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-kubernetes-client</artifactId>
+        </dependency>
         <!-- Hier alles für Usage statistics-->
         <dependency>
             <groupId>io.quarkus</groupId>

@@ -21,8 +21,12 @@ public class AppointmentParticipationStatusPendingReminderService {
     @Inject
     Event<AppointmentParticipationStatusPendingReminderEvent> appointmentParticipationStatusPendingReminderEvent;
 
+    @Inject
+    LeaderElectionService leaderElectionService;
+
     @Scheduled(cron = "0 */15 * * * ?")
     void sendAppointmentParticipationStatusPendingReminder() {
+        if (!leaderElectionService.isLeader()) return;
         // Wenn mehr als 24h -> 2 Monate vorher
         // Wenn Mo - Do -> 1 Woche vorher
         // Wenn Fr - So -> 2 Wochen vorher
@@ -66,6 +70,7 @@ public class AppointmentParticipationStatusPendingReminderService {
 
     @Scheduled(cron = "0 0 17 * * ?")
     void sendEventAttendanceStatusPendingReminderAfterTargetTime() {
+        if (!leaderElectionService.isLeader()) return;
         List<Appointment> appointmentList = this.appointmentQueryService
                 .getNonCancelledAppointmentsStartingBetween(
                         Instant.now(),

@@ -42,8 +42,12 @@ public class AppointmentParticipationValidationService {
     @Inject
     MeterRegistry meterRegistry;
 
+    @Inject
+    LeaderElectionService leaderElectionService;
+
     @Scheduled(cron = "0 */15 * * * ?")
     void sendNonMinimalAttendeesAlerts() {
+        if (!leaderElectionService.isLeader()) return;
         // Sobald PENDING + APPROVED < REQUIRED
         // Wenn mehr als 24h -> 8 Wochen vorher
         // Wenn Mo - DO -> 1 Woche vorher
