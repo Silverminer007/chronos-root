@@ -115,7 +115,7 @@ jobs:
 
       - name: 🐳 Build & Push Docker Image
         run: |
-          docker build -t $IMAGE:$VERSION .
+          docker build -t $IMAGE:$VERSION -f src/main/docker/Dockerfile.jvm .
           docker push $IMAGE:$VERSION
 
       - name: 📦 Re-tag Docker Image (latest)
