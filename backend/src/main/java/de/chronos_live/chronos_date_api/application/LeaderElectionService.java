@@ -76,9 +76,6 @@ public class LeaderElectionService {
         leaderElectionFuture = executorService.submit(() -> {
             try {
                 kubernetesClient.leaderElector().withConfig(config).build().run();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOG.info("Leader election thread interrupted");
             } catch (Exception e) {
                 LOG.errorf(e, "Leader election failed: %s", e.getMessage());
                 leader = false;
