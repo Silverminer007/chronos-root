@@ -69,22 +69,26 @@ jobs:
           echo "**Namespace**: ${{ steps.deployment-info.outputs.namespace }}" >> $GITHUB_STEP_SUMMARY
           echo "**Values file**: ${{ steps.deployment-info.outputs.values_file }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by**: ${{ github.event.client_payload.service || 'Config Change' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag**: ${{ github.event.client_payload.image || 'Config Change' }}:${{ github.event.client_payload.version }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Override version
         run: |
           touch overrides.yaml
+          VERSION=${{ github.event.client_payload.version }}
+          REPOSITORY=${{ github.event.client_payload.image }}
+          echo "$REPOSITORY:$VERSION"
           if [ "${{ github.event.client_payload.service }}" = "backend" ]; then
             echo "
             backend:
               image:
-                tag: ${{ github.event.client_payload.version }}
-                repository: ${{ github.event.client_payload.image }}" >> overrides.yaml
+                tag: $VERSION
+                repository: $REPOSITORY" >> overrides.yaml
           elif [ "${{ github.event.client_payload.service }}" = "frontend" ]; then
             echo "
             frontend:
               image:
-                tag: ${{ github.event.client_payload.version }}
-                repository: ${{ github.event.client_payload.image }}" >> overrides.yaml
+                tag: $VERSION
+                repository: $REPOSITORY" >> overrides.yaml
           fi
 
       - name: 🔍 Debug before deployment
