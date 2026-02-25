@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   repository_dispatch:
-    types: [deploy-staging, deploy-production]
+    types: [ deploy-staging, deploy-production ]
 
 jobs:
   deploy:
@@ -70,6 +70,23 @@ jobs:
           echo "**Values file**: ${{ steps.deployment-info.outputs.values_file }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by**: ${{ github.event.client_payload.service || 'Config Change' }}" >> $GITHUB_STEP_SUMMARY
 
+      - name: Override version
+        run: |
+          touch overrides.yaml
+          if [ "${{ github.event.client_payload.service }}" = "backend" ]; then
+            echo "
+            backend:
+              image:
+                tag: ${{ github.event.client_payload.version }}
+                repository: ${{ github.event.client_payload.image }}" >> overrides.yaml
+          elif [ "${{ github.event.client_payload.service }}" = "frontend" ]; then
+            echo "
+            frontend:
+              image:
+                tag: ${{ github.event.client_payload.version }}
+                repository: ${{ github.event.client_payload.image }}" >> overrides.yaml
+          fi
+
       - name: 🔍 Debug before deployment
         run: |
           NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
@@ -106,6 +123,7 @@ jobs:
           helm upgrade chronos . \
             --namespace $NAMESPACE \
             -f ./$VALUES_FILE \
+            -f ./overrides.yaml \
             --install \
             --debug
 
