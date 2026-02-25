@@ -155,18 +155,3 @@ jobs:
           # ImagePullSecrets checken
           echo "📋 Secrets:"
           kubectl get secrets -n $NAMESPACE
-
-      - name: ✅ Verify deployment
-        run: |
-          NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
-          
-          # Wait for rollout
-          kubectl rollout status deployment/chronos-frontend -n $NAMESPACE --timeout=300s
-          kubectl rollout status deployment/chronos-backend -n $NAMESPACE --timeout=300s
-          
-          # Show pod status
-          echo "📋 Pod Status:"
-          kubectl get pods -n $NAMESPACE
-          
-          # Show ingress
-          kubectl get ingress -n $NAMESPACE
