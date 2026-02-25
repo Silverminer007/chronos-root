@@ -133,6 +133,8 @@ jobs:
       - name: 🚀 Trigger Production Deployment
         if: github.ref == 'refs/heads/master'
         run: |
+          VERSION=$VERSION
+          IMAGE=$IMAGE
           curl -X POST \
             -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
@@ -141,14 +143,16 @@ jobs:
               "event_type":"deploy-production",
               "client_payload":{
                 "service":"backend",
-                "version":"${{ steps.get_version.outputs.VERSION }}",
-                "image":"${{ steps.set_image.outputs.IMAGE }}"
+                "version":"$VERSION",
+                "image":"$IMAGE"
               }
             }'
 
       - name: 🧪 Trigger Staging Deployment
         if: github.ref == 'refs/heads/develop'
         run: |
+          VERSION=$VERSION
+          IMAGE=$IMAGE
           curl -X POST \
             -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
@@ -157,8 +161,8 @@ jobs:
               "event_type":"deploy-staging",
               "client_payload":{
                 "service":"backend",
-                "version":"${{ steps.get_version.outputs.VERSION }}",
-                "image":"${{ steps.set_image.outputs.IMAGE }}"
+                "version":"$VERSION",
+                "image":"$IMAGE"
               }
             }'
 
