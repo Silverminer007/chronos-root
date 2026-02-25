@@ -86,7 +86,7 @@ backend:
       cpu: "200m"
   env:
     DB_URL: "jdbc:postgresql://postgres:5432/chronos"
-    DB_USER: "postgres"
+    DB_USER: "chronos"
     AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
   envFromSecrets:
     - name: DB_PASSWORD
@@ -125,6 +125,7 @@ postgresql:
   image:
     tag: "16"
   database: chronos
+  user: chronos
   storage:
     size: 10Gi
     storageClass: hcloud-volumes
