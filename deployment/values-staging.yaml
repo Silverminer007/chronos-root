@@ -111,13 +111,13 @@ backend:
     httpGet:
       path: /q/health/live
       port: 9000
-    initialDelaySeconds: 30
+    initialDelaySeconds: 60
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /q/health/ready
       port: 9000
-    initialDelaySeconds: 5
+    initialDelaySeconds: 60
     periodSeconds: 5
 
 postgresql:
@@ -135,10 +135,10 @@ postgresql:
   resources:
     requests:
       cpu: "100m"
-      memory: "256Mi"
+      memory: "100Mi"
     limits:
       cpu: "500m"
-      memory: "512Mi"
+      memory: "256Mi"
 
 metrics:
   enabled: true
