@@ -130,6 +130,15 @@ jobs:
           echo "Pushing $IMAGE:latest ..."
           docker push $IMAGE:latest
 
+      - name: 📦 Re-tag Docker Image (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          echo "Tagging as $IMAGE:develop ..."
+          docker tag $IMAGE:$VERSION $IMAGE:develop
+
+          echo "Pushing $IMAGE:develop ..."
+          docker push $IMAGE:develop
+
       - name: 🚀 Trigger Production Deployment
         if: github.ref == 'refs/heads/master'
         run: |
