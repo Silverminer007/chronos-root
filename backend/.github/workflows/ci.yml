@@ -101,6 +101,8 @@ jobs:
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "**Image**: $IMAGE:$VERSION" >> $GITHUB_STEP_SUMMARY
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: 🧩 Build Native Image
         run: mvn -B clean package -D version=$VERSION
