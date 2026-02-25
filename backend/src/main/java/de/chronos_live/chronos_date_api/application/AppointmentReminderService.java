@@ -18,8 +18,12 @@ public class AppointmentReminderService {
     @Inject
     Event<AppointmentReminderEvent> appointmentReminderEvent;
 
+    @Inject
+    LeaderElectionService leaderElectionService;
+
     @Scheduled(cron = "0 */1 * * * ?")
     void triggerAppointmentReminder() {
+        if (!leaderElectionService.isLeader()) return;
         long minutesUntilStart = 30L;
         Instant in30Minutes = Instant.now().plusSeconds(60L * minutesUntilStart);
 

@@ -21,8 +21,12 @@ public class AppointmentParticipationStatusConfirmationService {
     @Inject
     Event<AppointmentParticipationStatusConfirmationEvent> appointmentParticipationStatusConfirmationEvent;
 
+    @Inject
+    LeaderElectionService leaderElectionService;
+
     @Scheduled(cron = "0 */15 * * * ?")
     void triggerAppointmentParticipationStatusConfirmation() {
+        if (!leaderElectionService.isLeader()) return;
         // Wenn mehr als 24h -> 1 Monat vorher
         // Wenn Mo - Do -> gar nicht
         // Wenn Fr - So -> 1 Woche vorher
