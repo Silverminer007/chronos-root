@@ -49,7 +49,7 @@ frontend:
       memory: "512Mi"
       cpu: "200m"
   env:
-    NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
+    NUXT_AUTH_ISSUER: "https://keycloak.chronos-live.de/realms/chronos"
     NUXT_AUTH_REDIRECT_URI: https://staging.chronos-live.de/api/auth/callback
     NUXT_QUARKUS_URL: "http://chronos-backend"
     NUXT_PUBLIC_IMPRESSUM_NAME: "Justus Henze"
@@ -87,7 +87,7 @@ backend:
   env:
     DB_URL: "jdbc:postgresql://postgres:5432/chronos"
     DB_USER: "chronos"
-    AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
+    AUTH_SERVER_URL: "https://keycloak.chronos-live.de/realms/chronos"
   envFromSecrets:
     - name: DB_PASSWORD
       secretName: chronos-secret
