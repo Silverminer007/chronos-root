@@ -74,13 +74,13 @@
       </div>
 
       <!-- Skip -->
-      <NuxtLink
+      <button
           v-if="currentStep < steps.length - 1"
-          to="/agenda"
+          @click="completeOnboarding()"
           class="mt-4 text-white/60 hover:text-white/90 text-sm transition-colors"
       >
         Überspringen
-      </NuxtLink>
+      </button>
     </div>
   </div>
 </template>
