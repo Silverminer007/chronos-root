@@ -2,7 +2,10 @@ package de.chronos_live.chronos_date_api.presentation;
 
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.dto.LinkedAccountDto;
+import de.chronos_live.chronos_date_api.dto.PasskeyDto;
 import de.chronos_live.chronos_date_api.dto.PrincipalDto;
+import de.chronos_live.chronos_date_api.dto.UpdatedUserDto;
 import de.chronos_live.chronos_date_api.mapper.PrincipalMapper;
 import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
@@ -13,7 +16,10 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
-import java.util.Objects;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 @Path("/api/v2/user")
 @Produces(MediaType.APPLICATION_JSON)
@@ -47,26 +53,89 @@ public class UserResource {
     }
 
     @PATCH
-    public Response patchUser(@RequestBody PrincipalDto userDto) {
-        if (userDto != null) {
-            User newUser = this.userService.updateUser(mapper.toEntity(userDto), jwt.getSubject());
-            return Response.ok(mapper.toDto(newUser)).build();
-        }
-        try {
-            User user = new User();
-            user.setFirstName(jwt.getClaim("given_name"));
-            user.setLastName(jwt.getClaim("family_name"));
-            user.setEmail(jwt.getClaim("email"));
-            user.setOidcId(jwt.getSubject());
-            User newUser = this.userService.updateUser(user, jwt.getSubject());
-            return Response.ok(mapper.toDto(newUser)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+    public Response patchUser(@RequestBody PrincipalDto userDto, @QueryParam("redirectUri") String redirectUri) {
+        UpdatedUserDto newUser = this.userService.updateUser(
+                userDto.first_name(),
+                userDto.last_name(),
+                userDto.email(),
+                jwt.getSubject(),
+                redirectUri
+        );
+        return Response.ok(newUser).build();
     }
 
     @DELETE
     public Response deleteUser() {
         return Response.status(Response.Status.METHOD_NOT_ALLOWED).build();
+    }
+
+    @GET
+    @Path("/linked")
+    public Response getLinkedAccounts() {
+        List<LinkedAccountDto> accounts = userService.getLinkedAccounts(jwt.getSubject()).stream()
+                .map(fi -> new LinkedAccountDto(fi.getIdentityProvider()))
+                .toList();
+        return Response.ok(accounts).build();
+    }
+
+    @DELETE
+    @Path("/linked/{providerId}")
+    public Response unlinkAccount(@PathParam("providerId") String providerId) {
+        userService.unlinkAccount(jwt.getSubject(), providerId);
+        return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/link/{provider}")
+    public Response getLinkUrl(
+            @PathParam("provider") String provider,
+            @QueryParam("redirectUri") String redirectUri
+    ) {
+        try {
+            String linkUrl = userService.getLinkUrl(provider, redirectUri);
+            return Response.ok(Map.of("url", linkUrl)).build();
+        } catch (NoSuchAlgorithmException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GET
+    @Path("/link/passkey")
+    public Response getPasskeyRegistrationUrl(
+            @QueryParam("redirectUri") String redirectUri
+    ) {
+        String linkUrl = userService.getPasskeyRegistrationUrl(redirectUri);
+        return Response.ok(Map.of("url", linkUrl)).build();
+    }
+
+    @GET
+    @Path("/unlink/passkey")
+    public Response getPasskeyDeletionUrl(
+            @QueryParam("redirectUri") String redirectUri,
+            @QueryParam("passkeyId") String passkeyId
+    ) {
+        String linkUrl = userService.getDeletePasskeyUrl(redirectUri, passkeyId);
+        return Response.ok(Map.of("url", linkUrl)).build();
+    }
+
+    @GET
+    @Path("/passkeys")
+    public Response getPasskeys() {
+        List<PasskeyDto> passkeys = userService.getPasskeys(jwt.getSubject()).stream()
+                .map(c -> new PasskeyDto(
+                        c.getId(),
+                        c.getUserLabel(),
+                        c.getCreatedDate() != null ? Instant.ofEpochMilli(c.getCreatedDate()).toString() : null,
+                        null
+                ))
+                .toList();
+        return Response.ok(passkeys).build();
+    }
+
+    @GET
+    @Path("/change-password")
+    public Response getChangePasswordUrl(@QueryParam("redirectUri") String redirectUri) {
+        String linkUrl = userService.getChangePasswordUrl(redirectUri);
+        return Response.ok(Map.of("url", linkUrl)).build();
     }
 }

@@ -111,6 +111,11 @@
             <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
         <!-- Hier alles für Usage statistics-->
+        <!-- Keycloak Admin Client -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-keycloak-admin-rest-client</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
