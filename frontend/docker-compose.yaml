@@ -20,7 +20,7 @@ services:
       retries: 5
 
   chronos-api:
-    image: ghcr.io/silverminer007/chronos-date-api:v1.0.2
+    image: chronos-api:test
     container_name: chronos_api
     depends_on:
       postgres:
@@ -29,6 +29,7 @@ services:
       DB_USER: chronos
       DB_PASSWORD: chronos
       DB_URL: jdbc:postgresql://postgres:5432/chronos
+      LEADER_ELECTION_ENABLED: false
     env_file: .env
     ports:
       - "8080:8080"
