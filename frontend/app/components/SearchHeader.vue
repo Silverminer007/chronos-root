@@ -13,13 +13,13 @@ const menu = ref();
 const items = ref([
   {
     items: [
-      /*{
+      {
         label: 'Profil',
         iconName: 'lucide:user',
         command: () => {
           navigateTo('/profile')
         }
-      },*/
+      },
       {
         label: 'Freunde',
         iconName: 'lucide:users',

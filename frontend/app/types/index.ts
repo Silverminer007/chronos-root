@@ -43,6 +43,7 @@ export interface User {
     id: number,
     first_name: string | null,
     last_name: string | null,
+    email: string | null,
 }
 
 export interface Friend {
@@ -72,6 +73,17 @@ export interface Message {
     appointment_id: number;
     body: string;
     timestamp: string;
+}
+
+export interface LinkedAccount {
+    provider: string;
+}
+
+export interface Passkey {
+    id: string;
+    name: string;
+    created_at: string;
+    last_used_at: string | null;
 }
 
 // Notification settings types
