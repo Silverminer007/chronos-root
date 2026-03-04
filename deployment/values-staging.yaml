@@ -87,7 +87,7 @@ backend:
   env:
     DB_URL: "jdbc:postgresql://postgres:5432/chronos"
     DB_USER: "chronos"
-    AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de/"
+    AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de"
     AUTH_SERVER_REALM: "chronos"
   envFromSecrets:
     - name: DB_PASSWORD
