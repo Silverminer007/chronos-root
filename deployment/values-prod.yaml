@@ -142,6 +142,7 @@ postgresql:
     key: database_password
   backup:
     s3_path: "chronos-prod-backup"
+    host: "postgres"
   resources:
     requests:
       cpu: "100m"
