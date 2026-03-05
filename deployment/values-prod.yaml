@@ -28,7 +28,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  host: cluster.chronos-live.de
+  host: chronos-live.de
   tls:
     secretName: chronos-tls-cert
 
@@ -56,8 +56,8 @@ frontend:
       memory: "512Mi"
       cpu: "500m"
   env:
-    NUXT_AUTH_ISSUER: "https://keycloak.chronos-live.de/realms/chronos"
-    NUXT_AUTH_REDIRECT_URI: https://cluster.chronos-live.de/api/auth/callback
+    NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
+    NUXT_AUTH_REDIRECT_URI: https://chronos-live.de/api/auth/callback
     NUXT_QUARKUS_URL: "http://chronos-backend"
     NUXT_PUBLIC_IMPRESSUM_NAME: "Justus Henze"
     NUXT_PUBLIC_IMPRESSUM_STREET: "Malmedystraße 3"
@@ -93,7 +93,7 @@ backend:
   env:
     DB_URL: "jdbc:postgresql://postgres:5432/chronos"
     DB_USER: "chronos"
-    AUTH_SERVER_URL: "https://keycloak.chronos-live.de/realms/chronos"
+    AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
     AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de"
     AUTH_SERVER_REALM: "chronos"
   envFromSecrets:
