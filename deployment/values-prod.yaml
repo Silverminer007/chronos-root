@@ -14,6 +14,13 @@ secrets:
     privateKey: fa639799-a9ef-465a-81c1-b3f600b4454b
     mailto: 0f9266a6-9989-424a-9d91-b3f600b45aa1
   imagePullSecret: f02d5821-dfeb-4b53-8611-b3f600aeefde
+  backup:
+    s3:
+      bucket: f3da84d7-5a2f-42f5-8af4-b403012e715d
+      access_key_id: 9e5a1327-c33b-4cc7-99ac-b403012edc34
+      secret_access_key: aa67843f-9d59-4c6c-be68-b403012eed93
+      region: 2c72168b-ebaf-4af4-a8d2-b403012f15a1
+      endpoint_url: e66b944a-d56d-495a-acc9-b403012ea6fc
 
 ingress:
   enabled: true
@@ -133,6 +140,8 @@ postgresql:
   passwordSecret:
     name: chronos-secret
     key: database_password
+  backup:
+    s3_path: "chronos-prod-backup"
   resources:
     requests:
       cpu: "100m"

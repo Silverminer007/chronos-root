@@ -19,83 +19,179 @@ spec:
             app: postgres-backup
         spec:
           restartPolicy: OnFailure
+          initContainers:
+            # Init-Container: pg_dump (postgres image)
+            - name: postgres-dump
+              image: "postgres:{{ .Values.postgresql.image.tag }}"
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "🗄️ Starting PostgreSQL Backup - $(date)"
+
+                  echo "Waiting for PostgreSQL..."
+                  until pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER; do
+                    echo "PostgreSQL not ready, waiting..."
+                    sleep 5
+                  done
+
+                  BACKUP_FILE="chronos-backup-$(date +%Y%m%d-%H%M%S).sql"
+                  BACKUP_PATH="/backup/$BACKUP_FILE"
+
+                  echo "📥 Creating backup: $BACKUP_FILE"
+
+                  pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB \
+                    --verbose \
+                    --no-owner \
+                    --no-privileges \
+                    --format=custom \
+                    --compress=9 \
+                    > $BACKUP_PATH
+
+                  if [ -s "$BACKUP_PATH" ]; then
+                    BACKUP_SIZE=$(du -h "$BACKUP_PATH" | cut -f1)
+                    echo "✅ Backup created successfully: $BACKUP_FILE ($BACKUP_SIZE)"
+
+                    # Dateinamen für den S3-Upload-Container speichern
+                    echo "$BACKUP_FILE" > /backup/latest-backup.txt
+
+                    echo "📋 Current backups:"
+                    ls -lah /backup/chronos-backup-* | tail -5
+
+                    echo "🧹 Cleaning up old local backups (>7 days)..."
+                    find /backup -name "chronos-backup-*.sql" -mtime +7 -delete
+
+                    echo "✅ Dump completed: $BACKUP_FILE"
+                  else
+                    echo "❌ Backup failed - file is empty or missing"
+                    exit 1
+                  fi
+              env:
+                - name: POSTGRES_HOST
+                  value: {{ .Values.postgresql.backup.host  }}
+                - name: POSTGRES_USER
+                  value: {{ .Values.postgresql.user  }}
+                - name: POSTGRES_DB
+                  value: {{ .Values.postgresql.database  }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: database_password
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+
           containers:
-          - name: postgres-backup
-            image: "postgres:{{ .Values.postgresql.image.tag }}"
-            imagePullPolicy: IfNotPresent
-            command:
-            - /bin/bash
-            - -c
-            - |
-              set -e
-              echo "🗄️ Starting PostgreSQL Backup - $(date)"
-              
-              # Wait for PostgreSQL to be ready
-              echo "Waiting for PostgreSQL..."
-              until pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER; do
-                echo "PostgreSQL not ready, waiting..."
-                sleep 5
-              done
-              
-              # Create backup filename with timestamp
-              BACKUP_FILE="chronos-backup-$(date +%Y%m%d-%H%M%S).sql"
-              BACKUP_PATH="/backup/$BACKUP_FILE"
-              
-              echo "📥 Creating backup: $BACKUP_FILE"
-              
-              # Create pg_dump
-              pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB \
-                --verbose \
-                --no-owner \
-                --no-privileges \
-                --format=custom \
-                --compress=9 \
-                > $BACKUP_PATH
-              
-              # Verify backup
-              if [ -s "$BACKUP_PATH" ]; then
-                BACKUP_SIZE=$(du -h "$BACKUP_PATH" | cut -f1)
-                echo "✅ Backup created successfully: $BACKUP_SIZE"
-                
-                # List all backups
-                echo "📋 Current backups:"
-                ls -lah /backup/chronos-backup-* | tail -5
-                
-                # Cleanup old backups (keep last 7 days)
-                echo "🧹 Cleaning up old backups..."
-                find /backup -name "chronos-backup-*.sql" -mtime +7 -delete
-                
-                echo "✅ Backup completed: $BACKUP_FILE"
-              else
-                echo "❌ Backup failed - file is empty or missing"
-                exit 1
-              fi
-            env:
-            - name: POSTGRES_HOST
-              value: "postgres"  # Service name
-            - name: POSTGRES_USER
-              value: "postgres"
-            - name: POSTGRES_DB
-              value: "chronos"
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: chronos-secret
-                  key: database_password
-            volumeMounts:
-            - name: backup-storage
-              mountPath: /backup
-            resources:
-              requests:
-                cpu: 100m
-                memory: 128Mi
-              limits:
-                cpu: 500m
-                memory: 512Mi
+            # Haupt-Container: S3 Upload (aws-cli image)
+            - name: s3-upload
+              image: amazon/aws-cli:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "☁️ Starting S3 Upload - $(date)"
+
+                  # Dateinamen aus Init-Container lesen
+                  if [ ! -f /backup/latest-backup.txt ]; then
+                    echo "❌ No backup file reference found - dump may have failed"
+                    exit 1
+                  fi
+
+                  BACKUP_FILE=$(cat /backup/latest-backup.txt)
+                  BACKUP_PATH="/backup/$BACKUP_FILE"
+
+                  if [ ! -s "$BACKUP_PATH" ]; then
+                    echo "❌ Backup file missing or empty: $BACKUP_PATH"
+                    exit 1
+                  fi
+
+                  BACKUP_SIZE=$(du -h "$BACKUP_PATH" | cut -f1)
+                  echo "📤 Uploading $BACKUP_FILE ($BACKUP_SIZE) to s3://$S3_BUCKET/$S3_PREFIX/$BACKUP_FILE"
+
+                  aws s3 cp "$BACKUP_PATH" "s3://$S3_BUCKET/$S3_PREFIX/$BACKUP_FILE" \
+                    --no-progress
+
+                  echo "✅ Upload successful!"
+
+                  # Alte S3-Backups aufräumen (älter als 30 Tage)
+                  echo "🧹 Cleaning up S3 backups older than 30 days..."
+                  CUTOFF_DATE=$(date -d "30 days ago" +%Y-%m-%dT%H:%M:%S)
+                  aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" \
+                    | awk '{print $4}' \
+                    | while read key; do
+                        MOD_DATE=$(aws s3api head-object \
+                          --bucket "$S3_BUCKET" \
+                          --key "$S3_PREFIX/$key" \
+                          --query 'LastModified' \
+                          --output text 2>/dev/null || echo "")
+                        if [[ -n "$MOD_DATE" && "$MOD_DATE" < "$CUTOFF_DATE" ]]; then
+                          echo "  🗑️  Deleting old backup: $key"
+                          aws s3 rm "s3://$S3_BUCKET/$S3_PREFIX/$key"
+                        fi
+                      done
+
+                  echo "📋 Current S3 backups:"
+                  aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" | tail -10
+
+                  # Aufräumen der Referenzdatei
+                  rm -f /backup/latest-backup.txt
+
+                  echo "✅ S3 Upload job completed - $(date)"
+              env:
+                - name: S3_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_bucket
+                - name: S3_PREFIX
+                  value: {{ .Values.postgresql.backup.s3_path }}
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_access_key_id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_secret_access_key
+                - name: AWS_DEFAULT_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_region
+                - name: AWS_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_endpoint_url
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi
+
           volumes:
-          - name: backup-storage
-            persistentVolumeClaim:
-              claimName: postgres-backup-pvc
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
 
 ---
 # PVC für Backup Storage
@@ -109,11 +205,10 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: hcloud-volumes  # Hetzner Volume für Backups
+  storageClassName: hcloud-volumes
   resources:
     requests:
-      storage: 50Gi  # 50GB für Backups (adjust as needed)
-
+      storage: 10Gi
 ---
 # ServiceMonitor für Backup Monitoring (optional)
 apiVersion: monitoring.coreos.com/v1
@@ -128,6 +223,6 @@ spec:
     matchLabels:
       app: postgres-backup
   endpoints:
-  - port: metrics
-    path: /metrics
-    interval: 300s  # Check every 5 minutes
+    - port: metrics
+      path: /metrics
+      interval: 300s
