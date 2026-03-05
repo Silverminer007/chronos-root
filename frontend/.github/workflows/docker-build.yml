@@ -33,9 +33,7 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           npm install -g semantic-release \
-            @semantic-release/commit-analyzer \
-            @semantic-release/release-notes-generator \
-            @semantic-release/github
+            @semantic-release/commit-analyzer
 
       - name: 🚀 Run Semantic Release (GitHub only)
         if: github.ref == 'refs/heads/master'
@@ -44,15 +42,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npx semantic-release --plugins \
-            @semantic-release/commit-analyzer \
-            @semantic-release/release-notes-generator \
-            @semantic-release/github
+            @semantic-release/commit-analyzer
 
       - name: 🧾 Get latest release version
         if: github.ref == 'refs/heads/master'
         id: get_version
         run: |
-          VERSION=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
+          VERSION=$(git tag --sort=-creatordate | head -1)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
