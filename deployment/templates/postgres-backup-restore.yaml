@@ -1,0 +1,231 @@
+# postgres-restore-job.yaml
+  #
+  # ⚠️  DIESER JOB STELLT DIE DATENBANK AUS EINEM S3-BACKUP WIEDER HER!
+  #
+  # Manuell starten mit:
+  #   kubectl create job postgres-restore-manual \
+  #     --from=cronjob/postgres-restore-trigger \
+  #     -n <namespace>
+  #
+  # Oder mit Bestätigung via RESTORE_CONFIRM:
+  #   kubectl create job postgres-restore-manual \
+  #     --from=cronjob/postgres-restore-trigger \
+  #     -n <namespace>
+  #   # Dann den Job patchen um die Bestätigung zu setzen:
+  #   kubectl set env job/postgres-restore-manual \
+  #     RESTORE_CONFIRM="YES_I_WANT_TO_RESTORE" \
+  #     RESTORE_TARGET_ENV="chronos-staging" \
+  #     -n <namespace>
+  #
+  # EMPFOHLEN: Direkt einen einmaligen Job mit gesetzten Env-Variablen anlegen:
+  #   kubectl run postgres-restore-$(date +%s) \
+  #     --image=amazon/aws-cli:latest \
+  #     --restart=Never \
+  #     ... (siehe unten für vollständiges Beispiel)
+  #
+  # Einfachster Weg (alles in einem Befehl):
+  #   kubectl create job postgres-restore-manual \
+  #     --from=cronjob/postgres-restore-trigger \
+  #     -n chronos-staging \
+  #   && kubectl set env job/postgres-restore-manual \
+  #     RESTORE_CONFIRM="YES_I_WANT_TO_RESTORE" \
+  #     RESTORE_TARGET_ENV="chronos-staging" \
+  #     -n chronos-staging
+
+---
+# CronJob mit schedule "0 0 31 2 *" → läuft niemals automatisch
+# (31. Februar existiert nicht)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-restore-trigger
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: postgres-restore
+    warning: "destructive-operation"
+spec:
+  schedule: "0 0 31 2 *"  # ⛔ Niemals automatisch - 31. Februar existiert nicht
+  suspend: true            # Doppelte Absicherung: Job ist suspended
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      # Job schlägt fehl wenn er nach 1h noch läuft
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            app: postgres-restore
+            warning: "destructive-operation"
+        spec:
+          restartPolicy: Never  # Kein automatischer Neustart bei Fehler
+          initContainers:
+            # ── Schritt 2: Aktuellstes Backup aus S3 herunterladen ───────────
+            - name: s3-download
+              image: amazon/aws-cli:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "☁️ Suche aktuellstes Backup in S3..."
+
+                  # Aktuellste Datei im S3-Prefix finden (nach LastModified sortiert)
+                  LATEST_BACKUP=$(aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" \
+                    | grep "chronos-backup-" \
+                    | sort | tail -1 \
+                    | awk '{print $4}')
+
+                  if [ -z "$LATEST_BACKUP" ]; then
+                    echo "❌ Kein Backup in s3://$S3_BUCKET/$S3_PREFIX/ gefunden!"
+                    exit 1
+                  fi
+
+                  echo "📥 Aktuellstes Backup: $LATEST_BACKUP"
+                  echo "   Lade herunter..."
+
+                  aws s3 cp "s3://$S3_BUCKET/$S3_PREFIX/$LATEST_BACKUP" \
+                    "/restore/$LATEST_BACKUP" \
+                    --no-progress
+
+                  # Dateinamen für den Restore-Container speichern
+                  echo "$LATEST_BACKUP" > /restore/restore-target.txt
+
+                  BACKUP_SIZE=$(du -h "/restore/$LATEST_BACKUP" | cut -f1)
+                  echo "✅ Download abgeschlossen: $LATEST_BACKUP ($BACKUP_SIZE)"
+              env:
+                - name: S3_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_bucket
+                - name: S3_PREFIX
+                  value: {{ .Values.postgresql.backup.s3_path }}
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_access_key_id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_secret_access_key
+                - name: AWS_DEFAULT_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_region
+                - name: AWS_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: backup_endpoint_url
+              volumeMounts:
+                - name: restore-storage
+                  mountPath: /restore
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi
+
+          # ── Schritt 3: Restore ───────────────────────────────────────────
+          containers:
+            - name: postgres-restore
+              image: "postgres:{{ .Values.postgresql.image.tag }}"
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+
+                  echo "Waiting for PostgreSQL..."
+                  until pg_isready -h $POSTGRES_HOST -p 5432 -U $POSTGRES_USER; do
+                    echo "PostgreSQL not ready, waiting..."
+                    sleep 5
+                  done
+
+                  BACKUP_FILE=$(cat /restore/restore-target.txt)
+                  BACKUP_PATH="/restore/$BACKUP_FILE"
+
+                  if [ ! -s "$BACKUP_PATH" ]; then
+                    echo "❌ Backup-Datei nicht gefunden: $BACKUP_PATH"
+                    exit 1
+                  fi
+
+                  BACKUP_SIZE=$(du -h "$BACKUP_PATH" | cut -f1)
+                  echo ""
+                  echo "════════════════════════════════════════════════════"
+                  echo "🔄 RESTORE GESTARTET - $(date)"
+                  echo "   Datei:      $BACKUP_FILE ($BACKUP_SIZE)"
+                  echo "   Datenbank:  $POSTGRES_DB @ $POSTGRES_HOST"
+                  echo "════════════════════════════════════════════════════"
+                  echo ""
+
+                  # Alle anderen Verbindungen zur DB trennen
+                  echo "🔌 Trenne aktive Datenbankverbindungen..."
+                  psql -h $POSTGRES_HOST -U $POSTGRES_USER -d postgres -c \
+                    "SELECT pg_terminate_backend(pid)
+                     FROM pg_stat_activity
+                     WHERE datname = '$POSTGRES_DB'
+                       AND pid <> pg_backend_pid();"
+
+                  # Datenbank leeren und neu erstellen
+                  echo "🗑️  Lösche Datenbank $POSTGRES_DB..."
+                  psql -h $POSTGRES_HOST -U $POSTGRES_USER -d postgres -c \
+                    "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";"
+                  psql -h $POSTGRES_HOST -U $POSTGRES_USER -d postgres -c \
+                    "CREATE DATABASE \"$POSTGRES_DB\";"
+
+                  # Backup einspielen
+                  echo "📤 Spiele Backup ein..."
+                  psql \
+                    -h $POSTGRES_HOST \
+                    -U $POSTGRES_USER \
+                    -d $POSTGRES_DB \
+                    < "$BACKUP_PATH"
+
+                  echo ""
+                  echo "════════════════════════════════════════════════════"
+                  echo "✅ RESTORE ABGESCHLOSSEN - $(date)"
+
+                  # Kurze Verifikation
+                  TABLE_COUNT=$(psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -t -c \
+                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+                  echo "   Tabellen wiederhergestellt: $TABLE_COUNT"
+                  echo "════════════════════════════════════════════════════"
+
+                  # Aufräumen
+                  rm -f /restore/restore-target.txt /restore/$BACKUP_FILE
+              env:
+                - name: POSTGRES_HOST
+                  value: {{ .Values.postgresql.backup.host  }}
+                - name: POSTGRES_USER
+                  value: {{ .Values.postgresql.user  }}
+                - name: POSTGRES_DB
+                  value: {{ .Values.postgresql.database  }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: chronos-secret
+                      key: database_password
+              volumeMounts:
+                - name: restore-storage
+                  mountPath: /restore
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  cpu: 1000m
+                  memory: 1Gi
+
+          volumes:
+            - name: restore-storage
+              emptyDir: {}  # Temporärer Speicher, nur für die Laufzeit des Jobs

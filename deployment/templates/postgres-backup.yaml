@@ -208,7 +208,7 @@ spec:
   storageClassName: hcloud-volumes
   resources:
     requests:
-      storage: 10Gi
+      storage: 50Gi
 ---
 # ServiceMonitor für Backup Monitoring (optional)
 apiVersion: monitoring.coreos.com/v1
