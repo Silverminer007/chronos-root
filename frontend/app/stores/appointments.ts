@@ -23,7 +23,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         currentAppointment: null as Appointment | null,
         loading: false,
         error: null as string | null,
-        search: null as string | null,
+        searchQuery: null as string | null,
         pagination: {
             page: 0,
             size: 20,
@@ -117,7 +117,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         hasMore: (state) => {
-            const { page, size, total } = state.pagination;
+            const {page, size, total} = state.pagination;
             return (page + 1) * size < total;
         }
     },
@@ -429,7 +429,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         // Initiale Appointments laden (für Agenda-Seite)
-        async loadInitialAppointments(options: FetchOptions = {}) : Promise<Appointment[]> {
+        async loadInitialAppointments(options: FetchOptions = {}): Promise<Appointment[]> {
             return this.fetchAgenda({
                 participants: true,
                 page: 0,
@@ -440,7 +440,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Weitere Appointments laden (Paginierung)
         async fetchAppointments() {
             return this.fetchAgenda({
-                search: this.search,
+                search: this.searchQuery || undefined,
                 participants: true,
                 page: this.pagination.page + 1,
                 size: this.pagination.size
