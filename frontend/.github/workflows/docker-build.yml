@@ -103,14 +103,6 @@ jobs:
           echo "Pushing $IMAGE:develop ..."
           docker push $IMAGE:develop
 
-      - name: Create git tag
-        if: github.ref == 'refs/heads/master'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ env.VERSION }}" -m "Release v${{ env.VERSION }}"
-          git push origin "v${{ env.VERSION }}"
-
       - name: 🚀 Trigger Production Deployment
         if: github.ref == 'refs/heads/master'
         run: |
