@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtd/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="fileExtensions" value="java"/>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="checkstyle-suppressions.xml"/>
+    </module>
+
+    <!-- No tabs in source files -->
+    <module name="FileTabCharacter"/>
+
+    <module name="TreeWalker">
+
+        <!-- ===== Naming Conventions ===== -->
+        <module name="TypeName"/>
+        <module name="ConstantName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="MethodName"/>
+        <module name="PackageName"/>
+        <module name="ParameterName"/>
+
+        <!-- ===== Imports ===== -->
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+
+        <!-- ===== Block Style ===== -->
+        <!-- Opening brace on same line -->
+        <module name="LeftCurly"/>
+        <!-- Closing brace on its own line -->
+        <module name="RightCurly"/>
+
+        <!-- ===== Coding Issues ===== -->
+        <!-- No empty statements like stray semicolons -->
+        <module name="EmptyStatement"/>
+        <!-- Override equals() and hashCode() together -->
+        <module name="EqualsHashCode"/>
+        <!-- Intentional fall-through must be commented -->
+        <module name="FallThrough"/>
+        <!-- Use .equals() instead of == for Strings -->
+        <module name="StringLiteralEquality"/>
+        <!-- Simplify redundant boolean logic -->
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+
+        <!-- ===== Miscellaneous ===== -->
+        <!-- Use String[] args, not String args[] -->
+        <module name="ArrayTypeStyle"/>
+        <!-- Use L not l for long literals (1000L not 1000l) -->
+        <module name="UpperEll"/>
+
+    </module>
+</module>

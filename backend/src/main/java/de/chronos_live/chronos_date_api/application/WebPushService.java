@@ -6,7 +6,6 @@ import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.config.PushConfig;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogRepository;
-import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.PushAppointmentMapper;
 import io.micrometer.core.annotation.Timed;

@@ -1,8 +1,8 @@
 package de.chronos_live.chronos_date_api.config;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import lombok.Getter;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Optional;
 

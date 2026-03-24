@@ -2,13 +2,11 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
 import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
-import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.infrastructure.FriendshipRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 

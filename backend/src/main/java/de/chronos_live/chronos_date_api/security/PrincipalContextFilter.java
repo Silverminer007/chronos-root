@@ -2,13 +2,12 @@ package de.chronos_live.chronos_date_api.security;
 
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.domain.User;
-import io.quarkus.logging.Log;
+import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.ext.Provider;
-import jakarta.annotation.Priority;
-import jakarta.ws.rs.Priorities;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 @Provider

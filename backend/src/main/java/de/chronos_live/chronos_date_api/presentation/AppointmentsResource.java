@@ -1,11 +1,14 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.*;
-import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.application.AppointmentQueryService;
+import de.chronos_live.chronos_date_api.application.AppointmentService;
+import de.chronos_live.chronos_date_api.application.UserService;
+import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.PagedResponse;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
-import de.chronos_live.chronos_date_api.mapper.*;
+import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;

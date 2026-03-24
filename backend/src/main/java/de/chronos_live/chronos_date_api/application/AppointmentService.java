@@ -1,7 +1,8 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
-import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
@@ -103,7 +104,7 @@ public class AppointmentService {
         } else if (updateAppointmentDto.getEnd() != null) {
             newEndTime = Instant.parse(updateAppointmentDto.getEnd());
         }
-        if (newEndTime.isBefore(newEndTime)) {
+        if (newEndTime.isBefore(newStartTime)) {
             throw new ValidationException("end", "Start date cannot be after end date");
         }
         if (!oldStartTime.equals(newStartTime) || !oldEndTime.equals(newEndTime)) {

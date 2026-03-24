@@ -1,7 +1,6 @@
 package de.chronos_live.chronos_date_api.exception;
 
 import de.chronos_live.chronos_date_api.dto.ErrorResponse;
-import io.quarkus.logging.Log;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
@@ -31,4 +30,3 @@ public class NotFoundExceptionMapper
         return Response.status(404).entity(error).build();
     }
 }
-

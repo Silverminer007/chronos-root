@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!--
+        DTOs use public fields exclusively for JSON serialization.
+        Jackson reads these fields via reflection — SpotBugs cannot trace
+        reflection-based access and incorrectly flags them as unread/unused.
+    -->
+    <Match>
+        <Package name="~de\.chronos_live\.chronos_date_api\.dto.*"/>
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"/>
+    </Match>
+
+    <!--
+        JPA entities follow the Quarkus Panache convention of public fields
+        managed by Hibernate. PA warnings and EI_EXPOSE warnings are expected
+        and intentional for this persistence pattern.
+    -->
+    <Match>
+        <Package name="~de\.chronos_live\.chronos_date_api\.domain.*"/>
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,PA_PUBLIC_PRIMITIVE_ATTRIBUTE,EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

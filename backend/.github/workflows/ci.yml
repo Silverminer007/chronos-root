@@ -1,9 +1,10 @@
-name: 🧪 CI & 🚀 Release Pipeline
+name: CI
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ main, master, develop ]
   pull_request:
+    branches: [ main, master, develop ]
 
 permissions:
   contents: write
@@ -13,29 +14,20 @@ permissions:
   packages: write
 
 jobs:
-  build-test-native:
-    name: 🧪 Build, Test & Native Image
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: ☕ Set up Java 21
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: temurin
+          java-version: 21
+          cache: maven
 
-      - name: 🧰 Set up Maven cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-
-      - name: 🧪 Run Tests
-        run: mvn -B clean test
+      - name: Run tests
+        run: ./mvnw test
 
       - name: 📊 Publish JUnit test results
         uses: mikepenz/action-junit-report@v4
@@ -43,14 +35,35 @@ jobs:
         with:
           report_paths: |
             **/target/surefire-reports/*.xml
-            **/target/failsafe-reports/*.xml
-            **/target/test-results/**/*.xml
-            **/target/quarkus-test-report.xml
           check_name: "JUnit Tests"
           job_name: "Test Report"
           require_tests: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Run code quality checks
+        run: ./mvnw verify -DskipTests
+
+  calculate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{steps.version.outputs.VERSION}}
+      image: ${{steps.version.outputs.IMAGE}}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
       - name: ⚙️ Set up Node.js
         if: github.ref == 'refs/heads/master'
@@ -62,9 +75,7 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           npm install -g semantic-release \
-            @semantic-release/commit-analyzer \
-            @semantic-release/release-notes-generator \
-            @semantic-release/github
+            @semantic-release/commit-analyzer
 
       - name: 🚀 Run Semantic Release (GitHub only)
         if: github.ref == 'refs/heads/master'
@@ -73,43 +84,58 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npx semantic-release --plugins \
-            @semantic-release/commit-analyzer \
-            @semantic-release/release-notes-generator \
-            @semantic-release/github
-
-      - name: 🧾 Get latest release version
-        if: github.ref == 'refs/heads/master'
-        id: get_version
-        run: |
-          VERSION=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            @semantic-release/commit-analyzer
 
       - name: Calculate Image Name and Version tag
+        id: version
         run: |
           REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            VERSION=v$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
+            VERSION=$(git tag --sort=-creatordate | head -1)
           else
             VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"  # develop-a1b2c3d4
           fi
 
           IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-date-api
 
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "**Image**: $IMAGE:$VERSION" >> $GITHUB_STEP_SUMMARY
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: 🧩 Build Native Image
-        run: |
-          mvn -B versions:set -DnewVersion=${{env.VERSION}}
-          mvn -B clean package
+  build-jvm:
+    needs:
+      - calculate-version
+      - test
+      - quality
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: 🔐 Log in to GitHub Container Registry
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: 🧰 Set up Maven cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
+      - name: Build
+        run: |
+          ./mvnw -B versions:set -DnewVersion=${{needs.calculate-version.outputs.version}}
+          ./mvnw -B package -DskipTests
+
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -118,42 +144,110 @@ jobs:
 
       - name: 🐳 Build & Push Docker Image
         run: |
-          docker build -t $IMAGE:$VERSION -f src/main/docker/Dockerfile.jvm .
-          docker push $IMAGE:$VERSION
+          docker build -t ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} -f src/main/docker/Dockerfile.jvm .
+          docker push ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📦 Re-tag Docker Image (latest)
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         run: |
-          echo "Tagging as $IMAGE:latest ..."
-          docker tag $IMAGE:$VERSION $IMAGE:latest
+          echo "Tagging as ${{needs.calculate-version.outputs.image}}:latest ..."
+          docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:latest
 
-          echo "Pushing $IMAGE:latest ..."
-          docker push $IMAGE:latest
+          echo "Pushing ${{needs.calculate-version.outputs.image}}:latest ..."
+          docker push ${{needs.calculate-version.outputs.image}}:latest
 
       - name: 📦 Re-tag Docker Image (develop)
         if: github.ref == 'refs/heads/develop'
         run: |
-          echo "Tagging as $IMAGE:develop ..."
-          docker tag $IMAGE:$VERSION $IMAGE:develop
+          echo "Tagging as ${{needs.calculate-version.outputs.image}}:develop ..."
+          docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:develop
 
-          echo "Pushing $IMAGE:develop ..."
-          docker push $IMAGE:develop
+          echo "Pushing ${{needs.calculate-version.outputs.image}}:develop ..."
+          docker push ${{needs.calculate-version.outputs.image}}:develop
 
+  build-native:
+    needs:
+      - calculate-version
+      - test
+      - quality
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up GraalVM 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: 21
+          distribution: graalvm
+
+      - name: 🧰 Set up Maven cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
+      - name: Build
+        run: |
+          ./mvnw -B versions:set -DnewVersion=${{needs.calculate-version.outputs.version}}-native
+          ./mvnw -B package -DskipTests -Dnative
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐳 Build & Push Docker Image
+        run: |
+          docker build -t ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}-native -f src/main/docker/Dockerfile.native .
+          docker push ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}-native
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Re-tag Docker Image (latest)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          echo "Tagging as ${{needs.calculate-version.outputs.image}}:latest-native ..."
+          docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}-native ${{needs.calculate-version.outputs.image}}:latest-native
+
+          echo "Pushing ${{needs.calculate-version.outputs.image}}:latest-native ..."
+          docker push ${{needs.calculate-version.outputs.image}}:latest-native
+
+      - name: 📦 Re-tag Docker Image (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          echo "Tagging as ${{needs.calculate-version.outputs.image}}:develop-native ..."
+          docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}-native ${{needs.calculate-version.outputs.image}}:develop-native
+
+          echo "Pushing ${{needs.calculate-version.outputs.image}}:develop-native ..."
+          docker push ${{needs.calculate-version.outputs.image}}:develop-native
+
+  deploy:
+    needs:
+      - build-jvm
+      - calculate-version
+    runs-on: ubuntu-latest
+    steps:
       - name: 🚀 Trigger Production Deployment
         if: github.ref == 'refs/heads/master'
         run: |
           curl -X POST \
             -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/silverminer007/chronos-deployment/dispatches \
+            https://api.github.com/repos/silverminer007/inventory-deployment/dispatches \
             -d '{
               "event_type":"deploy-production",
               "client_payload":{
                 "service":"backend",
-                "version":"${{env.VERSION}}",
-                "image":"${{env.IMAGE}}"
+                "version":"${{needs.calculate-version.outputs.version}}",
+                "image":"${{needs.calculate-version.outputs.image}}"
               }
             }'
 
@@ -163,159 +257,12 @@ jobs:
           curl -X POST \
             -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/silverminer007/chronos-deployment/dispatches \
+            https://api.github.com/repos/silverminer007/inventory-deployment/dispatches \
             -d '{
               "event_type":"deploy-staging",
               "client_payload":{
                 "service":"backend",
-                "version":"${{env.VERSION}}",
-                "image":"${{env.IMAGE}}"
+                "version":"${{needs.calculate-version.outputs.version}}",
+                "image":"${{needs.calculate-version.outputs.image}}"
               }
             }'
-
-  performance-tests:
-    name: 🚀 Performance Tests
-    runs-on: ubuntu-latest
-    needs: build-test-native
-    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: ☕ Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: 🧰 Set up Maven cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-
-      - name: 🔧 Build Application
-        run: mvn -B clean package -DskipTests -q
-
-      - name: 🐳 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 🧪 Run K6 Performance Tests
-        run: |
-          cd performance-tests/docker
-
-          # Ensure results directory exists and is writable
-          mkdir -p ../results
-          chmod 777 ../results
-
-          # Start infrastructure services
-          docker compose up -d postgres-perf keycloak-db keycloak-perf
-
-          # Wait for PostgreSQL
-          echo "Waiting for PostgreSQL..."
-          for i in {1..30}; do
-            if docker exec chronos-perf-postgres pg_isready -U chronos_perf > /dev/null 2>&1; then
-              echo "PostgreSQL is ready"
-              break
-            fi
-            sleep 2
-          done
-
-          # Wait for Keycloak
-          echo "Waiting for Keycloak..."
-          for i in {1..60}; do
-            if curl -sf http://localhost:9000/health/ready > /dev/null 2>&1; then
-              echo "Keycloak is ready"
-              break
-            fi
-            sleep 5
-          done
-
-          # Start and wait for API
-          docker compose up -d --build chronos-api
-          echo "Waiting for Chronos API..."
-          for i in {1..60}; do
-            if curl -sf http://localhost:8080/q/health/ready > /dev/null 2>&1; then
-              echo "Chronos API is ready"
-              break
-            fi
-            sleep 3
-          done
-
-          # Run K6 tests (thresholds are informational in CI, don't fail the build)
-          docker compose run --rm \
-            -e K6_VUS=30 \
-            -e K6_DURATION=1m \
-            k6 run --env THRESHOLD_P95=5000 --env THRESHOLD_P99=10000 /scripts/main.js || true
-
-          # Debug: List results directory
-          echo "Results directory contents:"
-          ls -la ../results/ || echo "Results directory is empty or doesn't exist"
-
-      - name: 📊 Parse Results
-        if: always()
-        run: |
-          if [ -f performance-tests/results/k6-results.json ]; then
-            node performance-tests/scripts/parse-results.js \
-              performance-tests/results/k6-results.json \
-              --format=markdown > performance-tests/results/report.md
-            echo "## Performance Test Results" >> $GITHUB_STEP_SUMMARY
-            cat performance-tests/results/report.md >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: 📦 Upload Performance Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: performance-test-results
-          path: performance-tests/results/
-          retention-days: 30
-
-      - name: 📎 Attach Results to Release
-        if: github.ref == 'refs/heads/master'
-        run: |
-          # Get the latest release tag
-          RELEASE_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-
-          if [ -n "$RELEASE_TAG" ] && [ -f performance-tests/results/k6-results.json ]; then
-            echo "Uploading performance results to release $RELEASE_TAG"
-
-            # Create a zip of all results
-            cd performance-tests/results
-            zip -r performance-results.zip *.json *.txt *.md 2>/dev/null || true
-
-            # Upload to the release
-            gh release upload "$RELEASE_TAG" performance-results.zip --clobber || echo "Failed to upload results to release"
-
-            # Append performance results to release notes
-            if [ -f report.md ]; then
-              echo "Appending performance results to release notes"
-
-              # Get current release body
-              CURRENT_BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
-
-              # Create new body with performance results
-              NEW_BODY="$CURRENT_BODY
-
-          ---
-
-          ## 🚀 Performance Test Results
-
-          $(cat report.md)"
-
-              # Update release with new body
-              gh release edit "$RELEASE_TAG" --notes "$NEW_BODY"
-            fi
-          else
-            echo "No release found or no results to upload"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🧹 Cleanup
-        if: always()
-        run: |
-          cd performance-tests/docker
-          docker compose down -v --remove-orphans || true

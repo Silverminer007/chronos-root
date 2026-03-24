@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<ruleset name="Inventory Backend Rules"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+        https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>PMD rules for inventory-backend</description>
+
+    <!-- ===== Best Practices: dead code ===== -->
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+
+    <!-- ===== Error Prone: common bugs ===== -->
+    <!-- Unintended double negation or decrement used as value -->
+    <rule ref="category/java/errorprone.xml/AvoidMultipleUnaryOperators"/>
+    <!-- Null check on value that cannot be null due to prior dereference -->
+    <rule ref="category/java/errorprone.xml/BrokenNullCheck"/>
+    <!-- Empty catch blocks silently swallow exceptions -->
+    <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
+    <!-- Returning null instead of an empty collection -->
+    <rule ref="category/java/errorprone.xml/ReturnEmptyCollectionRatherThanNull"/>
+    <!-- new String("foo") is wasteful -->
+    <rule ref="category/java/performance.xml/StringInstantiation"/>
+    <!-- "string".toString() is a no-op -->
+    <rule ref="category/java/performance.xml/StringToString"/>
+
+</ruleset>

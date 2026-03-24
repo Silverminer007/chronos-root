@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtd/suppressions_1_2.dtd">
+
+<suppressions>
+    <!--
+        Test methods may use underscore-separated naming (method_state_expectedBehavior)
+        which is a common BDD-style convention for test readability.
+    -->
+    <suppress checks="MethodName" files=".*Test\.java"/>
+    <suppress checks="MemberName" files=".*Dto\.java"/>
+</suppressions>

@@ -7,8 +7,8 @@ import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
-import io.quarkus.logging.Log;
 import io.micrometer.core.annotation.Timed;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
@@ -16,7 +16,7 @@ import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import java.util.*;
+import java.util.List;
 
 @ApplicationScoped
 @Transactional

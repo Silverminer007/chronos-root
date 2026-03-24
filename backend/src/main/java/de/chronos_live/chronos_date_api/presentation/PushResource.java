@@ -3,22 +3,15 @@ package de.chronos_live.chronos_date_api.presentation;
 import de.chronos_live.chronos_date_api.application.PushSubscriptionService;
 import de.chronos_live.chronos_date_api.application.UserService;
 import de.chronos_live.chronos_date_api.application.WebPushService;
-import de.chronos_live.chronos_date_api.domain.PushNotificationLog;
 import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.dto.PushNotificationLogDto;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionDto;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionStatusDto;
-import de.chronos_live.chronos_date_api.infrastructure.PushNotificationLogRepository;
 import io.micrometer.core.annotation.Timed;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-
-import java.time.Instant;
-import java.util.List;
 
 @Path("/api/v2/push")
 @Consumes(MediaType.APPLICATION_JSON)

@@ -1,37 +1,30 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.application.events.AppointmentReminderEvent;
+import de.chronos_live.chronos_date_api.application.reminder.ReminderRuleEngine;
 import de.chronos_live.chronos_date_api.domain.Appointment;
-import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @ApplicationScoped
 public class AppointmentReminderService {
     @Inject
-    AppointmentQueryService appointmentQueryService;
-
+    AppointmentQueryService queryService;
     @Inject
-    Event<AppointmentReminderEvent> appointmentReminderEvent;
-
+    ReminderRuleEngine engine;
     @Inject
-    LeaderElectionService leaderElectionService;
+    Clock clock;
 
-    @Scheduled(cron = "0 */1 * * * ?")
-    void triggerAppointmentReminder() {
-        if (!leaderElectionService.isLeader()) return;
-        long minutesUntilStart = 30L;
-        Instant in30Minutes = Instant.now().plusSeconds(60L * minutesUntilStart);
+    public void sendPendingReminders() {
+        Instant now = clock.instant();
 
-        List<Appointment> appointments = this.appointmentQueryService.getNonCancelledAppointmentsStartingAt(in30Minutes);
-        for (Appointment appointment : appointments) {
-            this.appointmentReminderEvent.fire(
-                    new AppointmentReminderEvent(appointment.id)
-            );
-        }
+        List<Appointment> appointments =
+                queryService.getNonCancelledAppointmentsStartingBetween(now, now.plus(20 * 7, ChronoUnit.DAYS));
+
+        engine.evaluate(appointments, now);
     }
 }

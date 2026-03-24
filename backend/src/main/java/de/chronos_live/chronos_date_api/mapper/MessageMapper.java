@@ -2,7 +2,8 @@ package de.chronos_live.chronos_date_api.mapper;
 
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.dto.MessageDto;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 

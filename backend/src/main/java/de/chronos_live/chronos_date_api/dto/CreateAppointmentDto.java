@@ -27,13 +27,13 @@ public class CreateAppointmentDto {
             String start,
             String end,
             String venue,
-            Integer minimal_attendees
+            Integer minimalAttendees
     ) {
         this.name = name;
         this.description = description;
         this.start = start;
         this.end = end;
         this.venue = venue;
-        this.minimal_attendees = minimal_attendees;
+        this.minimal_attendees = minimalAttendees;
     }
 }

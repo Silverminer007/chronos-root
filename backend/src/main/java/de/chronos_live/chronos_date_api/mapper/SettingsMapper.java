@@ -4,11 +4,7 @@ import de.chronos_live.chronos_date_api.domain.AppointmentNotificationSetting;
 import de.chronos_live.chronos_date_api.domain.NotificationSetting;
 import de.chronos_live.chronos_date_api.domain.Settings;
 import de.chronos_live.chronos_date_api.dto.SettingsDto;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.Named;
+import org.mapstruct.*;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.JAKARTA_CDI)
 public interface SettingsMapper {

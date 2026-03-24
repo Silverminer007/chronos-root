@@ -62,8 +62,14 @@ public class LeaderElectionService {
                 .withRetryPeriod(Duration.ofSeconds(2))
                 .withReleaseOnCancel()
                 .withLeaderCallbacks(new LeaderCallbacks(
-                        () -> { leader = true;  LOG.infof("Pod %s acquired scheduler leadership", resolvedIdentity); },
-                        () -> { leader = false; LOG.warnf("Pod %s lost scheduler leadership", resolvedIdentity); },
+                        () -> {
+                            leader = true;
+                            LOG.infof("Pod %s acquired scheduler leadership", resolvedIdentity);
+                        },
+                        () -> {
+                            leader = false;
+                            LOG.warnf("Pod %s lost scheduler leadership", resolvedIdentity);
+                        },
                         newLeader -> LOG.infof("New scheduler leader: %s", newLeader)
                 ))
                 .build();

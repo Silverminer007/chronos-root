@@ -2,8 +2,8 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.PushSubscription;
 import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.infrastructure.PushSubscriptionRepository;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionDto;
+import de.chronos_live.chronos_date_api.infrastructure.PushSubscriptionRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
