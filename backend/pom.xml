@@ -286,6 +286,9 @@
                         <ruleset>pmd-ruleset.xml</ruleset>
                     </rulesets>
                     <includeTests>true</includeTests>
+                    <excludeRoots>
+                        <excludeRoot>target/generated-sources/annotations</excludeRoot>
+                    </excludeRoots>
                 </configuration>
                 <executions>
                     <execution>

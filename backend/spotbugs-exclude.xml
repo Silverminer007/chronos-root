@@ -1,13 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
     <!--
-        DTOs use public fields exclusively for JSON serialization.
-        Jackson reads these fields via reflection — SpotBugs cannot trace
-        reflection-based access and incorrectly flags them as unread/unused.
+        DTOs and response records are short-lived JSON serialization objects.
+        Jackson reads their fields once via reflection/getters and discards them.
+        EI_EXPOSE_REP defensive-copy rules are designed for long-lived library APIs
+        with untrusted callers, not for internal request/response objects.
     -->
     <Match>
         <Package name="~de\.chronos_live\.chronos_date_api\.dto.*"/>
-        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"/>
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD,EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Package name="~de\.chronos_live\.admin\.dto.*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.AppointmentQueryService$SearchResult"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.reminder.ReminderRuleEngine"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
 
     <!--
@@ -18,5 +31,50 @@
     <Match>
         <Package name="~de\.chronos_live\.chronos_date_api\.domain.*"/>
         <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,PA_PUBLIC_PRIMITIVE_ATTRIBUTE,EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+        PrincipalContext holds a reference to the current user JPA entity.
+        Defensive copy of a Hibernate-managed entity is neither safe nor meaningful.
+    -->
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.security.PrincipalContext"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+        Quarkus Panache entity.persist() is added via bytecode enhancement at compile
+        time. SpotBugs cannot trace this instrumented call and incorrectly classifies
+        the entity variable as dead/useless even though persist() is invoked on it.
+    -->
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.AppointmentParticipationService"/>
+        <Method name="onAppointmentCreated"/>
+        <Bug pattern="UC_USELESS_OBJECT"/>
+    </Match>
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.GroupService"/>
+        <Method name="onGroupCreated"/>
+        <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+    </Match>
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.GroupService"/>
+        <Method name="createGroup"/>
+        <Bug pattern="UC_USELESS_OBJECT"/>
+    </Match>
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.PushSubscriptionService"/>
+        <Method name="saveSubscription"/>
+        <Bug pattern="UC_USELESS_OBJECT"/>
+    </Match>
+
+    <!--
+        These null-checks guard against appointments/messages that may have been
+        deleted between event firing and handler execution. SpotBugs incorrectly
+        infers the values are non-null based on incomplete inter-procedural analysis.
+    -->
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.WebPushService"/>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
     </Match>
 </FindBugsFilter>

@@ -1,5 +1,6 @@
 package de.chronos_live.chronos_date_api.exception;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,15 +14,15 @@ public class ValidationException extends BusinessException {
 
     public ValidationException(Map<String, String> fieldErrors) {
         super("Validierungsfehler", "VALIDATION_ERROR");
-        this.fieldErrors = fieldErrors;
+        this.fieldErrors = new HashMap<>(fieldErrors);
     }
 
     public ValidationException(String field, String error) {
         super("Validierungsfehler bei Feld: " + field, "VALIDATION_ERROR");
-        this.fieldErrors = Map.of(field, error);
+        this.fieldErrors = new HashMap<>(Map.of(field, error));
     }
 
     public Map<String, String> getFieldErrors() {
-        return fieldErrors;
+        return Collections.unmodifiableMap(fieldErrors);
     }
 }

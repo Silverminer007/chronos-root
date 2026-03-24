@@ -77,10 +77,10 @@ public class GroupService {
     }
 
     public Group createGroup(Long actingUserId, GroupDto createGroupDto) {
-        Group group = new Group();
         if (createGroupDto.getName() == null || createGroupDto.getName().isBlank()) {
             throw new ValidationException("Group name is required");
         }
+        Group group = new Group();
         group.setGroupName(createGroupDto.getName());
 
         User user = User.findById(actingUserId);

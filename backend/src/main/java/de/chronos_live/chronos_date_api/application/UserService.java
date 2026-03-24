@@ -19,7 +19,6 @@ import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -47,13 +46,8 @@ public class UserService {
     String clientSecret;
 
     public User createUser(String firstName, String lastName, String email, String oidcId) {
-        try {
-            Objects.requireNonNull(firstName);
-            Objects.requireNonNull(lastName);
-            Objects.requireNonNull(email);
-            Objects.requireNonNull(oidcId);
-        } catch (NullPointerException e) {
-            throw new BadRequestException(e.getMessage());
+        if (firstName == null || lastName == null || email == null || oidcId == null) {
+            throw new BadRequestException("Required user fields cannot be null");
         }
 
         User user;
