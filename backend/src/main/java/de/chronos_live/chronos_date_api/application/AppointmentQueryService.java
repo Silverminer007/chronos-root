@@ -5,7 +5,6 @@ import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.micrometer.core.annotation.Timed;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -39,33 +38,32 @@ public class AppointmentQueryService {
     }
 
     public SearchResult search(Long requestingUserId, String query,
-                                    Instant after, Instant before,
-                                    int page, int pageSize,
-                                    boolean messages, boolean participants, boolean groupParticipants) {
-        String sqlQuery = "SELECT a FROM AppointmentParticipation ap JOIN ap.appointment a";
-        if (messages) {
-            sqlQuery += " LEFT JOIN FETCH a.messages";
-        }
-        if (participants) {
-            sqlQuery += " LEFT JOIN FETCH a.participants part LEFT JOIN FETCH part.user";
-        }
-        if (groupParticipants) {
-            sqlQuery += " LEFT JOIN FETCH a.groupParticipants";
-        }
-        sqlQuery += " WHERE ap.user.id = ?1 AND a.endTime > ?2 AND a.startTime < ?3 AND a.status != ?4";
-        if (query != null) {
-            sqlQuery += " AND (lower(a.name) LIKE lower(?5) OR lower(a.description) LIKE lower(?5) OR lower(a.venue) LIKE lower(?5))";
-        }
-        sqlQuery += " ORDER BY a.startTime";
+                               Instant after, Instant before,
+                               int page, int pageSize,
+                               boolean messages, boolean participants, boolean groupParticipants) {
+        String baseJoin = " FROM AppointmentParticipation ap JOIN ap.appointment a";
+        String fetchJoins = "";
+        if (messages) fetchJoins += " LEFT JOIN FETCH a.messages";
+        if (participants) fetchJoins += " LEFT JOIN FETCH a.participants part LEFT JOIN FETCH part.user";
+        if (groupParticipants) fetchJoins += " LEFT JOIN FETCH a.groupParticipants";
 
-        PanacheQuery<Appointment> panacheQuery;
+        String where = " WHERE ap.user.id = ?1 AND a.endTime > ?2 AND a.startTime < ?3 AND a.status != ?4";
         if (query != null) {
-            panacheQuery = Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED, "%" + query + "%");
-        } else {
-            panacheQuery = Appointment.find(sqlQuery, requestingUserId, after, before, AppointmentStatus.DELETED);
+            where += " AND (lower(a.name) LIKE lower(?5) OR lower(a.description) LIKE lower(?5) OR lower(a.venue) LIKE lower(?5))";
         }
-        long total = panacheQuery.count();
-        List<Appointment> items = panacheQuery.page(page, pageSize).list();
+
+        Object[] params = query != null
+                ? new Object[]{requestingUserId, after, before, AppointmentStatus.DELETED, "%" + query + "%"}
+                : new Object[]{requestingUserId, after, before, AppointmentStatus.DELETED};
+
+        long total = Appointment.count(
+                "SELECT COUNT(DISTINCT a)" + baseJoin + where, params
+        );
+
+        List<Appointment> items = Appointment.<Appointment>find(
+                "SELECT a" + baseJoin + fetchJoins + where + " ORDER BY a.startTime", params
+        ).page(page, pageSize).list();
+
         return new SearchResult(items, total);
     }
 
