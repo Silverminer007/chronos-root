@@ -1,5 +1,6 @@
 package de.chronos_live.chronos_date_api.infrastructure;
 
+import de.chronos_live.chronos_date_api.application.ports.NotificationLogPort;
 import de.chronos_live.chronos_date_api.domain.PushNotificationLog;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.panache.common.Sort;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @ApplicationScoped
-public class PushNotificationLogRepository implements PanacheRepository<PushNotificationLog> {
+public class PushNotificationLogRepository implements PanacheRepository<PushNotificationLog>, NotificationLogPort {
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void log(Long userId, String notificationType, String payload,
