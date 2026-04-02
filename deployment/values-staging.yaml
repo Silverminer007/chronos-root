@@ -9,6 +9,8 @@ secrets:
     clientSecret: 22e2fb2f-83ca-4ce6-bf74-b3f700cf28ff
   frontend:
     clientId: a71d209e-4600-4eaa-a81f-b3f700cf38cb
+    sentryDsn: 6f37edcb-1d78-40ac-9510-b42001264cdb
+    sentryAuthToken: 9dcad1a6-ed91-41ae-8954-b420012664d7
   vapid:
     publicKey: aefad867-54b7-4764-9f12-b3f600b42da2
     privateKey: fa639799-a9ef-465a-81c1-b3f600b4454b
@@ -67,6 +69,12 @@ frontend:
     - name: NUXT_AUTH_CLIENT_ID
       secretName: chronos-secret
       secretKey: frontend_client_id
+    - name: SENTRY_AUTH_TOKEN
+      secretName: chronos-secret
+      secretKey: frontend_sentry_auth_token
+    - name: NUXT_PUBLIC_SENTRY_DSN
+      secretName: chronos-secret
+      secretKey: frontend_sentry_dsn
 
 backend:
   replicaCount: 1

@@ -9,6 +9,8 @@ secrets:
     clientSecret:
   frontend:
     clientId:
+    sentryDsn:
+    sentryAuthToken:
   vapid:
     publicKey:
     privateKey:
@@ -60,6 +62,12 @@ frontend:
     - name: NUXT_AUTH_CLIENT_ID
       secretName: chronos-secret
       secretKey: frontend_client_id
+    - name: SENTRY_AUTH_TOKEN
+      secretName: chronos-secret
+      secretKey: frontend_sentry_auth_token
+    - name: NUXT_PUBLIC_SENTRY_DSN
+      secretName: chronos-secret
+      secretKey: frontend_sentry_dsn
 
 backend:
   replicaCount: 2
