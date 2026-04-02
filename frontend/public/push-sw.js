@@ -1,6 +1,33 @@
 // public/push-sw.js
 importScripts('https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js');
 
+/**
+ * Report an error from the service worker to all connected clients.
+ * The client-side Sentry plugin listens for these messages and forwards them to Sentry.
+ */
+function reportSwError(error, context) {
+    const payload = {
+        type: 'SW_ERROR',
+        context: context,
+        message: error && error.message ? error.message : String(error),
+        stack: error && error.stack ? error.stack : undefined,
+    };
+    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(function (clients) {
+        clients.forEach(function (client) {
+            client.postMessage(payload);
+        });
+    });
+}
+
+// Catch unhandled errors and promise rejections in the service worker
+self.addEventListener('error', function (event) {
+    reportSwError(event.error || new Error(event.message), 'unhandled-error');
+});
+
+self.addEventListener('unhandledrejection', function (event) {
+    reportSwError(event.reason instanceof Error ? event.reason : new Error(String(event.reason)), 'unhandled-rejection');
+});
+
 const API_BASE_URL = self.location.origin;
 
 const DateTime = luxon.DateTime;
@@ -19,6 +46,7 @@ self.addEventListener('push', function (event) {
         event.waitUntil(notificationPromise);
     } catch (error) {
         console.error('Fehler beim Verarbeiten der Push-Nachricht:', error);
+        reportSwError(error, 'push-handler');
     }
 });
 
@@ -252,6 +280,7 @@ self.addEventListener('notificationclick', function (event) {
                 })
                 .catch(error => {
                     console.error('Fehler beim Aktualisieren des Status:', error);
+                    reportSwError(error, 'notificationclick-update-status');
                     // Fehler-Benachrichtigung
                     return self.registration.showNotification('Fehler', {
                         body: 'Status konnte nicht aktualisiert werden. Bitte öffne die App.',
@@ -280,6 +309,7 @@ self.addEventListener('notificationclick', function (event) {
             }
         } catch (error) {
             console.error('Fehler beim Parsen der Benachrichtigungsdaten:', error);
+            reportSwError(error, 'notificationclick-parse');
         }
     }
 

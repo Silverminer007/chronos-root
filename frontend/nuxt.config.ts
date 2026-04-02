@@ -23,6 +23,8 @@ export default defineNuxtConfig({
             impressumCity: "",
             impressumEmail: "",
             impressumPhone: "",
+            // Sentry DSN - set via NUXT_PUBLIC_SENTRY_DSN
+            sentryDsn: "",
         }
     },
 
@@ -39,7 +41,16 @@ export default defineNuxtConfig({
         ],
     },
 
-    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon'],
+    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@sentry/nuxt/module'],
+
+    sentry: {
+        dsn: process.env.NUXT_PUBLIC_SENTRY_DSN,
+        sourceMapsUploadOptions: {
+            org: 'justus-henze',
+            project: 'chronos-frontend',
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+        },
+    },
 
     primevue: {
         options: {
