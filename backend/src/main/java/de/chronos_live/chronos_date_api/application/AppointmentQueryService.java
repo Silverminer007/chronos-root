@@ -17,6 +17,10 @@ public class AppointmentQueryService {
     @Inject
     AppointmentRepository appointmentRepository;
 
+    public Appointment findById(Long id) {
+        return Appointment.findById(id);
+    }
+
     public Appointment getAppointment(Long appointmentId, boolean messages, boolean participants, boolean groupParticipants) {
         String sqlQuery = "SELECT a FROM Appointment a";
         if (messages) {

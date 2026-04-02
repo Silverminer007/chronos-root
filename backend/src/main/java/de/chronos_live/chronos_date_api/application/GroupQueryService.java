@@ -34,4 +34,8 @@ public class GroupQueryService {
     public List<GroupMember> getGroupMembers(Long groupId) {
         return GroupMember.find("group.id = ?1", groupId).list();
     }
+
+    public Group findById(Long id) {
+        return Group.findById(id);
+    }
 }
