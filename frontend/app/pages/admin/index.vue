@@ -1,11 +1,30 @@
 <script setup lang="ts">
 import {useAuthStore} from '~/stores/auth';
 import {DateTime} from 'luxon';
+import {useToast} from 'primevue/usetoast';
+import ConfirmDialog from "~/components/ConfirmDialog.vue";
 
 const NuxtLink = resolveComponent('NuxtLink');
 
 const {fetchUser} = useAuthStore();
 await fetchUser();
+
+const toast = useToast();
+const showSurveyConfirm = ref(false);
+const surveyLoading = ref(false);
+
+async function sendSurveyInvitations() {
+  surveyLoading.value = true;
+  try {
+    await $fetch('/api/v2/admin/survey/11111111-1111-1111-1111-111111111111/notify', {method: 'POST'});
+    toast.add({severity: 'success', summary: 'Einladungen versendet', life: 3000});
+  } catch {
+    toast.add({severity: 'error', summary: 'Fehler beim Versenden', detail: 'Bitte versuche es erneut.', life: 4000});
+  } finally {
+    surveyLoading.value = false;
+    showSurveyConfirm.value = false;
+  }
+}
 
 interface AdminStatistics {
   users: { total: number };
@@ -87,6 +106,30 @@ function formatRelativeTime(dateStr: string): string {
           </component>
         </div>
 
+        <!-- Survey -->
+        <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6 mb-6">
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center shrink-0">
+                <Icon name="lucide:clipboard-list" class="text-xl text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Umfrage</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Push-Einladungen an alle noch nicht eingeladenen Nutzer senden</p>
+              </div>
+            </div>
+            <button
+              @click="showSurveyConfirm = true"
+              :disabled="surveyLoading"
+              class="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
+            >
+              <Icon v-if="surveyLoading" name="lucide:loader-circle" class="animate-spin" />
+              <Icon v-else name="lucide:send" />
+              <span>Umfrage-Einladungen senden</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Recent Logins -->
         <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700">
           <div class="p-6 border-b border-gray-200 dark:border-neutral-700">
@@ -113,5 +156,17 @@ function formatRelativeTime(dateStr: string): string {
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      :visible="showSurveyConfirm"
+      title="Umfrage-Einladungen senden"
+      message="Es wird eine Push-Benachrichtigung an alle Nutzer gesendet, die noch nicht eingeladen wurden. Fortfahren?"
+      confirm-text="Senden"
+      confirm-color="purple"
+      @close="showSurveyConfirm = false"
+      @confirm="sendSurveyInvitations"
+    />
+
+    <Toast />
   </div>
 </template>

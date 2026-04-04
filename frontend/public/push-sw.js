@@ -12,7 +12,7 @@ function reportSwError(error, context) {
         message: error && error.message ? error.message : String(error),
         stack: error && error.stack ? error.stack : undefined,
     };
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(function (clients) {
+    self.clients.matchAll({includeUncontrolled: true, type: 'window'}).then(function (clients) {
         clients.forEach(function (client) {
             client.postMessage(payload);
         });
@@ -93,6 +93,13 @@ async function handleNotification(data) {
     const ownAttendanceStatus = appointment ? await getOwnAttendanceStatus(appointment.id) : 'PENDING';
 
     switch (type) {
+        case 'SURVEY_INVITATION':
+            const surveyId = data.survey;
+            title = 'Hilf mit Chronos zu verbessern - dauert keine Minute';
+            body = 'Klicke einfach auf diese Benachrichtigung um 5 Fragen zu beantworten';
+            tag = `survey-${surveyId}`
+            break;
+
         case 'APPOINTMENT_MOVED':
             title = `${data.acting_user_name} hat ${appointment.name} verschoben`;
             body = `${appointment.name} geht jetzt vom ${formatTimeRange(appointment.start, appointment.end)}`;
@@ -300,7 +307,9 @@ self.addEventListener('notificationclick', function (event) {
     // Bestimme die URL basierend auf dem Benachrichtigungstyp
     if (data) {
         try {
-            if (data.appointment) {
+            if (data.type && data.type === 'SURVEY_INVITATION') {
+                urlToOpen = `/survey/${data.survey}`;
+            } else if (data.appointment) {
                 const appointmentData = JSON.parse(data.appointment);
                 urlToOpen = `/appointment/${appointmentData.id}`;
             } else if (data.group) {
