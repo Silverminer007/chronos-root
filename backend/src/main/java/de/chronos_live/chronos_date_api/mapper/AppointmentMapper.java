@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "cdi", uses = {AppointmentParticipationMapper.class, AppointmentGroupParticipationMapper.class, MessageMapper.class})
+@Mapper(componentModel = "jakarta", uses = {AppointmentParticipationMapper.class, AppointmentGroupParticipationMapper.class, MessageMapper.class})
 public interface AppointmentMapper {
 
     // ============================

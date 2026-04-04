@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import java.util.List;
 import java.util.Set;
 
-@Mapper(componentModel = "cdi")
+@Mapper(componentModel = "jakarta")
 public interface AppointmentParticipationMapper {
 
     @Mapping(target = "user_id", source = "user.id")

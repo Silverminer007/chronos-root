@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import java.util.List;
 
 @Mapper(
-        componentModel = "cdi",
+        componentModel = "jakarta",
         uses = {GroupMemberMapper.class}
 )
 public interface GroupMapper {
