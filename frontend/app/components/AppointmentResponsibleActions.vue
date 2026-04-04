@@ -4,8 +4,10 @@ import {computed, ref} from "vue";
 import type {Appointment} from "~/types";
 import {useAuthStore} from "~/stores/auth";
 import {useToast} from "primevue/usetoast";
+import ConfirmDialog from "~/components/ConfirmDialog.vue";
 
 const authStore = useAuthStore();
+const appointmentStore = useAppointmentsStore();
 const toast = useToast();
 
 const {appointment} = defineProps<{
@@ -49,7 +51,7 @@ const handleRequestRecheck = async () => {
 const handleCancelAppointment = async () => {
   actionsLoading.value = true;
   try {
-    // TODO: API call to cancel appointment
+    await appointmentStore.cancelAppointment(appointment.id);
     toast.add({
       severity: 'success',
       summary: 'Termin abgesagt',
@@ -82,6 +84,7 @@ const requestRecheck = () => {
 
     <div class="space-y-3">
       <button
+          v-if="false"
           @click="requestRecheck"
           :disabled="actionsLoading"
           class="w-full px-6 py-3 rounded-lg font-medium transition-all border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

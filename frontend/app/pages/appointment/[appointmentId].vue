@@ -38,10 +38,8 @@
           <div class="order-4 lg:hidden">
             <GroupParticipantsCard :appointment="appointment"/>
           </div>
+          <AppointmentResponsibleActions :appointment="appointment" class="order-5 lg:hidden"/>
 
-          <div class="hidden">
-            <AppointmentResponsibleActions :appointment="appointment" class="order-5"/>
-          </div>
           <MessagesCard :appointment="appointment" class="order-6"/>
         </div>
 
@@ -49,6 +47,7 @@
         <div class="hidden lg:block lg:col-span-1 space-y-6">
           <ParticipantsStatusCard :appointment="appointment"/>
           <GroupParticipantsCard :appointment="appointment"/>
+          <AppointmentResponsibleActions :appointment="appointment"/>
         </div>
       </div>
     </main>
