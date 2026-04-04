@@ -42,7 +42,7 @@ public class ReminderRuleEngine {
     }
 
     private boolean isDue(Instant now, Instant trigger) {
-        long diff = Duration.between(now, trigger).toMinutes();
-        return diff <= 15; // dein Scheduler-Fenster
+        Duration diff = Duration.between(trigger, now);
+        return !diff.isNegative() && diff.toMinutes() <= 15;
     }
 }

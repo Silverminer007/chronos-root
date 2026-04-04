@@ -32,11 +32,13 @@ import static org.mockito.Mockito.*;
 class ReminderRuleEngineTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Instant NOW                   = Instant.parse("2024-06-01T10:00:00Z");
-    private static final Instant TRIGGER_10_MIN_AHEAD  = NOW.plus(10, ChronoUnit.MINUTES);
-    private static final Instant TRIGGER_16_MIN_AHEAD  = NOW.plus(16, ChronoUnit.MINUTES);
-    private static final Instant TRIGGER_1_HOUR_AHEAD  = NOW.plus(1, ChronoUnit.HOURS);
-    private static final Instant TRIGGER_10_MIN_AGO    = NOW.minus(10, ChronoUnit.MINUTES);
+    private static final Instant NOW                = Instant.parse("2024-06-01T10:00:00Z");
+    private static final Instant TRIGGER_10_MIN_AGO = NOW.minus(10, ChronoUnit.MINUTES);
+    private static final Instant TRIGGER_15_MIN_AGO = NOW.minus(15, ChronoUnit.MINUTES);
+    private static final Instant TRIGGER_16_MIN_AGO = NOW.minus(16, ChronoUnit.MINUTES);
+    private static final Instant TRIGGER_7_DAYS_AGO = NOW.minus(7, ChronoUnit.DAYS);
+    private static final Instant TRIGGER_10_MIN_AHEAD = NOW.plus(10, ChronoUnit.MINUTES);
+    private static final Instant TRIGGER_1_HOUR_AHEAD = NOW.plus(1, ChronoUnit.HOURS);
 
     // ── Mocks ─────────────────────────────────────────────────────────────────
     @Mock
@@ -70,18 +72,18 @@ class ReminderRuleEngineTest {
      * Coverage plan – evaluate:
      *   B1  empty appointments list → for-loop never executes
      *   B2  no rule matches (rule == null) → continue
-     *   B3  rule matches, trigger within ±15 min → execute + break
-     *   B4  rule matches, trigger {@literal >} 15 min ahead → no execute
+     *   B3  rule matches, trigger within past 15 min → execute + break
+     *   B4  rule matches, trigger in the future → no execute
      *   B5  multiple appointments: one unmatched, one matched
-     *   B6  multiple triggers: first not due, second due → execute once
+     *   B6  multiple triggers: first not due (future), second due (past) → execute once
      *   B7  multiple triggers: none due → no execute
      *
      * Coverage plan – isDue (private, exercised through evaluate):
-     *   IB1  |diff| {@literal <=} 15 min → true  (execute called)
-     *   IB2  |diff| {@literal >}  15 min → false (execute not called)
-     *   IB3  trigger in the past within window → Math.abs → true
-     *   IB4  |diff| exactly 15 min → true
-     *   IB5  |diff| exactly 16 min → false
+     *   IB1  trigger 0–15 min ago → true  (execute called)
+     *   IB2  trigger in future → false (execute not called)
+     *   IB3  trigger exactly 15 min ago → true  (boundary inclusive)
+     *   IB4  trigger exactly 16 min ago → false (boundary exclusive)
+     *   IB5  trigger 7 days ago → false  (regression: old triggers must not re-fire)
      *
      * Total branches: 7 + 5  |  Tests: 10
      */
@@ -109,19 +111,19 @@ class ReminderRuleEngineTest {
             verifyNoInteractions(eventPort);
         }
 
-        // B3 + IB1: rule matches, trigger within window → execute called, break
+        // B3 + IB1: rule matches, trigger within past 15 min → execute called, break
         @Test
         void should_executeRule_when_ruleAppliesAndTriggerIsDue() {
             Appointment appointment = buildAppointment();
             when(rule.appliesTo(appointment)).thenReturn(true);
-            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_10_MIN_AHEAD));
+            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_10_MIN_AGO));
 
             engine.evaluate(List.of(appointment), NOW);
 
             verify(rule).execute(appointment, eventPort);
         }
 
-        // B4 + IB2: rule matches, trigger too far ahead → no execute
+        // B4 + IB2: rule matches, trigger in the future → no execute
         @Test
         void should_notExecuteRule_when_ruleAppliesButTriggerIsNotDue() {
             Appointment appointment = buildAppointment();
@@ -142,20 +144,20 @@ class ReminderRuleEngineTest {
 
             when(rule.appliesTo(unmatched)).thenReturn(false);
             when(rule.appliesTo(matched)).thenReturn(true);
-            when(rule.computeTriggerTimes(matched)).thenReturn(List.of(TRIGGER_10_MIN_AHEAD));
+            when(rule.computeTriggerTimes(matched)).thenReturn(List.of(TRIGGER_10_MIN_AGO));
 
             engine.evaluate(List.of(unmatched, matched), NOW);
 
             verify(rule, times(1)).execute(any(Appointment.class), eq(eventPort));
         }
 
-        // B6: multiple triggers – first not due, second is due → exactly 1 execute
+        // B6: multiple triggers – first not due (future), second is due (past) → exactly 1 execute
         @Test
         void should_executeOnce_when_secondOfMultipleTriggersIsDue() {
             Appointment appointment = buildAppointment();
             when(rule.appliesTo(appointment)).thenReturn(true);
             when(rule.computeTriggerTimes(appointment))
-                    .thenReturn(List.of(TRIGGER_1_HOUR_AHEAD, TRIGGER_10_MIN_AHEAD));
+                    .thenReturn(List.of(TRIGGER_1_HOUR_AHEAD, TRIGGER_10_MIN_AGO));
 
             engine.evaluate(List.of(appointment), NOW);
 
@@ -168,45 +170,43 @@ class ReminderRuleEngineTest {
             Appointment appointment = buildAppointment();
             when(rule.appliesTo(appointment)).thenReturn(true);
             when(rule.computeTriggerTimes(appointment))
-                    .thenReturn(List.of(TRIGGER_1_HOUR_AHEAD,
-                            TRIGGER_1_HOUR_AHEAD.plus(1, ChronoUnit.HOURS)));
+                    .thenReturn(List.of(TRIGGER_10_MIN_AHEAD, TRIGGER_1_HOUR_AHEAD));
 
             engine.evaluate(List.of(appointment), NOW);
 
             verify(rule, never()).execute(any(), any());
         }
 
-        // IB3: trigger in the past within 15 min → Math.abs makes diff positive → due
+        // IB3: exactly 15 min ago → due (boundary inclusive)
         @Test
-        void should_executeRule_when_triggerWas10MinutesAgo() {
+        void should_executeRule_when_triggerWasExactly15MinutesAgo() {
             Appointment appointment = buildAppointment();
             when(rule.appliesTo(appointment)).thenReturn(true);
-            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_10_MIN_AGO));
+            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_15_MIN_AGO));
 
             engine.evaluate(List.of(appointment), NOW);
 
             verify(rule).execute(appointment, eventPort);
         }
 
-        // IB4: exactly 15 min ahead → diff == 15 → due (boundary inclusive)
+        // IB4: exactly 16 min ago → not due (boundary exclusive)
         @Test
-        void should_executeRule_when_triggerIsExactly15MinutesAhead() {
+        void should_notExecuteRule_when_triggerWas16MinutesAgo() {
             Appointment appointment = buildAppointment();
             when(rule.appliesTo(appointment)).thenReturn(true);
-            when(rule.computeTriggerTimes(appointment))
-                    .thenReturn(List.of(NOW.plus(15, ChronoUnit.MINUTES)));
+            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_16_MIN_AGO));
 
             engine.evaluate(List.of(appointment), NOW);
 
-            verify(rule).execute(appointment, eventPort);
+            verify(rule, never()).execute(any(), any());
         }
 
-        // IB5: exactly 16 min ahead → diff == 16 → not due (boundary exclusive)
+        // IB5: regression – trigger 7 days ago must not re-fire on every scheduler run
         @Test
-        void should_notExecuteRule_when_triggerIs16MinutesAhead() {
+        void should_notExecuteRule_when_triggerWas7DaysAgo() {
             Appointment appointment = buildAppointment();
             when(rule.appliesTo(appointment)).thenReturn(true);
-            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_16_MIN_AHEAD));
+            when(rule.computeTriggerTimes(appointment)).thenReturn(List.of(TRIGGER_7_DAYS_AGO));
 
             engine.evaluate(List.of(appointment), NOW);
 
