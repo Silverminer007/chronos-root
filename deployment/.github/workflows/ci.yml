@@ -109,7 +109,7 @@ jobs:
 
           # 2. Helm Template Test (ohne Deployment)
           echo "📋 Testing Helm template..."
-          helm template chronos . -f $VALUES_FILE --namespace $NAMESPACE --debug
+          helm template chronos . -f $VALUES_FILE -f ./overrides.yaml --namespace $NAMESPACE --debug
 
           # 3. Bestehende Resources checken
           echo "📋 Checking existing resources..."
