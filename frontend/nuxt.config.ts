@@ -41,7 +41,7 @@ export default defineNuxtConfig({
         ],
     },
 
-    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@sentry/nuxt/module'],
+    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@sentry/nuxt/module', '@nuxt/eslint'],
 
     sentry: {
         dsn: process.env.NUXT_PUBLIC_SENTRY_DSN,
