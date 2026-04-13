@@ -1,10 +1,10 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - master
-      - develop
+  workflow_run:
+    workflows: ['CI']
+    branches: [master, develop]
+    types: [completed]
 
 env:
   REGISTRY: ghcr.io
@@ -13,6 +13,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Only run when all CI checks passed
+    if: github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: write
       packages: write
@@ -21,22 +23,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # Check out the exact commit that passed CI, not the current HEAD
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: ⚙️ Set up Node.js
-        if: github.ref == 'refs/heads/master'
+        if: github.event.workflow_run.head_branch == 'master'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: 📦 Install Semantic Release
-        if: github.ref == 'refs/heads/master'
+        if: github.event.workflow_run.head_branch == 'master'
         run: |
           npm install -g semantic-release \
             @semantic-release/commit-analyzer
 
       - name: 🚀 Run Semantic Release (GitHub only)
-        if: github.ref == 'refs/heads/master'
+        if: github.event.workflow_run.head_branch == 'master'
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,7 +49,7 @@ jobs:
             @semantic-release/commit-analyzer
 
       - name: 🧾 Get latest release version
-        if: github.ref == 'refs/heads/master'
+        if: github.event.workflow_run.head_branch == 'master'
         id: get_version
         run: |
           VERSION=$(git tag --sort=-creatordate | head -1)
@@ -57,10 +61,10 @@ jobs:
         run: |
           REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+          if [ "${{ github.event.workflow_run.head_branch }}" = "master" ]; then
             VERSION=v$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
           else
-            VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"  # develop-a1b2c3d4
+            VERSION="develop-$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-8)"
           fi
 
           IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-nuxt
@@ -86,7 +90,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📦 Re-tag Docker Image (latest)
-        if: github.ref == 'refs/heads/master'
+        if: github.event.workflow_run.head_branch == 'master'
         run: |
           echo "Tagging as $IMAGE:latest ..."
           docker tag $IMAGE:$VERSION $IMAGE:latest
@@ -95,7 +99,7 @@ jobs:
           docker push $IMAGE:latest
 
       - name: 📦 Re-tag Docker Image (develop)
-        if: github.ref == 'refs/heads/develop'
+        if: github.event.workflow_run.head_branch == 'develop'
         run: |
           echo "Tagging as $IMAGE:develop ..."
           docker tag $IMAGE:$VERSION $IMAGE:develop
@@ -104,7 +108,7 @@ jobs:
           docker push $IMAGE:develop
 
       - name: 🚀 Trigger Production Deployment
-        if: github.ref == 'refs/heads/master'
+        if: github.event.workflow_run.head_branch == 'master'
         run: |
           curl -X POST \
             -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
@@ -120,7 +124,7 @@ jobs:
             }'
 
       - name: 🧪 Trigger Staging Deployment
-        if: github.ref == 'refs/heads/develop'
+        if: github.event.workflow_run.head_branch == 'develop'
         run: |
           curl -X POST \
             -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \

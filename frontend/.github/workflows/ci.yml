@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  # ── Secret Detection ──────────────────────────────────────────────────────
+  secret-detection:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history required by gitleaks
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Dependency Vulnerability Audit ───────────────────────────────────────
+  audit-deps:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      # Fail only on high/critical vulnerabilities; moderate are reported as
+      # warnings via the summary output but do not block the pipeline.
+      - run: npm audit --audit-level=high
+
+  # ── Code Quality: ESLint + TypeScript ────────────────────────────────────
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      # postinstall runs `nuxt prepare` which generates .nuxt/eslint.config.mjs
+      - run: npm ci
+        env:
+          # Prevent Sentry source map upload plugin from erroring during prepare
+          SENTRY_DISABLE_AUTO_SOURCE_MAP_UPLOAD: 'true'
+      - run: npm run lint
+      - run: npm run typecheck
+
+  # ── Build ─────────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+        env:
+          SENTRY_DISABLE_AUTO_SOURCE_MAP_UPLOAD: 'true'
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholder auth config — only needed to avoid empty runtime config
+          # errors. No real Keycloak is contacted during build.
+          NUXT_AUTH_ISSUER: https://placeholder.example.com/realms/test
+          NUXT_AUTH_CLIENT_ID: ci
+          NUXT_AUTH_CLIENT_SECRET: ci-placeholder
+          NUXT_AUTH_REDIRECT_URI: http://localhost:3000/api/auth/callback
+          NUXT_QUARKUS_URL: http://localhost:8080
+          NUXT_PUBLIC_SENTRY_DSN: ''
+          SENTRY_DISABLE_AUTO_SOURCE_MAP_UPLOAD: 'true'
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuxt-output
+          path: .output/
+          retention-days: 1
+
+  # ── E2E Tests ─────────────────────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+        env:
+          SENTRY_DISABLE_AUTO_SOURCE_MAP_UPLOAD: 'true'
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nuxt-output
+          path: .output/
+      - name: Start preview server
+        run: node .output/server/index.mjs &
+        env:
+          HOST: 0.0.0.0
+          PORT: 3000
+          NUXT_AUTH_ISSUER: https://placeholder.example.com/realms/test
+          NUXT_AUTH_CLIENT_ID: ci
+          NUXT_AUTH_CLIENT_SECRET: ci-placeholder
+          NUXT_AUTH_REDIRECT_URI: http://localhost:3000/api/auth/callback
+          NUXT_QUARKUS_URL: http://localhost:8080
+      - name: Wait for server
+        run: timeout 30 bash -c 'until curl -sf http://localhost:3000/ > /dev/null 2>&1; do sleep 1; done'
+      - name: Run E2E tests
+        run: npm run test:e2e
+      - name: Publish test results
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'test-results/junit.xml'
+          check_name: 'Playwright E2E Results'
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ── Lighthouse CI ─────────────────────────────────────────────────────────
+  lighthouse-ci:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+        env:
+          SENTRY_DISABLE_AUTO_SOURCE_MAP_UPLOAD: 'true'
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nuxt-output
+          path: .output/
+      - name: Run Lighthouse CI
+        # lhci autorun starts the server via startServerCommand in .lighthouserc.json
+        run: npm run test:lhci
+        env:
+          HOST: 0.0.0.0
+          PORT: 3000
+          NUXT_AUTH_ISSUER: https://placeholder.example.com/realms/test
+          NUXT_AUTH_CLIENT_ID: ci
+          NUXT_AUTH_CLIENT_SECRET: ci-placeholder
+          NUXT_AUTH_REDIRECT_URI: http://localhost:3000/api/auth/callback
+          NUXT_QUARKUS_URL: http://localhost:8080
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      - name: Upload Lighthouse report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14

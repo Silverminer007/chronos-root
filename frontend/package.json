@@ -7,7 +7,12 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "nuxi typecheck",
+    "test:e2e": "playwright test",
+    "test:lhci": "lhci autorun"
   },
   "dependencies": {
     "@nuxt/icon": "^2.1.1",
@@ -25,8 +30,12 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.82",
+    "@lhci/cli": "^0.14.0",
+    "@nuxt/eslint": "^0.7.5",
+    "@playwright/test": "^1.50.0",
     "@primevue/nuxt-module": "^4.5.0",
-    "@types/luxon": "^3.7.1"
+    "@types/luxon": "^3.7.1",
+    "eslint": "^9.18.0"
   },
   "overrides": {
     "@vercel/nft": "^0.27.4"
