@@ -119,9 +119,9 @@ function formatRelativeTime(dateStr: string): string {
               </div>
             </div>
             <button
-              @click="showSurveyConfirm = true"
               :disabled="surveyLoading"
               class="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
+              @click="showSurveyConfirm = true"
             >
               <Icon v-if="surveyLoading" name="lucide:loader-circle" class="animate-spin" />
               <Icon v-else name="lucide:send" />

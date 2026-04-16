@@ -70,8 +70,8 @@ watch(() => props.visible, (newVal) => {
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Neue Gruppe</h2>
         </div>
         <button
-            @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+            @click="close"
         >
           <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>

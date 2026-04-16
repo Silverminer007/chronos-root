@@ -13,9 +13,9 @@
           </div>
         </div>
         <button
-            @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
             aria-label="Schließen"
+            @click="close"
         >
           <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>

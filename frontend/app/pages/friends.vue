@@ -106,8 +106,8 @@ const handleCancelRequest = async (requestId: number) => {
             <p class="text-gray-500 dark:text-gray-400 mt-1">Verwalte deine Freundschaften</p>
           </div>
           <button
-              @click="showAddDialog = true"
               class="hidden sm:flex px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg items-center gap-2"
+              @click="showAddDialog = true"
           >
             <Icon name="lucide:plus" />
             <span>Hinzufügen</span>
@@ -117,11 +117,11 @@ const handleCancelRequest = async (requestId: number) => {
         <!-- Tabs -->
         <div class="flex gap-2 mb-6">
           <button
-              @click="activeTab = 'friends'"
               class="flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-all"
               :class="activeTab === 'friends'
                 ? 'bg-linear-to-r from-purple-600 to-pink-500 text-white shadow-lg'
                 : 'bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-700'"
+              @click="activeTab = 'friends'"
           >
             <Icon name="lucide:users" class=" mr-2" />
             Freunde
@@ -130,11 +130,11 @@ const handleCancelRequest = async (requestId: number) => {
             </span>
           </button>
           <button
-              @click="activeTab = 'requests'"
               class="flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-all"
               :class="activeTab === 'requests'
                 ? 'bg-linear-to-r from-purple-600 to-pink-500 text-white shadow-lg'
                 : 'bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-700'"
+              @click="activeTab = 'requests'"
           >
             <Icon name="lucide:inbox" class=" mr-2" />
             Anfragen
@@ -182,8 +182,8 @@ const handleCancelRequest = async (requestId: number) => {
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Noch keine Freunde</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-6">Füge Freunde hinzu, um Termine gemeinsam zu planen.</p>
             <button
-                @click="showAddDialog = true"
                 class="px-6 py-3 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg"
+                @click="showAddDialog = true"
             >
               <Icon name="lucide:plus" class=" mr-2" />
               Freund hinzufügen
@@ -249,8 +249,8 @@ const handleCancelRequest = async (requestId: number) => {
 
     <!-- FAB - Add Friend (Mobile) -->
     <button
-        @click="showAddDialog = true"
         class="fixed bottom-6 right-6 w-14 h-14 sm:hidden rounded-full flex items-center justify-center text-white shadow-2xl bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all transform hover:scale-110 z-50"
+        @click="showAddDialog = true"
     >
       <Icon name="lucide:plus" class=" text-xl" />
     </button>

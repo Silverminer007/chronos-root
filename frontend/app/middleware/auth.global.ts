@@ -1,7 +1,7 @@
 import {useAuthStore} from "~/stores/auth";
 import {useOnboarding} from "~/composables/useOnboarding";
 
-export default defineNuxtRouteMiddleware(async (to, from) => {
+export default defineNuxtRouteMiddleware(async (to) => {
     const authStore = useAuthStore();
     if (!authStore.authenticated) {
         await authStore.fetchUser();

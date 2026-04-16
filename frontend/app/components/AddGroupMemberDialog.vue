@@ -70,8 +70,8 @@ watch(() => props.visible, (newVal) => {
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Mitglied hinzufügen</h2>
         </div>
         <button
-            @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+            @click="close"
         >
           <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
@@ -119,9 +119,9 @@ watch(() => props.visible, (newVal) => {
             <button
                 v-for="result in filteredResults"
                 :key="result.user_id"
-                @click="selectUser(result)"
                 class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors text-left"
                 :class="selectedUser?.user_id === result.user_id ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500' : ''"
+                @click="selectUser(result)"
             >
               <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30">
                 <span class="text-purple-600 dark:text-purple-400 font-semibold text-sm">
@@ -150,8 +150,8 @@ watch(() => props.visible, (newVal) => {
               <p class="text-sm text-gray-500 dark:text-gray-400">Wird zur Gruppe hinzugefügt</p>
             </div>
             <button
-                @click="selectedUser = null"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors"
+                @click="selectedUser = null"
             >
               <Icon name="lucide:x" />
             </button>

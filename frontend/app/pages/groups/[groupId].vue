@@ -151,8 +151,8 @@ const goBack = () => {
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Gruppe nicht gefunden</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
         <button
-            @click="goBack"
             class="px-6 py-3 rounded-lg font-medium text-white bg-linear-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 transition-all"
+            @click="goBack"
         >
           Zurück zur Übersicht
         </button>
@@ -165,8 +165,8 @@ const goBack = () => {
         <!-- Header -->
         <div class="mb-6">
           <button
-              @click="goBack"
               class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-4 transition-colors"
+              @click="goBack"
           >
             <Icon name="lucide:arrow-left" />
             <span>Zurück</span>
@@ -186,8 +186,8 @@ const goBack = () => {
             </div>
 
             <button
-                @click="showAddMemberDialog = true"
                 class="hidden sm:flex px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 transition-all shadow-lg items-center gap-2"
+                @click="showAddMemberDialog = true"
             >
               <Icon name="lucide:plus" />
               <span>Mitglied hinzufügen</span>
@@ -220,16 +220,16 @@ const goBack = () => {
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
           <button
               v-if="isLastMember"
-              @click="showDeleteDialog = true"
               class="flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium text-red-600 dark:text-red-400 border-2 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center gap-2"
+              @click="showDeleteDialog = true"
           >
             <Icon name="lucide:trash-2" />
             <span>Gruppe löschen</span>
           </button>
           <button
               v-else
-              @click="showLeaveDialog = true"
               class="flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium text-gray-600 dark:text-gray-400 border-2 border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-all flex items-center justify-center gap-2"
+              @click="showLeaveDialog = true"
           >
             <Icon name="lucide:log-out" />
             <span>Gruppe verlassen</span>
@@ -241,8 +241,8 @@ const goBack = () => {
     <!-- FAB - Add Member (Mobile) -->
     <button
         v-if="group"
-        @click="showAddMemberDialog = true"
         class="fixed bottom-6 right-6 w-14 h-14 sm:hidden rounded-full flex items-center justify-center text-white shadow-2xl bg-linear-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 transition-all transform hover:scale-110 z-50"
+        @click="showAddMemberDialog = true"
     >
       <Icon name="lucide:plus" class=" text-xl" />
     </button>

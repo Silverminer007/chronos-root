@@ -2,7 +2,7 @@
   <Dialog
       v-model:visible="isVisible"
       modal
-      :dismissableMask="true"
+      :dismissable-mask="true"
       :closable="true"
       class="w-full max-w-3xl"
   >
@@ -55,9 +55,9 @@
           <DatePicker
               id="edit-start-date"
               v-model="formData.start"
-              showTime
-              hourFormat="24"
-              dateFormat="dd.mm.yy"
+              show-time
+              hour-format="24"
+              date-format="dd.mm.yy"
               placeholder="Datum & Zeit wählen"
               class="w-full"
               :class="{ 'p-invalid': errors.start }"
@@ -73,13 +73,13 @@
           <DatePicker
               id="edit-end-date"
               v-model="formData.end"
-              showTime
-              hourFormat="24"
-              dateFormat="dd.mm.yy"
+              show-time
+              hour-format="24"
+              date-format="dd.mm.yy"
               placeholder="Datum & Zeit wählen"
               class="w-full"
               :class="{ 'p-invalid': errors.end }"
-              :minDate="formData.start"
+              :min-date="formData.start"
           />
           <small v-if="errors.end" class="text-red-500">{{ errors.end }}</small>
         </div>
@@ -139,14 +139,14 @@
         <Button
             label="Abbrechen"
             severity="secondary"
-            @click="closeDialog"
             :disabled="saving"
+            @click="closeDialog"
         />
         <Button
             label="Änderungen speichern"
-            @click="saveChanges"
             :loading="saving"
             :disabled="!isValid || !hasChanges"
+            @click="saveChanges"
         >
           <template #icon>
             <Icon name="lucide:check" class=" mr-2" />

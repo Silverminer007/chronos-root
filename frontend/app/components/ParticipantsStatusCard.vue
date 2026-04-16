@@ -187,8 +187,8 @@ const getStatusBadgeClass = (status: string) => {
         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Teilnehmer</h3>
         <button
             v-if="isResponsible"
-            @click="showAddDialog = true"
             class="w-8 h-8 flex items-center justify-center rounded-lg bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white transition-all shadow-sm"
+            @click="showAddDialog = true"
         >
           <Icon name="lucide:plus"/>
         </button>
@@ -245,8 +245,8 @@ const getStatusBadgeClass = (status: string) => {
           </div>
           <button
               v-if="isResponsible && participant.role !== 'RESPONSIBLE'"
-              @click="toggleParticipantMenu($event, participant.user_id)"
               class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0"
+              @click="toggleParticipantMenu($event, participant.user_id)"
           >
             <Icon name="lucide:more-vertical"/>
           </button>

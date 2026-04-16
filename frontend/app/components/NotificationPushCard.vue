@@ -18,10 +18,10 @@
       </div>
 
       <button
-          @click="emit('toggle')"
           :disabled="permission === 'denied'"
           class="relative w-14 h-8 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           :class="enabled ? 'bg-purple-600' : 'bg-gray-300 dark:bg-neutral-600'"
+          @click="emit('toggle')"
       >
         <span
             class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200"
@@ -30,7 +30,8 @@
       </button>
     </div>
 
-    <div v-if="permission === 'denied'"
+    <div
+v-if="permission === 'denied'"
          class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
       <p class="text-sm text-yellow-800 dark:text-yellow-200">
         <Icon name="lucide:info" class=" mr-2" />

@@ -12,8 +12,8 @@
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Teilnehmer hinzufügen</h2>
         </div>
         <button
-            @click="close"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+            @click="close"
         >
           <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg" />
         </button>
@@ -45,41 +45,41 @@
           </label>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
-                @click="selectedRole = 'RESPONSIBLE'"
                 class="p-3 rounded-lg border-2 transition-all"
                 :class="selectedRole === 'RESPONSIBLE'
                 ? 'border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
+                @click="selectedRole = 'RESPONSIBLE'"
             >
               <Icon name="lucide:star" class=" text-purple-600 dark:text-purple-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Organisator</p>
             </button>
             <button
-                @click="selectedRole = 'ATTENDANT'"
                 class="p-3 rounded-lg border-2 transition-all"
                 :class="selectedRole === 'ATTENDANT'
                 ? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
+                @click="selectedRole = 'ATTENDANT'"
             >
               <Icon name="lucide:user" class=" text-blue-600 dark:text-blue-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Teilnehmer</p>
             </button>
             <button
-                @click="selectedRole = 'HELPER'"
                 class="p-3 rounded-lg border-2 transition-all"
                 :class="selectedRole === 'HELPER'
                 ? 'border-green-600 dark:border-green-400 bg-green-50 dark:bg-green-900/20'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
+                @click="selectedRole = 'HELPER'"
             >
               <Icon name="lucide:wrench" class=" text-green-600 dark:text-green-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Helfer</p>
             </button>
             <button
-                @click="selectedRole = 'GUEST'"
                 class="p-3 rounded-lg border-2 transition-all"
                 :class="selectedRole === 'GUEST'
                 ? 'border-gray-600 dark:border-gray-400 bg-gray-50 dark:bg-gray-800/50'
                 : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
+                @click="selectedRole = 'GUEST'"
             >
               <Icon name="lucide:eye" class=" text-gray-600 dark:text-gray-400 mb-1" />
               <p class="text-sm font-medium text-gray-900 dark:text-white">Gast</p>
@@ -107,8 +107,8 @@
             <button
                 v-for="result in searchResults"
                 :key="result.id"
-                @click="selectResult(result)"
                 class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors text-left"
+                @click="selectResult(result)"
             >
               <div
                   class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-linear-to-br
@@ -125,7 +125,8 @@
         </div>
 
         <!-- Selected Item -->
-        <div v-if="selectedItem"
+        <div
+v-if="selectedItem"
              class="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -141,8 +142,8 @@
               </div>
             </div>
             <button
-                @click="selectedItem = null"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+                @click="selectedItem = null"
             >
               <Icon name="lucide:x" />
             </button>

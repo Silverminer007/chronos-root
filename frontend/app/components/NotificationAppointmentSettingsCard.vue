@@ -19,7 +19,8 @@
 
     <!-- Notification Settings List -->
     <div class="divide-y divide-gray-200 dark:divide-neutral-700">
-      <div v-for="notificationType in notificationTypes"
+      <div
+v-for="notificationType in notificationTypes"
            :key="notificationType.key"
            class="p-6">
         <!-- Notification Type Header -->
@@ -40,8 +41,8 @@
           <button
               v-for="option in roleOptions"
               :key="option.value"
-              @click="emit('update', notificationType.key, option.value)"
               :class="getButtonClasses(option, settings[notificationType.key] === option.value)"
+              @click="emit('update', notificationType.key, option.value)"
           >
             <Icon :name="option.icon" :class="getIconClasses(option, settings[notificationType.key] === option.value)" />
             <p class="text-xs font-medium text-gray-900 dark:text-white hidden sm:block">

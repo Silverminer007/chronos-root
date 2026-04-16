@@ -23,9 +23,9 @@
         <button
             v-for="(_, i) in steps"
             :key="i"
-            @click="currentStep = i"
             class="w-2.5 h-2.5 rounded-full transition-all duration-300"
             :class="i === currentStep ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'"
+            @click="currentStep = i"
         />
       </div>
 
@@ -50,24 +50,24 @@
       <div class="flex items-center gap-4 mt-8">
         <button
             v-if="currentStep > 0"
-            @click="currentStep--"
             class="px-5 py-2.5 rounded-lg font-medium text-white/80 hover:text-white border border-white/30 hover:border-white/60 transition-all"
+            @click="currentStep--"
         >
           Zurück
         </button>
 
         <button
             v-if="currentStep < steps.length - 1"
-            @click="currentStep++"
             class="px-6 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-lg transition-all transform hover:scale-105"
+            @click="currentStep++"
         >
           Weiter
         </button>
 
         <button
             v-else
-            @click="completeOnboarding()"
             class="px-6 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-lg transition-all transform hover:scale-105"
+            @click="completeOnboarding()"
         >
           Loslegen
         </button>
@@ -76,8 +76,8 @@
       <!-- Skip -->
       <button
           v-if="currentStep < steps.length - 1"
-          @click="completeOnboarding()"
           class="mt-4 text-white/60 hover:text-white/90 text-sm transition-colors"
+          @click="completeOnboarding()"
       >
         Überspringen
       </button>
@@ -86,11 +86,11 @@
 </template>
 
 <script setup lang="ts">
+import {useOnboarding} from "~/composables/useOnboarding";
+
 definePageMeta({
   layout: false
 })
-
-import {useOnboarding} from "~/composables/useOnboarding";
 
 const currentStep = ref(0)
 

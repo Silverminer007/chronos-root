@@ -189,7 +189,7 @@ async function submit() {
               </div>
               <div class="space-y-3 ml-10">
                 <label v-for="opt in q1Options" :key="opt.value" class="flex items-center gap-3 cursor-pointer group">
-                  <input type="radio" :value="opt.value" v-model="q1" class="w-4 h-4 accent-purple-600 cursor-pointer shrink-0" />
+                  <input v-model="q1" type="radio" :value="opt.value" class="w-4 h-4 accent-purple-600 cursor-pointer shrink-0" />
                   <span class="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ opt.label }}</span>
                 </label>
                 <div v-if="q1 === 'other'" class="pt-1">
@@ -238,8 +238,8 @@ async function submit() {
                   <input
                     type="checkbox"
                     :checked="q3.includes(opt.value)"
-                    @change="toggleQ3(opt.value)"
                     class="w-4 h-4 accent-purple-600 cursor-pointer rounded shrink-0"
+                    @change="toggleQ3(opt.value)"
                   />
                   <span class="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ opt.label }}</span>
                 </label>
@@ -261,8 +261,8 @@ async function submit() {
                       <input
                         type="checkbox"
                         :checked="q4.includes(opt.value)"
-                        @change="toggleQ4(opt.value)"
                         class="w-4 h-4 accent-purple-600 cursor-pointer rounded shrink-0"
+                        @change="toggleQ4(opt.value)"
                       />
                       <span class="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ opt.label }}</span>
                     </label>
@@ -276,8 +276,8 @@ async function submit() {
                       <input
                         type="checkbox"
                         :checked="q4.includes(opt.value)"
-                        @change="toggleQ4(opt.value)"
                         class="w-4 h-4 accent-purple-600 cursor-pointer rounded shrink-0"
+                        @change="toggleQ4(opt.value)"
                       />
                       <span class="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ opt.label }}</span>
                     </label>
@@ -309,9 +309,9 @@ async function submit() {
 
             <!-- Submit -->
             <button
-              @click="submit"
               :disabled="submitting"
               class="w-full py-4 rounded-xl font-semibold text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center gap-2"
+              @click="submit"
             >
               <Icon v-if="submitting" name="lucide:loader-circle" class="animate-spin" />
               <Icon v-else name="lucide:send" />

@@ -55,8 +55,8 @@ async function sendMessage(messageBody: string) {
   <Toast/>
   <LazyMessageDialog
       :visible="messageDialog"
-      :appointmentTitle="`${appointment.name} ${formatDate(appointment.start)}`"
-      :recipientCount="appointment.participants?.length || 0"
+      :appointment-title="`${appointment.name} ${formatDate(appointment.start)}`"
+      :recipient-count="appointment.participants?.length || 0"
       @close="messageDialog = false"
       @send="sendMessage($event.message)"
   />
@@ -133,19 +133,19 @@ async function sendMessage(messageBody: string) {
       <div class="flex flex-wrap gap-2">
         <button
             :disabled="hasApproved"
-            @click.stop="setParticipationStatus('APPROVED')"
             class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
             :class="hasApproved
               ? 'bg-green-600 text-white'
               : 'border-2 border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/20'"
+            @click.stop="setParticipationStatus('APPROVED')"
         >
           <Icon name="lucide:check" class=" text-sm" />
           <span class="hidden sm:inline">Zusagen</span>
         </button>
 
         <button
-            @click="messageDialog = true"
             class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-medium transition-all border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center justify-center gap-2"
+            @click="messageDialog = true"
         >
           <Icon name="lucide:send" class=" text-sm" />
           <span class="hidden sm:inline">Nachricht</span>
@@ -153,11 +153,11 @@ async function sendMessage(messageBody: string) {
 
         <button
             :disabled="hasRejected"
-            @click.stop="setParticipationStatus('REJECTED')"
             class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
             :class="hasRejected
               ? 'bg-red-600 text-white'
               : 'border-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-900/20'"
+            @click.stop="setParticipationStatus('REJECTED')"
         >
           <Icon name="lucide:x" class=" text-sm" />
           <span class="hidden sm:inline">Absagen</span>

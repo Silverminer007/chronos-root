@@ -57,31 +57,32 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
 
     <div class="flex flex-col sm:flex-row gap-3">
       <button
-          @click="updateParticipation('approve')"
           :disabled="ownParticipationStatus === 'APPROVED' || updating"
           class="flex-1 px-6 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           :class="ownParticipationStatus === 'APPROVED'
                   ? 'bg-green-600 text-white'
                   : 'border-2 border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/20'"
+          @click="updateParticipation('approve')"
       >
         <Icon name="lucide:check" />
         <span>Zusagen</span>
       </button>
 
       <button
-          @click="updateParticipation('reject')"
           :disabled="ownParticipationStatus === 'REJECTED' || updating"
           class="flex-1 px-6 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           :class="ownParticipationStatus === 'REJECTED'
                   ? 'bg-red-600 text-white'
                   : 'border-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-900/20'"
+          @click="updateParticipation('reject')"
       >
         <Icon name="lucide:x" />
         <span>Absagen</span>
       </button>
     </div>
 
-    <div v-if="ownParticipationStatus === 'PENDING'"
+    <div
+v-if="ownParticipationStatus === 'PENDING'"
          class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
       <div class="flex gap-3">
         <Icon name="lucide:triangle-alert" class=" text-yellow-600 dark:text-yellow-400 mt-0.5" />

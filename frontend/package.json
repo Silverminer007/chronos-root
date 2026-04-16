@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.82",
-    "@lhci/cli": "^0.14.0",
+    "@lhci/cli": "^0.15.1",
     "@nuxt/eslint": "^0.7.5",
     "@playwright/test": "^1.50.0",
     "@primevue/nuxt-module": "^4.5.0",

@@ -1,5 +1,6 @@
 <template>
-  <div v-if="appointmentsStore.loading"
+  <div
+v-if="appointmentsStore.loading"
        class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
     <div class="text-center">
       <i class="pi animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
@@ -13,8 +14,8 @@
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Termin nicht gefunden</h2>
       <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
       <button
-          @click="goBack"
           class="px-6 py-3 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
+          @click="goBack"
       >
         Zurück zur Übersicht
       </button>

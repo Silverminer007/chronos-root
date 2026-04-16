@@ -122,13 +122,13 @@ function getStatusButtonClasses(value: string): string {
             <!-- Date From -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Von</label>
-              <DatePicker v-model="filterDateFrom" dateFormat="dd.mm.yy" placeholder="Startdatum" class="w-full" />
+              <DatePicker v-model="filterDateFrom" date-format="dd.mm.yy" placeholder="Startdatum" class="w-full" />
             </div>
 
             <!-- Date To -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bis</label>
-              <DatePicker v-model="filterDateTo" dateFormat="dd.mm.yy" placeholder="Enddatum" :minDate="filterDateFrom ?? undefined" class="w-full" />
+              <DatePicker v-model="filterDateTo" date-format="dd.mm.yy" placeholder="Enddatum" :min-date="filterDateFrom ?? undefined" class="w-full" />
             </div>
           </div>
 
