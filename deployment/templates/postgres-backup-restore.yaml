@@ -185,11 +185,13 @@ spec:
 
                   # Backup einspielen
                   echo "📤 Spiele Backup ein..."
-                  psql \
+                  pg_restore \
                     -h $POSTGRES_HOST \
                     -U $POSTGRES_USER \
                     -d $POSTGRES_DB \
-                    < "$BACKUP_PATH"
+                    --no-owner \
+                    --no-privileges \
+                    "$BACKUP_PATH"
 
                   echo ""
                   echo "════════════════════════════════════════════════════"
