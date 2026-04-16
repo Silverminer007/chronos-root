@@ -7,7 +7,7 @@ metadata:
   labels:
     app: postgres-backup
 spec:
-  schedule: "0 2 * * *"  # Jeden Tag um 2 Uhr nachts
+  schedule: "0 2,8,14,20 * * *"  # Alle 6 Stunden
   successfulJobsHistoryLimit: 7  # Letzte 7 erfolgreiche Jobs behalten
   failedJobsHistoryLimit: 3      # Letzte 3 fehlgeschlagene Jobs behalten
   concurrencyPolicy: Forbid      # Keine parallelen Backups
