@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type {Appointment} from "~/types";
-import {computed, ref} from "vue";
 import {useAppointmentsStore} from "~/stores/appointments";
 import {useDateFormatter} from "~/composables/useDateFormatter";
 import {useToast} from "primevue/usetoast";
@@ -101,7 +100,3 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
       @send="handleSendMessage"
   />
 </template>
-
-<style scoped>
-
-</style>

@@ -106,7 +106,7 @@ watch(() => props.visible, (newVal) => {
           </h3>
 
           <div v-if="searching" class="text-center py-6">
-            <i class="pi animate-spin text-xl text-blue-600 dark:text-blue-400" />
+            <Icon name="lucide:loader-2" class="animate-spin text-xl text-blue-600 dark:text-blue-400" />
             <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Wird gesucht...</p>
           </div>
 

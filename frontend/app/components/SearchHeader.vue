@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import {ref} from "vue";
 import {useAuthStore} from "~/stores/auth";
 import {useAppointmentsStore} from "~/stores/appointments";
 import Menu from 'primevue/menu';

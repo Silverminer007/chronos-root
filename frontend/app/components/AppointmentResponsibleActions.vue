@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import Toast from "primevue/toast";
-import {computed, ref} from "vue";
 import type {Appointment} from "~/types";
 import {useAuthStore} from "~/stores/auth";
 import {useToast} from "primevue/usetoast";
@@ -125,7 +124,3 @@ const requestRecheck = () => {
       @confirm="handleRequestRecheck"
   />
 </template>
-
-<style scoped>
-
-</style>

@@ -33,7 +33,3 @@ const goBack = () => {
     </div>
   </header>
 </template>
-
-<style scoped>
-
-</style>

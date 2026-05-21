@@ -1,3 +1,74 @@
+<script setup lang="ts">
+import {useFriends} from "~/composables/useFriends";
+
+interface Props {
+  visible: boolean;
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<{
+  close: [];
+  add: [data: { id: number; role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER' }];
+}>();
+
+const {searchFriends, loading: searching} = useFriends();
+
+const searchQuery = ref('');
+const selectedRole = ref<'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER'>('ATTENDANT');
+const searchResults = ref<any[]>([]);
+const selectedItem = ref<any>(null);
+
+const handleSearch = async () => {
+  if (searchQuery.value.length < 2) {
+    searchResults.value = [];
+    return;
+  }
+
+  searchResults.value = await searchFriends(searchQuery.value);
+};
+
+const selectResult = (result: any) => {
+  selectedItem.value = result;
+};
+
+const getRoleLabel = (role: string) => {
+  const labels: Record<string, string> = {
+    RESPONSIBLE: 'Organisator',
+    ATTENDANT: 'Teilnehmer',
+    HELPER: 'Helfer',
+    GUEST: 'Gast'
+  };
+  return labels[role] || role;
+};
+
+const close = () => {
+  searchQuery.value = '';
+  searchResults.value = [];
+  selectedItem.value = null;
+  emit('close');
+};
+
+const add = () => {
+  if (!selectedItem.value) return;
+
+  emit('add', {
+    id: selectedItem.value.user_id,
+    role: selectedRole.value
+  });
+
+  close();
+};
+
+watch(() => props.visible, (newVal) => {
+  if (!newVal) {
+    searchQuery.value = '';
+    searchResults.value = [];
+    selectedItem.value = null;
+  }
+});
+</script>
+
 <template>
   <div v-if="visible" class="fixed inset-0 flex items-center justify-center bg-black/60 z-50 p-4">
     <div
@@ -24,7 +95,7 @@
         <!-- Search -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {{ 'Person suchen' }}
+            Person suchen
           </label>
           <div class="relative">
             <Icon name="lucide:search" class=" absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -172,75 +243,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import {ref, watch} from 'vue';
-import {useFriends} from "~/composables/useFriends";
-
-interface Props {
-  visible: boolean;
-}
-
-const props = defineProps<Props>();
-
-const emit = defineEmits<{
-  close: [];
-  add: [data: { id: number; role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER' }];
-}>();
-
-const {searchFriends, loading: searching} = useFriends();
-
-const searchQuery = ref('');
-const selectedRole = ref<'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER'>('ATTENDANT');
-const searchResults = ref<any[]>([]);
-const selectedItem = ref<any>(null);
-
-const handleSearch = async () => {
-  if (searchQuery.value.length < 2) {
-    searchResults.value = [];
-    return;
-  }
-
-  searchResults.value = await searchFriends(searchQuery.value);
-};
-
-const selectResult = (result: any) => {
-  selectedItem.value = result;
-};
-
-const getRoleLabel = (role: string) => {
-  const labels: Record<string, string> = {
-    RESPONSIBLE: 'Organisator',
-    ATTENDANT: 'Teilnehmer',
-    HELPER: 'Helfer',
-    GUEST: 'Gast'
-  };
-  return labels[role] || role;
-};
-
-const close = () => {
-  searchQuery.value = '';
-  searchResults.value = [];
-  selectedItem.value = null;
-  emit('close');
-};
-
-const add = () => {
-  if (!selectedItem.value) return;
-
-  emit('add', {
-    id: selectedItem.value.user_id,
-    role: selectedRole.value
-  });
-
-  close();
-};
-
-watch(() => props.visible, (newVal) => {
-  if (!newVal) {
-    searchQuery.value = '';
-    searchResults.value = [];
-    selectedItem.value = null;
-  }
-});
-</script>

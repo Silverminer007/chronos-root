@@ -3,7 +3,6 @@ import Toast from "primevue/toast";
 import type {Appointment} from "~/types";
 import {useAppointmentsStore} from "~/stores/appointments";
 import {useAuthStore} from "~/stores/auth";
-import {ref, computed} from "vue";
 import {useToast} from "primevue/usetoast";
 
 const appointmentStore = useAppointmentsStore();
@@ -97,7 +96,3 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
     </div>
   </div>
 </template>
-
-<style scoped>
-
-</style>

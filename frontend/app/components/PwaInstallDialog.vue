@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-
 let deferredPrompt: any = null;
 
 const visible = ref(false);
@@ -22,7 +20,6 @@ async function install() {
   deferredPrompt = null;
   visible.value = false;
 
-  console.log('User install choice:', result);
 }
 
 function close() {

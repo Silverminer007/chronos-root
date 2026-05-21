@@ -15,13 +15,13 @@
 Block order within `.vue` files:
 
 ```vue
-<template>
-  ...
-</template>
-
 <script setup lang="ts">
   ...
 </script>
+
+<template>
+  ...
+</template>
 
 <style scoped>
   ...

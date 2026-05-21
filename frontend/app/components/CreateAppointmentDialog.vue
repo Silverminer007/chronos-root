@@ -1,174 +1,6 @@
-<template>
-  <Dialog
-      v-model:visible="isVisible"
-      modal
-      :dismissableMask="true"
-      :closable="true"
-      class="w-full max-w-3xl"
-  >
-    <template #header>
-      <div class="flex items-center gap-3">
-        <div
-            class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center">
-          <Icon name="lucide:calendar-plus" class=" text-purple-600 dark:text-purple-400 text-xl" />
-        </div>
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Neuen Termin erstellen</h2>
-      </div>
-    </template>
-
-    <div class="space-y-6 pt-4">
-      <!-- Event Name -->
-      <div>
-        <label for="event-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Terminname <span class="text-red-500">*</span>
-        </label>
-        <InputText
-            id="event-name"
-            v-model="formData.name"
-            placeholder="z.B. Sommerfest 2024"
-            class="w-full"
-            :class="{ 'p-invalid': errors.name }"
-        />
-        <small v-if="errors.name" class="text-red-500">{{ errors.name }}</small>
-      </div>
-
-      <!-- Description -->
-      <div>
-        <label for="event-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Beschreibung
-        </label>
-        <Textarea
-            id="event-description"
-            v-model="formData.description"
-            rows="4"
-            placeholder="Beschreibe den Termin..."
-            class="w-full"
-        />
-      </div>
-
-      <!-- Date & Time -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Start Date & Time -->
-        <div>
-          <label for="start-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Startdatum & -zeit <span class="text-red-500">*</span>
-          </label>
-          <DatePicker
-              id="start-date"
-              v-model="formData.start"
-              showTime
-              hourFormat="24"
-              dateFormat="dd.mm.yy"
-              placeholder="Datum & Zeit wählen"
-              class="w-full"
-              :class="{ 'p-invalid': errors.start }"
-          />
-          <small v-if="errors.start" class="text-red-500">{{ errors.start }}</small>
-        </div>
-
-        <!-- End Date & Time -->
-        <div>
-          <label for="end-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Enddatum & -zeit <span class="text-red-500">*</span>
-          </label>
-          <DatePicker
-              id="end-date"
-              v-model="formData.end"
-              showTime
-              hourFormat="24"
-              dateFormat="dd.mm.yy"
-              placeholder="Datum & Zeit wählen"
-              class="w-full"
-              :class="{ 'p-invalid': errors.end }"
-              :minDate="formData.start"
-          />
-          <small v-if="errors.end" class="text-red-500">{{ errors.end }}</small>
-        </div>
-      </div>
-
-      <!-- Venue -->
-      <div>
-        <label for="venue" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Veranstaltungsort
-        </label>
-        <InputText
-            id="venue"
-            v-model="formData.venue"
-            placeholder="z.B. Vereinsheim"
-            class="w-full"
-        >
-          <template #prepend>
-            <Icon name="lucide:map-pin" />
-          </template>
-        </InputText>
-      </div>
-
-      <!-- Minimal Attendees -->
-      <div>
-        <label for="minimal-attendees" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Mindestanzahl Teilnehmer
-        </label>
-        <InputNumber
-            id="minimal-attendees"
-            v-model="formData.minimalAttendees"
-            :min="0"
-            :max="1000"
-            placeholder="z.B. 10"
-            class="w-full"
-        />
-        <small class="text-gray-500 dark:text-gray-400">Optional: Wieviele Teilnehmer werden mindestens
-          benötigt?</small>
-      </div>
-
-      <!-- Add Users/Groups Later Info -->
-      <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div class="flex gap-3">
-          <Icon name="lucide:info" class=" text-blue-600 dark:text-blue-400 mt-0.5" />
-          <div class="flex-1">
-            <p class="text-sm font-medium text-blue-900 dark:text-blue-200">
-              Weitere Teilnehmer hinzufügen
-            </p>
-            <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              Du kannst nach dem Erstellen weitere Personen und Gruppen zum Termin einladen.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex flex-col-reverse sm:flex-row justify-end gap-3">
-        <Button
-            label="Abbrechen"
-            severity="secondary"
-            @click="closeDialog"
-            :disabled="saving"
-        />
-        <Button
-            label="Termin erstellen"
-            @click="createAppointment"
-            :loading="saving"
-            :disabled="!isValid"
-        >
-          <template #icon>
-            <Icon name="lucide:check" class=" mr-2" />
-          </template>
-        </Button>
-      </div>
-    </template>
-  </Dialog>
-</template>
-
 <script setup lang="ts">
-import {ref, computed, watch} from 'vue';
 import {useAppointmentsStore} from '~/stores/appointments';
 import {useToast} from 'primevue/usetoast';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Textarea from 'primevue/textarea';
-import DatePicker from 'primevue/datepicker';
-import InputNumber from 'primevue/inputnumber';
-import Button from 'primevue/button';
 
 interface Props {
   visible: boolean;
@@ -333,6 +165,167 @@ watch(() => props.visible, (newVal) => {
   }
 });
 </script>
+
+<template>
+  <Dialog
+      v-model:visible="isVisible"
+      modal
+      :dismissableMask="true"
+      :closable="true"
+      class="w-full max-w-3xl"
+  >
+    <template #header>
+      <div class="flex items-center gap-3">
+        <div
+            class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center">
+          <Icon name="lucide:calendar-plus" class=" text-purple-600 dark:text-purple-400 text-xl" />
+        </div>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Neuen Termin erstellen</h2>
+      </div>
+    </template>
+
+    <div class="space-y-6 pt-4">
+      <!-- Event Name -->
+      <div>
+        <label for="event-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Terminname <span class="text-red-500">*</span>
+        </label>
+        <InputText
+            id="event-name"
+            v-model="formData.name"
+            placeholder="z.B. Sommerfest 2024"
+            class="w-full"
+            :class="{ 'p-invalid': errors.name }"
+        />
+        <small v-if="errors.name" class="text-red-500">{{ errors.name }}</small>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label for="event-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Beschreibung
+        </label>
+        <Textarea
+            id="event-description"
+            v-model="formData.description"
+            rows="4"
+            placeholder="Beschreibe den Termin..."
+            class="w-full"
+        />
+      </div>
+
+      <!-- Date & Time -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Start Date & Time -->
+        <div>
+          <label for="start-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Startdatum & -zeit <span class="text-red-500">*</span>
+          </label>
+          <DatePicker
+              id="start-date"
+              v-model="formData.start"
+              showTime
+              hourFormat="24"
+              dateFormat="dd.mm.yy"
+              placeholder="Datum & Zeit wählen"
+              class="w-full"
+              :class="{ 'p-invalid': errors.start }"
+          />
+          <small v-if="errors.start" class="text-red-500">{{ errors.start }}</small>
+        </div>
+
+        <!-- End Date & Time -->
+        <div>
+          <label for="end-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Enddatum & -zeit <span class="text-red-500">*</span>
+          </label>
+          <DatePicker
+              id="end-date"
+              v-model="formData.end"
+              showTime
+              hourFormat="24"
+              dateFormat="dd.mm.yy"
+              placeholder="Datum & Zeit wählen"
+              class="w-full"
+              :class="{ 'p-invalid': errors.end }"
+              :minDate="formData.start"
+          />
+          <small v-if="errors.end" class="text-red-500">{{ errors.end }}</small>
+        </div>
+      </div>
+
+      <!-- Venue -->
+      <div>
+        <label for="venue" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Veranstaltungsort
+        </label>
+        <InputText
+            id="venue"
+            v-model="formData.venue"
+            placeholder="z.B. Vereinsheim"
+            class="w-full"
+        >
+          <template #prepend>
+            <Icon name="lucide:map-pin" />
+          </template>
+        </InputText>
+      </div>
+
+      <!-- Minimal Attendees -->
+      <div>
+        <label for="minimal-attendees" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Mindestanzahl Teilnehmer
+        </label>
+        <InputNumber
+            id="minimal-attendees"
+            v-model="formData.minimalAttendees"
+            :min="0"
+            :max="1000"
+            placeholder="z.B. 10"
+            class="w-full"
+        />
+        <small class="text-gray-500 dark:text-gray-400">Optional: Wieviele Teilnehmer werden mindestens
+          benötigt?</small>
+      </div>
+
+      <!-- Add Users/Groups Later Info -->
+      <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div class="flex gap-3">
+          <Icon name="lucide:info" class=" text-blue-600 dark:text-blue-400 mt-0.5" />
+          <div class="flex-1">
+            <p class="text-sm font-medium text-blue-900 dark:text-blue-200">
+              Weitere Teilnehmer hinzufügen
+            </p>
+            <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+              Du kannst nach dem Erstellen weitere Personen und Gruppen zum Termin einladen.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="flex flex-col-reverse sm:flex-row justify-end gap-3">
+        <Button
+            label="Abbrechen"
+            severity="secondary"
+            @click="closeDialog"
+            :disabled="saving"
+        />
+        <Button
+            label="Termin erstellen"
+            @click="createAppointment"
+            :loading="saving"
+            :disabled="!isValid"
+        >
+          <template #icon>
+            <Icon name="lucide:check" class=" mr-2" />
+          </template>
+        </Button>
+      </div>
+    </template>
+  </Dialog>
+</template>
 
 <style scoped>
 /* Custom styling for invalid inputs */

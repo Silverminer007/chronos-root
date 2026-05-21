@@ -150,7 +150,7 @@ const handleCancelRequest = async (requestId: number) => {
 
         <!-- Loading State -->
         <div v-if="friendshipsStore.loading" class="text-center py-16">
-          <i class="pi animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
+          <Icon name="lucide:loader-2" class="animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
           <p class="text-gray-600 dark:text-gray-400">Wird geladen...</p>
         </div>
 

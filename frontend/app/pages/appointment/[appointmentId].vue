@@ -1,8 +1,37 @@
+<script setup lang="ts">
+import {useAppointmentsStore} from '~/stores/appointments';
+
+const route = useRoute();
+const appointmentsStore = useAppointmentsStore();
+
+const appointmentId = computed(() => Number(route.params.appointmentId));
+const appointment = computed(() => appointmentsStore.currentAppointment);
+const error = ref('');
+
+const router = useRouter();
+const goBack = () => {
+  if (router.options.history.state.back) {
+    router.back();
+  } else {
+    navigateTo('/agenda');
+  }
+};
+
+onMounted(async () => {
+  await appointmentsStore.fetchAppointment(appointmentId.value);
+  if (appointmentsStore.error) {
+    error.value = 'Termin konnte nicht geladen werden';
+  } else {
+    error.value = '';
+  }
+});
+</script>
+
 <template>
   <div v-if="appointmentsStore.loading"
        class="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
     <div class="text-center">
-      <i class="pi animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
+      <Icon name="lucide:loader-2" class="animate-spin text-4xl text-purple-600 dark:text-purple-400 mb-4" />
       <p class="text-gray-600 dark:text-gray-400">Termin wird geladen...</p>
     </div>
   </div>
@@ -54,37 +83,6 @@
     <Toast/>
   </div>
 </template>
-
-<script setup lang="ts">
-import {ref, computed, onMounted} from 'vue';
-import {useRoute} from 'vue-router';
-import {useAppointmentsStore} from '~/stores/appointments';
-
-const route = useRoute();
-const appointmentsStore = useAppointmentsStore();
-
-const appointmentId = computed(() => Number(route.params.appointmentId));
-const appointment = computed(() => appointmentsStore.currentAppointment);
-const error = ref('');
-
-const router = useRouter();
-const goBack = () => {
-  if (router.options.history.state.back) {
-    router.back();
-  } else {
-    navigateTo('/agenda');
-  }
-};
-
-onMounted(async () => {
-  await appointmentsStore.fetchAppointment(appointmentId.value);
-  if (appointmentsStore.error) {
-    error.value = 'Termin konnte nicht geladen werden';
-  } else {
-    error.value = '';
-  }
-});
-</script>
 
 <style scoped>
 /* Custom scrollbar */

@@ -280,7 +280,3 @@ const getStatusBadgeClass = (status: string) => {
     />
   </div>
 </template>
-
-<style scoped>
-
-</style>

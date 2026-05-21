@@ -139,7 +139,3 @@ const getStatusClass = (status: string) => {
       :appointment="appointment"
   />
 </template>
-
-<style scoped>
-
-</style>

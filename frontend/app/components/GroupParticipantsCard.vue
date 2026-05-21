@@ -461,7 +461,3 @@ const getRoleIconClass = (role: string) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-
-</style>
