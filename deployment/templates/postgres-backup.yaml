@@ -125,23 +125,6 @@ spec:
 
                   echo "✅ Upload successful!"
 
-                  # Alte S3-Backups aufräumen (älter als 30 Tage)
-                  echo "🧹 Cleaning up S3 backups older than 30 days..."
-                  CUTOFF_DATE=$(date -d "30 days ago" +%Y-%m-%dT%H:%M:%S)
-                  aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" \
-                    | awk '{print $4}' \
-                    | while read key; do
-                        MOD_DATE=$(aws s3api head-object \
-                          --bucket "$S3_BUCKET" \
-                          --key "$S3_PREFIX/$key" \
-                          --query 'LastModified' \
-                          --output text 2>/dev/null || echo "")
-                        if [[ -n "$MOD_DATE" && "$MOD_DATE" < "$CUTOFF_DATE" ]]; then
-                          echo "  🗑️  Deleting old backup: $key"
-                          aws s3 rm "s3://$S3_BUCKET/$S3_PREFIX/$key"
-                        fi
-                      done
-
                   echo "📋 Current S3 backups:"
                   aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" | tail -10
 
