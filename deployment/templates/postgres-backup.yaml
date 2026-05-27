@@ -190,25 +190,8 @@ spec:
 
           volumes:
             - name: backup-storage
-              persistentVolumeClaim:
-                claimName: postgres-backup-pvc
-
----
-# PVC für Backup Storage
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-backup-pvc
-  namespace: {{ .Values.namespace }}
-  labels:
-    app: postgres-backup
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: hcloud-volumes
-  resources:
-    requests:
-      storage: 50Gi
+              emptyDir:
+                sizeLimit: "5Gi"
 ---
 # ServiceMonitor für Backup Monitoring (optional)
 apiVersion: monitoring.coreos.com/v1
