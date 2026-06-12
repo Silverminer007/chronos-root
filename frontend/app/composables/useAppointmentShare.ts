@@ -49,8 +49,7 @@ export function useAppointmentShare() {
             try {
                 await navigator.share({
                     title: appointment.name,
-                    text,
-                    url
+                    text
                 });
             } catch (err) {
                 if ((err as DOMException).name !== 'AbortError') {
