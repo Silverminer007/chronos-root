@@ -161,8 +161,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                     this.pagination.total = meta.total;
                 }
                 this.appointments = this.appointments.concat(items);
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Laden der Appointments'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Laden der Appointments')
                 throw err
             } finally {
                 this.loading = false
@@ -192,8 +192,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 }
 
                 return response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Laden des Appointments'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Laden des Appointments')
                 throw err
             } finally {
                 this.loading = false
@@ -201,7 +201,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         // Neues Appointment erstellen
-        async createAppointment(data: Omit<Appointment, 'id'>) {
+        async createAppointment(data: Pick<Appointment, 'name' | 'description' | 'start' | 'end' | 'venue' | 'minimal_attendees'>) {
             this.loading = true
             this.error = null
 
@@ -213,8 +213,8 @@ export const useAppointmentsStore = defineStore('appointments', {
 
                 this.appointments.push(response)
                 return response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Erstellen des Appointments'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Erstellen des Appointments')
                 throw err
             } finally {
                 this.loading = false
@@ -242,8 +242,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 }
 
                 return response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Aktualisieren des Appointments'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Aktualisieren des Appointments')
                 throw err
             } finally {
                 this.loading = false
@@ -265,8 +265,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (this.currentAppointment?.id === id) {
                     this.currentAppointment = null
                 }
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Löschen des Appointments'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Löschen des Appointments')
                 throw err
             } finally {
                 this.loading = false
@@ -285,8 +285,8 @@ export const useAppointmentsStore = defineStore('appointments', {
 
                 // Appointment neu laden
                 await this.fetchAppointment(id)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Absagen des Appointments'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Absagen des Appointments')
                 throw err
             } finally {
                 this.loading = false
@@ -302,8 +302,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Hinzufügen des Teilnehmers'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Hinzufügen des Teilnehmers')
                 throw err
             }
         },
@@ -316,8 +316,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Entfernen des Teilnehmers'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Entfernen des Teilnehmers')
                 throw err
             }
         },
@@ -331,8 +331,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Ändern der Rolle'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Ändern der Rolle')
                 throw err
             }
         },
@@ -346,8 +346,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Hinzufügen der Gruppe'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Hinzufügen der Gruppe')
                 throw err
             }
         },
@@ -360,8 +360,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Entfernen der Gruppe'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Entfernen der Gruppe')
                 throw err
             }
         },
@@ -374,8 +374,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Zusagen'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Zusagen')
                 throw err
             }
         },
@@ -388,8 +388,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 })
 
                 await this.fetchAppointment(appointmentId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Absagen'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Absagen')
                 throw err
             }
         },
@@ -406,8 +406,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 await this.fetchAppointment(appointmentId)
 
                 return response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Senden der Nachricht'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Senden der Nachricht')
                 throw err
             }
         },
@@ -422,8 +422,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                 }
 
                 return response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Laden der Nachrichten'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Laden der Nachrichten')
                 throw err
             }
         },

@@ -36,7 +36,7 @@ onMounted(async () => {
     if (!groupsStore.currentGroup) {
       error.value = 'Gruppe nicht gefunden';
     }
-  } catch (err) {
+  } catch {
     error.value = 'Gruppe konnte nicht geladen werden';
   }
 });
@@ -54,7 +54,7 @@ const handleAddMember = async (userId: number) => {
       detail: 'Das Mitglied wurde zur Gruppe hinzugefügt',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -73,7 +73,7 @@ const handleRemoveMember = async (userId: number) => {
       detail: 'Das Mitglied wurde aus der Gruppe entfernt',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -95,7 +95,7 @@ const handleLeaveGroup = async () => {
       life: 3000
     });
     router.push('/groups');
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -116,7 +116,7 @@ const handleDeleteGroup = async () => {
       life: 3000
     });
     router.push('/groups');
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',

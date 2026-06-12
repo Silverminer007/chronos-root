@@ -79,7 +79,7 @@
               placeholder="Datum & Zeit wählen"
               class="w-full"
               :class="{ 'p-invalid': errors.end }"
-              :min-date="formData.start"
+              :min-date="formData.start ?? undefined"
           />
           <small v-if="errors.end" class="text-red-500">{{ errors.end }}</small>
         </div>
@@ -90,16 +90,17 @@
         <label for="edit-venue" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Veranstaltungsort
         </label>
-        <InputText
-            id="edit-venue"
-            v-model="formData.venue"
-            placeholder="z.B. Vereinsheim"
-            class="w-full"
-        >
-          <template #prepend>
+        <IconField>
+          <InputIcon>
             <Icon name="lucide:map-pin" />
-          </template>
-        </InputText>
+          </InputIcon>
+          <InputText
+              id="edit-venue"
+              v-model="formData.venue"
+              placeholder="z.B. Vereinsheim"
+              class="w-full"
+          />
+        </IconField>
       </div>
 
       <!-- Minimal Attendees -->
@@ -263,10 +264,10 @@ const saveChanges = async () => {
   try {
     const updates = {
       name: formData.value.name.trim(),
-      description: formData.value.description.trim() || null,
+      description: formData.value.description.trim(),
       start: formData.value.start!.toISOString(),
       end: formData.value.end!.toISOString(),
-      venue: formData.value.venue.trim() || null,
+      venue: formData.value.venue.trim(),
       minimal_attendees: formData.value.minimalAttendees || 0
     };
 
@@ -288,7 +289,7 @@ const saveChanges = async () => {
     // Reload appointment
     await appointmentStore.fetchAppointment(props.appointment.id);
 
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',

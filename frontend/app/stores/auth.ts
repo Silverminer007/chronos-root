@@ -23,18 +23,18 @@ export const useAuthStore = defineStore('auth', () => {
             if (user.value && !user.value.first_name && !user.value.last_name) {
                 await initUser()
             }
-        } catch (err) {
+        } catch {
             user.value = null
         }
     }
 
     const updateProfile = async (payload: { first_name: string; last_name: string; email: string }) => {
-        const {user, verifyEmailUrl} = await $fetch<User>('/api/v2/user', {
+        const {user: updatedUser, verifyEmailUrl} = await $fetch<{ user: User; verifyEmailUrl?: string }>('/api/v2/user', {
             method: 'PATCH',
             query: {redirectUri: window.location.origin + window.location.pathname},
             body: payload
         })
-        if (user) user.value = user
+        if (updatedUser) user.value = updatedUser
 
         if (verifyEmailUrl) {
             window.location.href = verifyEmailUrl
@@ -42,7 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const changePassword = async () => {
-        const {url} = await $fetch('/api/v2/user/change-password', {
+        const {url} = await $fetch<{ url: string }>('/api/v2/user/change-password', {
             query: {redirectUri: window.location.origin + window.location.pathname}
         })
         window.location.href = url
@@ -57,7 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const linkAccount = async (providerId: string): Promise<void> => {
-        const {url} = await $fetch('/api/v2/user/link/' + providerId, {
+        const {url} = await $fetch<{ url: string }>('/api/v2/user/link/' + providerId, {
             query: {redirectUri: window.location.origin + window.location.pathname}
         })
 
@@ -70,7 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const createPasskey = async (): Promise<void> => {
-        const {url} = await $fetch('/api/v2/user/link/passkey', {
+        const {url} = await $fetch<{ url: string }>('/api/v2/user/link/passkey', {
             query: {redirectUri: window.location.origin + window.location.pathname}
         })
 
@@ -79,7 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const deletePasskey = async (passkeyId: string): Promise<void> => {
-        const {url} = await $fetch('/api/v2/user/unlink/passkey', {
+        const {url} = await $fetch<{ url: string }>('/api/v2/user/unlink/passkey', {
             query: {
                 redirectUri: window.location.origin + window.location.pathname,
                 passkeyId

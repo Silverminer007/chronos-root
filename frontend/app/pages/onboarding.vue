@@ -34,15 +34,15 @@
           class="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-600 rounded-2xl shadow-2xl p-8 sm:p-12 max-w-lg w-full text-center transition-all duration-300">
         <div
             class="w-16 h-16 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <Icon :name="steps[currentStep].icon" class="text-purple-600 dark:text-purple-400 text-3xl"/>
+          <Icon :name="currentStepData.icon" class="text-purple-600 dark:text-purple-400 text-3xl"/>
         </div>
 
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-3">
-          {{ steps[currentStep].title }}
+          {{ currentStepData.title }}
         </h1>
 
         <p class="text-gray-600 dark:text-gray-300 text-base sm:text-lg leading-relaxed">
-          {{ steps[currentStep].description }}
+          {{ currentStepData.description }}
         </p>
       </div>
 
@@ -126,6 +126,8 @@ const steps = [
     description: 'Erhalte Push-Benachrichtigungen bei neuen Terminen, Änderungen und Zu- oder Absagen.'
   }
 ]
+
+const currentStepData = computed(() => steps[currentStep.value] ?? steps[0]!)
 
 function completeOnboarding() {
   const {markShown} = useOnboarding();

@@ -1,4 +1,6 @@
 <template>
-  <PwaInstallDialog/>
-  <slot/>
+  <div>
+    <PwaInstallDialog/>
+    <slot/>
+  </div>
 </template>

@@ -58,7 +58,7 @@ v-for="notificationType in notificationTypes"
 <script setup lang="ts">
 import type {NotificationSettings, AppointmentNotificationSetting} from '~/types';
 
-const props = defineProps<{
+defineProps<{
   settings: NotificationSettings;
 }>();
 

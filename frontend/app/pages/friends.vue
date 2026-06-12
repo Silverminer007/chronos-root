@@ -25,7 +25,7 @@ const handleRemoveFriend = async (friendId: number) => {
       detail: 'Die Freundschaft wurde beendet',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -44,7 +44,7 @@ const handleAcceptRequest = async (requestId: number) => {
       detail: 'Ihr seid jetzt Freunde!',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -63,7 +63,7 @@ const handleDeclineRequest = async (requestId: number) => {
       detail: 'Die Anfrage wurde abgelehnt',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -82,7 +82,7 @@ const handleCancelRequest = async (requestId: number) => {
       detail: 'Die Anfrage wurde zurückgezogen',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',

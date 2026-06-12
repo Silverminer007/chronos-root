@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
     const access = event.context.accessToken || getCookie(event, 'kc_access')
 
-    const path = event.context.params.path
+    const path = event.context.params?.path
     const query = getQuery(event)
     const quarkusUrl = `${config.quarkusUrl}/api/v2/${path}`
 

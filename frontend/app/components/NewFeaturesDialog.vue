@@ -21,6 +21,7 @@ onMounted(() => {
 })
 
 function next() {
+    if (!currentFeature.value) return
     markShown(currentFeature.value.id)
     if (isLast.value) {
         close()
@@ -39,6 +40,7 @@ function skipAll() {
 }
 
 function goToLink() {
+    if (!currentFeature.value) return
     markShown(currentFeature.value.id)
     close()
     navigateTo(currentFeature.value.link!)

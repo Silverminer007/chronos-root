@@ -35,7 +35,7 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
       summary: action === 'approve' ? 'Zusage bestätigt' : 'Absage registriert',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',

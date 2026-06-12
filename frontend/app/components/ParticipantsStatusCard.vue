@@ -32,7 +32,7 @@ const handleAddParticipant = async (data: { id: number; role: string }) => {
       detail: 'Der Teilnehmer wurde erfolgreich hinzugefügt',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -77,7 +77,7 @@ const handleChangeRole = async (userId: number, role: string) => {
       detail: 'Die Teilnehmerrolle wurde erfolgreich geändert',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -96,7 +96,7 @@ const handleRemoveParticipant = async (participant: UserParticipant) => {
       detail: `${participant.name} wurde entfernt`,
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -262,7 +262,7 @@ const getStatusBadgeClass = (status: string) => {
                   v-if="!item.separator"
                   class="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer"
                   :class="item.label === 'Entfernen' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'"
-                  @click="item.command?.()"
+                  @click="item.command?.({originalEvent: $event, item})"
               >
                 <Icon v-if="item.iconName" :name="item.iconName" class="text-sm"/>
                 <span>{{ item.label }}</span>

@@ -15,7 +15,7 @@ const {formatDate, formatTime} = useDateFormatter();
 const showEditDialog = ref<boolean>(false);
 
 const getStatusLabel = (status: string) => {
-  const labels = {
+  const labels: Record<string, string> = {
     CANCELLED: 'Abgesagt',
     NOT_ENOUGH_ATTENDEES: 'Zu wenig Teilnehmer',
     DELETED: 'Gelöscht',
@@ -65,7 +65,7 @@ const shareLink = async () => {
 };
 
 const getStatusClass = (status: string) => {
-  const classes = {
+  const classes: Record<string, string> = {
     CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     NOT_ENOUGH_ATTENDEES: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
     DELETED: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'

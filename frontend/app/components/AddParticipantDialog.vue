@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {useFriends} from "~/composables/useFriends";
+import type {Friend} from "~/types";
 
 interface Props {
   visible: boolean;
@@ -16,8 +17,8 @@ const {searchFriends, loading: searching} = useFriends();
 
 const searchQuery = ref('');
 const selectedRole = ref<'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER'>('ATTENDANT');
-const searchResults = ref<any[]>([]);
-const selectedItem = ref<any>(null);
+const searchResults = ref<Friend[]>([]);
+const selectedItem = ref<Friend | null>(null);
 
 const handleSearch = async () => {
   if (searchQuery.value.length < 2) {
@@ -28,7 +29,7 @@ const handleSearch = async () => {
   searchResults.value = await searchFriends(searchQuery.value);
 };
 
-const selectResult = (result: any) => {
+const selectResult = (result: Friend) => {
   selectedItem.value = result;
 };
 
@@ -177,7 +178,7 @@ watch(() => props.visible, (newVal) => {
           <div v-else class="space-y-2 max-h-60 overflow-y-auto">
             <button
                 v-for="result in searchResults"
-                :key="result.id"
+                :key="result.user_id"
                 class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors text-left"
                 @click="selectResult(result)"
             >

@@ -35,7 +35,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
       life: 3000
     });
     showMessageDialog.value = false;
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler beim Senden',
@@ -80,7 +80,6 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ formatDateTime(message.timestamp) }}</p>
               </div>
             </div>
-            <h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ message.title }}</h4>
             <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ message.body }}</p>
           </div>
         </div>

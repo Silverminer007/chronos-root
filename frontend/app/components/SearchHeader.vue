@@ -52,7 +52,7 @@ const items = ref([
   }
 ]);
 
-const toggle = (event) => {
+const toggle = (event: Event) => {
   menu.value.toggle(event);
 };
 
@@ -122,7 +122,7 @@ const handleSearch = () => {
     <!-- User Menu Popup -->
     <Menu id="user_menu" ref="menu" :model="items" :popup="true" class="w-56">
       <template #item="{ item }">
-        <a v-if="!item.separator" class="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer" @click="item.command">
+        <a v-if="!item.separator" class="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer" @click="item.command?.({originalEvent: $event, item})">
           <Icon v-if="item.iconName" :name="item.iconName" class="text-gray-600 dark:text-gray-400" />
           <span class="text-gray-900 dark:text-white">{{ item.label }}</span>
         </a>

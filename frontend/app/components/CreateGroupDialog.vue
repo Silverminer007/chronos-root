@@ -43,8 +43,8 @@ const createGroup = async () => {
       life: 3000
     });
     close();
-  } catch (err: any) {
-    error.value = err.data?.message || 'Fehler beim Erstellen der Gruppe';
+  } catch (err) {
+    error.value = getErrorMessage(err, 'Fehler beim Erstellen der Gruppe');
   } finally {
     loading.value = false;
   }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {useFriends} from '~/composables/useFriends';
-import type {User} from '~/types';
+import type {Friend} from '~/types';
 
 const props = defineProps<{
   visible: boolean;
@@ -15,8 +15,8 @@ const emit = defineEmits<{
 const {searchFriends, loading: searching} = useFriends();
 
 const searchQuery = ref('');
-const searchResults = ref<any[]>([]);
-const selectedUser = ref<any>(null);
+const searchResults = ref<Friend[]>([]);
+const selectedUser = ref<Friend | null>(null);
 
 const filteredResults = computed(() => {
   // Filter out users who are already members
@@ -32,7 +32,7 @@ const handleSearch = async () => {
   searchResults.value = await searchFriends(searchQuery.value);
 };
 
-const selectUser = (user: any) => {
+const selectUser = (user: Friend) => {
   selectedUser.value = user;
 };
 

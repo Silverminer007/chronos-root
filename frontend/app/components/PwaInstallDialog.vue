@@ -1,12 +1,17 @@
 <script setup lang="ts">
-let deferredPrompt: any = null;
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 const visible = ref(false);
 
 onMounted(() => {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt = e;
+    deferredPrompt = e as BeforeInstallPromptEvent;
     visible.value = true;
   });
 });
@@ -16,10 +21,9 @@ async function install() {
 
   deferredPrompt.prompt();
 
-  const result = await deferredPrompt.userChoice;
+  await deferredPrompt.userChoice;
   deferredPrompt = null;
   visible.value = false;
-
 }
 
 function close() {

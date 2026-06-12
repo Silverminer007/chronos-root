@@ -1,4 +1,4 @@
-import {getCookie, setCookie, deleteCookie} from "h3"
+import {getCookie, setCookie, deleteCookie, type H3Event} from "h3"
 import {decodeJwt} from "../utils/decodeJwt"
 import {$fetch} from "ofetch"
 
@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
     event.context.accessToken = access
 })
 
-async function refreshTokens(event: any, config: any, refreshToken: string) {
+async function refreshTokens(event: H3Event, config: ReturnType<typeof useRuntimeConfig>, refreshToken: string) {
     try {
         const tokenResponse = await $fetch(
             `${config.auth.issuer}/protocol/openid-connect/token`,

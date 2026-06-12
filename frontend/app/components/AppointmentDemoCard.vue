@@ -44,7 +44,7 @@ function setParticipationStatus(status: "APPROVED" | "REJECTED") {
 
 const messageDialog = ref<boolean>(false)
 
-async function sendMessage(messageBody: string) {
+async function sendMessage() {
   await new Promise(resolve => setTimeout(resolve, 500));
   toast.add({severity: 'info', summary: 'Die Nachricht wurde versendet', life: 3000});
   messageDialog.value = false;
@@ -58,7 +58,7 @@ async function sendMessage(messageBody: string) {
       :appointment-title="`${appointment.name} ${formatDate(appointment.start)}`"
       :recipient-count="appointment.participants?.length || 0"
       @close="messageDialog = false"
-      @send="sendMessage($event.message)"
+      @send="sendMessage()"
   />
 
   <div

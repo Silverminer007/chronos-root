@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {Appointment, ParticipantGroup, Role} from '~/types';
+import type {Appointment, Group, Role} from '~/types';
 import {useAppointmentsStore} from '~/stores/appointments';
 import {useAuthStore} from '~/stores/auth';
 import {useGroups} from '~/composables/useGroups';
@@ -59,8 +59,8 @@ const isExpanded = (groupId: number) => expandedGroups.value.has(groupId);
 // Add group dialog state
 const showAddDialog = ref(false);
 const searchQuery = ref('');
-const searchResults = ref<any[]>([]);
-const selectedGroup = ref<any>(null);
+const searchResults = ref<(Group & { member_count?: number })[]>([]);
+const selectedGroup = ref<(Group & { member_count?: number }) | null>(null);
 const selectedRole = ref<Role>('ATTENDANT');
 const adding = ref(false);
 
@@ -69,7 +69,7 @@ const handleSearch = async () => {
 };
 await handleSearch();
 
-const selectGroup = (group: any) => {
+const selectGroup = (group: Group & { member_count?: number }) => {
   selectedGroup.value = group;
 };
 
@@ -105,7 +105,7 @@ const addGroup = async () => {
       life: 3000
     });
     closeAddDialog();
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -117,17 +117,6 @@ const addGroup = async () => {
   }
 };
 
-const getRoleLabel = (role: string) => {
-  const labels: Record<string, string> = {
-    RESPONSIBLE: 'Organisatoren',
-    ATTENDANT: 'Teilnehmer',
-    HELPER: 'Helfer',
-    GUEST: 'Gäste',
-    NONE: ''
-  };
-  return labels[role] || role;
-};
-
 const getRoleLabelSingular = (role: string) => {
   const labels: Record<string, string> = {
     RESPONSIBLE: 'Organisator',
@@ -136,16 +125,6 @@ const getRoleLabelSingular = (role: string) => {
     GUEST: 'Gast'
   };
   return labels[role] || role;
-};
-
-const getRoleBadgeClass = (role: string) => {
-  const classes: Record<string, string> = {
-    RESPONSIBLE: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-    ATTENDANT: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    HELPER: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    GUEST: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-  };
-  return classes[role] || classes.GUEST;
 };
 
 const getStatusIconName = (status: string) => {

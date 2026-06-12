@@ -27,8 +27,8 @@ export const useGroupsStore = defineStore('groups', {
             try {
                 const response = await $fetch<Group[]>('/api/v2/groups')
                 this.groups = response || []
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Laden der Gruppen'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Laden der Gruppen')
                 throw err
             } finally {
                 this.loading = false
@@ -61,8 +61,8 @@ export const useGroupsStore = defineStore('groups', {
                 }
 
                 return this.currentGroup
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Laden der Gruppe'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Laden der Gruppe')
                 throw err
             } finally {
                 this.loading = false
@@ -81,8 +81,8 @@ export const useGroupsStore = defineStore('groups', {
                 }
 
                 return response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Erstellen der Gruppe'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Erstellen der Gruppe')
                 throw err
             }
         },
@@ -94,8 +94,8 @@ export const useGroupsStore = defineStore('groups', {
                 })
 
                 this.groups = this.groups.filter(g => g.id !== groupId)
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Löschen der Gruppe'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Löschen der Gruppe')
                 throw err
             }
         },
@@ -112,8 +112,8 @@ export const useGroupsStore = defineStore('groups', {
                 } else {
                     await this.fetchGroups()
                 }
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Hinzufügen des Mitglieds'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Hinzufügen des Mitglieds')
                 throw err
             }
         },
@@ -130,8 +130,8 @@ export const useGroupsStore = defineStore('groups', {
                 } else {
                     await this.fetchGroups()
                 }
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Entfernen des Mitglieds'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Entfernen des Mitglieds')
                 throw err
             }
         },
@@ -146,8 +146,8 @@ export const useGroupsStore = defineStore('groups', {
 
                 this.groups = this.groups.filter(g => g.id !== groupId)
                 this.currentGroup = null
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Verlassen der Gruppe'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Verlassen der Gruppe')
                 throw err
             }
         },

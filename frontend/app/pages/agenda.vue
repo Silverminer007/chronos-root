@@ -22,8 +22,9 @@ const showCreateDialog = ref(false);
     <div class="container mx-auto px-4 sm:px-6  pb-24">
       <div class="max-w-4xl mx-auto space-y-6">
         <!-- Appointment Cards -->
-        <AppointmentCard v-for="appointment in appointmentsStore.appointments" :key="appointment.id"
-                         :appointment="appointment"/>
+        <AppointmentCard
+            v-for="appointment in appointmentsStore.appointments" :key="appointment.id"
+            :appointment="appointment"/>
 
         <!-- Skeletons -->
         <div v-if="appointmentsStore.loading">

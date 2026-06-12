@@ -85,10 +85,10 @@ const createAppointment = async () => {
   try {
     const appointmentData = {
       name: formData.value.name.trim(),
-      description: formData.value.description.trim() || null,
+      description: formData.value.description.trim(),
       start: formData.value.start!.toISOString(),
       end: formData.value.end!.toISOString(),
-      venue: formData.value.venue.trim() || null,
+      venue: formData.value.venue.trim(),
       minimal_attendees: formData.value.minimalAttendees || 0
     };
 
@@ -111,7 +111,7 @@ const createAppointment = async () => {
     emit('created');
 
     navigateTo(`/appointment/${newAppointment.id}`);
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -248,7 +248,7 @@ watch(() => props.visible, (newVal) => {
               placeholder="Datum & Zeit wählen"
               class="w-full"
               :class="{ 'p-invalid': errors.end }"
-              :min-date="formData.start"
+              :min-date="formData.start ?? undefined"
           />
           <small v-if="errors.end" class="text-red-500">{{ errors.end }}</small>
         </div>
@@ -259,16 +259,17 @@ watch(() => props.visible, (newVal) => {
         <label for="venue" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Veranstaltungsort
         </label>
-        <InputText
-            id="venue"
-            v-model="formData.venue"
-            placeholder="z.B. Vereinsheim"
-            class="w-full"
-        >
-          <template #prepend>
+        <IconField>
+          <InputIcon>
             <Icon name="lucide:map-pin" />
-          </template>
-        </InputText>
+          </InputIcon>
+          <InputText
+              id="venue"
+              v-model="formData.venue"
+              placeholder="z.B. Vereinsheim"
+              class="w-full"
+          />
+        </IconField>
       </div>
 
       <!-- Minimal Attendees -->

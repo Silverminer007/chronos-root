@@ -46,8 +46,8 @@ const sendRequest = async () => {
       life: 3000
     });
     close();
-  } catch (err: any) {
-    error.value = err.data?.message || 'Fehler beim Senden der Anfrage. Überprüfe die E-Mail-Adresse.';
+  } catch (err) {
+    error.value = getErrorMessage(err, 'Fehler beim Senden der Anfrage. Überprüfe die E-Mail-Adresse.');
   } finally {
     loading.value = false;
   }

@@ -38,11 +38,11 @@ export const useSettingsStore = defineStore('settings', {
             try {
                 const response = await $fetch<NotificationSettings>('/api/v2/settings')
                 this.settings = response
-            } catch (err: any) {
-                if (err.status === 404 || err.statusCode === 404) {
+            } catch (err) {
+                if (getErrorStatus(err) === 404) {
                     this.settings = {...defaultSettings}
                 } else {
-                    this.error = err.message || 'Fehler beim Laden der Einstellungen'
+                    this.error = getErrorMessage(err, 'Fehler beim Laden der Einstellungen')
                     throw err
                 }
             } finally {
@@ -62,8 +62,8 @@ export const useSettingsStore = defineStore('settings', {
                     body: this.settings
                 })
                 this.settings = response
-            } catch (err: any) {
-                this.error = err.message || 'Fehler beim Speichern der Einstellungen'
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Fehler beim Speichern der Einstellungen')
                 throw err
             } finally {
                 this.saving = false
@@ -72,7 +72,7 @@ export const useSettingsStore = defineStore('settings', {
 
         updateSetting(key: keyof NotificationSettings, value: string) {
             if (this.settings) {
-                (this.settings as any)[key] = value
+                (this.settings as Record<keyof NotificationSettings, string>)[key] = value
             }
         },
 

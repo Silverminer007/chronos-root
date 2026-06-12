@@ -69,7 +69,7 @@ v-for="notificationType in groupNotificationTypes"
 <script setup lang="ts">
 import type {NotificationSettings, GroupNotificationSetting} from '~/types';
 
-const props = defineProps<{
+defineProps<{
   settings: NotificationSettings;
 }>();
 

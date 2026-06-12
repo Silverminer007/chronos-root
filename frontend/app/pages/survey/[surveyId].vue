@@ -119,8 +119,8 @@ async function submit() {
     });
     submitted.value = true;
     setTimeout(() => navigateTo('/agenda'), 2000);
-  } catch (e: any) {
-    if (e?.response?.status === 400) {
+  } catch (e) {
+    if (getErrorStatus(e) === 400) {
       alreadyCompleted.value = true;
     } else {
       toast.add({

@@ -34,7 +34,7 @@ const handleRequestRecheck = async () => {
       detail: 'Alle Teilnehmer wurden benachrichtigt',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',
@@ -57,7 +57,7 @@ const handleCancelAppointment = async () => {
       detail: 'Alle Teilnehmer wurden benachrichtigt',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler',

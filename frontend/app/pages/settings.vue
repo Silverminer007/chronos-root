@@ -3,6 +3,7 @@ import {useAuthStore} from '~/stores/auth';
 import {useSettingsStore} from '~/stores/settings';
 import {useToast} from 'primevue/usetoast';
 import {usePush} from '~/composables/usePush';
+import type {NotificationSettings} from '~/types';
 
 const {fetchUser} = useAuthStore();
 await fetchUser();
@@ -45,7 +46,7 @@ const handleTogglePush = async () => {
           life: 5000
         });
       }
-    } catch (err) {
+    } catch {
       toast.add({
         severity: 'error',
         summary: 'Fehler',
@@ -72,7 +73,7 @@ const handleSave = async () => {
       summary: 'Einstellungen gespeichert',
       life: 3000
     });
-  } catch (err) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'Fehler beim Speichern',
@@ -82,7 +83,7 @@ const handleSave = async () => {
   }
 };
 
-const handleUpdateSetting = (key: keyof typeof settingsStore.settings, value: string) => {
+const handleUpdateSetting = (key: keyof NotificationSettings, value: string) => {
   settingsStore.updateSetting(key, value);
 };
 </script>
