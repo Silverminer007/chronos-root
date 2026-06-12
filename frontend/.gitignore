@@ -32,3 +32,5 @@ sw.*
 playwright-report/
 test-results/
 .lighthouseci/
+
+*.sql
