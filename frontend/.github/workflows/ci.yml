@@ -83,6 +83,7 @@ jobs:
           name: nuxt-output
           path: .output/
           retention-days: 1
+          include-hidden-files: true
 
   # ── E2E Tests ─────────────────────────────────────────────────────────────
   e2e-tests:
