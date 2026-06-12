@@ -62,7 +62,7 @@ jobs:
           REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           if [ "${{ github.event.workflow_run.head_branch }}" = "master" ]; then
-            VERSION=v$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
+            VERSION=$(git tag --sort=-creatordate | head -1)
           else
             VERSION="develop-$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-8)"
           fi
