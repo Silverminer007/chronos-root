@@ -89,9 +89,9 @@ function close() {
                                     </span>
                                 </div>
                                 <button
-                                    @click="skipAll"
                                     class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700"
                                     title="Schließen"
+                                    @click="skipAll"
                                 >
                                     <Icon name="lucide:x" />
                                 </button>
@@ -120,8 +120,8 @@ function close() {
                             <!-- CTA link -->
                             <button
                                 v-if="currentFeature?.link"
-                                @click="goToLink"
                                 class="w-full flex items-center justify-center gap-2 px-4 py-3 mb-4 rounded-xl font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-sm"
+                                @click="goToLink"
                             >
                                 <Icon name="lucide:arrow-right" class="text-sm" />
                                 <span>{{ currentFeature.linkLabel ?? 'Jetzt ansehen' }}</span>
@@ -131,8 +131,8 @@ function close() {
                             <div class="flex items-center gap-3">
                                 <button
                                     v-if="!isFirst"
-                                    @click="back"
                                     class="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 dark:border-neutral-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors shrink-0"
+                                    @click="back"
                                 >
                                     <Icon name="lucide:chevron-left" />
                                 </button>
@@ -142,17 +142,17 @@ function close() {
                                     <button
                                         v-for="(_, i) in features"
                                         :key="i"
-                                        @click="currentStep = i"
                                         class="rounded-full transition-all duration-200"
                                         :class="i === currentStep
                                             ? 'w-5 h-2 bg-purple-500'
                                             : 'w-2 h-2 bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600'"
+                                        @click="currentStep = i"
                                     />
                                 </div>
 
                                 <button
-                                    @click="next"
                                     class="flex items-center justify-center gap-1.5 px-4 h-10 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors shrink-0"
+                                    @click="next"
                                 >
                                     <span>{{ isLast ? 'Fertig' : 'Weiter' }}</span>
                                     <Icon :name="isLast ? 'lucide:check' : 'lucide:chevron-right'" class="text-sm" />
@@ -162,8 +162,8 @@ function close() {
                             <!-- Skip all (only when multiple features) -->
                             <div v-if="features.length > 1" class="text-center mt-4">
                                 <button
-                                    @click="skipAll"
                                     class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                    @click="skipAll"
                                 >
                                     Alle überspringen
                                 </button>

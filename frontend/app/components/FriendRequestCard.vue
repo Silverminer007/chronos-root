@@ -70,17 +70,17 @@ const handleCancel = async () => {
       <!-- Actions for incoming requests -->
       <div v-if="type === 'incoming'" class="flex items-center gap-2 shrink-0">
         <button
-            @click="handleAccept"
             :disabled="loading"
             class="px-3 py-2 rounded-lg font-medium text-sm text-white bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 transition-all disabled:opacity-50"
+            @click="handleAccept"
         >
           <Icon name="lucide:check" class=" mr-1" />
           Annehmen
         </button>
         <button
-            @click="handleDecline"
             :disabled="loading"
             class="px-3 py-2 rounded-lg font-medium text-sm text-red-600 dark:text-red-400 border-2 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50"
+            @click="handleDecline"
         >
           <Icon name="lucide:x" class=" mr-1" />
           Ablehnen
@@ -90,9 +90,9 @@ const handleCancel = async () => {
       <!-- Actions for outgoing requests -->
       <div v-else class="shrink-0">
         <button
-            @click="handleCancel"
             :disabled="loading"
             class="px-3 py-2 rounded-lg font-medium text-sm text-gray-600 dark:text-gray-400 border-2 border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-all disabled:opacity-50"
+            @click="handleCancel"
         >
           Zurückziehen
         </button>

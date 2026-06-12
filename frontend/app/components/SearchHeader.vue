@@ -79,10 +79,10 @@ const handleSearch = () => {
             <Icon name="lucide:search" class=" absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
                 v-model="searchQuery"
-                @input="handleSearch"
                 type="text"
                 placeholder="Termine durchsuchen..."
                 class="w-full pl-11 pr-4 py-2.5 rounded-lg border-2 border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-500 dark:focus:border-purple-400 focus:bg-white dark:focus:bg-neutral-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900/50 outline-none transition-all"
+                @input="handleSearch"
             />
           </div>
         </div>
@@ -91,10 +91,10 @@ const handleSearch = () => {
         <div v-if="authenticated" class="flex items-center gap-3 shrink-0">
           <!-- User Avatar -->
           <button
-              @click="toggle"
               class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
               aria-haspopup="true"
               aria-controls="user_menu"
+              @click="toggle"
           >
             <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center">
               <span class="text-purple-600 dark:text-purple-400 font-semibold text-sm">
@@ -120,7 +120,7 @@ const handleSearch = () => {
     </div>
 
     <!-- User Menu Popup -->
-    <Menu ref="menu" id="user_menu" :model="items" :popup="true" class="w-56">
+    <Menu id="user_menu" ref="menu" :model="items" :popup="true" class="w-56">
       <template #item="{ item }">
         <a v-if="!item.separator" class="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer" @click="item.command">
           <Icon v-if="item.iconName" :name="item.iconName" class="text-gray-600 dark:text-gray-400" />

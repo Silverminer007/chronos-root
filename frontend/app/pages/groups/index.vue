@@ -48,8 +48,8 @@ const handleDeleteGroup = async (groupId: number) => {
             <p class="text-gray-500 dark:text-gray-400 mt-1">Verwalte deine Gruppen für Termine</p>
           </div>
           <button
-              @click="showCreateDialog = true"
               class="hidden sm:flex px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 transition-all shadow-lg items-center gap-2"
+              @click="showCreateDialog = true"
           >
             <Icon name="lucide:plus" />
             <span>Neue Gruppe</span>
@@ -90,8 +90,8 @@ const handleDeleteGroup = async (groupId: number) => {
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Noch keine Gruppen</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-6">Erstelle Gruppen, um mehrere Personen gleichzeitig zu Terminen einzuladen.</p>
             <button
-                @click="showCreateDialog = true"
                 class="px-6 py-3 rounded-lg font-medium text-white bg-linear-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 transition-all shadow-lg"
+                @click="showCreateDialog = true"
             >
               <Icon name="lucide:plus" class=" mr-2" />
               Erste Gruppe erstellen
@@ -103,8 +103,8 @@ const handleDeleteGroup = async (groupId: number) => {
 
     <!-- FAB - Create Group (Mobile) -->
     <button
-        @click="showCreateDialog = true"
         class="fixed bottom-6 right-6 w-14 h-14 sm:hidden rounded-full flex items-center justify-center text-white shadow-2xl bg-linear-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 transition-all transform hover:scale-110 z-50"
+        @click="showCreateDialog = true"
     >
       <Icon name="lucide:plus" class=" text-xl" />
     </button>

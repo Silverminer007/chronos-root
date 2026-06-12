@@ -163,16 +163,16 @@ const handleSaveProfile = async () => {
 
             <div class="flex justify-between pt-2">
               <button
-                  @click="authStore.changePassword()"
                   class="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  @click="authStore.changePassword()"
               >
                 <Icon name="lucide:key" />
                 <span>Passwort ändern</span>
               </button>
               <button
-                @click="handleSaveProfile"
                 :disabled="savingProfile"
                 class="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="handleSaveProfile"
               >
                 <Icon :name="savingProfile ? 'lucide:loader-2' : 'lucide:save'" :class="{ 'animate-spin': savingProfile }" />
                 <span>Speichern</span>
@@ -218,9 +218,9 @@ const handleSaveProfile = async () => {
               <!-- Linked: unlink button -->
               <button
                 v-if="isLinked(provider.id)"
-                @click="handleUnlink(provider.id)"
                 :disabled="unlinkingProvider === provider.id"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="handleUnlink(provider.id)"
               >
                 <Icon
                   :name="unlinkingProvider === provider.id ? 'lucide:loader-2' : 'lucide:unlink'"
@@ -233,8 +233,8 @@ const handleSaveProfile = async () => {
               <!-- Not linked: link button -->
               <button
                 v-else
-                @click="authStore.linkAccount(provider.id)"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                @click="authStore.linkAccount(provider.id)"
               >
                 <Icon name="lucide:link" class="text-sm" />
                 <span>Verknüpfen</span>
@@ -256,8 +256,8 @@ const handleSaveProfile = async () => {
               </div>
             </div>
             <button
-              @click="authStore.createPasskey()"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors shrink-0"
+              @click="authStore.createPasskey()"
             >
               <Icon name="lucide:plus" class="text-sm" />
               <span>Hinzufügen</span>
@@ -296,8 +296,8 @@ const handleSaveProfile = async () => {
                 </p>
               </div>
               <button
-                  @click="authStore.deletePasskey(passkey.id)"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  @click="authStore.deletePasskey(passkey.id)"
               >
                 <Icon
                     name="lucide:x"
@@ -329,14 +329,14 @@ const handleSaveProfile = async () => {
               </p>
               <div class="flex gap-3">
                 <button
-                  @click="showPasskeyDialog = false"
                   class="flex-1 px-4 py-2.5 rounded-lg font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+                  @click="showPasskeyDialog = false"
                 >
                   Abbrechen
                 </button>
                 <button
-                  @click="authStore.createPasskey()"
                   class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-sm"
+                  @click="authStore.createPasskey()"
                 >
                   <Icon name="lucide:external-link" class="text-sm" />
                   <span>Weiter</span>

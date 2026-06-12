@@ -19,7 +19,8 @@
 
     <!-- Group Notification Settings -->
     <div class="p-6">
-      <div v-for="notificationType in groupNotificationTypes"
+      <div
+v-for="notificationType in groupNotificationTypes"
            :key="notificationType.key">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-start gap-3">
@@ -39,15 +40,16 @@
             <button
                 v-for="option in options"
                 :key="option.value"
-                @click="emit('update', notificationType.key, option.value)"
                 class="px-4 py-2 rounded-lg border-2 transition-all flex items-center gap-2"
                 :class="settings[notificationType.key] === option.value
                     ? (option.value === 'ENABLED'
                         ? 'border-green-600 dark:border-green-400 bg-green-50 dark:bg-green-900/20'
                         : 'border-gray-600 dark:border-gray-400 bg-gray-50 dark:bg-gray-800/50')
                     : 'border-gray-300 dark:border-neutral-600 hover:border-gray-400 dark:hover:border-neutral-500'"
+                @click="emit('update', notificationType.key, option.value)"
             >
-              <Icon :name="option.icon"
+              <Icon
+:name="option.icon"
                   :class="settings[notificationType.key] === option.value
                       ? (option.value === 'ENABLED'
                           ? 'text-green-600 dark:text-green-400'

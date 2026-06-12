@@ -53,8 +53,8 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Nachrichten</h3>
         <button
-            @click="showMessageDialog = true"
             class="px-4 py-2 rounded-lg font-medium text-white transition-all bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 dark:from-purple-500 dark:to-pink-400 flex items-center justify-center gap-2"
+            @click="showMessageDialog = true"
         >
           <Icon name="lucide:send" />
           <span>Nachricht senden</span>

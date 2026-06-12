@@ -227,9 +227,9 @@ const getRoleIconClass = (role: string) => {
         <!-- Add Group Button (only for responsible users) -->
         <button
             v-if="isResponsible"
-            @click="openAddDialog"
             class="w-8 h-8 flex items-center justify-center rounded-lg bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white transition-all shadow-sm"
             title="Gruppe hinzufügen"
+            @click="openAddDialog"
         >
           <Icon name="lucide:plus"/>
         </button>
@@ -247,8 +247,8 @@ const getRoleIconClass = (role: string) => {
       </p>
       <button
           v-if="isResponsible"
-          @click="openAddDialog"
           class="mt-4 px-4 py-2 rounded-lg font-medium text-purple-600 dark:text-purple-400 border-2 border-purple-600 dark:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+          @click="openAddDialog"
       >
         <Icon name="lucide:plus" class=" mr-2"/>
         Gruppe hinzufügen
@@ -264,8 +264,8 @@ const getRoleIconClass = (role: string) => {
       >
         <!-- Group Header -->
         <button
-            @click="toggleGroup(group.id)"
             class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors"
+            @click="toggleGroup(group.id)"
         >
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
@@ -306,7 +306,8 @@ const getRoleIconClass = (role: string) => {
                 </div>
                 <span class="text-sm text-gray-700 dark:text-gray-300">{{ participant.name }}</span>
               </div>
-              <Icon :name="getStatusIconName(participant.status)" :class="getStatusIconClass(participant.status)"
+              <Icon
+:name="getStatusIconName(participant.status)" :class="getStatusIconClass(participant.status)"
                     class="text-sm"/>
             </div>
           </div>
@@ -329,8 +330,8 @@ const getRoleIconClass = (role: string) => {
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Gruppe hinzufügen</h2>
         </div>
         <button
-            @click="closeAddDialog"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+            @click="closeAddDialog"
         >
           <Icon name="lucide:x" class=" text-gray-500 dark:text-gray-400 text-lg"/>
         </button>
@@ -364,9 +365,9 @@ const getRoleIconClass = (role: string) => {
             <button
                 v-for="option in roleOptions"
                 :key="option.value"
-                @click="selectedRole = option.value as Role"
                 class="p-3 rounded-lg border-2 transition-all text-center"
                 :class="getRoleButtonClass(option.value)"
+                @click="selectedRole = option.value as Role"
             >
               <Icon :name="option.icon" :class="getRoleIconClass(option.value)" class="mb-1"/>
               <p class="text-sm font-medium text-gray-900 dark:text-white">{{ option.label }}</p>
@@ -394,9 +395,9 @@ const getRoleIconClass = (role: string) => {
             <button
                 v-for="result in searchResults"
                 :key="result.id"
-                @click="selectGroup(result)"
                 class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors text-left"
                 :class="selectedGroup?.id === result.id ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500' : ''"
+                @click="selectGroup(result)"
             >
               <div
                   class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center shrink-0">
@@ -408,14 +409,16 @@ const getRoleIconClass = (role: string) => {
                   {{ result.member_count }} Mitglieder
                 </p>
               </div>
-              <Icon v-if="selectedGroup?.id === result.id" name="lucide:check"
+              <Icon
+v-if="selectedGroup?.id === result.id" name="lucide:check"
                     class="text-purple-600 dark:text-purple-400"/>
             </button>
           </div>
         </div>
 
         <!-- Selected Group Preview -->
-        <div v-if="selectedGroup"
+        <div
+v-if="selectedGroup"
              class="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -429,8 +432,8 @@ const getRoleIconClass = (role: string) => {
               </div>
             </div>
             <button
-                @click="selectedGroup = null"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+                @click="selectedGroup = null"
             >
               <Icon name="lucide:x"/>
             </button>
@@ -443,8 +446,8 @@ const getRoleIconClass = (role: string) => {
           class="flex flex-col-reverse sm:flex-row justify-end gap-3 p-6 border-t border-gray-200 dark:border-neutral-700 shrink-0">
         <button
             class="px-5 py-2.5 rounded-lg font-medium transition-all border-2 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
-            @click="closeAddDialog"
             :disabled="adding"
+            @click="closeAddDialog"
         >
           Abbrechen
         </button>

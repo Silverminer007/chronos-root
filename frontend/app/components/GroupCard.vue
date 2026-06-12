@@ -51,9 +51,9 @@ const confirmDelete = () => {
         <div class="flex items-center justify-between gap-2">
           <h3 class="font-semibold text-gray-900 dark:text-white truncate">{{ group.name }}</h3>
           <button
-              @click="handleDelete"
               class="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
               title="Gruppe löschen"
+              @click="handleDelete"
           >
             <Icon name="lucide:trash-2" class=" text-sm" />
           </button>

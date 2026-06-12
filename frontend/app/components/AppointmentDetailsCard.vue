@@ -89,16 +89,16 @@ const getStatusClass = (status: string) => {
                 </span>
         <div class="flex items-center gap-2 shrink-0">
           <button
-              @click="shareLink"
               class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
               title="Link teilen"
+              @click="shareLink"
           >
             <Icon name="lucide:share-2" />
           </button>
           <button
-              @click="showEditDialog = true"
               class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
               title="Termin bearbeiten"
+              @click="showEditDialog = true"
           >
             <Icon name="lucide:pencil" />
           </button>

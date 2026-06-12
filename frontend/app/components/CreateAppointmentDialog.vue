@@ -170,7 +170,7 @@ watch(() => props.visible, (newVal) => {
   <Dialog
       v-model:visible="isVisible"
       modal
-      :dismissableMask="true"
+      :dismissable-mask="true"
       :closable="true"
       class="w-full max-w-3xl"
   >
@@ -224,9 +224,9 @@ watch(() => props.visible, (newVal) => {
           <DatePicker
               id="start-date"
               v-model="formData.start"
-              showTime
-              hourFormat="24"
-              dateFormat="dd.mm.yy"
+              show-time
+              hour-format="24"
+              date-format="dd.mm.yy"
               placeholder="Datum & Zeit wählen"
               class="w-full"
               :class="{ 'p-invalid': errors.start }"
@@ -242,13 +242,13 @@ watch(() => props.visible, (newVal) => {
           <DatePicker
               id="end-date"
               v-model="formData.end"
-              showTime
-              hourFormat="24"
-              dateFormat="dd.mm.yy"
+              show-time
+              hour-format="24"
+              date-format="dd.mm.yy"
               placeholder="Datum & Zeit wählen"
               class="w-full"
               :class="{ 'p-invalid': errors.end }"
-              :minDate="formData.start"
+              :min-date="formData.start"
           />
           <small v-if="errors.end" class="text-red-500">{{ errors.end }}</small>
         </div>
@@ -309,14 +309,14 @@ watch(() => props.visible, (newVal) => {
         <Button
             label="Abbrechen"
             severity="secondary"
-            @click="closeDialog"
             :disabled="saving"
+            @click="closeDialog"
         />
         <Button
             label="Termin erstellen"
-            @click="createAppointment"
             :loading="saving"
             :disabled="!isValid"
+            @click="createAppointment"
         >
           <template #icon>
             <Icon name="lucide:check" class=" mr-2" />

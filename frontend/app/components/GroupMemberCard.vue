@@ -29,9 +29,9 @@ const initials = computed(() => `${props.member.first_name?.charAt(0) || ''}${pr
 
     <button
         v-if="canRemove"
-        @click="emit('remove', member.id)"
         class="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
         title="Mitglied entfernen"
+        @click="emit('remove', member.id)"
     >
       <Icon name="lucide:x" class=" text-sm" />
     </button>

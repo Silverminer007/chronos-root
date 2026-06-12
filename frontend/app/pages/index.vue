@@ -48,7 +48,7 @@
             <a href="/api/auth/register" class="px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-white transition-all shadow-xl text-base sm:text-lg bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 dark:from-purple-500 dark:to-pink-400 dark:hover:from-purple-600 dark:hover:to-pink-500 transform hover:scale-105">
               Jetzt kostenlos starten
             </a>
-            <button @click="scrollToFeatures" class="px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold transition-all shadow-lg text-base sm:text-lg border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 bg-white dark:bg-neutral-800 transform hover:scale-105">
+            <button class="px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold transition-all shadow-lg text-base sm:text-lg border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 bg-white dark:bg-neutral-800 transform hover:scale-105" @click="scrollToFeatures">
               Mehr erfahren
             </button>
           </div>
@@ -124,6 +124,9 @@
 </template>
 
 <script setup lang="ts">
+import {useAuthStore} from "~/stores/auth";
+import type {Appointment} from '~/types'
+import {DateTime} from "luxon"
 definePageMeta({
   layout: 'landingpage'
 })
@@ -155,9 +158,6 @@ const scrollToFeatures = () => {
     element.scrollIntoView({ behavior: 'smooth' });
   }
 };
-import {useAuthStore} from "~/stores/auth";
-import type {Appointment} from '~/types'
-import {DateTime} from "luxon"
 
 const {fetchUser, authenticated} = useAuthStore()
 await fetchUser()
