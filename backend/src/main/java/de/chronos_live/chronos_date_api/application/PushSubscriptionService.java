@@ -44,9 +44,10 @@ public class PushSubscriptionService {
     public void deleteByEndpoint(String endpoint) {
         PushSubscription existing = repo.findByEndpoint(endpoint);
         if (existing != null) {
-            LOGGER.debugf("[Principal %s] Deleting Push Subscription", existing.getUser().id);
-
             repo.delete(existing);
+            if (existing.getUser() != null && existing.getUser().id != null) {
+                LOGGER.debugf("[Principal %s] Deleting Push Subscription", existing.getUser().id);
+            }
         }
     }
 
