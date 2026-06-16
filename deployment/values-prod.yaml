@@ -104,6 +104,7 @@ backend:
     AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
     AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de"
     AUTH_SERVER_REALM: "chronos"
+    QUARKUS_LOG_LEVEL: "DEBUG"
   envFromSecrets:
     - name: DB_PASSWORD
       secretName: chronos-secret
