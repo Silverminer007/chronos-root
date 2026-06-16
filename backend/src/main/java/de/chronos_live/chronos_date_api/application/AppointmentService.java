@@ -11,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 
@@ -18,6 +19,7 @@ import java.time.Instant;
 @Transactional
 @Timed("service.appointment")
 public class AppointmentService {
+    private static final Logger LOGGER = Logger.getLogger(AppointmentService.class);
     @Inject
     AuthorizationService authorizationService;
     @Inject
@@ -68,12 +70,16 @@ public class AppointmentService {
         appointment.setLastUpdate(Instant.now());
         appointment.persist();
 
+        LOGGER.debugf("[Principal %s][Appointment %s] Created Appointment", creatorId, appointment.id);
+
         this.appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorId));
 
         return appointment;
     }
 
     public Appointment updateAppointment(Long appointmentId, Long actingUserId, UpdateAppointmentDto updateAppointmentDto) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Update Appointment", actingUserId, appointmentId);
+
         this.authorizationService.requireUpdateAppointment(appointmentId, actingUserId);
 
         Appointment appointment = this.getAppointment(appointmentId, actingUserId, true, true, true);
@@ -126,6 +132,8 @@ public class AppointmentService {
     }
 
     public void deleteAppointment(Long appointmentId, Long actingUserId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Delete Appointment", actingUserId, appointmentId);
+
         this.authorizationService.requireDeleteAppointment(appointmentId, actingUserId);
 
         Appointment appointment = Appointment.findById(appointmentId);
@@ -137,6 +145,8 @@ public class AppointmentService {
     }
 
     public void cancelAppointment(Long appointmentId, Long actingUserId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Cancel Appointment", actingUserId, appointmentId);
+
         this.authorizationService.requireCancelAppointment(appointmentId, actingUserId);
 
         Appointment appointment = Appointment.findById(appointmentId);
@@ -149,6 +159,8 @@ public class AppointmentService {
 
     public Appointment getAppointment(Long appointmentId, Long requestingUserId,
                                       boolean messages, boolean participants, boolean groupParticipants) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Read Appointment", requestingUserId, appointmentId);
+
         this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
 
         Appointment appointment = this.appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);

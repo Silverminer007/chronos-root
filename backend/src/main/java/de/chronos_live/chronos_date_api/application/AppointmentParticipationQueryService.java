@@ -6,13 +6,17 @@ import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 
 @ApplicationScoped
 @Timed("service.participationQuery")
 public class AppointmentParticipationQueryService {
+    private static final Logger LOGGER = Logger.getLogger(AppointmentParticipationQueryService.class);
     public UserRole getUserRole(Long appointmentId, Long userId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading user role", userId, appointmentId);
+
         return AppointmentParticipation
                 .find("appointment.id = ?1 AND user.id = ?2", appointmentId, userId)
                 .firstResultOptional()
@@ -22,6 +26,8 @@ public class AppointmentParticipationQueryService {
     }
 
     public ParticipationStatus getUserStatus(Long appointmentId, Long userId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading user status", userId, appointmentId);
+
         return AppointmentParticipation
                 .find("appointment.id = ?1 AND user.id = ?2", appointmentId, userId)
                 .firstResultOptional()

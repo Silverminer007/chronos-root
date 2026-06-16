@@ -18,6 +18,7 @@ import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -27,6 +28,7 @@ import java.util.List;
 @Transactional
 @Timed("service.message")
 public class MessageService {
+    private static final Logger LOGGER = Logger.getLogger(MessageService.class);
     @Inject
     AuthorizationService authorizationService;
 
@@ -128,6 +130,8 @@ public class MessageService {
     }
 
     public Message sendMessage(Long appointmentId, String messageText, Long actingUserId, Instant timeStamp) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Sending message", actingUserId, appointmentId);
+
         this.authorizationService.requireSendMessage(appointmentId, actingUserId);
         Appointment appointment = Appointment.findById(appointmentId);
 
@@ -147,6 +151,7 @@ public class MessageService {
     }
 
     public List<Message> getMessages(Long appointmentId, Long requestingUserId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading Messages", requestingUserId, appointmentId);
         this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
 
         return this.messageQueryService.getMessages(appointmentId);

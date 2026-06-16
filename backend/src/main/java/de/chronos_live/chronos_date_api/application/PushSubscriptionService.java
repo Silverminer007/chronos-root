@@ -8,6 +8,7 @@ import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 
@@ -15,12 +16,15 @@ import java.util.List;
 @Transactional
 @Timed("service.pushSubscription")
 public class PushSubscriptionService {
+    private static final Logger LOGGER = Logger.getLogger(PushSubscriptionService.class);
 
     @Inject
     PushSubscriptionRepository repo;
 
     @Transactional
     public void saveSubscription(Long userId, PushSubscriptionDto dto) {
+        LOGGER.debugf("[Principal %s] Saving Push Subscription", userId);
+
         // Replace existing subscription with same endpoint
         PushSubscription existing = repo.findByEndpoint(dto.endpoint());
         if (existing != null) {
@@ -40,6 +44,8 @@ public class PushSubscriptionService {
     public void deleteByEndpoint(String endpoint) {
         PushSubscription existing = repo.findByEndpoint(endpoint);
         if (existing != null) {
+            LOGGER.debugf("[Principal %s] Deleting Push Subscription", existing.getUser().id);
+
             repo.delete(existing);
         }
     }
