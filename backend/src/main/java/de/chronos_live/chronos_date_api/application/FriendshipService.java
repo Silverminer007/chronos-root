@@ -21,6 +21,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.util.*;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 @Timed("service.friendship")
 public class FriendshipService {
+    private static final Logger LOGGER = Logger.getLogger(FriendshipService.class);
 
     @Inject
     FriendshipRepository friendshipRepo;
@@ -66,6 +68,8 @@ public class FriendshipService {
      */
     @Transactional
     public void sendFriendshipRequest(Long requesterId, Long addresseeId) {
+        LOGGER.debugf("[Principal %s][Addressee %s] Sending Friendship Request", requesterId, addresseeId);
+
         Log.info("User " + requesterId + " sending friendship request to " + addresseeId);
 
         // Validierung
@@ -130,6 +134,8 @@ public class FriendshipService {
      */
     @Transactional
     public void acceptFriendshipRequest(Long requestId, Long acceptingUserId) {
+        LOGGER.debugf("[Principal %s][Friendship Request %s] Accepting Friendship Request", acceptingUserId, requestId);
+
         Log.info("User " + acceptingUserId + " accepting friendship request " + requestId);
 
         FriendshipRequest request = friendshipRepo.findByIdOptional(requestId)
@@ -164,6 +170,8 @@ public class FriendshipService {
      */
     @Transactional
     public void declineFriendshipRequest(Long requestId, Long decliningUserId) {
+        LOGGER.debugf("[Principal %s][Friendship Request %s] Declining Friendship Request", decliningUserId, requestId);
+
         Log.info("User " + decliningUserId + " declining friendship request " + requestId);
 
         FriendshipRequest request = friendshipRepo.findByIdOptional(requestId)
@@ -198,6 +206,8 @@ public class FriendshipService {
      */
     @Transactional
     public void cancelFriendshipRequest(Long requestId, Long cancellingUserId) {
+        LOGGER.debugf("[Principal %s][Friendship Request %s] Cancelling Friendship Request", cancellingUserId, requestId);
+
         Log.info("User " + cancellingUserId + " cancelling friendship request " + requestId);
 
         FriendshipRequest request = friendshipRepo.findByIdOptional(requestId)
@@ -224,6 +234,8 @@ public class FriendshipService {
      */
     @Transactional
     public void removeFriendship(Long userId1, Long userId2) {
+        LOGGER.debugf("[Principal %s][User %s] Removing Friendship", userId1, userId2);
+
         Log.info("Removing friendship between " + userId1 + " and " + userId2);
 
         // Finde Freundschaft
@@ -249,6 +261,7 @@ public class FriendshipService {
      * Lädt alle Freunde eines Users
      */
     public List<FriendDto> getFriends(Long userId) {
+        LOGGER.debugf("[Principal %s] Reading Friends", userId);
         List<FriendshipRequest> friendships = friendshipRepo.getFriendships(userId);
 
         // Extrahiere Friend-IDs
@@ -297,6 +310,7 @@ public class FriendshipService {
      * Lädt eingehende Freundschaftsanfragen
      */
     public List<FriendshipRequestDto> getIncomingRequests(Long userId) {
+        LOGGER.debugf("[Principal %s] Reading Incoming Friendship Requests", userId);
         List<FriendshipRequest> requests = friendshipRepo.getIncomingRequests(userId);
         return buildRequestDTOs(requests, userId, true);
     }
@@ -305,6 +319,7 @@ public class FriendshipService {
      * Lädt ausgehende Freundschaftsanfragen
      */
     public List<FriendshipRequestDto> getOutgoingRequests(Long userId) {
+        LOGGER.debugf("[Principal %s] Reading Outgoing Friendship Requests", userId);
         List<FriendshipRequest> requests = friendshipRepo.getOutgoingRequests(userId);
         return buildRequestDTOs(requests, userId, false);
     }
@@ -313,6 +328,7 @@ public class FriendshipService {
      * Gibt Freundschaftsstatus zwischen zwei Usern zurück
      */
     public FriendshipStatus getFriendshipStatus(Long userId1, Long userId2) {
+        LOGGER.debugf("[Principal %s][User %s] Reading Friendship Status", userId1, userId2);
         return friendshipRepo.findRequest(userId1, userId2)
                 .map(FriendshipRequest::getStatus)
                 .orElse(null);

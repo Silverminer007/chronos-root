@@ -13,6 +13,7 @@ import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ import java.util.List;
 @Transactional
 @Timed("service.participation")
 public class AppointmentParticipationService {
+    private static final Logger LOGGER = Logger.getLogger(AppointmentParticipationService.class);
     @Inject
     AuthorizationService authorizationService;
     @Inject
@@ -83,6 +85,8 @@ public class AppointmentParticipationService {
 
     // User zu Termin hinzufügen
     public void addUserToAppointment(Long actingUserId, Long appointmentId, Long targetUserId, UserRole role) {
+        LOGGER.debugf("[Principal %s][Appointment %s][User %s][Role %s] Adding User Participant", actingUserId, appointmentId, targetUserId, role);
+
         this.authorizationService.requireAddUserToAppointment(appointmentId, actingUserId, targetUserId);
 
         if (AppointmentParticipation.find("appointment.id = ?1 AND user.id = ?2", appointmentId, targetUserId).count() > 0) {
@@ -105,6 +109,8 @@ public class AppointmentParticipationService {
 
     // Gruppe zu Termin hinzufügen (alle Gruppenmitglieder bekommen eine Rolle)
     public void addGroupToAppointment(Long actingUserId, Long appointmentId, Long groupId, UserRole role) {
+        LOGGER.debugf("[Principal %s][Appointment %s][Group %s][Role %s] Adding Group Participant", actingUserId, appointmentId, groupId, role);
+
         this.authorizationService.requireAddGroupToAppointment(appointmentId, actingUserId, groupId);
 
         if (AppointmentGroupParticipation.find("appointment.id = ?1 AND group.id = ?2", appointmentId, groupId).count() > 0) {
@@ -143,6 +149,8 @@ public class AppointmentParticipationService {
 
     // Rolle ändern
     public void changeUserRole(Long actingUserId, Long appointmentId, Long targetUserId, UserRole newRole) {
+        LOGGER.debugf("[Principal %s][Appointment %s][User %s][Role %s] Changing Participant Role", actingUserId, appointmentId, targetUserId, newRole);
+
         this.authorizationService.requireChangeParticipantRoleAtAppointment(appointmentId, actingUserId, targetUserId, newRole);
 
         if (newRole == null) {
@@ -169,6 +177,8 @@ public class AppointmentParticipationService {
 
     // User entfernen
     public void removeUserFromAppointment(Long actingUserId, Long appointmentId, Long targetUserId) {
+        LOGGER.debugf("[Principal %s][Appointment %s][User %s] Removing Participant", actingUserId, appointmentId, targetUserId);
+
         this.authorizationService.requireRemoveParticipantFromAppointment(appointmentId, actingUserId, targetUserId);
 
         long removedParticipationCount = AppointmentParticipation
@@ -184,6 +194,8 @@ public class AppointmentParticipationService {
 
     // Gruppe entfernen
     public void removeGroupFromAppointment(Long actingUserId, Long appointmentId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Appointment %s][Group %s] Removing Group Participant", actingUserId, appointmentId, groupId);
+
         this.authorizationService.requireRemoveGroupFromAppointment(appointmentId, actingUserId, groupId);
 
         long deletedGroupParticipationCount = AppointmentGroupParticipation
@@ -201,6 +213,8 @@ public class AppointmentParticipationService {
 
     // Teilnahmestatus ändern (User ändert seinen eigenen Status)
     public void changeParticipationStatus(Long userId, Long appointmentId, ParticipationStatus status) {
+        LOGGER.debugf("[Principal %s][Appointment %s][RSVP %s] RSVP Changed", userId, appointmentId, status);
+
         this.authorizationService.requireReadAppointment(appointmentId, userId);
 
         if (status == null) {
@@ -230,6 +244,8 @@ public class AppointmentParticipationService {
 
     // Alle Teilnehmer abrufen
     public List<UserParticipantDto> getParticipants(Long appointmentId, Long requestingUserId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading participants", requestingUserId, appointmentId);
+
         this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
 
         List<AppointmentParticipation> appointmentParticipationList =
@@ -259,6 +275,8 @@ public class AppointmentParticipationService {
     }
 
     public List<GroupDto> getGroupParticipants(Long appointmentId, Long requestingUserId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading Group Participants", requestingUserId, appointmentId);
+
         this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
 
         List<AppointmentGroupParticipation> appointmentGroupParticipationList =

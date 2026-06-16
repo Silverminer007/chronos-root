@@ -7,11 +7,14 @@ import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 @Transactional
 @Timed("service.settings")
 public class SettingsService {
+    private static final Logger LOGGER = Logger.getLogger(SettingsService.class);
+
     @Inject
     SettingsMapper settingsMapper;
 
@@ -40,6 +43,7 @@ public class SettingsService {
     }
 
     public void updateSettings(Long userId, SettingsDto settingsDto) {
+        LOGGER.debugf("[Principal %s] Updating Settings", userId);
         Settings setting = getOrCreateSettings(userId);
 
         this.settingsMapper.updateEntityFromDto(settingsDto, setting);

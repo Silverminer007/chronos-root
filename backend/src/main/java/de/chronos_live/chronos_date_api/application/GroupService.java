@@ -15,6 +15,7 @@ import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ import java.util.List;
 @Transactional
 @Timed("service.group")
 public class GroupService {
+    private static final Logger LOGGER = Logger.getLogger(GroupService.class);
     @Inject
     AuthorizationService authorizationService;
     @Inject
@@ -47,6 +49,8 @@ public class GroupService {
     }
 
     public void addGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
+        LOGGER.debugf("[Principal %s][Group %s][User %s] Adding Member", actingUserId, groupId, targetUserId);
+
         this.authorizationService.requireAddGroupMember(groupId, actingUserId, targetUserId);
         if(GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId).count() > 0) {
             throw new ValidationException("user", "This user is already a member of this group");
@@ -64,6 +68,8 @@ public class GroupService {
     }
 
     public void removeGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
+        LOGGER.debugf("[Principal %s][Group %s][User %s] Removing Member", actingUserId, groupId, targetUserId);
+
         this.authorizationService.requireRemoveGroupMember(groupId, actingUserId, targetUserId);
         GroupMember groupMember = (GroupMember) GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId)
                 .firstResultOptional().orElseThrow(() -> new ValidationException("This user is not member of this group"));
@@ -72,6 +78,7 @@ public class GroupService {
     }
 
     public List<User> getGroupUsers(Long requestingUserId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Group %s] Reading Group Members", requestingUserId, groupId);
         this.authorizationService.requireReadGroupMembers(groupId, requestingUserId);
         return GroupMember.list("SELECT gm.user FROM GroupMember gm WHERE gm.group.id = ?1", groupId);
     }
@@ -80,6 +87,8 @@ public class GroupService {
         if (createGroupDto.getName() == null || createGroupDto.getName().isBlank()) {
             throw new ValidationException("Group name is required");
         }
+        LOGGER.debugf("[Principal %s][Group %s] Creating Group", actingUserId, createGroupDto.getName());
+
         Group group = new Group();
         group.setGroupName(createGroupDto.getName());
 
@@ -92,6 +101,8 @@ public class GroupService {
     }
 
     public Group editGroup(Long actingUserId, Long groupId, GroupDto groupDto) {
+        LOGGER.debugf("[Principal %s][Group %s] Edit Group", actingUserId, groupId);
+
         this.authorizationService.requireEditGroup(groupId, actingUserId);
         if (groupDto.getName() == null || groupDto.getName().isBlank()) {
             throw new ValidationException("Group name is required");
@@ -106,6 +117,8 @@ public class GroupService {
     }
 
     public void deleteGroup(Long actingUserId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Group %s] Deleting Group", actingUserId, groupId);
+
         this.authorizationService.requireDeleteGroup(groupId, actingUserId);
         Group group = Group.findById(groupId);
         if (group == null) {

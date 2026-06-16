@@ -10,6 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.FederatedIdentityRepresentation;
@@ -27,6 +28,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Transactional
 @Timed("service.user")
 public class UserService {
+    private static final Logger LOGGER = Logger.getLogger(UserService.class);
     @Inject
     Keycloak keycloak;
 
@@ -46,6 +48,8 @@ public class UserService {
     String clientSecret;
 
     public User createUser(String firstName, String lastName, String email, String oidcId) {
+        LOGGER.debugf("[OidcId %s] Creating User", oidcId);
+
         if (firstName == null || lastName == null || email == null || oidcId == null) {
             throw new BadRequestException("Required user fields cannot be null");
         }
@@ -101,6 +105,9 @@ public class UserService {
     public UpdatedUserDto updateUser(String firstName, String lastName, String email, String oidcId, String redirectUri) {
         User user = (User) User.find("oidcId = ?1", oidcId).firstResultOptional()
                 .orElseThrow(() -> new BadRequestException("This user does not exist yet"));
+
+        LOGGER.debugf("[Principal %s] Updating User", user.id);
+
         if (firstName != null) {
             user.setFirstName(user.getFirstName());
         }
