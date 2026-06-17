@@ -80,7 +80,9 @@ public class UserService {
         if (oidcId == null) {
             throw new BadRequestException("Authentication invalid");
         }
+        LOGGER.debugf("[OidcId %s] User logged in", oidcId);
         return (User) User.find("oidcId = ?1", oidcId).firstResultOptional().orElseGet(() -> {
+            LOGGER.debugf("[OidcId %s] Creating User without data", oidcId);
             User user = new User();
             user.setOidcId(oidcId);
             user.setCreatedAt(Instant.now());
