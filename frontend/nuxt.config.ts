@@ -41,7 +41,14 @@ export default defineNuxtConfig({
         ],
     },
 
-    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@nuxt/eslint'],
+    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@nuxt/eslint', '@nuxtjs/google-fonts'],
+
+    googleFonts: {
+        download: true,
+        families: {
+            Inter: [400, 500, 600, 700]
+        }
+    },
 
     primevue: {
         options: {
