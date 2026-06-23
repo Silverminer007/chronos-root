@@ -14,6 +14,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
+    channel: 'chrome',
     // domcontentloaded avoids waiting for background fetches to the Quarkus
     // backend (http://localhost:8080) which is absent in CI. The SSR error
     // is caught gracefully but network-idle would hang until timeout.
