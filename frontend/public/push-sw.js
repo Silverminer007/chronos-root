@@ -396,13 +396,116 @@ self.addEventListener('install', function (event) {
     self.skipWaiting();
 });
 
-self.addEventListener('activate', function (event) {
+self.addEventListener('activate', async function (event) {
     console.log('Service Worker aktiviert');
     event.waitUntil(clients.claim());
+    try {
+        await scheduleRefresh();
+    } catch (err) {
+        reportSwError(err, 'activate-schedule-refresh');
+    }
 });
 
+let inflightRefresh = null
+
+async function refreshTokens() {
+    console.log('Refreshing tokens')
+    if (inflightRefresh) return inflightRefresh
+    inflightRefresh = fetch('/api/auth/refresh', {method: 'POST'})
+        .then(res => {
+            if (!res.ok) throw new Error('token_refresh_failed')
+            return res
+        })
+        .finally(() => {
+            inflightRefresh = null
+            scheduleRefresh().catch(err => reportSwError(err, 'schedule-refresh'))
+        })
+    return inflightRefresh
+}
+
 self.addEventListener('fetch', (event) => {
-    // Minimal offline response, required for PWA installation
-    // Wir lassen Requests einfach "durchfallen"
-    event.respondWith(fetch(event.request));
-});
+    event.respondWith(handleRequest(event.request))
+})
+
+async function handleRequest(request) {
+    const url = new URL(request.url)
+
+    // Nuxt page fetches shall not be intercepted
+    if (!url.pathname.startsWith('/api')) {
+        return fetch(request)
+    }
+    // isLoggedIn: answered synthetically — refresh if needed, no server round-trip
+    if (url.pathname === '/api/auth/isLoggedIn') {
+        const exp = await getTokenExpiresIn()
+        if (!exp || exp < 5_000) {
+            try {
+                await refreshTokens()
+            } catch {
+                return new Response(null, { status: 401 })
+            }
+        }
+        return new Response(null, { status: 204 })
+    }
+
+    // Auth-Routen komplett aus dem SW rausnehmen
+    if (url.pathname.startsWith('/api/auth/')) {
+        return fetch(request)
+    }
+
+    const exp = await getTokenExpiresIn()
+    if (!exp || exp < 5_000) {
+        try {
+            await refreshTokens()
+        } catch {
+            // proactive refresh failed; attempt request anyway, 401 path below retries
+        }
+    }
+
+    const cloned = request.clone()
+    const response = await fetch(request)
+    if (response.status === 401) {
+        try {
+            await refreshTokens()
+            return fetch(cloned)
+        } catch {
+            return response
+        }
+    }
+    return response
+}
+
+async function getTokenExpiresIn() {
+    const cookie = await cookieStore.get('kc_expires')
+    if (!cookie || !cookie.value) return null;
+    return cookie.value * 1000 - Date.now()
+}
+
+let refreshTimerId = null
+
+async function scheduleRefresh() {
+    const exp = await getTokenExpiresIn()
+    if (!exp || exp <= 0) {
+        console.log('scheduleRefresh: no valid token, skipping')
+        return
+    }
+    clearTimeout(refreshTimerId)
+    const msUntilRefresh = Math.max(0, exp - 30_000)
+    refreshTimerId = setTimeout(refreshTokens, msUntilRefresh)
+    console.log(`scheduleRefresh: timer set for ${Math.round(msUntilRefresh / 1000)}s (token expires in ${Math.round(exp / 1000)}s)`)
+}
+
+cookieStore.addEventListener('change', ({deleted, changed}) => {
+    // deleted = Array aller Cookies die gerade gelöscht wurden
+    if (deleted.some(c => c.name === 'kc_expires')) {
+        // kc_expires wurde vom Server gelöscht
+        // → Session ist ungültig
+        // → z.B. alle offenen Tabs benachrichtigen
+        self.clients.matchAll().then(clients => {
+            clients.forEach(client => client.postMessage({type: 'SESSION_EXPIRED'}))
+        })
+    }
+    if (changed.some(c => c.name === 'kc_expires')) {
+        console.log('Schedule Refresh as kc_expires is set')
+        scheduleRefresh().catch(err => reportSwError(err, 'cookie-change-schedule-refresh'))
+    }
+})

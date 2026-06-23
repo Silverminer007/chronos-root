@@ -1,5 +1,5 @@
-import { setCookie } from 'h3'
-import { $fetch } from 'ofetch'
+import {decodeJwt} from "#server/utils/decodeJwt";
+import type {TokenResponse} from "#server/utils/types"
 
 export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
@@ -16,23 +16,38 @@ export default defineEventHandler(async (event) => {
                 code,
             })
         }
-    )
+    ) as TokenResponse;
+
+    if (!tokenResponse || !tokenResponse.access_token || !tokenResponse.refresh_token) {
+        return
+    }
+
+    const access_token = decodeJwt(tokenResponse.access_token);
+    const refresh_token = decodeJwt(tokenResponse.refresh_token);
 
     setCookie(event, "kc_access", tokenResponse.access_token, {
         httpOnly: true,
         secure: true,
-        sameSite: "lax",
+        sameSite: "none",
         path: "/",
-        maxAge: 60 * 5 // 5 Minuten reichen für Access Tokens
+        expires: new Date(access_token.exp * 1000)
     })
 
     setCookie(event, "kc_refresh", tokenResponse.refresh_token, {
         httpOnly: true,
         secure: true,
-        sameSite: "lax",
+        sameSite: "none",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30 // Maximal alle 30 Tage neu anmelden
+        expires: new Date(refresh_token.exp * 1000)
     })
 
+    setCookie(event, "kc_expires", access_token.exp, {
+        httpOnly: false,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+        expires: new Date(refresh_token.exp * 1000)
+    })
+    console.log(`User logged in: ${access_token.iss}`)
     return sendRedirect(event, "/agenda")
 })

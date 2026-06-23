@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import {useAuthStore} from '~/stores/auth';
 import {useGroupsStore} from '~/stores/groups';
 import {useToast} from 'primevue/usetoast';
-
-const {fetchUser} = useAuthStore();
-await fetchUser();
 
 const groupsStore = useGroupsStore();
 const toast = useToast();

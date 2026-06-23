@@ -124,9 +124,9 @@
 </template>
 
 <script setup lang="ts">
-import {useAuthStore} from "~/stores/auth";
 import type {Appointment} from '~/types'
 import {DateTime} from "luxon"
+
 definePageMeta({
   layout: 'landingpage'
 })
@@ -158,12 +158,6 @@ const scrollToFeatures = () => {
     element.scrollIntoView({ behavior: 'smooth' });
   }
 };
-
-const {fetchUser, authenticated} = useAuthStore()
-await fetchUser()
-if (authenticated) {
-  navigateTo('/agenda');
-}
 
 const demoAppointment1 = ref<Appointment>({
   id: 0,

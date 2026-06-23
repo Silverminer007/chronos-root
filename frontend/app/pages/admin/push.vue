@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import {useAuthStore} from '~/stores/auth';
 import {DateTime} from 'luxon';
 import DatePicker from 'primevue/datepicker';
-
-const {fetchUser} = useAuthStore();
-await fetchUser();
 
 interface PushLogEntry {
   id: number;

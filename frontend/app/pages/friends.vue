@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import {useAuthStore} from '~/stores/auth';
 import {useFriendshipsStore} from '~/stores/friendships';
 import {useToast} from 'primevue/usetoast';
-
-const {fetchUser} = useAuthStore();
-await fetchUser();
 
 const friendshipsStore = useFriendshipsStore();
 const toast = useToast();

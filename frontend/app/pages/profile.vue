@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth';
-import { useToast } from 'primevue/usetoast';
-import type { LinkedAccount, Passkey } from '~/types';
+import {useAuthStore} from '~/stores/auth';
+import {useToast} from 'primevue/usetoast';
+import type {LinkedAccount, Passkey} from '~/types';
 
 const authStore = useAuthStore();
 const toast = useToast();
-
-await authStore.fetchUser();
 
 // Profile form
 const firstName = ref(authStore.user?.first_name ?? '');

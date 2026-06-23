@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import {useAuthStore} from '~/stores/auth';
 import {DateTime} from 'luxon';
 import {useToast} from 'primevue/usetoast';
 import ConfirmDialog from "~/components/ConfirmDialog.vue";
 
 const NuxtLink = resolveComponent('NuxtLink');
-
-const {fetchUser} = useAuthStore();
-await fetchUser();
 
 const toast = useToast();
 const showSurveyConfirm = ref(false);

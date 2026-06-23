@@ -28,6 +28,7 @@ export default defineEventHandler(async (event) => {
     // Lokale Cookies entfernen
     deleteCookie(event, 'kc_access')
     deleteCookie(event, 'kc_refresh')
+    deleteCookie(event, 'kc_expires')
 
     return { success: true }
 })

@@ -4,7 +4,8 @@ import {useAppointmentsStore} from "~/stores/appointments";
 import Menu from 'primevue/menu';
 
 const {search} = useAppointmentsStore()
-const {logout, user, authenticated} = useAuthStore()
+const {logout, user, checkSession} = useAuthStore()
+const isLoggedIn = await checkSession();
 
 const searchQuery = ref("");
 const menu = ref();
@@ -88,7 +89,7 @@ const handleSearch = () => {
         </div>
 
         <!-- User Menu -->
-        <div v-if="authenticated" class="flex items-center gap-3 shrink-0">
+        <div v-if="isLoggedIn" class="flex items-center gap-3 shrink-0">
           <!-- User Avatar -->
           <button
               class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"

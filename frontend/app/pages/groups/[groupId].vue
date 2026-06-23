@@ -7,7 +7,6 @@ const route = useRoute();
 const router = useRouter();
 
 const authStore = useAuthStore();
-await authStore.fetchUser();
 
 const groupsStore = useGroupsStore();
 const toast = useToast();

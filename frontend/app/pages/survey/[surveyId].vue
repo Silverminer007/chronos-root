@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth';
-import { useToast } from 'primevue/usetoast';
-
-const { fetchUser } = useAuthStore();
-await fetchUser();
+import {useToast} from 'primevue/usetoast';
 
 const route = useRoute();
 const toast = useToast();

@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import {useAuthStore} from '~/stores/auth';
 import {useSettingsStore} from '~/stores/settings';
 import {useToast} from 'primevue/usetoast';
 import {usePush} from '~/composables/usePush';
 import type {NotificationSettings} from '~/types';
-
-const {fetchUser} = useAuthStore();
-await fetchUser();
 
 const settingsStore = useSettingsStore();
 const toast = useToast();

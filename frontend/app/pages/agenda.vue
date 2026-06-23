@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import {useAuthStore} from "~/stores/auth";
 import {useAppointmentsStore} from "~/stores/appointments";
 
-const {fetchUser} = useAuthStore()
-await fetchUser()
 const appointmentsStore = useAppointmentsStore()
 
 // Get request headers for SSR - $fetch in Pinia stores doesn't have request context

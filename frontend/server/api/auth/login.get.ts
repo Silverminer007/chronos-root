@@ -9,5 +9,5 @@ export default defineEventHandler((event) => {
         `&response_type=code` +
         `&scope=openid profile email`
 
-    return sendRedirect(event, kcAuthUrl)
+    return sendRedirect(event, kcAuthUrl, 302)
 })

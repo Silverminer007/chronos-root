@@ -1,13 +1,18 @@
 import {defineStore} from 'pinia'
-import type {User, LinkedAccount, Passkey} from '~/types'
+import type {LinkedAccount, Passkey, User} from '~/types'
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<User | null>(null)
-    const authenticated = computed(() => !!user.value)
-
-    const initUser = async () => {
-        const data = await $fetch<User>('/api/v2/user', {method: 'POST'})
-        if (data) user.value = data
+    const checkSession = async (): Promise<boolean> => {
+        if (!import.meta.client) {
+            return true;
+        }
+        try {
+            await $fetch('/api/auth/isLoggedIn')
+            return true
+        } catch {
+            return false
+        }
     }
 
     const fetchUser = async () => {
@@ -15,13 +20,9 @@ export const useAuthStore = defineStore('auth', () => {
             const {data} = await useFetch('/api/v2/user')
 
             if (data.value) {
-                user.value = data.value
+                user.value = data.value as User;
             } else {
                 user.value = null
-            }
-
-            if (user.value && !user.value.first_name && !user.value.last_name) {
-                await initUser()
             }
         } catch {
             user.value = null
@@ -29,7 +30,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const updateProfile = async (payload: { first_name: string; last_name: string; email: string }) => {
-        const {user: updatedUser, verifyEmailUrl} = await $fetch<{ user: User; verifyEmailUrl?: string }>('/api/v2/user', {
+        const {user: updatedUser, verifyEmailUrl} = await $fetch<{
+            user: User;
+            verifyEmailUrl?: string
+        }>('/api/v2/user', {
             method: 'PATCH',
             query: {redirectUri: window.location.origin + window.location.pathname},
             body: payload
@@ -106,7 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     return {
         user,
-        authenticated,
+        checkSession,
         fetchUser,
         updateProfile,
         changePassword,
