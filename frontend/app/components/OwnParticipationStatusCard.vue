@@ -11,6 +11,8 @@ const toast = useToast();
 
 const {appointment} = defineProps<{ appointment: Appointment }>();
 
+defineOptions({ inheritAttrs: false })
+
 const updating = ref(false);
 
 // Eigenen Teilnahmestatus aus participants berechnen
@@ -51,6 +53,7 @@ const updateParticipation = async (action: 'approve' | 'reject') => {
 <template>
   <Toast />
   <div
+      v-bind="$attrs"
       class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Deine Teilnahme</h3>
 

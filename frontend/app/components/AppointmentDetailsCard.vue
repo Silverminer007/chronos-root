@@ -11,6 +11,8 @@ const props = defineProps<{
 const {formatDate, formatTime} = useDateFormatter();
 const {shareAppointment} = useAppointmentShare();
 
+defineOptions({ inheritAttrs: false })
+
 const showEditDialog = ref<boolean>(false);
 
 const getStatusLabel = (status: string) => {
@@ -37,6 +39,7 @@ const getStatusClass = (status: string) => {
 
 <template>
   <div
+      v-bind="$attrs"
       class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 overflow-hidden">
     <div class="bg-linear-to-r from-purple-600 to-pink-500 dark:from-purple-500 dark:to-pink-400 p-6">
       <div class="flex items-start justify-between gap-4 mb-2">

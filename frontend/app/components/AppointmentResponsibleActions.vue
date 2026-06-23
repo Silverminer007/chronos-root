@@ -13,6 +13,8 @@ const {appointment} = defineProps<{
   appointment: Appointment
 }>()
 
+defineOptions({ inheritAttrs: false })
+
 const actionsLoading = ref(false);
 const showCancelDialog = ref(false);
 const showRecheckDialog = ref(false);
@@ -78,8 +80,9 @@ const requestRecheck = () => {
 <template>
   <Toast/>
   <div
-v-if="isResponsible"
-       class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
+      v-if="isResponsible"
+      v-bind="$attrs"
+      class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Organisator-Aktionen</h3>
 
     <div class="space-y-3">

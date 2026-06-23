@@ -14,6 +14,8 @@ const {appointment} = defineProps<{
   appointment: Appointment;
 }>();
 
+defineOptions({ inheritAttrs: false })
+
 const showMessageDialog = ref(false);
 
 const sortedMessages = computed(() => {
@@ -24,7 +26,7 @@ const sortedMessages = computed(() => {
 });
 
 
-const handleSendMessage = async (data: { subject: string; message: string }) => {
+const handleSendMessage = async (data: { message: string }) => {
   if (!appointment) return;
 
   try {
@@ -48,7 +50,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
 
 <template>
   <Toast/>
-  <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700">
+  <div v-bind="$attrs" class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700">
     <div class="p-6 border-b border-gray-200 dark:border-neutral-700">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Nachrichten</h3>
@@ -93,7 +95,7 @@ const handleSendMessage = async (data: { subject: string; message: string }) => 
   </div>
   <MessageDialog
       :visible="showMessageDialog"
-      :event-title="appointment.name"
+      :appointment-title="appointment.name"
       :recipient-count="appointment.participants?.length || 0"
       @close="showMessageDialog = false"
       @send="handleSendMessage"
