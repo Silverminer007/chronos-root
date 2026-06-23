@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
     const code = getQuery(event).code as string
 
-    const tokenResponse = await $fetch(
+    const tokenResponse = await $fetch<TokenResponse>(
         `${config.auth.issuer}/protocol/openid-connect/token`,
         {
             method: "POST",
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
                 code,
             })
         }
-    ) as TokenResponse;
+    );
 
     if (!tokenResponse || !tokenResponse.access_token || !tokenResponse.refresh_token) {
         return

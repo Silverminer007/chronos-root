@@ -7,7 +7,7 @@ export function useFriends() {
     async function loadFriends() {
         loading.value = true;
 
-        const data = await $fetch(`/api/v2/friendships/friends/`);
+        const data = await $fetch<Friend[]>(`/api/v2/friendships/friends/`);
 
         if (data) {
             friends.value = data;

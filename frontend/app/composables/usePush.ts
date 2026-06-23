@@ -81,7 +81,7 @@ export function usePush() {
             if (!existing) {
                 await subscribe();
             } else {
-                const subscriptionStatus = await $fetch("/api/v2/push/status", {
+                const subscriptionStatus = await $fetch<{ exists: boolean }>("/api/v2/push/status", {
                     method: "GET",
                     query: {
                         endpoint: existing.endpoint,

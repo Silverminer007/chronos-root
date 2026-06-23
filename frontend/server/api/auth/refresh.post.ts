@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
 
     let tokenResponse: TokenResponse | undefined;
     try {
-        tokenResponse = await $fetch(
+        tokenResponse = await $fetch<TokenResponse>(
             `${config.auth.issuer}/protocol/openid-connect/token`,
             {
                 method: "POST",

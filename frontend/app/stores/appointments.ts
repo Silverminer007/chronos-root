@@ -1,6 +1,11 @@
 // stores/appointments.ts
 import {defineStore} from 'pinia'
-import type {Appointment, ParticipantGroup} from "~/types";
+import type {Appointment, Message, ParticipantGroup} from "~/types";
+
+interface PaginatedAppointments {
+    data: Appointment[]
+    meta: { page: number; size: number; total: number }
+}
 
 export interface AppointmentFilters {
     start?: string
@@ -146,15 +151,15 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (filters.messages) params.append('messages', 'true')
                 if (filters.groups) params.append('groups', 'true')
 
-                const response = await $fetch(`/api/v2/appointments?${params.toString()}`, {
+                const response = await $fetch<PaginatedAppointments | Appointment[]>(`/api/v2/appointments?${params.toString()}`, {
                     headers: options.headers
                 })
 
                 if (!this.appointments || this.appointments.length === 0) {
                     this.appointments = [];
                 }
-                const items = response.data ?? response;
-                const meta = response.meta;
+                const items = Array.isArray(response) ? response : response.data;
+                const meta = Array.isArray(response) ? undefined : response.meta;
                 if (meta) {
                     this.pagination.page = meta.page;
                     this.pagination.size = meta.size;
@@ -181,7 +186,7 @@ export const useAppointmentsStore = defineStore('appointments', {
                 if (options.messages) params.append('messages', 'true')
                 if (options.group_participants) params.append('group_participants', 'true')
 
-                const response = await $fetch(`/api/v2/appointments/${id}?${params.toString()}`)
+                const response = await $fetch<Appointment>(`/api/v2/appointments/${id}?${params.toString()}`)
 
                 this.currentAppointment = response
 
@@ -206,7 +211,7 @@ export const useAppointmentsStore = defineStore('appointments', {
             this.error = null
 
             try {
-                const response = await $fetch('/api/v2/appointments', {
+                const response = await $fetch<Appointment>('/api/v2/appointments', {
                     method: 'POST',
                     body: data
                 })
@@ -227,7 +232,7 @@ export const useAppointmentsStore = defineStore('appointments', {
             this.error = null
 
             try {
-                const response = await $fetch(`/api/v2/appointments/${id}`, {
+                const response = await $fetch<Appointment>(`/api/v2/appointments/${id}`, {
                     method: 'PATCH',
                     body: data
                 })
@@ -415,7 +420,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Nachrichten abrufen
         async fetchMessages(appointmentId: number) {
             try {
-                const response = await $fetch(`/api/v2/appointments/${appointmentId}/messages`)
+                const response = await $fetch<Message[]>(`/api/v2/appointments/${appointmentId}/messages`)
 
                 if (this.currentAppointment?.id === appointmentId) {
                     this.currentAppointment.messages = response
