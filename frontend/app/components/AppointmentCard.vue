@@ -4,7 +4,7 @@ import {useDateFormatter} from '~/composables/useDateFormatter';
 import {useAuthStore} from "~/stores/auth";
 import {useAppointmentsStore} from "~/stores/appointments";
 import {useToast} from "primevue/usetoast";
-import LazyMessageDialog from "~/components/LazyMessageDialog.vue";
+import MessageDialog from "./MessageDialog.vue";
 
 const {appointment} = defineProps<{
   appointment: Appointment
@@ -99,7 +99,7 @@ async function sendMessage(messageBody: string) {
 </script>
 
 <template>
-  <LazyMessageDialog
+  <MessageDialog
       :visible="messageDialog"
       :appointment-title="`${appointment.name} ${formatDate(appointment.start)}`"
       :recipient-count="appointment.participants?.length || 0"

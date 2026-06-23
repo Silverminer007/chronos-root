@@ -53,7 +53,7 @@ async function sendMessage() {
 
 <template>
   <Toast/>
-  <LazyMessageDialog
+  <MessageDialog
       :visible="messageDialog"
       :appointment-title="`${appointment.name} ${formatDate(appointment.start)}`"
       :recipient-count="appointment.participants?.length || 0"
