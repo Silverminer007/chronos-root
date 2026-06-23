@@ -41,15 +41,7 @@ export default defineNuxtConfig({
         ],
     },
 
-    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@sentry/nuxt/module', '@nuxt/eslint'],
-
-    sentry: {
-        sourceMapsUploadOptions: {
-            org: 'justus-henze',
-            project: 'chronos-frontend',
-            authToken: process.env.SENTRY_AUTH_TOKEN,
-        },
-    },
+    modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@nuxt/eslint'],
 
     primevue: {
         options: {
