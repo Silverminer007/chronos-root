@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Check out the exact commit that passed CI, not the current HEAD
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -29,9 +29,9 @@ jobs:
 
       - name: ⚙️ Set up Node.js
         if: github.event.workflow_run.head_branch == 'master'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 26
 
       - name: 📦 Install Semantic Release
         if: github.event.workflow_run.head_branch == 'master'
@@ -76,7 +76,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
