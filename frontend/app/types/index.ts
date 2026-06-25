@@ -1,10 +1,10 @@
 export interface Appointment {
     id: number,
     name: string,
-    description: string,
+    description: string | null,
     start: string,
     end: string,
-    venue: string,
+    venue: string | null,
     status: AppointmentStatus,
     minimal_attendees: number,
     participants: UserParticipant[],

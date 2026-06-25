@@ -3,11 +3,14 @@ import {useAppointmentsStore} from "~/stores/appointments";
 
 const appointmentsStore = useAppointmentsStore()
 
-// Get request headers for SSR - $fetch in Pinia stores doesn't have request context
 const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 await useAsyncData('appointments', () => appointmentsStore.loadInitialAppointments({headers}))
 
-const showCreateDialog = ref(false);
+const showStepper = ref(false)
+
+function onAppointmentCreated(id: number) {
+  navigateTo(`/appointment/${id}`)
+}
 </script>
 
 <template>
@@ -70,13 +73,13 @@ const showCreateDialog = ref(false);
     <!-- FAB - Create Appointment -->
     <button
         class="fixed bottom-6 right-6 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white shadow-2xl bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all transform hover:scale-110 z-50"
-        @click="showCreateDialog = true"
+        @click="showStepper = true"
     >
-      <Icon name="lucide:plus" class=" text-xl sm:text-2xl"/>
+      <Icon name="lucide:plus" class=" text-xl sm:text-2xl" />
     </button>
 
-    <!-- Create Appointment Dialog -->
-    <CreateAppointmentDialog v-model:visible="showCreateDialog"/>
+    <!-- Create Appointment Stepper -->
+    <CreateAppointmentStepper v-model="showStepper" @created="onAppointmentCreated" />
 
     <Toast/>
   </div>

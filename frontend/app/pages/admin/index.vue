@@ -61,7 +61,17 @@ const stats = computed(() => [
   {label: 'Push-Abonnements', icon: 'lucide:bell', value: statistics.value?.pushSubscriptions.total ?? 0, link: '/admin/push'},
 ]);
 
-const recentLogins = computed(() => usersData.value?.items ?? []);
+const recentLogins = computed(() => usersData.value?.items ?? [])
+
+const AB_VARIANTS = ['a', 'b', 'c'] as const
+const abGroups = computed(() => {
+  const users = usersData.value?.items ?? []
+  return {
+    a: users.filter(u => u.id % 3 === 0),
+    b: users.filter(u => u.id % 3 === 1),
+    c: users.filter(u => u.id % 3 === 2),
+  }
+});
 
 function getInitials(user: AdminUser): string {
   return user && user.firstName && user.lastName ? ((user?.firstName[0] ?? '') + (user?.lastName[0] ?? '')).toUpperCase() : '';
@@ -123,6 +133,41 @@ function formatRelativeTime(dateStr: string): string {
               <Icon v-else name="lucide:send" />
               <span>Umfrage-Einladungen senden</span>
             </button>
+          </div>
+        </div>
+
+        <!-- A/B Test -->
+        <div class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6 mb-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center shrink-0">
+              <Icon name="lucide:flask-conical" class="text-xl text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">A/B-Test Erstellungsmaske</h2>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Zuweisung per <code class="font-mono text-xs">user.id % 3</code></p>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div v-for="v in AB_VARIANTS" :key="v" class="rounded-xl border border-gray-200 dark:border-neutral-700 overflow-hidden">
+              <div class="px-3 py-2 bg-gray-50 dark:bg-neutral-700 flex items-center justify-between">
+                <span class="text-sm font-bold text-gray-900 dark:text-white uppercase">Variante {{ v }}</span>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                  {{ abGroups[v].length }}
+                </span>
+              </div>
+              <ul class="divide-y divide-gray-100 dark:divide-neutral-700">
+                <li
+                  v-for="user in abGroups[v]"
+                  :key="user.id"
+                  class="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 truncate"
+                >
+                  {{ user.firstName }} {{ user.lastName }}
+                </li>
+                <li v-if="abGroups[v].length === 0" class="px-3 py-2 text-sm text-gray-400 dark:text-neutral-500 italic">
+                  Keine Nutzer
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 

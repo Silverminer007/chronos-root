@@ -2,7 +2,6 @@
 import type {Appointment} from '~/types'
 import {useDateFormatter} from "~/composables/useDateFormatter";
 import {useAppointmentShare} from "~/composables/useAppointmentShare";
-import EditAppointmentDialog from "~/components/EditAppointmentDialog.vue";
 
 const props = defineProps<{
   appointment: Appointment
@@ -13,7 +12,7 @@ const {shareAppointment} = useAppointmentShare();
 
 defineOptions({ inheritAttrs: false })
 
-const showEditDialog = ref<boolean>(false);
+const showEditSheet = ref(false)
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
@@ -49,8 +48,8 @@ const getStatusClass = (status: string) => {
             class="px-3 py-1 rounded-full text-sm font-medium shrink-0"
             :class="getStatusClass(appointment.status)"
         >
-                  {{ getStatusLabel(appointment.status) }}
-                </span>
+          {{ getStatusLabel(appointment.status) }}
+        </span>
         <div class="flex items-center gap-2 shrink-0">
           <button
               class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
@@ -62,9 +61,9 @@ const getStatusClass = (status: string) => {
           <button
               class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
               title="Termin bearbeiten"
-              @click="showEditDialog = true"
+              @click="showEditSheet = true"
           >
-            <Icon name="lucide:pencil"/>
+            <Icon name="lucide:pencil" />
           </button>
         </div>
       </div>
@@ -93,13 +92,14 @@ const getStatusClass = (status: string) => {
       <div class="flex items-center gap-2 text-sm">
         <Icon name="lucide:users" class=" text-gray-400"/>
         <span class="text-gray-600 dark:text-gray-400">
-                  Mindestens {{ appointment.minimal_attendees }} Teilnehmer erforderlich
-                </span>
+          Mindestens {{ appointment.minimal_attendees }} Teilnehmer erforderlich
+        </span>
       </div>
     </div>
   </div>
-  <EditAppointmentDialog
-      v-model:visible="showEditDialog"
-      :appointment="appointment"
+
+  <EditAppointmentBottomSheet
+    v-model="showEditSheet"
+    :appointment="appointment"
   />
 </template>
