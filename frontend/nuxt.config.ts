@@ -39,6 +39,13 @@ export default defineNuxtConfig({
         plugins: [
             tailwindcss(),
         ],
+        optimizeDeps: {
+            include: [
+                '@vue/devtools-core',
+                '@vue/devtools-kit',
+                'luxon',
+            ]
+        }
     },
 
     modules: ['@primevue/nuxt-module', '@pinia/nuxt', '@nuxt/icon', '@nuxt/eslint', '@nuxtjs/google-fonts'],
