@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
             path: "/",
             expires: new Date(refresh_token.exp * 1000)
         })
-        console.log(`User refreshed token: ${access_token.iss}`)
+        console.log(`User refreshed token: ${access_token.sub}`)
     } catch (err) {
         deleteCookie(event, "kc_expires")
         deleteCookie(event, "kc_access")
