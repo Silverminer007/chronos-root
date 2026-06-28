@@ -4,9 +4,6 @@ import type {LinkedAccount, Passkey, User} from '~/types'
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<User | null>(null)
     const checkSession = async (): Promise<boolean> => {
-        if (!import.meta.client) {
-            return true;
-        }
         try {
             await $fetch('/api/auth/isLoggedIn')
             return true

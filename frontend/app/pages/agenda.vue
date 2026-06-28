@@ -3,8 +3,7 @@ import {useAppointmentsStore} from "~/stores/appointments";
 
 const appointmentsStore = useAppointmentsStore()
 
-const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
-await useAsyncData('appointments', () => appointmentsStore.loadInitialAppointments({headers}))
+await useAsyncData('appointments', () => appointmentsStore.loadInitialAppointments())
 
 const showStepper = ref(false)
 
