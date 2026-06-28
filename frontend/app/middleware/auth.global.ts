@@ -16,4 +16,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     if (shouldShow() && to.path !== '/onboarding') {
         return navigateTo('/onboarding')
     }
+    if (to.path === '/') {
+        return navigateTo('/agenda')
+    }
 })
