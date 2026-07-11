@@ -75,7 +75,6 @@ helm upgrade chronos . -f values-staging.yaml --namespace chronos-staging --inst
 |---|---|---|
 | Backend CI | `.github/workflows/backend-ci.yml` | push/PR to `backend/**` |
 | Frontend CI | `.github/workflows/frontend-ci.yml` | push/PR to `frontend/**` |
-| Frontend Docker Build | `.github/workflows/frontend-docker-build.yml` | after Frontend CI passes |
 | Deploy to Kubernetes | `.github/workflows/deployment-ci.yml` | push to `deployment/**` or `repository_dispatch` |
 
 **Branch model:**
