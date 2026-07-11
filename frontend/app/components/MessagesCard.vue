@@ -1,0 +1,103 @@
+<script setup lang="ts">
+import type {Appointment} from "~/types";
+import {useAppointmentsStore} from "~/stores/appointments";
+import {useDateFormatter} from "~/composables/useDateFormatter";
+import {useToast} from "primevue/usetoast";
+import Toast from "primevue/toast";
+
+const appointmentsStore = useAppointmentsStore();
+const {formatDateTime} = useDateFormatter();
+
+const toast = useToast();
+
+const {appointment} = defineProps<{
+  appointment: Appointment;
+}>();
+
+defineOptions({ inheritAttrs: false })
+
+const showMessageDialog = ref(false);
+
+const sortedMessages = computed(() => {
+  if (!appointment) return [];
+  return [...appointment.messages].sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+});
+
+
+const handleSendMessage = async (data: { message: string }) => {
+  if (!appointment) return;
+
+  try {
+    await appointmentsStore.sendMessage(appointment.id, data.message);
+    toast.add({
+      severity: 'success',
+      summary: 'Nachricht versendet',
+      life: 3000
+    });
+    showMessageDialog.value = false;
+  } catch {
+    toast.add({
+      severity: 'error',
+      summary: 'Fehler beim Senden',
+      detail: 'Bitte kontaktiere den Entwickler der App',
+      life: 3000
+    });
+  }
+};
+</script>
+
+<template>
+  <Toast/>
+  <div v-bind="$attrs" class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700">
+    <div class="p-6 border-b border-gray-200 dark:border-neutral-700">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Nachrichten</h3>
+        <button
+            class="px-4 py-2 rounded-lg font-medium text-white transition-all bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 dark:from-purple-500 dark:to-pink-400 flex items-center justify-center gap-2"
+            @click="showMessageDialog = true"
+        >
+          <Icon name="lucide:send" />
+          <span>Nachricht senden</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="divide-y divide-gray-200 dark:divide-neutral-700">
+      <div
+          v-for="message in sortedMessages"
+          :key="message.id"
+          class="p-6 hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors"
+      >
+        <div class="flex gap-4">
+          <div
+              class="w-10 h-10 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center shrink-0">
+            <Icon name="lucide:user" class=" text-purple-600 dark:text-purple-400" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <div>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ message.sender_name }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ formatDateTime(message.timestamp) }}</p>
+              </div>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ message.body }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="appointment.messages.length === 0" class="p-12 text-center">
+        <Icon name="lucide:inbox" class=" text-4xl text-gray-300 dark:text-gray-600 mb-4" />
+        <p class="text-gray-500 dark:text-gray-400">Noch keine Nachrichten</p>
+      </div>
+    </div>
+  </div>
+  <MessageDialog
+      :visible="showMessageDialog"
+      :appointment-title="appointment.name"
+      :recipient-count="appointment.participants?.length || 0"
+      @close="showMessageDialog = false"
+      @send="handleSendMessage"
+  />
+</template>

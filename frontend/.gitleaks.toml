@@ -1,0 +1,10 @@
+title = "Chronos Frontend"
+
+[allowlist]
+  description = "Suppress known-safe patterns"
+  paths = [
+    # Example env file contains key names with intentionally empty values
+    '''.env\.example$''',
+    # Lockfile integrity hashes can match generic secret patterns
+    '''package-lock\.json$''',
+  ]
