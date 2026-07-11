@@ -1,0 +1,166 @@
+# github-actions-rbac.yaml - Service Account für CI/CD
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions-deployer
+  namespace: chronos-prod
+  labels:
+    app: github-actions
+    component: deployer
+
+---
+# ClusterRole für Deployment Permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: github-actions-deployer
+  labels:
+    app: github-actions
+rules:
+  # Deployment Management
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # Service Management
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  # ConfigMap und Secret Management
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # Ingress Management
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  # Pod Logs für Debugging
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+
+  # HPA Management
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  # ServiceMonitor für Monitoring
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  # BitwardenSecret Management
+  - apiGroups: ["k8s.bitwarden.com"]
+    resources: ["bitwardensecrets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  - apiGroups: [ "" ]
+    resources: [ "persistentvolumeclaims" ]
+    verbs: [ "get", "list", "create", "update", "patch" ]
+
+  - apiGroups: [ "batch" ]
+    resources: [ "cronjobs" ]
+    verbs: [ "get", "list", "create", "update", "patch" ]
+
+  - apiGroups: [ "monitoring.coreos.com" ]
+    resources: [ "prometheusrules" ]
+    verbs: [ "get", "list", "create", "update", "patch" ]
+
+  - apiGroups: [ "" ]
+    resources: [ "events" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "" ]
+    resources: [ "replicationcontrollers" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "apps" ]
+    resources: [ "daemonsets" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "apps" ]
+    resources: [ "statefulsets" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: [ "batch" ]
+    resources: [ "jobs" ]
+    verbs: [ "get", "list" ]
+
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get", "list", "create", "update", "patch"]
+
+  - apiGroups: [ "coordination.k8s.io" ]
+    resources: [ "leases" ]
+    verbs: [ "get", "list", "watch", "create", "update", "patch", "delete" ]
+
+---
+# ClusterRoleBinding für chronos namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deployer
+  namespace: chronos-prod
+  labels:
+    app: github-actions
+subjects:
+  - kind: ServiceAccount
+    name: github-actions-deployer
+    namespace: chronos-prod
+roleRef:
+  kind: ClusterRole
+  name: github-actions-deployer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Secret für Service Account Token (long-lived)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-actions-deployer-token
+  namespace: chronos-prod
+  annotations:
+    kubernetes.io/service-account.name: github-actions-deployer
+  labels:
+    app: github-actions
+type: kubernetes.io/service-account-token
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deployer-monitoring
+  namespace: monitoring
+  labels:
+    app: github-actions
+subjects:
+  - kind: ServiceAccount
+    name: github-actions-deployer
+    namespace: chronos-prod
+roleRef:
+  kind: ClusterRole
+  name: github-actions-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deployer-chronos-staging
+  namespace: chronos-staging
+  labels:
+    app: github-actions
+subjects:
+  - kind: ServiceAccount
+    name: github-actions-deployer
+    namespace: chronos-prod
+roleRef:
+  kind: ClusterRole
+  name: github-actions-deployer
+  apiGroup: rbac.authorization.k8s.io

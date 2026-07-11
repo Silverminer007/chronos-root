@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chronos-frontend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  selector:
+    app: chronos-frontend
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.containerPort }}

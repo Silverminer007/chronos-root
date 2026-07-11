@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chronos-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: chronos-backend
+  template:
+    metadata:
+      labels:
+        app: chronos-backend
+    spec:
+      imagePullSecrets:
+        - name: chronos-docker-secret
+      containers:
+        - name: chronos
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.containerPort }}
+          env:
+            {{- range $key, $value := .Values.backend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.backend.envFromSecrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.backend.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.backend.readinessProbe | nindent 12 }}

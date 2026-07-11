@@ -1,0 +1,89 @@
+{{- if .Values.alerts.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Values.namespace }}-alerts
+  namespace: monitoring
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+    app: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+  - name: chronos.rules
+    rules:
+    - alert: ChronosPodDown
+      expr: kube_pod_status_phase{namespace="{{ .Values.namespace }}", pod=~"chronos-.*", phase!="Running"} == 1
+      for: {{ .Values.alerts.rules.podDown.for }}
+      labels:
+        severity: critical
+        service: chronos
+      annotations:
+        summary: "Chronos Pod is down"
+        description: "Chronos pod {{`{{ $labels.pod }}`}} has been down for more than {{ .Values.alerts.rules.podDown.for }}"
+
+    - alert: PostgreSQLDown
+      expr: kube_pod_status_phase{namespace="{{ .Values.namespace }}", pod=~"postgres.*", phase!="Running"} == 1
+      for: {{ .Values.alerts.rules.postgresDown.for }}
+      labels:
+        severity: critical
+        service: postgresql
+      annotations:
+        summary: "PostgreSQL is down"
+        description: "PostgreSQL pod {{`{{ $labels.pod }}`}} has been down for more than {{ .Values.alerts.rules.postgresDown.for }}"
+
+    - alert: ChronosHighCPU
+      expr: rate(container_cpu_usage_seconds_total{namespace="{{ .Values.namespace }}", container="chronos"}[5m]) > {{ .Values.alerts.rules.highCPU.threshold }}
+      for: {{ .Values.alerts.rules.highCPU.for }}
+      labels:
+        severity: warning
+        service: chronos
+      annotations:
+        summary: "Chronos high CPU usage"
+        description: "Chronos pod {{`{{ $labels.pod }}`}} CPU usage is above {{ mulf .Values.alerts.rules.highCPU.threshold 100 }}% for more than {{ .Values.alerts.rules.highCPU.for }}"
+
+    - alert: ChronosHighMemory
+      expr: container_memory_usage_bytes{namespace="{{ .Values.namespace }}", container="chronos"} / container_spec_memory_limit_bytes{namespace="{{ .Values.namespace }}", container="chronos"} > {{ .Values.alerts.rules.highMemory.threshold }}
+      for: {{ .Values.alerts.rules.highMemory.for }}
+      labels:
+        severity: warning
+        service: chronos
+      annotations:
+        summary: "Chronos high memory usage"
+        description: "Chronos pod {{`{{ $labels.pod }}`}} memory usage is above {{ mulf .Values.alerts.rules.highMemory.threshold 100 }}% for more than {{ .Values.alerts.rules.highMemory.for }}"
+
+    - alert: PostgreSQLDiskFull
+      expr: |
+        (
+          kubelet_volume_stats_used_bytes{namespace="{{ .Values.namespace }}", persistentvolumeclaim=~"postgres.*"}
+          /
+          kubelet_volume_stats_capacity_bytes{namespace="{{ .Values.namespace }}", persistentvolumeclaim=~"postgres.*"}
+        ) > {{ .Values.alerts.rules.postgresDiskFull.threshold }}
+      for: {{ .Values.alerts.rules.postgresDiskFull.for }}
+      labels:
+        severity: warning
+        service: postgresql
+      annotations:
+        summary: "PostgreSQL disk usage high"
+        description: "PostgreSQL volume {{`{{ $labels.persistentvolumeclaim }}`}} is more than {{ mulf .Values.alerts.rules.postgresDiskFull.threshold 100 }}% full"
+
+    - alert: ChronosPodRestarting
+      expr: increase(kube_pod_container_status_restarts_total{namespace="{{ .Values.namespace }}"}[1h]) > {{ .Values.alerts.rules.podRestarting.threshold }}
+      for: 0m
+      labels:
+        severity: warning
+        service: chronos
+      annotations:
+        summary: "Chronos pod restarting frequently"
+        description: "Pod {{`{{ $labels.pod }}`}} has restarted more than {{ .Values.alerts.rules.podRestarting.threshold }} times in the last hour"
+
+    - alert: SSLCertExpiringSoon
+      expr: probe_ssl_earliest_cert_expiry - time() < 86400 * {{ .Values.alerts.rules.sslExpiry.daysWarning }}
+      for: 1h
+      labels:
+        severity: warning
+        service: ssl
+      annotations:
+        summary: "SSL certificate expiring soon"
+        description: "SSL certificate for {{`{{ $labels.instance }}`}} expires in less than {{ .Values.alerts.rules.sslExpiry.daysWarning }} days"
+{{- end }}
