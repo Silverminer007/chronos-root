@@ -1,10 +1,12 @@
-name: CI
+name: Backend CI
 
 on:
   push:
     branches: [ main, master, develop ]
+    paths: [ 'backend/**' ]
   pull_request:
     branches: [ main, master, develop ]
+    paths: [ 'backend/**' ]
 
 permissions:
   contents: write
@@ -12,6 +14,10 @@ permissions:
   issues: write
   pull-requests: write
   packages: write
+
+defaults:
+  run:
+    working-directory: backend
 
 jobs:
   test:
@@ -78,6 +84,7 @@ jobs:
         run: |
           npm install -g semantic-release \
             @semantic-release/commit-analyzer
+        working-directory: ${{ github.workspace }}
 
       - name: 🚀 Run Semantic Release (GitHub only)
         if: github.ref == 'refs/heads/master'
@@ -87,6 +94,7 @@ jobs:
         run: |
           npx semantic-release --plugins \
             @semantic-release/commit-analyzer
+        working-directory: ${{ github.workspace }}
 
       - name: Calculate Image Name and Version tag
         id: version
@@ -96,7 +104,7 @@ jobs:
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
             VERSION=$(git tag --sort=-creatordate | head -1)
           else
-            VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"  # develop-a1b2c3d4
+            VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"
           fi
 
           IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-date-api
@@ -104,6 +112,7 @@ jobs:
           echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "**Image**: $IMAGE:$VERSION" >> $GITHUB_STEP_SUMMARY
+        working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -154,19 +163,13 @@ jobs:
       - name: 📦 Re-tag Docker Image (latest)
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         run: |
-          echo "Tagging as ${{needs.calculate-version.outputs.image}}:latest ..."
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:latest
-
-          echo "Pushing ${{needs.calculate-version.outputs.image}}:latest ..."
           docker push ${{needs.calculate-version.outputs.image}}:latest
 
       - name: 📦 Re-tag Docker Image (develop)
         if: github.ref == 'refs/heads/develop'
         run: |
-          echo "Tagging as ${{needs.calculate-version.outputs.image}}:develop ..."
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:develop
-
-          echo "Pushing ${{needs.calculate-version.outputs.image}}:develop ..."
           docker push ${{needs.calculate-version.outputs.image}}:develop
 
   build-native:
@@ -216,19 +219,13 @@ jobs:
       - name: 📦 Re-tag Docker Image (latest)
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         run: |
-          echo "Tagging as ${{needs.calculate-version.outputs.image}}:latest-native ..."
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}-native ${{needs.calculate-version.outputs.image}}:latest-native
-
-          echo "Pushing ${{needs.calculate-version.outputs.image}}:latest-native ..."
           docker push ${{needs.calculate-version.outputs.image}}:latest-native
 
       - name: 📦 Re-tag Docker Image (develop)
         if: github.ref == 'refs/heads/develop'
         run: |
-          echo "Tagging as ${{needs.calculate-version.outputs.image}}:develop-native ..."
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}}-native ${{needs.calculate-version.outputs.image}}:develop-native
-
-          echo "Pushing ${{needs.calculate-version.outputs.image}}:develop-native ..."
           docker push ${{needs.calculate-version.outputs.image}}:develop-native
 
   deploy:
@@ -241,9 +238,9 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           curl -X POST \
-            -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/silverminer007/chronos-deployment/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{
               "event_type":"deploy-production",
               "client_payload":{
@@ -252,14 +249,15 @@ jobs:
                 "image":"${{needs.calculate-version.outputs.image}}"
               }
             }'
+        working-directory: ${{ github.workspace }}
 
       - name: 🧪 Trigger Staging Deployment
         if: github.ref == 'refs/heads/develop'
         run: |
           curl -X POST \
-            -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/silverminer007/chronos-deployment/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{
               "event_type":"deploy-staging",
               "client_payload":{
@@ -268,3 +266,4 @@ jobs:
                 "image":"${{needs.calculate-version.outputs.image}}"
               }
             }'
+        working-directory: ${{ github.workspace }}

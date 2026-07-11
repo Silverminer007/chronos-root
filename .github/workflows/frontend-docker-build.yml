@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   workflow_run:
-    workflows: ['CI']
+    workflows: ['Frontend CI']
     branches: [master, develop]
     types: [completed]
 
@@ -10,10 +10,13 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/chronos-nuxt
 
+defaults:
+  run:
+    working-directory: frontend
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Only run when all CI checks passed
     if: github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: write
@@ -23,7 +26,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          # Check out the exact commit that passed CI, not the current HEAD
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
@@ -38,6 +40,7 @@ jobs:
         run: |
           npm install -g semantic-release \
             @semantic-release/commit-analyzer
+        working-directory: ${{ github.workspace }}
 
       - name: 🚀 Run Semantic Release (GitHub only)
         if: github.event.workflow_run.head_branch == 'master'
@@ -47,6 +50,7 @@ jobs:
         run: |
           npx semantic-release --plugins \
             @semantic-release/commit-analyzer
+        working-directory: ${{ github.workspace }}
 
       - name: 🧾 Get latest release version
         if: github.event.workflow_run.head_branch == 'master'
@@ -54,6 +58,7 @@ jobs:
         run: |
           VERSION=$(git tag --sort=-creatordate | head -1)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+        working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -72,6 +77,7 @@ jobs:
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "**Image**: $IMAGE:$VERSION" >> $GITHUB_STEP_SUMMARY
+        working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -92,28 +98,22 @@ jobs:
       - name: 📦 Re-tag Docker Image (latest)
         if: github.event.workflow_run.head_branch == 'master'
         run: |
-          echo "Tagging as $IMAGE:latest ..."
           docker tag $IMAGE:$VERSION $IMAGE:latest
-
-          echo "Pushing $IMAGE:latest ..."
           docker push $IMAGE:latest
 
       - name: 📦 Re-tag Docker Image (develop)
         if: github.event.workflow_run.head_branch == 'develop'
         run: |
-          echo "Tagging as $IMAGE:develop ..."
           docker tag $IMAGE:$VERSION $IMAGE:develop
-
-          echo "Pushing $IMAGE:develop ..."
           docker push $IMAGE:develop
 
       - name: 🚀 Trigger Production Deployment
         if: github.event.workflow_run.head_branch == 'master'
         run: |
           curl -X POST \
-            -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/silverminer007/chronos-deployment/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{
               "event_type":"deploy-production",
               "client_payload":{
@@ -122,14 +122,15 @@ jobs:
                 "image":"${{env.IMAGE}}"
               }
             }'
+        working-directory: ${{ github.workspace }}
 
       - name: 🧪 Trigger Staging Deployment
         if: github.event.workflow_run.head_branch == 'develop'
         run: |
           curl -X POST \
-            -H "Authorization: token ${{ secrets.DEPLOYMENT_REPO_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/silverminer007/chronos-deployment/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{
               "event_type":"deploy-staging",
               "client_payload":{
@@ -138,3 +139,4 @@ jobs:
                 "image":"${{env.IMAGE}}"
               }
             }'
+        working-directory: ${{ github.workspace }}

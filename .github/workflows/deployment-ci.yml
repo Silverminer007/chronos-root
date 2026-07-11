@@ -3,8 +3,13 @@ name: 🚀 Deploy to Kubernetes
 on:
   push:
     branches: [ main ]
+    paths: [ 'deployment/**' ]
   repository_dispatch:
     types: [ deploy-staging, deploy-production ]
+
+defaults:
+  run:
+    working-directory: deployment
 
 jobs:
   deploy:
@@ -53,7 +58,7 @@ jobs:
               echo "values_file=values-prod.yaml" >> $GITHUB_OUTPUT
             elif [ "${{ github.event.action }}" = "deploy-staging" ]; then
               echo "environment=staging" >> $GITHUB_OUTPUT
-              echo "namespace=chronos-staging" >> $GITHUB_OUTPUT  
+              echo "namespace=chronos-staging" >> $GITHUB_OUTPUT
               echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
@@ -98,7 +103,6 @@ jobs:
 
           echo "## 🔍 Pre-deployment Checks"
 
-          # 1. Values File checken
           echo "📋 Checking values file..."
           if [ ! -f "$VALUES_FILE" ]; then
             echo "❌ Values file not found: $VALUES_FILE"
@@ -107,11 +111,9 @@ jobs:
           fi
           cat $VALUES_FILE
 
-          # 2. Helm Template Test (ohne Deployment)
           echo "📋 Testing Helm template..."
           helm template chronos . -f $VALUES_FILE -f ./overrides.yaml --namespace $NAMESPACE --debug
 
-          # 3. Bestehende Resources checken
           echo "📋 Checking existing resources..."
           kubectl get all -n $NAMESPACE || echo "Namespace empty or doesn't exist"
 
@@ -123,7 +125,6 @@ jobs:
 
           echo "🚀 Deploying Chronos to $ENVIRONMENT..."
 
-          # Helm deployment mit mehr Debugging
           helm upgrade chronos . \
             --namespace $NAMESPACE \
             -f ./$VALUES_FILE \
@@ -140,22 +141,17 @@ jobs:
 
           echo "## 🚨 Deployment Failed - Debug Info"
 
-          # Helm Status
           echo "📋 Helm Status:"
           helm status chronos -n $NAMESPACE || echo "No helm release found"
 
-          # Pod Status
           echo "📋 Pod Status:"
           kubectl get pods -n $NAMESPACE -o wide
 
-          # Events
           echo "📋 Recent Events:"
           kubectl get events -n $NAMESPACE --sort-by=.metadata.creationTimestamp --field-selector type=Warning
 
-          # Describe problematic pods
           echo "📋 Pod Details:"
           kubectl get pods -n $NAMESPACE | grep -v Running | tail -n +2 | awk '{print $1}' | xargs -I {} kubectl describe pod {} -n $NAMESPACE
 
-          # ImagePullSecrets checken
           echo "📋 Secrets:"
           kubectl get secrets -n $NAMESPACE
