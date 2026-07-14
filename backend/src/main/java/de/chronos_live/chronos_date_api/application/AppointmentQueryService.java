@@ -27,7 +27,7 @@ public class AppointmentQueryService {
             sqlQuery += " LEFT JOIN FETCH a.messages";
         }
         if (participants) {
-            sqlQuery += " LEFT JOIN FETCH a.participants p LEFT JOIN FETCH p.user";
+            sqlQuery += " LEFT JOIN FETCH a.participants p";
         }
 
         if (groupParticipants) {
@@ -41,24 +41,24 @@ public class AppointmentQueryService {
     public record SearchResult(List<Appointment> items, long total) {
     }
 
-    public SearchResult search(Long requestingUserId, String query,
+    public SearchResult search(String requestingUserOidcId, String query,
                                Instant after, Instant before,
                                int page, int pageSize,
                                boolean messages, boolean participants, boolean groupParticipants) {
         String baseJoin = " FROM AppointmentParticipation ap JOIN ap.appointment a";
         String fetchJoins = "";
         if (messages) fetchJoins += " LEFT JOIN FETCH a.messages";
-        if (participants) fetchJoins += " LEFT JOIN FETCH a.participants part LEFT JOIN FETCH part.user";
+        if (participants) fetchJoins += " LEFT JOIN FETCH a.participants part";
         if (groupParticipants) fetchJoins += " LEFT JOIN FETCH a.groupParticipants";
 
-        String where = " WHERE ap.user.id = ?1 AND a.endTime > ?2 AND a.startTime < ?3 AND a.status != ?4";
+        String where = " WHERE ap.userOidcId = ?1 AND a.endTime > ?2 AND a.startTime < ?3 AND a.status != ?4";
         if (query != null) {
             where += " AND (lower(a.name) LIKE lower(?5) OR lower(a.description) LIKE lower(?5) OR lower(a.venue) LIKE lower(?5))";
         }
 
         Object[] params = query != null
-                ? new Object[]{requestingUserId, after, before, AppointmentStatus.DELETED, "%" + query + "%"}
-                : new Object[]{requestingUserId, after, before, AppointmentStatus.DELETED};
+                ? new Object[]{requestingUserOidcId, after, before, AppointmentStatus.DELETED, "%" + query + "%"}
+                : new Object[]{requestingUserOidcId, after, before, AppointmentStatus.DELETED};
 
         long total = Appointment.count(
                 "SELECT COUNT(DISTINCT a)" + baseJoin + where, params

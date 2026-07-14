@@ -16,9 +16,8 @@ public class AppointmentParticipation extends PanacheEntity {
     @JoinColumn(name = "appointment_id", nullable = false)
     private Appointment appointment;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_oidcid", nullable = false)
+    private String userOidcId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -28,7 +27,6 @@ public class AppointmentParticipation extends PanacheEntity {
     @Column(nullable = false)
     private ParticipationStatus status;
 
-    // NEU: Verknüpfung zur Gruppe (wenn über Gruppe hinzugefügt)
     @Column(name = "group_participation_id")
-    private Long groupParticipationId;  // NULL wenn direkt hinzugefügt
+    private Long groupParticipationId;
 }

@@ -1,4 +1,4 @@
 package de.chronos_live.chronos_date_api.application.events;
 
-public record FriendshipRemovedEvent(Long actingUserId, Long friendId) {
+public record FriendshipRemovedEvent(String actingUserOidcId, String friendOidcId) {
 }

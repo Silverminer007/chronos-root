@@ -13,8 +13,9 @@ public interface GroupMemberMapper {
     // ============================
     // Entity → DTO
     // ============================
-    @Mapping(target = "first_name", source = "user.firstName")
-    @Mapping(target = "last_name", source = "user.lastName")
+    @Mapping(target = "id", source = "userOidcId")
+    @Mapping(target = "first_name", ignore = true)
+    @Mapping(target = "last_name", ignore = true)
     UserDto toDto(GroupMember groupMember);
 
     // ============================

@@ -44,7 +44,7 @@ public class AdminAppointmentResource {
     @POST
     @Path("/")
     public Response createAppointment(@RequestBody CreateAppointmentDto appointmentDto) {
-        Appointment createdAppointment = this.appointmentService.createAppointment(appointmentDto, this.principalContext.getPrincipal().id);
+        Appointment createdAppointment = this.appointmentService.createAppointment(appointmentDto, this.principalContext.getPrincipal().oidcId());
         return Response.ok(this.appointmentMapper.toDto(createdAppointment)).build();
     }
 
@@ -53,7 +53,7 @@ public class AdminAppointmentResource {
     public Response addGroupParticipant(@PathParam("appointmentId") Long appointmentId, @RequestBody AdminAddGroupParticipantDto dto) {
         this.appointmentParticipationService
                 .addGroupToAppointment(
-                        this.principalContext.getPrincipal().id,
+                        this.principalContext.getPrincipal().oidcId(),
                         appointmentId,
                         dto.getGroup_id(),
                         UserRole.valueOf(dto.getUser_role())

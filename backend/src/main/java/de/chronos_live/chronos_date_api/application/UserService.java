@@ -1,15 +1,15 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.PrincipalDto;
 import de.chronos_live.chronos_date_api.dto.UpdatedUserDto;
 import de.chronos_live.chronos_date_api.exception.BadRequestException;
-import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.CredentialRepresentation;
@@ -18,9 +18,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 
 import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -29,11 +27,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Timed("service.user")
 public class UserService {
     private static final Logger LOGGER = Logger.getLogger(UserService.class);
-    @Inject
-    Keycloak keycloak;
 
     @Inject
-    PrincipalContext principalContext;
+    Keycloak keycloak;
 
     @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
     String realm;
@@ -44,112 +40,83 @@ public class UserService {
     @ConfigProperty(name = "quarkus.keycloak.admin-client.client-id")
     String clientId;
 
-    @ConfigProperty(name = "quarkus.keycloak.admin-client.client-secret")
-    String clientSecret;
-
-    public User createUser(String firstName, String lastName, String email, String oidcId) {
-        LOGGER.debugf("[OidcId %s] Creating User", oidcId);
-
-        if (firstName == null || lastName == null || email == null || oidcId == null) {
-            throw new BadRequestException("Required user fields cannot be null");
-        }
-
-        User user;
-
-        Optional<User> existingUser = User.find("oidcId = ?1 OR email = ?2", oidcId, email).firstResultOptional();
-        if (existingUser.isPresent()) {
-            // Update User if the user already exists
-            user = existingUser.get();
-        } else {
-            // Create a new user otherwise
-            user = new User();
-            user.persist();
-            user.setCreatedAt(Instant.now());
-        }
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setEmail(email);
-
-        user.setOidcId(oidcId);
-
-        user.setLastUpdate(Instant.now());
-        return user;
-    }
-
-    public User getUser(String oidcId) {
-        if (oidcId == null) {
+    /**
+     * Builds a UserIdentity from the current JWT — no database call.
+     */
+    public UserIdentity fromToken(JsonWebToken jwt) {
+        if (jwt.getSubject() == null) {
             throw new BadRequestException("Authentication invalid");
         }
-        LOGGER.debugf("[OidcId %s] User logged in", oidcId);
-        return (User) User.find("oidcId = ?1", oidcId).firstResultOptional().orElseGet(() -> {
-            LOGGER.debugf("[OidcId %s] Creating User without data", oidcId);
-            User user = new User();
-            user.setOidcId(oidcId);
-            user.setCreatedAt(Instant.now());
-            user.setLastUpdate(Instant.now());
-            user.persist();
-            return user;
-        });
+        return new UserIdentity(
+                jwt.getSubject(),
+                jwt.getClaim("given_name"),
+                jwt.getClaim("family_name"),
+                jwt.getClaim("email"),
+                jwt.getClaim("picture")
+        );
     }
 
-    public void updateLastSeen(User user) {
-        User managed = User.findById(user.id);
-        managed.setLastSeen(Instant.now());
+    /**
+     * Fetches a UserIdentity from Keycloak Admin API by oidcId.
+     * Used when resolving participants whose JWT is not in scope (e.g. listing group members).
+     */
+    public UserIdentity getUserByOidcId(String oidcId) {
+        UserRepresentation rep = keycloak.realm(realm).users().get(oidcId).toRepresentation();
+        return new UserIdentity(
+                rep.getId(),
+                rep.getFirstName(),
+                rep.getLastName(),
+                rep.getEmail(),
+                rep.getAttributes() != null
+                        ? rep.getAttributes().getOrDefault("picture", List.of()).stream().findFirst().orElse(null)
+                        : null
+        );
     }
 
-    public Optional<User> getUser(Long id) {
-        if (id == null) {
-            return Optional.empty();
-        }
-        return User.find("id = ?1", id).firstResultOptional();
+    /**
+     * Searches Keycloak for users whose name or email matches the query.
+     * Replaces the former DB-based findNonFriends / findRecentNonFriends queries.
+     */
+    public List<UserIdentity> searchUsers(String query, int limit) {
+        return keycloak.realm(realm).users().search(query, 0, limit).stream()
+                .map(rep -> new UserIdentity(
+                        rep.getId(),
+                        rep.getFirstName(),
+                        rep.getLastName(),
+                        rep.getEmail(),
+                        rep.getAttributes() != null
+                                ? rep.getAttributes().getOrDefault("picture", List.of()).stream().findFirst().orElse(null)
+                                : null
+                ))
+                .toList();
     }
 
     public UpdatedUserDto updateUser(String firstName, String lastName, String email, String oidcId, String redirectUri) {
-        User user = (User) User.find("oidcId = ?1", oidcId).firstResultOptional()
-                .orElseThrow(() -> new BadRequestException("This user does not exist yet"));
+        LOGGER.debugf("[Principal %s] Updating User in Keycloak", oidcId);
 
-        LOGGER.debugf("[Principal %s] Updating User", user.id);
-
-        if (firstName != null) {
-            user.setFirstName(user.getFirstName());
-        }
-        if (lastName != null) {
-            user.setLastName(user.getLastName());
-        }
-        boolean emailChanged = false;
-        if (email != null &&
-                (user.getEmail() == null || !user.getEmail().equals(email))) {
-            emailChanged = true;
-            user.setEmail(email);
-        }
-        user.setLastUpdate(Instant.now());
-
+        boolean emailChanged = email != null;
         if (emailChanged && redirectUri == null) {
             throw new BadRequestException("Redirect Url must be set to change email address");
         }
 
-        this.updateUserInKeycloak(user, emailChanged);
+        UserRepresentation userRep = new UserRepresentation();
+        if (firstName != null) userRep.setFirstName(firstName);
+        if (lastName != null) userRep.setLastName(lastName);
+        if (emailChanged) {
+            userRep.setEmail(email);
+            userRep.setEmailVerified(false);
+        }
+        keycloak.realm(realm).users().get(oidcId).update(userRep);
 
         if (emailChanged) {
             keycloak.realm(realm).users().get(oidcId)
-                    .sendVerifyEmail(clientId, redirectUri, 60 * 60 /*seconds token lifespan => 1h*/);
+                    .sendVerifyEmail(clientId, redirectUri, 60 * 60);
         }
 
         UpdatedUserDto updatedUserDto = new UpdatedUserDto();
-        updatedUserDto.setUser(new PrincipalDto(user.id, firstName, lastName, email));
+        updatedUserDto.setUser(new PrincipalDto(oidcId, firstName, lastName, email));
         updatedUserDto.setVerifyEmailUrl(getVerifyEmailUrl(redirectUri));
         return updatedUserDto;
-    }
-
-    private void updateUserInKeycloak(User user, boolean emailChanged) {
-        UserRepresentation userRep = new UserRepresentation();
-        userRep.setFirstName(user.getFirstName());
-        userRep.setLastName(user.getLastName());
-        userRep.setEmail(user.getEmail());
-        if (emailChanged) {
-            userRep.setEmailVerified(false);
-        }
-        keycloak.realm(realm).users().get(user.getOidcId()).update(userRep);
     }
 
     public List<FederatedIdentityRepresentation> getLinkedAccounts(String oidcId) {
@@ -170,9 +137,7 @@ public class UserService {
                 + "&kc_action=idp_link:" + provider;
     }
 
-    public String getPasskeyRegistrationUrl(
-            String redirectUri
-    ) {
+    public String getPasskeyRegistrationUrl(String redirectUri) {
         return oidcAuthServerUrl + "/realms/" + realm
                 + "/protocol/openid-connect/auth"
                 + "?client_id=" + clientId
@@ -182,10 +147,7 @@ public class UserService {
                 + "&kc_action=webauthn-register-passwordless";
     }
 
-    public String getDeletePasskeyUrl(
-            String redirectUri,
-            String passkeyId
-    ) {
+    public String getDeletePasskeyUrl(String redirectUri, String passkeyId) {
         return oidcAuthServerUrl + "/realms/" + realm
                 + "/protocol/openid-connect/auth"
                 + "?client_id=" + clientId
@@ -195,9 +157,7 @@ public class UserService {
                 + "&kc_action=delete_credential:" + passkeyId;
     }
 
-    public String getChangePasswordUrl(
-            String redirectUri
-    ) {
+    public String getChangePasswordUrl(String redirectUri) {
         return oidcAuthServerUrl + "/realms/" + realm
                 + "/protocol/openid-connect/auth"
                 + "?client_id=" + clientId
@@ -207,9 +167,7 @@ public class UserService {
                 + "&kc_action=UPDATE_PASSWORD";
     }
 
-    public String getVerifyEmailUrl(
-            String redirectUri
-    ) {
+    public String getVerifyEmailUrl(String redirectUri) {
         return oidcAuthServerUrl + "/realms/" + realm
                 + "/protocol/openid-connect/auth"
                 + "?client_id=" + clientId

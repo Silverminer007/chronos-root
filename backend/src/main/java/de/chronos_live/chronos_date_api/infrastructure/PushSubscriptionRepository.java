@@ -9,8 +9,8 @@ import java.util.List;
 @ApplicationScoped
 public class PushSubscriptionRepository implements PanacheRepository<PushSubscription> {
 
-    public List<PushSubscription> findByUserId(Long userId) {
-        return list("user.id", userId);
+    public List<PushSubscription> findByUserOidcId(String userOidcId) {
+        return list("userOidcId", userOidcId);
     }
 
     public PushSubscription findByEndpoint(String endpoint) {

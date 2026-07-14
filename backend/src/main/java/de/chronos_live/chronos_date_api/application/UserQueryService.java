@@ -1,14 +1,18 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 @Timed("service.userQuery")
 public class UserQueryService {
 
-    public User findById(Long id) {
-        return User.findById(id);
+    @Inject
+    UserService userService;
+
+    public UserIdentity findByOidcId(String oidcId) {
+        return userService.getUserByOidcId(oidcId);
     }
 }

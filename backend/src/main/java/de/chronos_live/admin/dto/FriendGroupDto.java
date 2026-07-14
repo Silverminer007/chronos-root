@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class FriendGroupDto {
-    private List<Long> userIds;
+    private List<String> userIds;
 }

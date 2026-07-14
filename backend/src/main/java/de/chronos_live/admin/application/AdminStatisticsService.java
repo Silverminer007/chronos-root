@@ -1,6 +1,15 @@
 package de.chronos_live.admin.application;
 
-import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.domain.AppointmentParticipation;
+import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
+import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
+import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
+import de.chronos_live.chronos_date_api.domain.Group;
+import de.chronos_live.chronos_date_api.domain.GroupMember;
+import de.chronos_live.chronos_date_api.domain.Message;
+import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
+import de.chronos_live.chronos_date_api.domain.PushSubscription;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,7 +33,8 @@ public class AdminStatisticsService {
     }
 
     private AdminStatisticsDto.UserStatistics getUserStatistics() {
-        return new AdminStatisticsDto.UserStatistics(User.count());
+        // User count is now sourced from Keycloak — not available here without Admin API call
+        return new AdminStatisticsDto.UserStatistics(-1L);
     }
 
     private AdminStatisticsDto.AppointmentStatistics getAppointmentStatistics() {

@@ -24,7 +24,6 @@ public class AppointmentService {
     AuthorizationService authorizationService;
     @Inject
     AppointmentQueryService appointmentQueryService;
-
     @Inject
     Event<AppointmentMovedEvent> appointmentMovedEvent;
     @Inject
@@ -36,146 +35,106 @@ public class AppointmentService {
     @Inject
     Event<AppointmentEditedEvent> appointmentEditedEvent;
 
-    public Appointment createAppointment(CreateAppointmentDto createAppointmentDto, Long creatorId) {
+    public Appointment createAppointment(CreateAppointmentDto dto, String creatorOidcId) {
         Appointment appointment = new Appointment();
-        if (createAppointmentDto.getName().isBlank()) {
+        if (dto.getName().isBlank()) {
             throw new ValidationException("name", "Name cannot be blank");
         }
-        if (createAppointmentDto.getDescription() != null &&
-                !createAppointmentDto.getDescription().isBlank()) {
-            appointment.setDescription(createAppointmentDto.getDescription());
+        if (dto.getDescription() != null && !dto.getDescription().isBlank()) {
+            appointment.setDescription(dto.getDescription());
         }
-        if (createAppointmentDto.getVenue() != null &&
-                !createAppointmentDto.getVenue().isBlank()) {
-            appointment.setVenue(createAppointmentDto.getVenue());
+        if (dto.getVenue() != null && !dto.getVenue().isBlank()) {
+            appointment.setVenue(dto.getVenue());
         }
-        appointment.setName(createAppointmentDto.getName());
-        if (createAppointmentDto.getEnd() == null) {
-            throw new ValidationException("end", "End cannot be null");
-        }
-        appointment.setEndTime(Instant.parse(createAppointmentDto.getEnd()));
-        if (createAppointmentDto.getStart() == null) {
-            throw new ValidationException("start", "start cannot be null");
-        }
-        appointment.setStartTime(Instant.parse(createAppointmentDto.getStart()));
+        appointment.setName(dto.getName());
+        if (dto.getEnd() == null) throw new ValidationException("end", "End cannot be null");
+        appointment.setEndTime(Instant.parse(dto.getEnd()));
+        if (dto.getStart() == null) throw new ValidationException("start", "start cannot be null");
+        appointment.setStartTime(Instant.parse(dto.getStart()));
         if (appointment.getEndTime().isBefore(appointment.getStartTime())) {
             throw new ValidationException("end", "End date cannot be before start date");
         }
-        if (createAppointmentDto.getMinimal_attendees() != null && createAppointmentDto.getMinimal_attendees() < 0) {
+        if (dto.getMinimal_attendees() != null && dto.getMinimal_attendees() < 0) {
             throw new ValidationException("minimal_attendees", "Minimal attendees must be positive");
         }
-        appointment.setMinimalAttendees(createAppointmentDto.getMinimal_attendees());
+        appointment.setMinimalAttendees(dto.getMinimal_attendees());
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatedAt(Instant.now());
         appointment.setLastUpdate(Instant.now());
         appointment.persist();
 
-        LOGGER.debugf("[Principal %s][Appointment %s] Created Appointment", creatorId, appointment.id);
-
-        this.appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorId));
-
+        LOGGER.debugf("[Principal %s][Appointment %s] Created Appointment", creatorOidcId, appointment.id);
+        appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorOidcId));
         return appointment;
     }
 
-    public Appointment updateAppointment(Long appointmentId, Long actingUserId, UpdateAppointmentDto updateAppointmentDto) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Update Appointment", actingUserId, appointmentId);
+    public Appointment updateAppointment(Long appointmentId, String actingUserOidcId, UpdateAppointmentDto dto) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Update Appointment", actingUserOidcId, appointmentId);
 
-        this.authorizationService.requireUpdateAppointment(appointmentId, actingUserId);
+        authorizationService.requireUpdateAppointment(appointmentId, actingUserOidcId);
+        Appointment appointment = getAppointment(appointmentId, actingUserOidcId, true, true, true);
 
-        Appointment appointment = this.getAppointment(appointmentId, actingUserId, true, true, true);
+        if (dto.getName() != null) {
+            if (dto.getName().isBlank()) throw new ValidationException("name", "Name cannot be blank");
+            appointment.setName(dto.getName());
+        }
+        if (dto.getDescription() != null) appointment.setDescription(dto.getDescription());
+        if (dto.getVenue() != null) appointment.setVenue(dto.getVenue());
 
-        if (updateAppointmentDto.getName() != null) {
-            if (updateAppointmentDto.getName().isBlank()) {
-                throw new ValidationException("name", "Name cannot be blank");
-            }
-            appointment.setName(updateAppointmentDto.getName());
-        }
-        if (updateAppointmentDto.getDescription() != null) {
-            appointment.setDescription(updateAppointmentDto.getDescription());
-        }
-        if (updateAppointmentDto.getVenue() != null) {
-            appointment.setVenue(updateAppointmentDto.getVenue());
-        }
-        // Es könnte sein, dass nur Start-Datum oder nur End-Datum aktualisiert werden.
-        // Deshalb müssen auch beide einzeln validiert werden
         Instant oldStartTime = appointment.getStartTime();
         Instant oldEndTime = appointment.getEndTime();
         Instant newStartTime = appointment.getStartTime();
         Instant newEndTime = appointment.getEndTime();
-        if (updateAppointmentDto.getStart() != null && updateAppointmentDto.getEnd() != null) {
-            newStartTime = Instant.parse(updateAppointmentDto.getStart());
-            newEndTime = Instant.parse(updateAppointmentDto.getEnd());
-        } else if (updateAppointmentDto.getStart() != null) {
-            newStartTime = Instant.parse(updateAppointmentDto.getStart());
-        } else if (updateAppointmentDto.getEnd() != null) {
-            newEndTime = Instant.parse(updateAppointmentDto.getEnd());
+        if (dto.getStart() != null && dto.getEnd() != null) {
+            newStartTime = Instant.parse(dto.getStart());
+            newEndTime = Instant.parse(dto.getEnd());
+        } else if (dto.getStart() != null) {
+            newStartTime = Instant.parse(dto.getStart());
+        } else if (dto.getEnd() != null) {
+            newEndTime = Instant.parse(dto.getEnd());
         }
         if (newEndTime.isBefore(newStartTime)) {
             throw new ValidationException("end", "Start date cannot be after end date");
         }
         if (!oldStartTime.equals(newStartTime) || !oldEndTime.equals(newEndTime)) {
-            this.appointmentMovedEvent.fire(new AppointmentMovedEvent(appointment.id,
-                    oldStartTime, oldEndTime, actingUserId));
+            appointmentMovedEvent.fire(new AppointmentMovedEvent(appointment.id, oldStartTime, oldEndTime, actingUserOidcId));
         }
         appointment.setStartTime(newStartTime);
         appointment.setEndTime(newEndTime);
-        if (updateAppointmentDto.getMinimal_attendees() != null) {
-            appointment.setMinimalAttendees(updateAppointmentDto.getMinimal_attendees());
+        if (dto.getMinimal_attendees() != null) {
+            appointment.setMinimalAttendees(dto.getMinimal_attendees());
         }
         appointment.setLastUpdate(Instant.now());
-
-        this.appointmentEditedEvent.fire(
-                new AppointmentEditedEvent(appointmentId)
-        );
-
+        appointmentEditedEvent.fire(new AppointmentEditedEvent(appointmentId));
         return appointment;
     }
 
-    public void deleteAppointment(Long appointmentId, Long actingUserId) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Delete Appointment", actingUserId, appointmentId);
-
-        this.authorizationService.requireDeleteAppointment(appointmentId, actingUserId);
-
+    public void deleteAppointment(Long appointmentId, String actingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Delete Appointment", actingUserOidcId, appointmentId);
+        authorizationService.requireDeleteAppointment(appointmentId, actingUserOidcId);
         Appointment appointment = Appointment.findById(appointmentId);
-        if (appointment == null) {
-            return;
-        }
+        if (appointment == null) return;
         appointment.setStatus(AppointmentStatus.DELETED);
-        this.appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserId));
+        appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserOidcId));
     }
 
-    public void cancelAppointment(Long appointmentId, Long actingUserId) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Cancel Appointment", actingUserId, appointmentId);
-
-        this.authorizationService.requireCancelAppointment(appointmentId, actingUserId);
-
+    public void cancelAppointment(Long appointmentId, String actingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Cancel Appointment", actingUserOidcId, appointmentId);
+        authorizationService.requireCancelAppointment(appointmentId, actingUserOidcId);
         Appointment appointment = Appointment.findById(appointmentId);
-        if (appointment == null) {
-            return;
-        }
+        if (appointment == null) return;
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        this.appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserId));
+        appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserOidcId));
     }
 
-    public Appointment getAppointment(Long appointmentId, Long requestingUserId,
+    public Appointment getAppointment(Long appointmentId, String requestingUserOidcId,
                                       boolean messages, boolean participants, boolean groupParticipants) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Read Appointment", requestingUserId, appointmentId);
-
-        this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
-
-        Appointment appointment = this.appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
-
-        // Set unfetched collections to null to prevent LazyInitializationException in mapper
-        if (!messages) {
-            appointment.setMessages(null);
-        }
-        if (!participants) {
-            appointment.setParticipants(null);
-        }
-        if (!groupParticipants) {
-            appointment.setGroupParticipants(null);
-        }
-
+        LOGGER.debugf("[Principal %s][Appointment %s] Read Appointment", requestingUserOidcId, appointmentId);
+        authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
+        Appointment appointment = appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
+        if (!messages) appointment.setMessages(null);
+        if (!participants) appointment.setParticipants(null);
+        if (!groupParticipants) appointment.setGroupParticipants(null);
         return appointment;
     }
 }

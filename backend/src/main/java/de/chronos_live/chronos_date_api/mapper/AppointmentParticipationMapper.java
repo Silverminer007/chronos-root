@@ -11,9 +11,9 @@ import java.util.Set;
 @Mapper(componentModel = "jakarta")
 public interface AppointmentParticipationMapper {
 
-    @Mapping(target = "user_id", source = "user.id")
-    @Mapping(target = "name", source = "user.name")
-    @Mapping(target = "profile_picture_url", source = "user.profilePictureUrl")
+    @Mapping(target = "user_id", source = "userOidcId")
+    @Mapping(target = "name", ignore = true)
+    @Mapping(target = "profile_picture_url", ignore = true)
     @Mapping(target = "via_group_id", source = "groupParticipationId")
     @Mapping(target = "via_group_name", ignore = true)
     UserParticipantDto toDto(AppointmentParticipation participation);

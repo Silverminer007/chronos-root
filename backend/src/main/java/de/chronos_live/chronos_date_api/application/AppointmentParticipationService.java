@@ -27,6 +27,8 @@ public class AppointmentParticipationService {
     @Inject
     GroupService groupService;
     @Inject
+    UserService userService;
+    @Inject
     Event<AppointmentParticipationStatusChangedEvent> appointmentParticipationStatusChangedEvent;
     @Inject
     Event<AppointmentParticipationRoleChangedEvent> appointmentParticipationRoleChangedEvent;
@@ -40,254 +42,230 @@ public class AppointmentParticipationService {
     Event<AppointmentGroupParticipationRemovedEvent> appointmentGroupParticipationRemovedEvent;
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onAppointmentCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentCreatedEvent appointmentCreatedEvent) {
-        AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
-        appointmentParticipation.setStatus(ParticipationStatus.PENDING);
-        appointmentParticipation.setRole(UserRole.RESPONSIBLE);
-        Appointment appointment = Appointment.findById(appointmentCreatedEvent.appointmentId());
-        User creator = User.findById(appointmentCreatedEvent.creatorId());
-        appointmentParticipation.setAppointment(appointment);
-        appointmentParticipation.setUser(creator);
-        appointmentParticipation.persist();
+    public void onAppointmentCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentCreatedEvent event) {
+        AppointmentParticipation participation = new AppointmentParticipation();
+        participation.setStatus(ParticipationStatus.PENDING);
+        participation.setRole(UserRole.RESPONSIBLE);
+        participation.setAppointment(Appointment.findById(event.appointmentId()));
+        participation.setUserOidcId(event.creatorOidcId());
+        participation.persist();
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onGroupMemberAdded(@Observes GroupMemberAddedEvent groupMemberAddedEvent) {
-        User newMember = User.findById(groupMemberAddedEvent.newMemberId());
+    public void onGroupMemberAdded(@Observes GroupMemberAddedEvent event) {
+        List<AppointmentGroupParticipation> groupParticipations =
+                AppointmentGroupParticipation.find("group.id = ?1", event.groupId()).list();
 
-        List<AppointmentGroupParticipation> groupParticipationList =
-                AppointmentGroupParticipation.find("group.id = ?1", groupMemberAddedEvent.groupId()).list();
+        for (AppointmentGroupParticipation agp : groupParticipations) {
+            boolean alreadyParticipant = AppointmentParticipation
+                    .find("appointment.id = ?1 AND userOidcId = ?2",
+                            agp.getAppointment().id, event.newMemberOidcId())
+                    .count() > 0;
+            if (alreadyParticipant) continue;
 
-        for (AppointmentGroupParticipation appointmentGroupParticipation : groupParticipationList) {
-            if (AppointmentParticipation
-                    .find("appointment.id = ?1 AND user.id = ?2",
-                            appointmentGroupParticipation.getAppointment().id,
-                            groupMemberAddedEvent.newMemberId()
-                    )
-                    .count() > 0) {
-                continue;
-            }
-            AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
-            appointmentParticipation.setStatus(ParticipationStatus.PENDING);
-            appointmentParticipation.setRole(appointmentGroupParticipation.getRole());
-            appointmentParticipation.setAppointment(appointmentGroupParticipation.getAppointment());
-            appointmentParticipation.setGroupParticipationId(groupMemberAddedEvent.groupId());
-            appointmentParticipation.setUser(newMember);
-            appointmentParticipation.persist();
+            AppointmentParticipation participation = new AppointmentParticipation();
+            participation.setStatus(ParticipationStatus.PENDING);
+            participation.setRole(agp.getRole());
+            participation.setAppointment(agp.getAppointment());
+            participation.setGroupParticipationId(event.groupId());
+            participation.setUserOidcId(event.newMemberOidcId());
+            participation.persist();
         }
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onGroupMemberRemoved(@Observes GroupMemberRemovedEvent event) {
         AppointmentParticipation
-                .delete("groupParticipationId = ?1 AND user.id = ?2", event.groupId(), event.removedMemberId());
+                .delete("groupParticipationId = ?1 AND userOidcId = ?2",
+                        event.groupId(), event.removedMemberOidcId());
     }
 
-    // User zu Termin hinzufügen
-    public void addUserToAppointment(Long actingUserId, Long appointmentId, Long targetUserId, UserRole role) {
-        LOGGER.debugf("[Principal %s][Appointment %s][User %s][Role %s] Adding User Participant", actingUserId, appointmentId, targetUserId, role);
+    public void addUserToAppointment(String actingUserOidcId, Long appointmentId, String targetUserOidcId, UserRole role) {
+        LOGGER.debugf("[Principal %s][Appointment %s][User %s][Role %s] Adding User Participant",
+                actingUserOidcId, appointmentId, targetUserOidcId, role);
 
-        this.authorizationService.requireAddUserToAppointment(appointmentId, actingUserId, targetUserId);
+        authorizationService.requireAddUserToAppointment(appointmentId, actingUserOidcId, targetUserOidcId);
 
-        if (AppointmentParticipation.find("appointment.id = ?1 AND user.id = ?2", appointmentId, targetUserId).count() > 0) {
+        if (AppointmentParticipation
+                .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, targetUserOidcId)
+                .count() > 0) {
             throw new ValidationException("This user is already a participant of this appointment");
         }
 
-        AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
-        appointmentParticipation.setStatus(ParticipationStatus.PENDING);
-        appointmentParticipation.setRole(role);
-        Appointment appointment = Appointment.findById(appointmentId);
-        User targetUser = User.findById(targetUserId);
-        appointmentParticipation.setAppointment(appointment);
-        appointmentParticipation.setUser(targetUser);
-        appointmentParticipation.persist();
+        AppointmentParticipation participation = new AppointmentParticipation();
+        participation.setStatus(ParticipationStatus.PENDING);
+        participation.setRole(role);
+        participation.setAppointment(Appointment.findById(appointmentId));
+        participation.setUserOidcId(targetUserOidcId);
+        participation.persist();
 
-        this.appointmentParticipationAddedEvent.fire(
-                new AppointmentParticipationAddedEvent(appointmentId, targetUserId, actingUserId)
-        );
+        appointmentParticipationAddedEvent.fire(
+                new AppointmentParticipationAddedEvent(appointmentId, targetUserOidcId, actingUserOidcId));
     }
 
-    // Gruppe zu Termin hinzufügen (alle Gruppenmitglieder bekommen eine Rolle)
-    public void addGroupToAppointment(Long actingUserId, Long appointmentId, Long groupId, UserRole role) {
-        LOGGER.debugf("[Principal %s][Appointment %s][Group %s][Role %s] Adding Group Participant", actingUserId, appointmentId, groupId, role);
+    public void addGroupToAppointment(String actingUserOidcId, Long appointmentId, Long groupId, UserRole role) {
+        LOGGER.debugf("[Principal %s][Appointment %s][Group %s][Role %s] Adding Group Participant",
+                actingUserOidcId, appointmentId, groupId, role);
 
-        this.authorizationService.requireAddGroupToAppointment(appointmentId, actingUserId, groupId);
+        authorizationService.requireAddGroupToAppointment(appointmentId, actingUserOidcId, groupId);
 
-        if (AppointmentGroupParticipation.find("appointment.id = ?1 AND group.id = ?2", appointmentId, groupId).count() > 0) {
+        if (AppointmentGroupParticipation
+                .find("appointment.id = ?1 AND group.id = ?2", appointmentId, groupId)
+                .count() > 0) {
             throw new ValidationException("This group is already a participant of this appointment");
         }
 
-        AppointmentGroupParticipation appointmentGroupParticipation = new AppointmentGroupParticipation();
-
         Appointment appointment = Appointment.findById(appointmentId);
-
         Group group = Group.findById(groupId);
 
-        appointmentGroupParticipation.setGroup(group);
-        appointmentGroupParticipation.setAppointment(appointment);
-        appointmentGroupParticipation.setRole(role);
+        AppointmentGroupParticipation agp = new AppointmentGroupParticipation();
+        agp.setGroup(group);
+        agp.setAppointment(appointment);
+        agp.setRole(role);
+        agp.persist();
 
-        appointmentGroupParticipation.persist();
+        for (UserIdentity user : groupService.getGroupUsers(actingUserOidcId, groupId)) {
+            if (AppointmentParticipation
+                    .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, user.oidcId())
+                    .count() > 0) continue;
 
-        for (User user : this.groupService.getGroupUsers(actingUserId, groupId)) {
-            if (AppointmentParticipation.find("appointment.id = ?1 AND user.id = ?2", appointmentId, user.id).count() > 0) {
-                continue;
-            }
-            AppointmentParticipation appointmentParticipation = new AppointmentParticipation();
-            appointmentParticipation.setStatus(ParticipationStatus.PENDING);
-            appointmentParticipation.setRole(role);
-            appointmentParticipation.setAppointment(appointment);
-            appointmentParticipation.setUser(user);
-            appointmentParticipation.setGroupParticipationId(groupId);
-            appointmentParticipation.persist();
+            AppointmentParticipation participation = new AppointmentParticipation();
+            participation.setStatus(ParticipationStatus.PENDING);
+            participation.setRole(role);
+            participation.setAppointment(appointment);
+            participation.setUserOidcId(user.oidcId());
+            participation.setGroupParticipationId(groupId);
+            participation.persist();
         }
 
-        this.appointmentGroupParticipationAddedEvent.fire(
-                new AppointmentGroupParticipationAddedEvent(appointmentId, groupId, actingUserId)
-        );
+        appointmentGroupParticipationAddedEvent.fire(
+                new AppointmentGroupParticipationAddedEvent(appointmentId, groupId, actingUserOidcId));
     }
 
-    // Rolle ändern
-    public void changeUserRole(Long actingUserId, Long appointmentId, Long targetUserId, UserRole newRole) {
-        LOGGER.debugf("[Principal %s][Appointment %s][User %s][Role %s] Changing Participant Role", actingUserId, appointmentId, targetUserId, newRole);
+    public void changeUserRole(String actingUserOidcId, Long appointmentId, String targetUserOidcId, UserRole newRole) {
+        LOGGER.debugf("[Principal %s][Appointment %s][User %s][Role %s] Changing Role",
+                actingUserOidcId, appointmentId, targetUserOidcId, newRole);
 
-        this.authorizationService.requireChangeParticipantRoleAtAppointment(appointmentId, actingUserId, targetUserId, newRole);
+        authorizationService.requireChangeParticipantRoleAtAppointment(appointmentId, actingUserOidcId, targetUserOidcId, newRole);
 
-        if (newRole == null) {
-            throw new BadRequestException("invalid role");
-        }
+        if (newRole == null) throw new BadRequestException("invalid role");
 
-        AppointmentParticipation appointmentParticipation =
-                (AppointmentParticipation) AppointmentParticipation
-                        .find("appointment.id = ?1 AND user.id = ?2", appointmentId, targetUserId)
+        AppointmentParticipation participation = (AppointmentParticipation)
+                AppointmentParticipation
+                        .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, targetUserOidcId)
                         .firstResultOptional()
                         .orElseThrow(() -> new ValidationException("This user is not a participant of this event"));
 
-        if (newRole.equals(appointmentParticipation.getRole())) {
+        if (newRole.equals(participation.getRole())) {
             throw new ValidationException("this is already the users role");
         }
-        this.appointmentParticipationRoleChangedEvent.fire(new AppointmentParticipationRoleChangedEvent(
-                appointmentId,
-                targetUserId,
-                actingUserId,
-                appointmentParticipation.getRole()
-        ));
-        appointmentParticipation.setRole(newRole);
+
+        appointmentParticipationRoleChangedEvent.fire(
+                new AppointmentParticipationRoleChangedEvent(
+                        appointmentId, targetUserOidcId, actingUserOidcId, participation.getRole()));
+        participation.setRole(newRole);
     }
 
-    // User entfernen
-    public void removeUserFromAppointment(Long actingUserId, Long appointmentId, Long targetUserId) {
-        LOGGER.debugf("[Principal %s][Appointment %s][User %s] Removing Participant", actingUserId, appointmentId, targetUserId);
+    public void removeUserFromAppointment(String actingUserOidcId, Long appointmentId, String targetUserOidcId) {
+        LOGGER.debugf("[Principal %s][Appointment %s][User %s] Removing Participant",
+                actingUserOidcId, appointmentId, targetUserOidcId);
 
-        this.authorizationService.requireRemoveParticipantFromAppointment(appointmentId, actingUserId, targetUserId);
+        authorizationService.requireRemoveParticipantFromAppointment(appointmentId, actingUserOidcId, targetUserOidcId);
 
-        long removedParticipationCount = AppointmentParticipation
-                .delete("appointment.id = ?1 AND user.id = ?2", appointmentId, targetUserId);
-        if (removedParticipationCount < 1) {
+        long removed = AppointmentParticipation
+                .delete("appointment.id = ?1 AND userOidcId = ?2", appointmentId, targetUserOidcId);
+        if (removed < 1) {
             throw new ValidationException("This user is not a participant of this event");
         }
 
-        this.appointmentParticipationRemovedEvent.fire(
-                new AppointmentParticipationRemovedEvent(appointmentId, targetUserId, actingUserId)
-        );
+        appointmentParticipationRemovedEvent.fire(
+                new AppointmentParticipationRemovedEvent(appointmentId, targetUserOidcId, actingUserOidcId));
     }
 
-    // Gruppe entfernen
-    public void removeGroupFromAppointment(Long actingUserId, Long appointmentId, Long groupId) {
-        LOGGER.debugf("[Principal %s][Appointment %s][Group %s] Removing Group Participant", actingUserId, appointmentId, groupId);
+    public void removeGroupFromAppointment(String actingUserOidcId, Long appointmentId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Appointment %s][Group %s] Removing Group Participant",
+                actingUserOidcId, appointmentId, groupId);
 
-        this.authorizationService.requireRemoveGroupFromAppointment(appointmentId, actingUserId, groupId);
+        authorizationService.requireRemoveGroupFromAppointment(appointmentId, actingUserOidcId, groupId);
 
-        long deletedGroupParticipationCount = AppointmentGroupParticipation
+        long deleted = AppointmentGroupParticipation
                 .delete("appointment.id = ?1 AND group.id = ?2", appointmentId, groupId);
-        if (deletedGroupParticipationCount < 1) {
+        if (deleted < 1) {
             throw new ValidationException("This group is not a participant of this appointment");
         }
-
         AppointmentParticipation.delete("groupParticipationId = ?1 AND appointment.id = ?2", groupId, appointmentId);
 
-        this.appointmentGroupParticipationRemovedEvent.fire(
-                new AppointmentGroupParticipationRemovedEvent(appointmentId, groupId, actingUserId)
-        );
+        appointmentGroupParticipationRemovedEvent.fire(
+                new AppointmentGroupParticipationRemovedEvent(appointmentId, groupId, actingUserOidcId));
     }
 
-    // Teilnahmestatus ändern (User ändert seinen eigenen Status)
-    public void changeParticipationStatus(Long userId, Long appointmentId, ParticipationStatus status) {
-        LOGGER.debugf("[Principal %s][Appointment %s][RSVP %s] RSVP Changed", userId, appointmentId, status);
+    public void changeParticipationStatus(String userOidcId, Long appointmentId, ParticipationStatus status) {
+        LOGGER.debugf("[Principal %s][Appointment %s][RSVP %s] RSVP Changed", userOidcId, appointmentId, status);
 
-        this.authorizationService.requireReadAppointment(appointmentId, userId);
+        authorizationService.requireReadAppointment(appointmentId, userOidcId);
 
-        if (status == null) {
-            throw new BadRequestException("invalid participation status");
-        }
+        if (status == null) throw new BadRequestException("invalid participation status");
         if (status.equals(ParticipationStatus.PENDING)) {
             throw new BadRequestException("you cannot set your participation status back to pending");
         }
 
-        AppointmentParticipation appointmentParticipation =
-                (AppointmentParticipation) AppointmentParticipation
-                        .find("appointment.id = ?1 AND user.id = ?2", appointmentId, userId)
+        AppointmentParticipation participation = (AppointmentParticipation)
+                AppointmentParticipation
+                        .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, userOidcId)
                         .firstResultOptional()
                         .orElseThrow(() -> new ValidationException("This user is not a participant of this event"));
 
-        if (status.equals(appointmentParticipation.getStatus())) {
+        if (status.equals(participation.getStatus())) {
             throw new ValidationException("this is already your participation status");
         }
 
-        appointmentParticipation.setStatus(status);
+        ParticipationStatus oldStatus = participation.getStatus();
+        participation.setStatus(status);
 
         AppointmentParticipationStatusChangedEvent event =
-                new AppointmentParticipationStatusChangedEvent(appointmentId, userId, status, appointmentParticipation.getStatus());
-        this.appointmentParticipationStatusChangedEvent.fire(event);
-        this.appointmentParticipationStatusChangedEvent.fireAsync(event);
+                new AppointmentParticipationStatusChangedEvent(appointmentId, userOidcId, status, oldStatus);
+        appointmentParticipationStatusChangedEvent.fire(event);
+        appointmentParticipationStatusChangedEvent.fireAsync(event);
     }
 
-    // Alle Teilnehmer abrufen
-    public List<UserParticipantDto> getParticipants(Long appointmentId, Long requestingUserId) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Reading participants", requestingUserId, appointmentId);
+    public List<UserParticipantDto> getParticipants(Long appointmentId, String requestingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading participants", requestingUserOidcId, appointmentId);
 
-        this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
+        authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
 
-        List<AppointmentParticipation> appointmentParticipationList =
-                AppointmentParticipation.list("appointment.id = ?1", appointmentId);
-
-        return appointmentParticipationList
+        return AppointmentParticipation.<AppointmentParticipation>list("appointment.id = ?1", appointmentId)
                 .stream()
                 .map(ap -> {
+                    UserIdentity user = userService.getUserByOidcId(ap.getUserOidcId());
                     UserParticipantDto dto = new UserParticipantDto();
-
-                    User user = ap.getUser();
-                    dto.setUser_id(user.id);
+                    dto.setUser_id(user.oidcId());
                     dto.setName(user.getName());
-                    dto.setProfile_picture_url(user.getProfilePictureUrl());
-
+                    dto.setProfile_picture_url(user.profilePictureUrl());
                     dto.setRole(ap.getRole());
                     dto.setStatus(ap.getStatus());
-
                     if (ap.getGroupParticipationId() != null) {
                         Group group = Group.findById(ap.getGroupParticipationId());
                         dto.setVia_group_id(group.id);
                         dto.setVia_group_name(group.getGroupName());
                     }
-
                     return dto;
-                }).toList();
+                })
+                .toList();
     }
 
-    public List<GroupDto> getGroupParticipants(Long appointmentId, Long requestingUserId) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Reading Group Participants", requestingUserId, appointmentId);
+    public List<GroupDto> getGroupParticipants(Long appointmentId, String requestingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading Group Participants", requestingUserOidcId, appointmentId);
 
-        this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
+        authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
 
-        List<AppointmentGroupParticipation> appointmentGroupParticipationList =
+        List<AppointmentGroupParticipation> list =
                 AppointmentGroupParticipation.list(
                         "SELECT agp FROM AppointmentGroupParticipation agp " +
                                 "JOIN agp.group g JOIN g.members m " +
-                                "WHERE agp.appointment.id = ?1 AND m.user.id = ?2",
-                        appointmentId, requestingUserId);
+                                "WHERE agp.appointment.id = ?1 AND m.userOidcId = ?2",
+                        appointmentId, requestingUserOidcId);
 
-        return appointmentGroupParticipationList
-                .stream()
+        return list.stream()
                 .map(agp -> {
                     GroupDto dto = new GroupDto();
                     dto.setId(agp.getGroup().id);

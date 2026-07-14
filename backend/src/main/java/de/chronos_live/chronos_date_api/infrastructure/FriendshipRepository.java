@@ -2,7 +2,6 @@ package de.chronos_live.chronos_date_api.infrastructure;
 
 import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
 import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
-import de.chronos_live.chronos_date_api.domain.User;
 import io.micrometer.core.annotation.Timed;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -15,129 +14,58 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class FriendshipRepository implements PanacheRepository<FriendshipRequest> {
 
-    /**
-     * Prüft ob eine Freundschaftsanfrage existiert (egal welcher Status)
-     */
-    public boolean existsRequest(Long userId1, Long userId2) {
+    public boolean existsRequest(String oidcId1, String oidcId2) {
         return count(
                 "(requesterId = ?1 and addresseeId = ?2) or (requesterId = ?2 and addresseeId = ?1)",
-                userId1, userId2
+                oidcId1, oidcId2
         ) > 0;
     }
 
-    /**
-     * Prüft, ob zwei User befreundet sind (ACCEPTED)
-     */
-    public boolean areFriends(Long userId1, Long userId2) {
+    public boolean areFriends(String oidcId1, String oidcId2) {
         return count(
                 "status = ?1 and ((requesterId = ?2 and addresseeId = ?3) or (requesterId = ?3 and addresseeId = ?2))",
-                FriendshipStatus.ACCEPTED, userId1, userId2
+                FriendshipStatus.ACCEPTED, oidcId1, oidcId2
         ) > 0;
     }
 
-    /**
-     * Findet Freundschaftsanfrage zwischen zwei Usern
-     */
-    public Optional<FriendshipRequest> findRequest(Long userId1, Long userId2) {
+    public Optional<FriendshipRequest> findRequest(String oidcId1, String oidcId2) {
         return find(
                 "(requesterId = ?1 and addresseeId = ?2) or (requesterId = ?2 and addresseeId = ?1)",
-                userId1, userId2
+                oidcId1, oidcId2
         ).firstResultOptional();
     }
 
-    /**
-     * Findet aktive Freundschaft zwischen zwei Usern
-     */
-    public Optional<FriendshipRequest> findFriendship(Long userId1, Long userId2) {
+    public Optional<FriendshipRequest> findFriendship(String oidcId1, String oidcId2) {
         return find(
                 "status = ?1 and ((requesterId = ?2 and addresseeId = ?3) or (requesterId = ?3 and addresseeId = ?2))",
-                FriendshipStatus.ACCEPTED, userId1, userId2
+                FriendshipStatus.ACCEPTED, oidcId1, oidcId2
         ).firstResultOptional();
     }
 
-    /**
-     * Lädt alle Freunde eines Users
-     */
-    @Timed(value = "repo.friendships.getFriendIds", description = "Time to get friend IDs from database")
-    public Set<Long> getFriendIds(Long userId) {
+    @Timed(value = "repo.friendships.getFriendOidcIds")
+    public Set<String> getFriendOidcIds(String oidcId) {
         List<FriendshipRequest> friendships = find(
                 "status = ?1 and (requesterId = ?2 or addresseeId = ?2)",
-                FriendshipStatus.ACCEPTED, userId
+                FriendshipStatus.ACCEPTED, oidcId
         ).list();
 
         return friendships.stream()
-                .map(f -> f.getRequesterId().equals(userId) ?
-                        f.getAddresseeId() : f.getRequesterId())
+                .map(f -> f.getRequesterId().equals(oidcId) ? f.getAddresseeId() : f.getRequesterId())
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * Lädt eingehende Anfragen (PENDING)
-     */
-    public List<FriendshipRequest> getIncomingRequests(Long userId) {
-        return find("addresseeId = ?1 and status = ?2", userId, FriendshipStatus.PENDING).list();
+    public List<FriendshipRequest> getIncomingRequests(String oidcId) {
+        return find("addresseeId = ?1 and status = ?2", oidcId, FriendshipStatus.PENDING).list();
     }
 
-    /**
-     * Lädt ausgehende Anfragen (PENDING)
-     */
-    public List<FriendshipRequest> getOutgoingRequests(Long userId) {
-        return find("requesterId = ?1 and status = ?2", userId, FriendshipStatus.PENDING).list();
+    public List<FriendshipRequest> getOutgoingRequests(String oidcId) {
+        return find("requesterId = ?1 and status = ?2", oidcId, FriendshipStatus.PENDING).list();
     }
 
-    /**
-     * Lädt alle Freundschaften eines Users
-     */
-    public List<FriendshipRequest> getFriendships(Long userId) {
+    public List<FriendshipRequest> getFriendships(String oidcId) {
         return find(
                 "status = ?1 and (requesterId = ?2 or addresseeId = ?2)",
-                FriendshipStatus.ACCEPTED, userId
+                FriendshipStatus.ACCEPTED, oidcId
         ).list();
-    }
-
-    @Timed(value = "repo.friendships.findNonFriends", description = "Time to find non-friends from database")
-    public List<User> findNonFriends(String search, Long userId, int limit) {
-        String searchPattern = "%" + search.toLowerCase() + "%";
-
-        return getEntityManager()
-                .createQuery(
-                        "SELECT u FROM User u WHERE " +
-                                "u.id <> :userId AND " +
-                                "NOT EXISTS (" +
-                                "  SELECT 1 FROM FriendshipRequest f WHERE " +
-                                "  f.status = :status AND " +
-                                "  ((f.requesterId = :userId AND f.addresseeId = u.id) OR " +
-                                "   (f.addresseeId = :userId AND f.requesterId = u.id))" +
-                                ") AND " +
-                                "(LOWER(u.firstName) LIKE :search OR " +
-                                " LOWER(u.lastName) LIKE :search OR " +
-                                " LOWER(u.email) LIKE :search)",
-                        User.class)
-                .setParameter("userId", userId)
-                .setParameter("status", FriendshipStatus.ACCEPTED)
-                .setParameter("search", searchPattern)
-                .setMaxResults(limit)
-                .getResultList();
-    }
-
-    @Timed(value = "repo.friendships.findRecentNonFriends", description = "Time to find recent non-friends from database")
-    public List<User> findRecentNonFriends(Long userId, int limit) {
-        return getEntityManager()
-                .createQuery(
-                        "SELECT u FROM User u WHERE " +
-                                "u.id <> :userId AND " +
-                                "u.createdAt IS NOT NULL AND " +
-                                "NOT EXISTS (" +
-                                "  SELECT 1 FROM FriendshipRequest f WHERE " +
-                                "  f.status = :status AND " +
-                                "  ((f.requesterId = :userId AND f.addresseeId = u.id) OR " +
-                                "   (f.addresseeId = :userId AND f.requesterId = u.id))" +
-                                ") " +
-                                "ORDER BY u.createdAt DESC",
-                        User.class)
-                .setParameter("userId", userId)
-                .setParameter("status", FriendshipStatus.ACCEPTED)
-                .setMaxResults(limit)
-                .getResultList();
     }
 }

@@ -19,7 +19,7 @@ public interface SettingsMapper {
     @Mapping(target = "appointmentReminder", source = "appointment_reminder", qualifiedByName = "stringToAppointmentNotificationSetting")
     @Mapping(target = "groupMemberAdded", source = "group_member_added", qualifiedByName = "stringToNotificationSetting")
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "user", ignore = true)
+    @Mapping(target = "userOidcId", ignore = true)
     Settings toEntity(SettingsDto dto);
 
     @Mapping(target = "appointment_moved", source = "appointmentMoved", qualifiedByName = "appointmentNotificationSettingToString")
@@ -43,7 +43,7 @@ public interface SettingsMapper {
     @Mapping(target = "appointmentReminder", source = "appointment_reminder", qualifiedByName = "stringToAppointmentNotificationSetting")
     @Mapping(target = "groupMemberAdded", source = "group_member_added", qualifiedByName = "stringToNotificationSetting")
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "user", ignore = true)
+    @Mapping(target = "userOidcId", ignore = true)
     void updateEntityFromDto(SettingsDto dto, @MappingTarget Settings entity);
 
     // Converter für AppointmentNotificationSetting

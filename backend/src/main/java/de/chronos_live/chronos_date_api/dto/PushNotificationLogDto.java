@@ -2,7 +2,7 @@ package de.chronos_live.chronos_date_api.dto;
 
 public record PushNotificationLogDto(
         Long id,
-        Long user_id,
+        String user_id,
         String notification_type,
         String payload,
         String endpoint,

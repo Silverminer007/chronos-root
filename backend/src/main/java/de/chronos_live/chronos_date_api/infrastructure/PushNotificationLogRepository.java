@@ -19,11 +19,11 @@ import java.util.Map;
 public class PushNotificationLogRepository implements PanacheRepository<PushNotificationLog>, NotificationLogPort {
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void log(Long userId, String notificationType, String payload,
+    public void log(String userOidcId, String notificationType, String payload,
                     String endpoint, Integer httpStatusCode, boolean success,
                     String errorMessage) {
         PushNotificationLog entry = new PushNotificationLog();
-        entry.setUserId(userId);
+        entry.setUserOidcId(userOidcId);
         entry.setNotificationType(notificationType);
         entry.setPayload(payload);
         entry.setEndpoint(endpoint);
@@ -34,15 +34,15 @@ public class PushNotificationLogRepository implements PanacheRepository<PushNoti
         persist(entry);
     }
 
-    public List<PushNotificationLog> findFiltered(Long userId, Instant from, Instant to,
+    public List<PushNotificationLog> findFiltered(String userOidcId, Instant from, Instant to,
                                                    Boolean success, String notificationType,
                                                    int page, int size) {
         List<String> conditions = new ArrayList<>();
         Map<String, Object> params = new HashMap<>();
 
-        if (userId != null) {
-            conditions.add("userId = :userId");
-            params.put("userId", userId);
+        if (userOidcId != null) {
+            conditions.add("userOidcId = :userOidcId");
+            params.put("userOidcId", userOidcId);
         }
         if (from != null) {
             conditions.add("createdAt >= :from");

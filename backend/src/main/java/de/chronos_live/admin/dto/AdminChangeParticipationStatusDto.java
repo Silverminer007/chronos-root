@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class AdminChangeParticipationStatusDto {
-    private Long userId, appointmentId;
+    private String userId;
+    private Long appointmentId;
     private String participationStatus;
 }

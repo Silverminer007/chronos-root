@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class AdminCreateGroupDto {
-    private Long ownerId;
+    private String ownerId;
     private String groupName;
 }

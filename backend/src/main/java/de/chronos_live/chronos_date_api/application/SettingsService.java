@@ -19,103 +19,85 @@ public class SettingsService {
     SettingsMapper settingsMapper;
 
     private Settings getDefaultSetting() {
-        Settings defaultSettings = new Settings();
-        defaultSettings.setAppointmentMoved(AppointmentNotificationSetting.ALL);
-        defaultSettings.setAppointmentMessage(AppointmentNotificationSetting.ATTENDANT);
-        defaultSettings.setAppointmentCancelled(AppointmentNotificationSetting.ALL);
-        defaultSettings.setAppointmentParticipantAdded(AppointmentNotificationSetting.RESPONSIBLE);
-        defaultSettings.setAppointmentParticipationStatusChanged(AppointmentNotificationSetting.RESPONSIBLE);
-        defaultSettings.setAppointmentParticipationInvalid(AppointmentNotificationSetting.ATTENDANT);
-        defaultSettings.setAppointmentParticipationStatusPending(AppointmentNotificationSetting.ATTENDANT);
-        defaultSettings.setAppointmentReminder(AppointmentNotificationSetting.ALL);
-        defaultSettings.setGroupMemberAdded(NotificationSetting.DISABLED);
-        return defaultSettings;
+        Settings s = new Settings();
+        s.setAppointmentMoved(AppointmentNotificationSetting.ALL);
+        s.setAppointmentMessage(AppointmentNotificationSetting.ATTENDANT);
+        s.setAppointmentCancelled(AppointmentNotificationSetting.ALL);
+        s.setAppointmentParticipantAdded(AppointmentNotificationSetting.RESPONSIBLE);
+        s.setAppointmentParticipationStatusChanged(AppointmentNotificationSetting.RESPONSIBLE);
+        s.setAppointmentParticipationInvalid(AppointmentNotificationSetting.ATTENDANT);
+        s.setAppointmentParticipationStatusPending(AppointmentNotificationSetting.ATTENDANT);
+        s.setAppointmentReminder(AppointmentNotificationSetting.ALL);
+        s.setGroupMemberAdded(NotificationSetting.DISABLED);
+        return s;
     }
 
-    public Settings getOrCreateSettings(Long userId) {
-        return (Settings) Settings.find("user.id", userId).firstResultOptional().orElseGet(() -> {
-            Settings setting = this.getDefaultSetting();
-            User user = User.findById(userId);
-            setting.setUser(user);
+    public Settings getOrCreateSettings(String userOidcId) {
+        return (Settings) Settings.find("userOidcId", userOidcId).firstResultOptional().orElseGet(() -> {
+            Settings setting = getDefaultSetting();
+            setting.setUserOidcId(userOidcId);
             setting.persist();
             return setting;
         });
     }
 
-    public void updateSettings(Long userId, SettingsDto settingsDto) {
-        LOGGER.debugf("[Principal %s] Updating Settings", userId);
-        Settings setting = getOrCreateSettings(userId);
-
-        this.settingsMapper.updateEntityFromDto(settingsDto, setting);
+    public void updateSettings(String userOidcId, SettingsDto settingsDto) {
+        LOGGER.debugf("[Principal %s] Updating Settings", userOidcId);
+        Settings setting = getOrCreateSettings(userOidcId);
+        settingsMapper.updateEntityFromDto(settingsDto, setting);
     }
 
-    private boolean checkSetting(AppointmentNotificationSetting setting, AppointmentParticipation appointmentParticipation) {
-        if (setting == null || appointmentParticipation == null) {
-            return false;
-        }
-        if (AppointmentNotificationSetting.DISABLED.equals(setting)) {
-            return false;
-        }
-        if (AppointmentNotificationSetting.ALL.equals(setting)) {
-            return appointmentParticipation.getRole().ordinal() >= UserRole.GUEST.ordinal();
-        }
-        if (AppointmentNotificationSetting.RESPONSIBLE.equals(setting)) {
-            return appointmentParticipation.getRole().ordinal() >= UserRole.RESPONSIBLE.ordinal();
-        }
-        if (AppointmentNotificationSetting.HELPER.equals(setting)) {
-            return appointmentParticipation.getRole().ordinal() >= UserRole.HELPER.ordinal();
-        }
-        if (AppointmentNotificationSetting.ATTENDANT.equals(setting)) {
-            return appointmentParticipation.getRole().ordinal() >= UserRole.ATTENDANT.ordinal();
-        }
+    private boolean checkSetting(AppointmentNotificationSetting setting, AppointmentParticipation participation) {
+        if (setting == null || participation == null) return false;
+        if (AppointmentNotificationSetting.DISABLED.equals(setting)) return false;
+        if (AppointmentNotificationSetting.ALL.equals(setting))
+            return participation.getRole().ordinal() >= UserRole.GUEST.ordinal();
+        if (AppointmentNotificationSetting.RESPONSIBLE.equals(setting))
+            return participation.getRole().ordinal() >= UserRole.RESPONSIBLE.ordinal();
+        if (AppointmentNotificationSetting.HELPER.equals(setting))
+            return participation.getRole().ordinal() >= UserRole.HELPER.ordinal();
+        if (AppointmentNotificationSetting.ATTENDANT.equals(setting))
+            return participation.getRole().ordinal() >= UserRole.ATTENDANT.ordinal();
         return false;
     }
 
-    public boolean sendAppointmentMovedNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentMoved(), appointmentParticipation);
+    public boolean sendAppointmentMovedNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentMoved(), ap);
     }
 
-    public boolean sendAppointmentMessageSentNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentMessage(), appointmentParticipation);
+    public boolean sendAppointmentMessageSentNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentMessage(), ap);
     }
 
-    public boolean sendAppointmentCancelledNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentCancelled(), appointmentParticipation);
+    public boolean sendAppointmentCancelledNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentCancelled(), ap);
     }
 
-    public boolean sendAppointmentParticipantAddedEventNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentParticipantAdded(), appointmentParticipation);
+    public boolean sendAppointmentParticipantAddedEventNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentParticipantAdded(), ap);
     }
 
-    public boolean sendGroupMemberAddedNotification(GroupMember groupMember) {
-        return NotificationSetting.ENABLED.equals(this.getOrCreateSettings(groupMember.getUser().id).getGroupMemberAdded());
+    public boolean sendGroupMemberAddedNotification(GroupMember gm) {
+        return NotificationSetting.ENABLED.equals(getOrCreateSettings(gm.getUserOidcId()).getGroupMemberAdded());
     }
 
-    public boolean sendAppointmentParticipationStatusChangedNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentParticipationStatusChanged(), appointmentParticipation);
+    public boolean sendAppointmentParticipationStatusChangedNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentParticipationStatusChanged(), ap);
     }
 
-    public boolean sendAppointmentParticipationInvalidNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentParticipationInvalid(), appointmentParticipation);
+    public boolean sendAppointmentParticipationInvalidNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentParticipationInvalid(), ap);
     }
 
-    public boolean sendAppointmentParticipationStatusPendingReminderNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentParticipationStatusPending(), appointmentParticipation);
+    public boolean sendAppointmentParticipationStatusPendingReminderNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentParticipationStatusPending(), ap);
     }
 
-    public boolean sendAppointmentReminderNotification(AppointmentParticipation appointmentParticipation) {
-        Settings settings = this.getOrCreateSettings(appointmentParticipation.getUser().id);
-        return this.checkSetting(settings.getAppointmentReminder(), appointmentParticipation);
+    public boolean sendAppointmentReminderNotification(AppointmentParticipation ap) {
+        return checkSetting(getOrCreateSettings(ap.getUserOidcId()).getAppointmentReminder(), ap);
     }
 
-    public boolean sendAppointmentParticipationStatusRecheckRequestedNotification(AppointmentParticipation appointmentParticipation) {
+    public boolean sendAppointmentParticipationStatusRecheckRequestedNotification(AppointmentParticipation ap) {
         return true;
     }
 }

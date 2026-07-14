@@ -63,15 +63,15 @@ public class WebPushAdapter implements NotificationPort {
     }
 
     @Override
-    public void send(Long userId, String payload) {
+    public void send(String userOidcId, String payload) {
         if (push == null) {
             LOGGER.warn("Omitting push notification because VAPID keys are not set");
             return;
         }
-        Log.debugf("[Notifications] Sending notification to user [%d]: %s", userId, payload);
+        Log.debugf("[Notifications] Sending notification to user [%s]: %s", userOidcId, payload);
         String notificationType = extractType(payload);
 
-        subscriptionService.getAllForUser(userId).forEach(sub -> {
+        subscriptionService.getAllForUser(userOidcId).forEach(sub -> {
             try {
                 Notification notification = new Notification(
                         sub.getEndpoint(),
@@ -83,7 +83,7 @@ public class WebPushAdapter implements NotificationPort {
                 int statusCode = response.getStatusLine().getStatusCode();
                 boolean success = statusCode >= 200 && statusCode < 300;
 
-                notificationLog.log(userId, notificationType, payload, sub.getEndpoint(), statusCode, success, null);
+                notificationLog.log(userOidcId, notificationType, payload, sub.getEndpoint(), statusCode, success, null);
 
                 if (statusCode == 410 || statusCode == 404) {
                     Log.infof("[Notifications] Subscription expired (HTTP %d), removing endpoint %s",
@@ -99,7 +99,7 @@ public class WebPushAdapter implements NotificationPort {
                 if (errorMessage != null && errorMessage.length() > MAX_ERROR_MESSAGE_LENGTH) {
                     errorMessage = errorMessage.substring(0, MAX_ERROR_MESSAGE_LENGTH);
                 }
-                notificationLog.log(userId, notificationType, payload, sub.getEndpoint(), null, false, errorMessage);
+                notificationLog.log(userOidcId, notificationType, payload, sub.getEndpoint(), null, false, errorMessage);
                 subscriptionService.deleteByEndpoint(sub.getEndpoint());
             }
         });
