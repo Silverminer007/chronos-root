@@ -155,7 +155,7 @@ export const useAppointmentsStore = defineStore('appointments', {
                     headers: options.headers
                 })
 
-                if (!this.appointments || this.appointments.length === 0) {
+                if (filters.page === 0 || filters.page == null) {
                     this.appointments = [];
                 }
                 const items = Array.isArray(response) ? response : response.data;
