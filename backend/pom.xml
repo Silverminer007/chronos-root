@@ -12,18 +12,21 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-        <quarkus.platform.version>3.34.0</quarkus.platform.version>
-        <lombok.version>1.18.42</lombok.version>
+        <quarkus.platform.version>3.37.3</quarkus.platform.version>
+        <lombok.version>1.18.46</lombok.version>
         <skipITs>true</skipITs>
-        <surefire-plugin.version>3.5.5</surefire-plugin.version>
+        <surefire-plugin.version>3.6.0-M1</surefire-plugin.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
-        <jacoco.version>0.8.14</jacoco.version>
-        <checkstyle-plugin.version>3.4.0</checkstyle-plugin.version>
-        <checkstyle.version>10.17.0</checkstyle.version>
-        <spotbugs-plugin.version>4.9.3.0</spotbugs-plugin.version>
-        <asm.version>9.9.1</asm.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
+        <checkstyle.version>13.8.0</checkstyle.version>
+        <spotbugs-plugin.version>4.10.3.0</spotbugs-plugin.version>
+        <asm.version>9.10.1</asm.version>
         <pmd-plugin.version>3.28.0</pmd-plugin.version>
-        <versions-plugin.version>2.18.0</versions-plugin.version>
+        <versions-plugin.version>2.21.0</versions-plugin.version>
+        <web-push.version>5.1.2</web-push.version>
+        <bouncycastle.version>1.85</bouncycastle.version>
+        <assertj.version>3.27.7</assertj.version>
     </properties>
 
     <dependencyManagement>
@@ -86,17 +89,17 @@
         <dependency>
             <groupId>nl.martijndwars</groupId>
             <artifactId>web-push</artifactId>
-            <version>5.1.1</version>
+            <version>${web-push.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.83</version>
+            <version>${bouncycastle.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.83</version>
+            <version>${bouncycastle.version}</version>
         </dependency>
         <!-- Hier alles für Web Push -->
         <dependency>
@@ -149,7 +152,7 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.27.7</version>
+            <version>${assertj.version}</version>
             <scope>test</scope>
         </dependency>
 
