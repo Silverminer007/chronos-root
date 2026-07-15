@@ -24,7 +24,7 @@
         <asm.version>9.10.1</asm.version>
         <pmd-plugin.version>3.28.0</pmd-plugin.version>
         <versions-plugin.version>2.21.0</versions-plugin.version>
-        <web-push.version>5.1.2</web-push.version>
+        <web-push.version>5.1.1</web-push.version>
         <bouncycastle.version>1.85</bouncycastle.version>
         <assertj.version>3.27.7</assertj.version>
     </properties>
