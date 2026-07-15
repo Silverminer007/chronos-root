@@ -40,9 +40,9 @@ import static org.mockito.Mockito.*;
 class AppointmentQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long APPOINTMENT_ID = 42L;
-    private static final Long UNKNOWN_ID     = 999L;
-    private static final Long USER_ID        = 1L;
+    private static final Long   APPOINTMENT_ID = 42L;
+    private static final Long   UNKNOWN_ID     = 999L;
+    private static final String USER_ID        = "oidc-user-1";
 
     /** A fixed reference instant used as the "now" anchor in timing tests. */
     private static final Instant T0    = Instant.parse("2024-06-01T12:00:00Z");
@@ -140,7 +140,7 @@ class AppointmentQueryServiceTest {
             service.getAppointment(APPOINTMENT_ID, false, true, false);
 
             assertThat(sqlCaptor.getValue())
-                    .contains("LEFT JOIN FETCH a.participants p LEFT JOIN FETCH p.user")
+                    .contains("LEFT JOIN FETCH a.participants p")
                     .doesNotContain("LEFT JOIN FETCH a.messages")
                     .doesNotContain("LEFT JOIN FETCH a.groupParticipants");
         }
@@ -269,7 +269,7 @@ class AppointmentQueryServiceTest {
             service.search(USER_ID, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, true, false);
 
             assertThat(findSqlCaptor.getValue())
-                    .contains("LEFT JOIN FETCH a.participants part LEFT JOIN FETCH part.user");
+                    .contains("LEFT JOIN FETCH a.participants part");
         }
 
         // B3=true

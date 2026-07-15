@@ -5,9 +5,10 @@ import de.chronos_live.chronos_date_api.application.events.GroupDeletedEvent;
 import de.chronos_live.chronos_date_api.application.events.GroupMemberAddedEvent;
 import de.chronos_live.chronos_date_api.application.events.GroupMemberRemovedEvent;
 import de.chronos_live.chronos_date_api.application.events.GroupNameChangedEvent;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
@@ -36,8 +37,7 @@ import static org.mockito.Mockito.*;
  * Unit tests for {@link GroupService}.
  *
  * <p>Strategy: {@code @QuarkusTest} + {@code @InjectMock} for CDI dependencies.
- * {@link PanacheMock} intercepts static calls on {@link Group}, {@link GroupMember},
- * and {@link User}.
+ * {@link PanacheMock} intercepts static calls on {@link Group} and {@link GroupMember}.
  *
  * <p><b>Untestable branch – onGroupCreated:</b><br>
  * The {@code onGroupCreated} method is a CDI observer annotated with
@@ -51,11 +51,11 @@ import static org.mockito.Mockito.*;
 class GroupServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long ACTING_USER_ID  = 1L;
-    private static final Long TARGET_USER_ID  = 2L;
-    private static final Long GROUP_ID        = 10L;
-    private static final String GROUP_NAME    = "Test Group";
-    private static final String NEW_GROUP_NAME = "Renamed Group";
+    private static final String ACTING_USER_OIDC_ID  = "oidc-acting-1";
+    private static final String TARGET_USER_OIDC_ID  = "oidc-target-2";
+    private static final Long   GROUP_ID             = 10L;
+    private static final String GROUP_NAME           = "Test Group";
+    private static final String NEW_GROUP_NAME       = "Renamed Group";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
@@ -67,18 +67,20 @@ class GroupServiceTest {
     @InjectMock
     AuthorizationService authorizationService;
 
+    @InjectMock
+    IdentityPort identityPort;
+
     @BeforeEach
     void insertGroupFixtures() throws Exception {
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO users (id, firstname, lastname) VALUES (2, 'Target', 'User') ON CONFLICT DO NOTHING");
-            stmt.execute("INSERT INTO groups (id, groupname) VALUES (10, 'Test Group') ON CONFLICT DO NOTHING");
+            stmt.execute("INSERT INTO groups (id, groupname, owner_oidcid) VALUES (10, 'Test Group', 'oidc-acting-1') ON CONFLICT DO NOTHING");
         }
     }
 
     @AfterEach
     void cleanupGroupTestData() throws Exception {
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("DELETE FROM group_member WHERE group_id = 10 AND user_id = 2");
+            stmt.execute("DELETE FROM group_member WHERE group_id = 10 AND user_oidcid = 'oidc-target-2'");
         }
     }
 
@@ -98,19 +100,15 @@ class GroupServiceTest {
     Event<GroupNameChangedEvent> groupNameChangedEvent;
 
     // ── Test-object builders ──────────────────────────────────────────────────
-    private static User buildUser(Long id) {
-        User u = new User();
-        u.id = id;
-        u.setFirstName("Test");
-        u.setLastName("User");
-        return u;
+    private static UserIdentity buildUserIdentity(String oidcId) {
+        return new UserIdentity(oidcId, "Test", "User", "test@example.com", null);
     }
 
     private static Group buildGroup(Long id, String name) {
         Group g = new Group();
         g.id = id;
         g.setGroupName(name);
-        g.setOwner(buildUser(ACTING_USER_ID));
+        g.setOwnerOidcId(ACTING_USER_OIDC_ID);
         return g;
     }
 
@@ -139,7 +137,6 @@ class GroupServiceTest {
         void mockPanache() {
             PanacheMock.mock(GroupMember.class);
             PanacheMock.mock(Group.class);
-            PanacheMock.mock(User.class);
         }
 
         // B1
@@ -149,10 +146,10 @@ class GroupServiceTest {
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(gmQuery);
             when(gmQuery.count()).thenReturn(1L);
 
-            assertThatThrownBy(() -> service.addGroupMember(ACTING_USER_ID, GROUP_ID, TARGET_USER_ID))
+            assertThatThrownBy(() -> service.addGroupMember(ACTING_USER_OIDC_ID, GROUP_ID, TARGET_USER_OIDC_ID))
                     .isInstanceOf(ValidationException.class);
 
-            verify(authorizationService).requireAddGroupMember(GROUP_ID, ACTING_USER_ID, TARGET_USER_ID);
+            verify(authorizationService).requireAddGroupMember(GROUP_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID);
         }
 
         // B2
@@ -163,7 +160,7 @@ class GroupServiceTest {
             when(gmQuery.count()).thenReturn(0L);
             when(Group.<Group>findById(GROUP_ID)).thenReturn(null);
 
-            assertThatThrownBy(() -> service.addGroupMember(ACTING_USER_ID, GROUP_ID, TARGET_USER_ID))
+            assertThatThrownBy(() -> service.addGroupMember(ACTING_USER_OIDC_ID, GROUP_ID, TARGET_USER_OIDC_ID))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining(GROUP_ID.toString());
         }
@@ -176,17 +173,15 @@ class GroupServiceTest {
             when(gmQuery.count()).thenReturn(0L);
             Group group = buildGroup(GROUP_ID, GROUP_NAME);
             when(Group.<Group>findById(GROUP_ID)).thenReturn(group);
-            User target = buildUser(TARGET_USER_ID);
-            when(User.<User>findById(TARGET_USER_ID)).thenReturn(target);
             ArgumentCaptor<GroupMemberAddedEvent> captor =
                     ArgumentCaptor.forClass(GroupMemberAddedEvent.class);
 
-            service.addGroupMember(ACTING_USER_ID, GROUP_ID, TARGET_USER_ID);
+            service.addGroupMember(ACTING_USER_OIDC_ID, GROUP_ID, TARGET_USER_OIDC_ID);
 
             verify(groupMemberAddedEvent).fire(captor.capture());
             assertThat(captor.getValue().groupId()).isEqualTo(GROUP_ID);
-            assertThat(captor.getValue().newMemberId()).isEqualTo(TARGET_USER_ID);
-            assertThat(captor.getValue().actingUserId()).isEqualTo(ACTING_USER_ID);
+            assertThat(captor.getValue().newMemberOidcId()).isEqualTo(TARGET_USER_OIDC_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
     }
 
@@ -216,11 +211,11 @@ class GroupServiceTest {
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.removeGroupMember(ACTING_USER_ID, GROUP_ID, TARGET_USER_ID))
+            assertThatThrownBy(() -> service.removeGroupMember(ACTING_USER_OIDC_ID, GROUP_ID, TARGET_USER_OIDC_ID))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("not member");
 
-            verify(authorizationService).requireRemoveGroupMember(GROUP_ID, ACTING_USER_ID, TARGET_USER_ID);
+            verify(authorizationService).requireRemoveGroupMember(GROUP_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID);
         }
 
         // B2
@@ -235,12 +230,12 @@ class GroupServiceTest {
             ArgumentCaptor<GroupMemberRemovedEvent> captor =
                     ArgumentCaptor.forClass(GroupMemberRemovedEvent.class);
 
-            service.removeGroupMember(ACTING_USER_ID, GROUP_ID, TARGET_USER_ID);
+            service.removeGroupMember(ACTING_USER_OIDC_ID, GROUP_ID, TARGET_USER_OIDC_ID);
 
             verify(groupMemberRemovedEvent).fire(captor.capture());
             assertThat(captor.getValue().groupId()).isEqualTo(GROUP_ID);
-            assertThat(captor.getValue().removedMemberId()).isEqualTo(TARGET_USER_ID);
-            assertThat(captor.getValue().actingUserId()).isEqualTo(ACTING_USER_ID);
+            assertThat(captor.getValue().removedMemberOidcId()).isEqualTo(TARGET_USER_OIDC_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
     }
 
@@ -263,14 +258,20 @@ class GroupServiceTest {
         }
 
         @Test
-        void should_returnUsers_when_authorized() {
-            User user = buildUser(TARGET_USER_ID);
-            when(GroupMember.list(anyString(), any(Object[].class))).thenReturn(List.of(user));
+        void should_returnUserIdentities_when_authorized() {
+            GroupMember member = new GroupMember();
+            member.setUserOidcId(TARGET_USER_OIDC_ID);
+            when(GroupMember.list(anyString(), any(Object[].class))).thenReturn(List.of(member));
 
-            List<User> result = service.getGroupUsers(ACTING_USER_ID, GROUP_ID);
+            UserIdentity userIdentity = buildUserIdentity(TARGET_USER_OIDC_ID);
+            when(identityPort.findByIds(anyList())).thenReturn(
+                    java.util.Map.of(TARGET_USER_OIDC_ID, userIdentity));
 
-            assertThat(result).containsExactly(user);
-            verify(authorizationService).requireReadGroupMembers(GROUP_ID, ACTING_USER_ID);
+            List<UserIdentity> result = service.getGroupUsers(ACTING_USER_OIDC_ID, GROUP_ID);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).oidcId()).isEqualTo(TARGET_USER_OIDC_ID);
+            verify(authorizationService).requireReadGroupMembers(GROUP_ID, ACTING_USER_OIDC_ID);
         }
     }
 
@@ -294,13 +295,12 @@ class GroupServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Group.class);
-            PanacheMock.mock(User.class);
         }
 
         // B1
         @Test
         void should_throwValidationException_when_nameIsNull() {
-            assertThatThrownBy(() -> service.createGroup(ACTING_USER_ID, buildGroupDto(null)))
+            assertThatThrownBy(() -> service.createGroup(ACTING_USER_OIDC_ID, buildGroupDto(null)))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("name");
         }
@@ -308,7 +308,7 @@ class GroupServiceTest {
         // B2
         @Test
         void should_throwValidationException_when_nameIsBlank() {
-            assertThatThrownBy(() -> service.createGroup(ACTING_USER_ID, buildGroupDto("   ")))
+            assertThatThrownBy(() -> service.createGroup(ACTING_USER_OIDC_ID, buildGroupDto("   ")))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("name");
         }
@@ -316,17 +316,15 @@ class GroupServiceTest {
         // B3
         @Test
         void should_persistGroupAndFireEvent_when_nameIsValid() {
-            User owner = buildUser(ACTING_USER_ID);
-            when(User.<User>findById(ACTING_USER_ID)).thenReturn(owner);
             ArgumentCaptor<GroupCreatedEvent> captor =
                     ArgumentCaptor.forClass(GroupCreatedEvent.class);
 
-            Group result = service.createGroup(ACTING_USER_ID, buildGroupDto(GROUP_NAME));
+            Group result = service.createGroup(ACTING_USER_OIDC_ID, buildGroupDto(GROUP_NAME));
 
             assertThat(result.getGroupName()).isEqualTo(GROUP_NAME);
-            assertThat(result.getOwner()).isEqualTo(owner);
+            assertThat(result.getOwnerOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
             verify(groupCreatedEvent).fire(captor.capture());
-            assertThat(captor.getValue().actingUserId()).isEqualTo(ACTING_USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
     }
 
@@ -354,17 +352,17 @@ class GroupServiceTest {
         // B1
         @Test
         void should_throwValidationException_when_nameIsNull() {
-            assertThatThrownBy(() -> service.editGroup(ACTING_USER_ID, GROUP_ID, buildGroupDto(null)))
+            assertThatThrownBy(() -> service.editGroup(ACTING_USER_OIDC_ID, GROUP_ID, buildGroupDto(null)))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("name");
 
-            verify(authorizationService).requireEditGroup(GROUP_ID, ACTING_USER_ID);
+            verify(authorizationService).requireEditGroup(GROUP_ID, ACTING_USER_OIDC_ID);
         }
 
         // B2
         @Test
         void should_throwValidationException_when_nameIsBlank() {
-            assertThatThrownBy(() -> service.editGroup(ACTING_USER_ID, GROUP_ID, buildGroupDto("  ")))
+            assertThatThrownBy(() -> service.editGroup(ACTING_USER_OIDC_ID, GROUP_ID, buildGroupDto("  ")))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("name");
         }
@@ -374,7 +372,7 @@ class GroupServiceTest {
         void should_throwResourceNotFoundException_when_groupNotFound() {
             when(Group.<Group>findById(GROUP_ID)).thenReturn(null);
 
-            assertThatThrownBy(() -> service.editGroup(ACTING_USER_ID, GROUP_ID, buildGroupDto(NEW_GROUP_NAME)))
+            assertThatThrownBy(() -> service.editGroup(ACTING_USER_OIDC_ID, GROUP_ID, buildGroupDto(NEW_GROUP_NAME)))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining(GROUP_ID.toString());
         }
@@ -387,14 +385,14 @@ class GroupServiceTest {
             ArgumentCaptor<GroupNameChangedEvent> captor =
                     ArgumentCaptor.forClass(GroupNameChangedEvent.class);
 
-            Group result = service.editGroup(ACTING_USER_ID, GROUP_ID, buildGroupDto(NEW_GROUP_NAME));
+            Group result = service.editGroup(ACTING_USER_OIDC_ID, GROUP_ID, buildGroupDto(NEW_GROUP_NAME));
 
             assertThat(result.getGroupName()).isEqualTo(NEW_GROUP_NAME);
             verify(groupNameChangedEvent).fire(captor.capture());
             assertThat(captor.getValue().groupId()).isEqualTo(GROUP_ID);
             assertThat(captor.getValue().oldName()).isEqualTo(GROUP_NAME);
             assertThat(captor.getValue().newName()).isEqualTo(NEW_GROUP_NAME);
-            assertThat(captor.getValue().actingUserId()).isEqualTo(ACTING_USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
     }
 
@@ -422,11 +420,11 @@ class GroupServiceTest {
         void should_throwResourceNotFoundException_when_groupNotFound() {
             when(Group.<Group>findById(GROUP_ID)).thenReturn(null);
 
-            assertThatThrownBy(() -> service.deleteGroup(ACTING_USER_ID, GROUP_ID))
+            assertThatThrownBy(() -> service.deleteGroup(ACTING_USER_OIDC_ID, GROUP_ID))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining(GROUP_ID.toString());
 
-            verify(authorizationService).requireDeleteGroup(GROUP_ID, ACTING_USER_ID);
+            verify(authorizationService).requireDeleteGroup(GROUP_ID, ACTING_USER_OIDC_ID);
         }
 
         // B2
@@ -438,12 +436,12 @@ class GroupServiceTest {
             ArgumentCaptor<GroupDeletedEvent> captor =
                     ArgumentCaptor.forClass(GroupDeletedEvent.class);
 
-            service.deleteGroup(ACTING_USER_ID, GROUP_ID);
+            service.deleteGroup(ACTING_USER_OIDC_ID, GROUP_ID);
 
             PanacheMock.verify(Group.class).deleteById(GROUP_ID);
             verify(groupDeletedEvent).fire(captor.capture());
             assertThat(captor.getValue().groupId()).isEqualTo(GROUP_ID);
-            assertThat(captor.getValue().actingUserId()).isEqualTo(ACTING_USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
     }
 }

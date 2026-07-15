@@ -2,7 +2,6 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
-import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
@@ -47,24 +46,16 @@ import static org.mockito.Mockito.when;
 class MessageQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long APPOINTMENT_ID = 10L;
-    private static final Long MESSAGE_ID     = 42L;
-    private static final Long UNKNOWN_ID     = 999L;
-    private static final Long USER_ID        = 1L;
+    private static final Long   APPOINTMENT_ID    = 10L;
+    private static final Long   MESSAGE_ID        = 42L;
+    private static final Long   UNKNOWN_ID        = 999L;
+    private static final String SENDER_OIDC_ID    = "oidc-sender-1";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
     MessageQueryService service;
 
     // ── Test-object builders ───────────────────────────────────────────────────
-    private static User buildUser() {
-        User u = new User();
-        u.id = USER_ID;
-        u.setFirstName("Max");
-        u.setLastName("Mustermann");
-        return u;
-    }
-
     private static Message buildMessage() {
         Appointment appointment = new Appointment();
         appointment.id = APPOINTMENT_ID;
@@ -72,7 +63,7 @@ class MessageQueryServiceTest {
         Message m = new Message();
         m.id = MESSAGE_ID;
         m.setBody("Hello!");
-        m.setSender(buildUser());
+        m.setSenderOidcId(SENDER_OIDC_ID);
         m.setAppointment(appointment);
         m.setTimeStamp(Instant.parse("2024-06-01T10:00:00Z"));
         return m;

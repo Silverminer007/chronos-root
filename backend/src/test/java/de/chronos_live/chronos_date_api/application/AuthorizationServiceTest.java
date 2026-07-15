@@ -52,10 +52,10 @@ import static org.mockito.Mockito.when;
 class AuthorizationServiceTest {
 
     // ── Constants ────────────────────────────────────────────────────────────
-    private static final Long APPT_ID      = 1L;
-    private static final Long GROUP_ID     = 2L;
-    private static final Long ACTING_USER  = 10L;
-    private static final Long TARGET_USER  = 20L;
+    private static final Long   APPT_ID      = 1L;
+    private static final Long   GROUP_ID     = 2L;
+    private static final String ACTING_USER  = "oidc-acting-10";
+    private static final String TARGET_USER  = "oidc-target-20";
 
     // ── CDI injection ────────────────────────────────────────────────────────
     @Inject

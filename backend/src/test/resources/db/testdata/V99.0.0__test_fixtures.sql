@@ -1,16 +1,13 @@
 -- Test fixtures: pre-insert rows referenced by hardcoded IDs in @BeforeEach / test helpers.
 -- Also advance all Hibernate sequences past the fixture IDs to avoid PK conflicts.
+-- Note: the users table has been removed; user identity is now sourced from Keycloak (OIDC).
 
-INSERT INTO users (id, firstname, lastname) VALUES (1, 'Test', 'User') ON CONFLICT DO NOTHING;
-INSERT INTO users (id, firstname, lastname) VALUES (2, 'Target', 'User') ON CONFLICT DO NOTHING;
-
-INSERT INTO groups (id, groupname) VALUES (3, 'Test Group') ON CONFLICT DO NOTHING;
-INSERT INTO groups (id, groupname) VALUES (10, 'Test Group 10') ON CONFLICT DO NOTHING;
+INSERT INTO groups (id, groupname, owner_oidcid) VALUES (3, 'Test Group', 'oidc-fixture-owner') ON CONFLICT DO NOTHING;
+INSERT INTO groups (id, groupname, owner_oidcid) VALUES (10, 'Test Group 10', 'oidc-fixture-owner') ON CONFLICT DO NOTHING;
 
 INSERT INTO appointment (id, name) VALUES (10, 'Test Appointment') ON CONFLICT DO NOTHING;
 
 -- Advance sequences so Hibernate-generated IDs never collide with the fixture IDs above.
-SELECT setval('users_seq', 1000, false);
 SELECT setval('groups_seq', 1000, false);
 SELECT setval('appointment_seq', 1000, false);
 SELECT setval('appointment_group_participations_seq', 1000, false);

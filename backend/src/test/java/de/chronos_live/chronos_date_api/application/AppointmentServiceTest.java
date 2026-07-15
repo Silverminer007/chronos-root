@@ -39,8 +39,8 @@ import static org.mockito.Mockito.*;
 class AppointmentServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long APPOINTMENT_ID = 42L;
-    private static final Long USER_ID        = 1L;
+    private static final Long   APPOINTMENT_ID = 42L;
+    private static final String USER_ID        = "oidc-user-1";
 
     private static final String  START_STR     = "2024-06-01T09:00:00Z";
     private static final String  END_STR       = "2024-06-01T17:00:00Z";
@@ -186,7 +186,7 @@ class AppointmentServiceTest {
             assertThat(result.getMinimalAttendees()).isEqualTo(5);
 
             verify(appointmentCreatedEvent).fire(captor.capture());
-            assertThat(captor.getValue().creatorId()).isEqualTo(USER_ID);
+            assertThat(captor.getValue().creatorOidcId()).isEqualTo(USER_ID);
         }
 
         // B2=false (null description), B3=false (null venue), B7=false (null minAttendees)
@@ -275,7 +275,7 @@ class AppointmentServiceTest {
             verify(appointmentMovedEvent).fire(movedCaptor.capture());
             assertThat(movedCaptor.getValue().oldStartTime()).isEqualTo(START);
             assertThat(movedCaptor.getValue().oldEndTime()).isEqualTo(END);
-            assertThat(movedCaptor.getValue().actingUserId()).isEqualTo(USER_ID);
+            assertThat(movedCaptor.getValue().actingUserOidcId()).isEqualTo(USER_ID);
 
             verify(appointmentEditedEvent).fire(any(AppointmentEditedEvent.class));
         }
@@ -360,7 +360,7 @@ class AppointmentServiceTest {
 
             assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.DELETED);
             verify(appointmentDeletedEvent).fire(captor.capture());
-            assertThat(captor.getValue().actingUserId()).isEqualTo(USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(USER_ID);
             assertThat(captor.getValue().deletedAppointmentId()).isEqualTo(APPOINTMENT_ID);
         }
     }
@@ -406,7 +406,7 @@ class AppointmentServiceTest {
 
             assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             verify(appointmentCancelledEvent).fire(captor.capture());
-            assertThat(captor.getValue().actingUserId()).isEqualTo(USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(USER_ID);
             assertThat(captor.getValue().cancelledAppointmentId()).isEqualTo(APPOINTMENT_ID);
         }
     }

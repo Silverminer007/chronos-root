@@ -29,24 +29,23 @@ import static org.mockito.Mockito.*;
  *
  * <p>No {@code @QuarkusTest}, no database, no VAPID keys. All infrastructure
  * dependencies are replaced with Mockito mocks. The {@link NotificationPort}
- * mock is the primary assertion point — tests verify which user IDs and
+ * mock is the primary assertion point — tests verify which user OIDCIDs and
  * payload fields reach the port.
  *
- * <p>This test class demonstrates the testability improvement introduced by
- * the hexagonal refactoring: before the refactoring a {@code @QuarkusTest}
- * with static {@code PanacheMock} and working VAPID keys were required to
- * exercise any business logic in this service.
+ * <p>User identity is now represented by {@link UserIdentity} records looked up
+ * via {@link UserQueryService#findByOidcId(String)} — no User entity or database
+ * lookup is needed.
  */
 @ExtendWith(MockitoExtension.class)
 class WebPushServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long ACTING_USER_ID  = 1L;
-    private static final Long TARGET_USER_ID  = 2L;
-    private static final Long APPOINTMENT_ID  = 10L;
-    private static final Long GROUP_ID        = 3L;
-    private static final Long REQUEST_ID      = 99L;
-    private static final Long MESSAGE_ID      = 50L;
+    private static final String ACTING_USER_OIDC_ID  = "oidc-acting-1";
+    private static final String TARGET_USER_OIDC_ID  = "oidc-target-2";
+    private static final Long   APPOINTMENT_ID        = 10L;
+    private static final Long   GROUP_ID              = 3L;
+    private static final Long   REQUEST_ID            = 99L;
+    private static final Long   MESSAGE_ID            = 50L;
 
     // ── Mocks ──────────────────────────────────────────────────────────────────
     @Mock NotificationPort                          notificationPort;
@@ -65,12 +64,8 @@ class WebPushServiceTest {
     WebPushService webPushService;
 
     // ── Domain-object helpers ──────────────────────────────────────────────────
-    private static User user(long id, String firstName, String lastName) {
-        User u = new User();
-        u.id = id;
-        u.setFirstName(firstName);
-        u.setLastName(lastName);
-        return u;
+    private static UserIdentity userIdentity(String oidcId, String firstName, String lastName) {
+        return new UserIdentity(oidcId, firstName, lastName, firstName.toLowerCase() + "@example.com", null);
     }
 
     private static Appointment appointment(long id, String name) {
@@ -87,23 +82,23 @@ class WebPushServiceTest {
         return g;
     }
 
-    private static AppointmentParticipation participation(User user) {
+    private static AppointmentParticipation participation(String userOidcId) {
         AppointmentParticipation ap = new AppointmentParticipation();
-        ap.setUser(user);
+        ap.setUserOidcId(userOidcId);
         ap.setStatus(ParticipationStatus.PENDING);
         return ap;
     }
 
-    private static GroupMember groupMember(User user) {
+    private static GroupMember groupMember(String userOidcId) {
         GroupMember gm = new GroupMember();
-        gm.setUser(user);
+        gm.setUserOidcId(userOidcId);
         return gm;
     }
 
-    /** Captures the single payload sent to the given userId and returns it. */
-    private String capturePayload(Long userId) {
+    /** Captures the single payload sent to the given oidcId and returns it. */
+    private String capturePayload(String userOidcId) {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(notificationPort).send(eq(userId), captor.capture());
+        verify(notificationPort).send(eq(userOidcId), captor.capture());
         return captor.getValue();
     }
 
@@ -125,9 +120,9 @@ class WebPushServiceTest {
 
         @Test
         void forwards_payload_unchanged_to_port() {
-            webPushService.sendNotification(42L, "{\"custom\":true}");
+            webPushService.sendNotification("oidc-abc", "{\"custom\":true}");
 
-            verify(notificationPort).send(42L, "{\"custom\":true}");
+            verify(notificationPort).send("oidc-abc", "{\"custom\":true}");
         }
     }
 
@@ -136,9 +131,9 @@ class WebPushServiceTest {
 
         @Test
         void builds_title_body_payload_and_delegates() {
-            webPushService.sendToUser(5L, "Hello", "World");
+            webPushService.sendToUser("oidc-xyz", "Hello", "World");
 
-            String payload = capturePayload(5L);
+            String payload = capturePayload("oidc-xyz");
             assertThat(payload)
                     .contains("\"title\":\"Hello\"")
                     .contains("\"body\":\"World\"");
@@ -152,14 +147,14 @@ class WebPushServiceTest {
 
         @Test
         void sends_to_addressee_with_correct_fields_and_no_db_lookup() {
-            var event = new FriendshipRequestSentEvent(REQUEST_ID, ACTING_USER_ID, TARGET_USER_ID, "Alice Test");
+            var event = new FriendshipRequestSentEvent(REQUEST_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID, "Alice Test");
 
             webPushService.onFriendshipRequestSent(event);
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(TARGET_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"NEW_FRIENDSHIP_REQUEST\"")
-                    .contains("\"requester_id\":" + ACTING_USER_ID)
+                    .contains("\"requester_id\":\"" + ACTING_USER_OIDC_ID + "\"")
                     .contains("\"requester_name\":\"Alice Test\"")
                     .contains("\"request_id\":" + REQUEST_ID);
             verifyNoInteractions(userQueryService);
@@ -171,23 +166,24 @@ class WebPushServiceTest {
 
         @Test
         void sends_FRIENDSHIP_REMOVED_to_friend() {
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(user(ACTING_USER_ID, "Alice", "Test"));
-            var event = new FriendshipRemovedEvent(ACTING_USER_ID, TARGET_USER_ID);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Test"));
+            var event = new FriendshipRemovedEvent(ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID);
 
             webPushService.onFriendshipRemoved(event);
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(TARGET_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"FRIENDSHIP_REMOVED\"")
-                    .contains("\"acting_user_id\":" + ACTING_USER_ID)
+                    .contains("\"acting_user_id\":\"" + ACTING_USER_OIDC_ID + "\"")
                     .contains("\"acting_user_name\":\"Alice Test\"");
         }
 
         @Test
         void does_nothing_when_acting_user_not_found() {
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID)).thenReturn(null);
 
-            webPushService.onFriendshipRemoved(new FriendshipRemovedEvent(ACTING_USER_ID, TARGET_USER_ID));
+            webPushService.onFriendshipRemoved(new FriendshipRemovedEvent(ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
@@ -197,24 +193,25 @@ class WebPushServiceTest {
     class OnFriendshipAccepted {
 
         @Test
-        void sends_FRIENDSHIP_ACCEPTED_to_addressee() {
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(user(TARGET_USER_ID, "Bob", "Test"));
-            var event = new FriendshipAcceptedEvent(REQUEST_ID, ACTING_USER_ID, TARGET_USER_ID);
+        void sends_FRIENDSHIP_ACCEPTED_to_requester() {
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID))
+                    .thenReturn(userIdentity(TARGET_USER_OIDC_ID, "Bob", "Test"));
+            var event = new FriendshipAcceptedEvent(REQUEST_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID);
 
             webPushService.onFriendshipAccepted(event);
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(ACTING_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"FRIENDSHIP_ACCEPTED\"")
-                    .contains("\"addressee_id\":" + TARGET_USER_ID)
+                    .contains("\"addressee_id\":\"" + TARGET_USER_OIDC_ID + "\"")
                     .contains("\"addressee_name\":\"Bob Test\"");
         }
 
         @Test
         void does_nothing_when_addressee_not_found() {
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID)).thenReturn(null);
 
-            webPushService.onFriendshipAccepted(new FriendshipAcceptedEvent(REQUEST_ID, ACTING_USER_ID, TARGET_USER_ID));
+            webPushService.onFriendshipAccepted(new FriendshipAcceptedEvent(REQUEST_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
@@ -224,13 +221,14 @@ class WebPushServiceTest {
     class OnFriendshipDeclined {
 
         @Test
-        void sends_FRIENDSHIP_DECLINED_to_addressee() {
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(user(TARGET_USER_ID, "Bob", "Test"));
-            var event = new FriendshipDeclinedEvent(REQUEST_ID, ACTING_USER_ID, TARGET_USER_ID);
+        void sends_FRIENDSHIP_DECLINED_to_requester() {
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID))
+                    .thenReturn(userIdentity(TARGET_USER_OIDC_ID, "Bob", "Test"));
+            var event = new FriendshipDeclinedEvent(REQUEST_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID);
 
             webPushService.onFriendshipDeclined(event);
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(ACTING_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"FRIENDSHIP_DECLINED\"")
                     .contains("\"addressee_name\":\"Bob Test\"");
@@ -238,9 +236,9 @@ class WebPushServiceTest {
 
         @Test
         void does_nothing_when_addressee_not_found() {
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID)).thenReturn(null);
 
-            webPushService.onFriendshipDeclined(new FriendshipDeclinedEvent(REQUEST_ID, ACTING_USER_ID, TARGET_USER_ID));
+            webPushService.onFriendshipDeclined(new FriendshipDeclinedEvent(REQUEST_ID, ACTING_USER_OIDC_ID, TARGET_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
@@ -260,17 +258,16 @@ class WebPushServiceTest {
 
         @Test
         void sends_APPOINTMENT_MOVED_to_participants_allowed_by_settings() throws Exception {
-            User actor       = user(ACTING_USER_ID, "Alice", "Test");
-            User participant = user(TARGET_USER_ID, "Bob", "Participant");
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(actor);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Test"));
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(participant)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentMovedNotification(any())).thenReturn(true);
 
             webPushService.onAppointmentMoved(
-                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_ID));
+                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_OIDC_ID));
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(TARGET_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"APPOINTMENT_MOVED\"")
                     .contains("\"acting_user_name\":\"Alice Test\"");
@@ -278,36 +275,36 @@ class WebPushServiceTest {
 
         @Test
         void skips_participant_when_settings_disallow() {
-            User actor       = user(ACTING_USER_ID, "Alice", "Test");
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(actor);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Test"));
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(participant)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentMovedNotification(any())).thenReturn(false);
 
             webPushService.onAppointmentMoved(
-                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_ID));
+                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
 
         @Test
         void does_nothing_when_acting_user_not_found() {
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID)).thenReturn(null);
 
             webPushService.onAppointmentMoved(
-                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_ID));
+                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
 
         @Test
         void does_nothing_when_appointment_not_found() {
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(user(ACTING_USER_ID, "A", "B"));
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "A", "B"));
             when(appointmentQueryService.findById(APPOINTMENT_ID)).thenReturn(null);
 
             webPushService.onAppointmentMoved(
-                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_ID));
+                    new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
@@ -325,16 +322,15 @@ class WebPushServiceTest {
 
         @Test
         void sends_APPOINTMENT_CANCELLED_with_canceller_name() {
-            User actor       = user(ACTING_USER_ID, "Alice", "Test");
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(actor);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Test"));
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(participant)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentCancelledNotification(any())).thenReturn(true);
 
-            webPushService.onAppointmentCancelled(new AppointmentCancelledEvent(APPOINTMENT_ID, ACTING_USER_ID));
+            webPushService.onAppointmentCancelled(new AppointmentCancelledEvent(APPOINTMENT_ID, ACTING_USER_OIDC_ID));
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(TARGET_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"APPOINTMENT_CANCELLED\"")
                     .contains("\"who_cancelled\":\"Alice Test\"");
@@ -342,9 +338,9 @@ class WebPushServiceTest {
 
         @Test
         void does_nothing_when_acting_user_not_found() {
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID)).thenReturn(null);
 
-            webPushService.onAppointmentCancelled(new AppointmentCancelledEvent(APPOINTMENT_ID, ACTING_USER_ID));
+            webPushService.onAppointmentCancelled(new AppointmentCancelledEvent(APPOINTMENT_ID, ACTING_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
@@ -355,17 +351,16 @@ class WebPushServiceTest {
 
         @Test
         void sends_PARTICIPATION_REMINDER_to_all_participants_allowed_by_settings() throws Exception {
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
             when(appointmentQueryService.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Team Event"));
             when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(participant)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentReminderNotification(any())).thenReturn(true);
 
             webPushService.onAppointmentReminder(new AppointmentReminderEvent(APPOINTMENT_ID));
 
-            assertThat(capturePayload(TARGET_USER_ID)).contains("\"type\":\"PARTICIPATION_REMINDER\"");
+            assertThat(capturePayload(TARGET_USER_OIDC_ID)).contains("\"type\":\"PARTICIPATION_REMINDER\"");
         }
 
         @Test
@@ -383,22 +378,22 @@ class WebPushServiceTest {
 
         @Test
         void sends_title_and_body_to_other_participants() throws Exception {
-            User sender    = user(ACTING_USER_ID, "Alice", "Sender");
-            User recipient = user(TARGET_USER_ID,  "Bob",  "Recipient");
             Appointment appt = appointment(APPOINTMENT_ID, "Team Meeting");
             Message message = new Message();
-            message.setSender(sender);
+            message.setSenderOidcId(ACTING_USER_OIDC_ID);
             message.setAppointment(appt);
             message.setBody("Hello everyone!");
 
             when(messageQueryService.getMessage(MESSAGE_ID)).thenReturn(message);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Sender"));
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(recipient)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentMessageSentNotification(any())).thenReturn(true);
 
             webPushService.onAppointmentMessageSent(new MessageSentEvent(MESSAGE_ID));
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(TARGET_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"title\":\"Alice Sender schreibt zu Team Meeting\"")
                     .contains("\"body\":\"Hello everyone!\"");
@@ -425,38 +420,39 @@ class WebPushServiceTest {
 
         @Test
         void sends_group_notification_to_members_and_personal_notification_to_new_member() {
-            User newMember      = user(TARGET_USER_ID,  "Bob",   "New");
-            User existingMember = user(ACTING_USER_ID, "Alice", "Existing");
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(newMember);
-            when(groupQueryService.getGroupMembers(GROUP_ID)).thenReturn(List.of(groupMember(existingMember)));
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID))
+                    .thenReturn(userIdentity(TARGET_USER_OIDC_ID, "Bob", "New"));
+            when(groupQueryService.getGroupMembers(GROUP_ID))
+                    .thenReturn(List.of(groupMember(ACTING_USER_OIDC_ID)));
             when(settingsService.sendGroupMemberAddedNotification(any())).thenReturn(true);
 
-            webPushService.onGroupMemberAdded(new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_ID, ACTING_USER_ID));
+            webPushService.onGroupMemberAdded(new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_OIDC_ID, ACTING_USER_OIDC_ID));
 
             ArgumentCaptor<String> groupPayload = ArgumentCaptor.forClass(String.class);
-            verify(notificationPort).send(eq(ACTING_USER_ID), groupPayload.capture());
+            verify(notificationPort).send(eq(ACTING_USER_OIDC_ID), groupPayload.capture());
             assertThat(groupPayload.getValue()).contains("\"type\":\"NEW_GROUP_MEMBER\"");
 
             ArgumentCaptor<String> personalPayload = ArgumentCaptor.forClass(String.class);
-            verify(notificationPort).send(eq(TARGET_USER_ID), personalPayload.capture());
+            verify(notificationPort).send(eq(TARGET_USER_OIDC_ID), personalPayload.capture());
             assertThat(personalPayload.getValue()).contains("\"type\":\"ADDED_TO_GROUP\"");
         }
 
         @Test
         void does_nothing_when_new_member_not_found() {
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID)).thenReturn(null);
 
-            webPushService.onGroupMemberAdded(new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_ID, ACTING_USER_ID));
+            webPushService.onGroupMemberAdded(new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_OIDC_ID, ACTING_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
 
         @Test
         void does_nothing_when_group_not_found() {
-            when(userQueryService.findById(TARGET_USER_ID)).thenReturn(user(TARGET_USER_ID, "Bob", "New"));
+            when(userQueryService.findByOidcId(TARGET_USER_OIDC_ID))
+                    .thenReturn(userIdentity(TARGET_USER_OIDC_ID, "Bob", "New"));
             when(groupQueryService.findById(GROUP_ID)).thenReturn(null);
 
-            webPushService.onGroupMemberAdded(new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_ID, ACTING_USER_ID));
+            webPushService.onGroupMemberAdded(new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_OIDC_ID, ACTING_USER_OIDC_ID));
 
             verifyNoInteractions(notificationPort);
         }
@@ -474,21 +470,19 @@ class WebPushServiceTest {
 
         @Test
         void sends_PARTICIPATION_STATUS_PENDING_to_pending_participants_allowed_by_settings() {
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(participant)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentParticipationStatusPendingReminderNotification(any())).thenReturn(true);
 
             webPushService.onAppointmentParticipationStatusPendingReminder(
                     new AppointmentParticipationStatusPendingReminderEvent(APPOINTMENT_ID));
 
-            assertThat(capturePayload(TARGET_USER_ID)).contains("\"type\":\"PARTICIPATION_STATUS_PENDING\"");
+            assertThat(capturePayload(TARGET_USER_OIDC_ID)).contains("\"type\":\"PARTICIPATION_STATUS_PENDING\"");
         }
 
         @Test
         void does_not_notify_participant_with_APPROVED_status() {
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
-            AppointmentParticipation ap = participation(participant);
+            AppointmentParticipation ap = participation(TARGET_USER_OIDC_ID);
             ap.setStatus(ParticipationStatus.APPROVED);
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
                     .thenReturn(List.of(ap));
@@ -502,8 +496,7 @@ class WebPushServiceTest {
 
         @Test
         void does_not_notify_participant_with_REJECTED_status() {
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
-            AppointmentParticipation ap = participation(participant);
+            AppointmentParticipation ap = participation(TARGET_USER_OIDC_ID);
             ap.setStatus(ParticipationStatus.REJECTED);
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
                     .thenReturn(List.of(ap));
@@ -517,9 +510,8 @@ class WebPushServiceTest {
 
         @Test
         void does_not_notify_pending_participant_when_settings_disallow() {
-            User participant = user(TARGET_USER_ID, "Bob", "Test");
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(participant)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentParticipationStatusPendingReminderNotification(any())).thenReturn(false);
 
             webPushService.onAppointmentParticipationStatusPendingReminder(
@@ -530,16 +522,13 @@ class WebPushServiceTest {
 
         @Test
         void only_notifies_pending_participants_when_mixed_statuses() {
-            Long approvedUserId = 20L;
-            Long rejectedUserId = 21L;
-            User pendingUser  = user(TARGET_USER_ID, "Bob",     "Pending");
-            User approvedUser = user(approvedUserId,  "Charlie", "Approved");
-            User rejectedUser = user(rejectedUserId,  "Diana",   "Rejected");
+            String approvedUserOidcId = "oidc-approved-20";
+            String rejectedUserOidcId = "oidc-rejected-21";
 
-            AppointmentParticipation pendingAp  = participation(pendingUser);
-            AppointmentParticipation approvedAp = participation(approvedUser);
+            AppointmentParticipation pendingAp  = participation(TARGET_USER_OIDC_ID);
+            AppointmentParticipation approvedAp = participation(approvedUserOidcId);
             approvedAp.setStatus(ParticipationStatus.APPROVED);
-            AppointmentParticipation rejectedAp = participation(rejectedUser);
+            AppointmentParticipation rejectedAp = participation(rejectedUserOidcId);
             rejectedAp.setStatus(ParticipationStatus.REJECTED);
 
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
@@ -549,9 +538,9 @@ class WebPushServiceTest {
             webPushService.onAppointmentParticipationStatusPendingReminder(
                     new AppointmentParticipationStatusPendingReminderEvent(APPOINTMENT_ID));
 
-            verify(notificationPort, times(1)).send(eq(TARGET_USER_ID), any());
-            verify(notificationPort, never()).send(eq(approvedUserId), any());
-            verify(notificationPort, never()).send(eq(rejectedUserId), any());
+            verify(notificationPort, times(1)).send(eq(TARGET_USER_OIDC_ID), any());
+            verify(notificationPort, never()).send(eq(approvedUserOidcId), any());
+            verify(notificationPort, never()).send(eq(rejectedUserOidcId), any());
         }
 
         @Test
@@ -570,21 +559,20 @@ class WebPushServiceTest {
 
         @Test
         void sends_PARTICIPATION_STATUS_CHANGED_to_other_participants() throws Exception {
-            User actor = user(ACTING_USER_ID, "Alice", "Test");
-            User other = user(TARGET_USER_ID,  "Bob",   "Test");
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(actor);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Test"));
             when(appointmentQueryService.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Test"));
             when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(other)));
+                    .thenReturn(List.of(participation(TARGET_USER_OIDC_ID)));
             when(settingsService.sendAppointmentParticipationStatusChangedNotification(any())).thenReturn(true);
 
             webPushService.onAppointmentParticipationStatusChanged(
                     new AppointmentParticipationStatusChangedEvent(
-                            APPOINTMENT_ID, ACTING_USER_ID, ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
+                            APPOINTMENT_ID, ACTING_USER_OIDC_ID, ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
 
-            String payload = capturePayload(TARGET_USER_ID);
+            String payload = capturePayload(TARGET_USER_OIDC_ID);
             assertThat(payload)
                     .contains("\"type\":\"PARTICIPATION_STATUS_CHANGED\"")
                     .contains("\"new_participation_status\":\"APPROVED\"")
@@ -593,30 +581,30 @@ class WebPushServiceTest {
 
         @Test
         void does_not_notify_acting_user_themselves() throws Exception {
-            User actor = user(ACTING_USER_ID, "Alice", "Test");
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(actor);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID))
+                    .thenReturn(userIdentity(ACTING_USER_OIDC_ID, "Alice", "Test"));
             when(appointmentQueryService.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Test"));
             when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
             // Actor is the only participant — the filter excludes them
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
-                    .thenReturn(List.of(participation(actor)));
+                    .thenReturn(List.of(participation(ACTING_USER_OIDC_ID)));
             lenient().when(settingsService.sendAppointmentParticipationStatusChangedNotification(any())).thenReturn(true);
 
             webPushService.onAppointmentParticipationStatusChanged(
                     new AppointmentParticipationStatusChangedEvent(
-                            APPOINTMENT_ID, ACTING_USER_ID, ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
+                            APPOINTMENT_ID, ACTING_USER_OIDC_ID, ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
 
             verifyNoInteractions(notificationPort);
         }
 
         @Test
         void does_nothing_when_acting_user_not_found() {
-            when(userQueryService.findById(ACTING_USER_ID)).thenReturn(null);
+            when(userQueryService.findByOidcId(ACTING_USER_OIDC_ID)).thenReturn(null);
 
             webPushService.onAppointmentParticipationStatusChanged(
                     new AppointmentParticipationStatusChangedEvent(
-                            APPOINTMENT_ID, ACTING_USER_ID, ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
+                            APPOINTMENT_ID, ACTING_USER_OIDC_ID, ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
 
             verifyNoInteractions(notificationPort);
         }

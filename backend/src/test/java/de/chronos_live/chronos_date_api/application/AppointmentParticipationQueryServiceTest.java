@@ -34,8 +34,8 @@ import static org.mockito.Mockito.when;
 class AppointmentParticipationQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long APPOINTMENT_ID = 10L;
-    private static final Long USER_ID        = 1L;
+    private static final Long   APPOINTMENT_ID = 10L;
+    private static final String USER_ID        = "oidc-user-1";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject

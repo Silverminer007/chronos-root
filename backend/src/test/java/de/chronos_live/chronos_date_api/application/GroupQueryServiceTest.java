@@ -2,7 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -32,35 +32,31 @@ import static org.mockito.Mockito.*;
 class GroupQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long GROUP_ID  = 10L;
-    private static final Long USER_ID   = 1L;
-    private static final String SEARCH  = "alpha";
+    private static final Long   GROUP_ID      = 10L;
+    private static final String USER_OIDC_ID  = "oidc-user-1";
+    private static final String SEARCH        = "alpha";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
     GroupQueryService service;
 
     // ── Test-object builders ──────────────────────────────────────────────────
-    private static User buildUser(Long id) {
-        User u = new User();
-        u.id = id;
-        u.setFirstName("Test");
-        u.setLastName("User");
-        return u;
+    private static UserIdentity buildUserIdentity(String oidcId) {
+        return new UserIdentity(oidcId, "Test", "User", "test@example.com", null);
     }
 
     private static Group buildGroup(Long id, String name) {
         Group g = new Group();
         g.id = id;
         g.setGroupName(name);
-        g.setOwner(buildUser(USER_ID));
+        g.setOwnerOidcId(USER_OIDC_ID);
         return g;
     }
 
-    private static GroupMember buildGroupMember(Group group, User user) {
+    private static GroupMember buildGroupMember(Group group, String userOidcId) {
         GroupMember gm = new GroupMember();
         gm.setGroup(group);
-        gm.setUser(user);
+        gm.setUserOidcId(userOidcId);
         return gm;
     }
 
@@ -70,9 +66,9 @@ class GroupQueryServiceTest {
 
     /**
      * Coverage plan – searchGroups:
-     *   B1  searchQuery == null → call Group.find with only user.id (no LIKE clause)
-     *   B2  searchQuery.isEmpty() → call Group.find with only user.id
-     *   B3  searchQuery non-empty → call Group.find with user.id AND the LIKE clause
+     *   B1  searchQuery == null → call Group.find with only user.oidcId (no LIKE clause)
+     *   B2  searchQuery.isEmpty() → call Group.find with only user.oidcId
+     *   B3  searchQuery non-empty → call Group.find with user.oidcId AND the LIKE clause
      *
      * Total branches: 3  |  Tests: 3
      *
@@ -91,7 +87,7 @@ class GroupQueryServiceTest {
         @Test
         void should_findWithoutLikeClause_when_searchQueryIsNull() {
             Group group = buildGroup(GROUP_ID, "Alpha Team");
-            User user = buildUser(USER_ID);
+            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
 
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             @SuppressWarnings("unchecked") PanacheQuery<Group> q = mock(PanacheQuery.class);
@@ -108,7 +104,7 @@ class GroupQueryServiceTest {
         @Test
         void should_findWithoutLikeClause_when_searchQueryIsEmpty() {
             Group group = buildGroup(GROUP_ID, "Beta Group");
-            User user = buildUser(USER_ID);
+            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
 
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             @SuppressWarnings("unchecked") PanacheQuery<Group> q = mock(PanacheQuery.class);
@@ -125,7 +121,7 @@ class GroupQueryServiceTest {
         @Test
         void should_appendLikeClause_when_searchQueryIsNonEmpty() {
             Group group = buildGroup(GROUP_ID, "Alpha Team");
-            User user = buildUser(USER_ID);
+            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
 
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             ArgumentCaptor<Object[]> paramsCaptor = ArgumentCaptor.forClass(Object[].class);
@@ -140,7 +136,7 @@ class GroupQueryServiceTest {
 
             PanacheMock.verify(Group.class).<Group>find(anyString(), paramsCaptor.capture());
             Object[] params = paramsCaptor.getValue();
-            assertThat(params[0]).isEqualTo(USER_ID);
+            assertThat(params[0]).isEqualTo(USER_OIDC_ID);
             assertThat(params[1].toString()).isEqualTo("%" + SEARCH + "%");
         }
     }
@@ -171,7 +167,7 @@ class GroupQueryServiceTest {
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(gmQuery);
             when(gmQuery.count()).thenReturn(1L);
 
-            boolean result = service.isGroupMember(GROUP_ID, USER_ID);
+            boolean result = service.isGroupMember(GROUP_ID, USER_OIDC_ID);
 
             assertThat(result).isTrue();
         }
@@ -183,7 +179,7 @@ class GroupQueryServiceTest {
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(gmQuery);
             when(gmQuery.count()).thenReturn(0L);
 
-            boolean result = service.isGroupMember(GROUP_ID, USER_ID);
+            boolean result = service.isGroupMember(GROUP_ID, USER_OIDC_ID);
 
             assertThat(result).isFalse();
         }
@@ -213,7 +209,7 @@ class GroupQueryServiceTest {
         void should_returnTrue_when_userIsOwner() {
             when(Group.count(anyString(), any(Object[].class))).thenReturn(1L);
 
-            boolean result = service.isGroupOwner(GROUP_ID, USER_ID);
+            boolean result = service.isGroupOwner(GROUP_ID, USER_OIDC_ID);
 
             assertThat(result).isTrue();
         }
@@ -223,7 +219,7 @@ class GroupQueryServiceTest {
         void should_returnFalse_when_userIsNotOwner() {
             when(Group.count(anyString(), any(Object[].class))).thenReturn(0L);
 
-            boolean result = service.isGroupOwner(GROUP_ID, USER_ID);
+            boolean result = service.isGroupOwner(GROUP_ID, USER_OIDC_ID);
 
             assertThat(result).isFalse();
         }
@@ -250,8 +246,7 @@ class GroupQueryServiceTest {
         @Test
         void should_returnMembers_when_membersExist() {
             Group group = buildGroup(GROUP_ID, "Team");
-            User user = buildUser(USER_ID);
-            GroupMember member = buildGroupMember(group, user);
+            GroupMember member = buildGroupMember(group, USER_OIDC_ID);
 
             @SuppressWarnings("unchecked") PanacheQuery<GroupMember> q = mock(PanacheQuery.class);
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(q);

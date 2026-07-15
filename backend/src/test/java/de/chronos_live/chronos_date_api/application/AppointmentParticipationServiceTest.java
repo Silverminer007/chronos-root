@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
@@ -42,10 +43,10 @@ import static org.mockito.Mockito.*;
 class AppointmentParticipationServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long APPOINTMENT_ID = 10L;
-    private static final Long ACTING_USER_ID = 1L;
-    private static final Long TARGET_USER_ID = 2L;
-    private static final Long GROUP_ID       = 3L;
+    private static final Long   APPOINTMENT_ID      = 10L;
+    private static final String ACTING_USER_OIDC_ID = "acting-user-oidc-1";
+    private static final String TARGET_USER_OIDC_ID = "target-user-oidc-2";
+    private static final Long   GROUP_ID            = 3L;
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
@@ -75,6 +76,9 @@ class AppointmentParticipationServiceTest {
     @InjectMock
     Event<AppointmentGroupParticipationRemovedEvent> appointmentGroupParticipationRemovedEvent;
 
+    @InjectMock
+    IdentityPort identityPort;
+
     @Inject
     AgroalDataSource dataSource;
 
@@ -89,7 +93,7 @@ class AppointmentParticipationServiceTest {
     void insertTestGroupFixture() throws Exception {
         try (var conn = dataSource.getConnection();
              var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO groups (id, groupname) VALUES (3, 'Test Group') ON CONFLICT DO NOTHING");
+            stmt.execute("INSERT INTO groups (id, groupname, owner_oidcid) VALUES (3, 'Test Group', 'oidc-acting-user') ON CONFLICT DO NOTHING");
         }
     }
 
@@ -115,13 +119,8 @@ class AppointmentParticipationServiceTest {
         return a;
     }
 
-    private static User buildUser(Long id) {
-        User u = new User();
-        u.id = id;
-        u.setFirstName("John");
-        u.setLastName("Doe");
-        u.setProfilePictureUrl("https://example.com/pic.jpg");
-        return u;
+    private static UserIdentity buildUserIdentity(String oidcId) {
+        return new UserIdentity(oidcId, "John", "Doe", "john@example.com", "https://example.com/pic.jpg");
     }
 
     private static Group buildGroup(Long id) {
@@ -132,10 +131,10 @@ class AppointmentParticipationServiceTest {
     }
 
     private static AppointmentParticipation buildParticipation(
-            Appointment appointment, User user, UserRole role, ParticipationStatus status) {
+            Appointment appointment, String userOidcId, UserRole role, ParticipationStatus status) {
         AppointmentParticipation ap = new AppointmentParticipation();
         ap.setAppointment(appointment);
-        ap.setUser(user);
+        ap.setUserOidcId(userOidcId);
         ap.setRole(role);
         ap.setStatus(status);
         return ap;
@@ -166,18 +165,15 @@ class AppointmentParticipationServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Appointment.class);
-            PanacheMock.mock(User.class);
             PanacheMock.mock(AppointmentParticipation.class);
         }
 
         @Test
         void should_createPendingResponsibleParticipation_when_appointmentCreated() {
             Appointment appointment = buildAppointment();
-            User creator = buildUser(ACTING_USER_ID);
             when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(User.<User>findById(ACTING_USER_ID)).thenReturn(creator);
 
-            AppointmentCreatedEvent event = new AppointmentCreatedEvent(APPOINTMENT_ID, ACTING_USER_ID);
+            AppointmentCreatedEvent event = new AppointmentCreatedEvent(APPOINTMENT_ID, ACTING_USER_OIDC_ID);
             service.onAppointmentCreated(event);
             // persist() is an instance call not intercepted by PanacheMock;
             // successful completion without exception is the observable assertion here.
@@ -199,7 +195,6 @@ class AppointmentParticipationServiceTest {
 
         @BeforeEach
         void mockPanache() {
-            PanacheMock.mock(User.class);
             PanacheMock.mock(AppointmentGroupParticipation.class);
             PanacheMock.mock(AppointmentParticipation.class);
         }
@@ -207,9 +202,6 @@ class AppointmentParticipationServiceTest {
         // B1=false — user does NOT already participate → persist called
         @Test
         void should_createParticipation_when_userNotYetParticipating() {
-            User newMember = buildUser(TARGET_USER_ID);
-            when(User.<User>findById(TARGET_USER_ID)).thenReturn(newMember);
-
             Appointment appointment = buildAppointment();
             AppointmentGroupParticipation agp = buildGroupParticipation(appointment, buildGroup(GROUP_ID), UserRole.GUEST);
 
@@ -221,7 +213,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(existingQuery);
             when(existingQuery.count()).thenReturn(0L);
 
-            GroupMemberAddedEvent event = new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_ID, ACTING_USER_ID);
+            GroupMemberAddedEvent event = new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_OIDC_ID, ACTING_USER_OIDC_ID);
             service.onGroupMemberAdded(event);
             // persist() is an instance call not intercepted by PanacheMock;
             // successful completion without exception is the observable assertion here.
@@ -230,9 +222,6 @@ class AppointmentParticipationServiceTest {
         // B1=true — user already participates → continue (no persist for that appointment)
         @Test
         void should_skipParticipation_when_userAlreadyParticipating() {
-            User newMember = buildUser(TARGET_USER_ID);
-            when(User.<User>findById(TARGET_USER_ID)).thenReturn(newMember);
-
             Appointment appointment = buildAppointment();
             AppointmentGroupParticipation agp = buildGroupParticipation(appointment, buildGroup(GROUP_ID), UserRole.GUEST);
 
@@ -244,7 +233,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(existingQuery);
             when(existingQuery.count()).thenReturn(1L);
 
-            GroupMemberAddedEvent event = new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_ID, ACTING_USER_ID);
+            GroupMemberAddedEvent event = new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_OIDC_ID, ACTING_USER_OIDC_ID);
             service.onGroupMemberAdded(event);
             // The skip branch is verified by the absence of any exception and
             // by count() returning 1 → service hits `continue` without calling persist().
@@ -273,13 +262,13 @@ class AppointmentParticipationServiceTest {
         void should_deleteParticipations_when_groupMemberRemoved() {
             when(AppointmentParticipation.delete(anyString(), any(Object[].class))).thenReturn(1L);
 
-            GroupMemberRemovedEvent event = new GroupMemberRemovedEvent(GROUP_ID, TARGET_USER_ID, ACTING_USER_ID);
+            GroupMemberRemovedEvent event = new GroupMemberRemovedEvent(GROUP_ID, TARGET_USER_OIDC_ID, ACTING_USER_OIDC_ID);
             service.onGroupMemberRemoved(event);
 
             ArgumentCaptor<Object[]> cap = ArgumentCaptor.forClass(Object[].class);
             PanacheMock.verify(AppointmentParticipation.class).delete(anyString(), cap.capture());
             assertThat(cap.getValue()[0]).isEqualTo(GROUP_ID);
-            assertThat(cap.getValue()[1]).isEqualTo(TARGET_USER_ID);
+            assertThat(cap.getValue()[1]).isEqualTo(TARGET_USER_OIDC_ID);
         }
     }
 
@@ -299,7 +288,6 @@ class AppointmentParticipationServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Appointment.class);
-            PanacheMock.mock(User.class);
             PanacheMock.mock(AppointmentParticipation.class);
         }
 
@@ -310,7 +298,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.count()).thenReturn(1L);
 
-            assertThatThrownBy(() -> service.addUserToAppointment(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID, UserRole.GUEST))
+            assertThatThrownBy(() -> service.addUserToAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.GUEST))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("already a participant");
         }
@@ -322,16 +310,15 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.count()).thenReturn(0L);
             when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment());
-            when(User.<User>findById(TARGET_USER_ID)).thenReturn(buildUser(TARGET_USER_ID));
 
-            service.addUserToAppointment(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID, UserRole.GUEST);
+            service.addUserToAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.GUEST);
 
             ArgumentCaptor<AppointmentParticipationAddedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentParticipationAddedEvent.class);
             verify(appointmentParticipationAddedEvent).fire(captor.capture());
             assertThat(captor.getValue().appointmentId()).isEqualTo(APPOINTMENT_ID);
-            assertThat(captor.getValue().targetUserId()).isEqualTo(TARGET_USER_ID);
-            assertThat(captor.getValue().actingUserId()).isEqualTo(ACTING_USER_ID);
+            assertThat(captor.getValue().targetUserOidcId()).isEqualTo(TARGET_USER_OIDC_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
     }
 
@@ -364,7 +351,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentGroupParticipation.<AppointmentGroupParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.count()).thenReturn(1L);
 
-            assertThatThrownBy(() -> service.addGroupToAppointment(ACTING_USER_ID, APPOINTMENT_ID, GROUP_ID, UserRole.GUEST))
+            assertThatThrownBy(() -> service.addGroupToAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.GUEST))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("already a participant");
         }
@@ -379,14 +366,14 @@ class AppointmentParticipationServiceTest {
             when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment());
             when(Group.<Group>findById(GROUP_ID)).thenReturn(buildGroup(GROUP_ID));
 
-            User user = buildUser(TARGET_USER_ID);
-            when(groupService.getGroupUsers(ACTING_USER_ID, GROUP_ID)).thenReturn(List.of(user));
+            UserIdentity user = buildUserIdentity(TARGET_USER_OIDC_ID);
+            when(groupService.getGroupUsers(ACTING_USER_OIDC_ID, GROUP_ID)).thenReturn(List.of(user));
 
             @SuppressWarnings("unchecked") PanacheQuery<AppointmentParticipation> apQuery = mock(PanacheQuery.class);
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(apQuery);
             when(apQuery.count()).thenReturn(0L);
 
-            service.addGroupToAppointment(ACTING_USER_ID, APPOINTMENT_ID, GROUP_ID, UserRole.GUEST);
+            service.addGroupToAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.GUEST);
 
             ArgumentCaptor<AppointmentGroupParticipationAddedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentGroupParticipationAddedEvent.class);
@@ -405,14 +392,14 @@ class AppointmentParticipationServiceTest {
             when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment());
             when(Group.<Group>findById(GROUP_ID)).thenReturn(buildGroup(GROUP_ID));
 
-            User user = buildUser(TARGET_USER_ID);
-            when(groupService.getGroupUsers(ACTING_USER_ID, GROUP_ID)).thenReturn(List.of(user));
+            UserIdentity user = buildUserIdentity(TARGET_USER_OIDC_ID);
+            when(groupService.getGroupUsers(ACTING_USER_OIDC_ID, GROUP_ID)).thenReturn(List.of(user));
 
             @SuppressWarnings("unchecked") PanacheQuery<AppointmentParticipation> apQuery = mock(PanacheQuery.class);
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(apQuery);
             when(apQuery.count()).thenReturn(1L);   // already exists
 
-            service.addGroupToAppointment(ACTING_USER_ID, APPOINTMENT_ID, GROUP_ID, UserRole.GUEST);
+            service.addGroupToAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.GUEST);
 
             // user participation persist is skipped (count=1 → continue); group participation IS persisted.
             // Instance persist() is not intercepted by PanacheMock; skip is verified via event firing.
@@ -444,7 +431,7 @@ class AppointmentParticipationServiceTest {
         // B1=true
         @Test
         void should_throwBadRequestException_when_roleIsNull() {
-            assertThatThrownBy(() -> service.changeUserRole(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID, null))
+            assertThatThrownBy(() -> service.changeUserRole(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, null))
                     .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("invalid role");
         }
@@ -456,7 +443,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.changeUserRole(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID, UserRole.GUEST))
+            assertThatThrownBy(() -> service.changeUserRole(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.GUEST))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("not a participant");
         }
@@ -465,12 +452,12 @@ class AppointmentParticipationServiceTest {
         @Test
         void should_throwValidationException_when_roleAlreadySet() {
             AppointmentParticipation ap = buildParticipation(
-                    buildAppointment(), buildUser(TARGET_USER_ID), UserRole.GUEST, ParticipationStatus.PENDING);
+                    buildAppointment(), TARGET_USER_OIDC_ID, UserRole.GUEST, ParticipationStatus.PENDING);
             @SuppressWarnings("unchecked") PanacheQuery<AppointmentParticipation> q = mock(PanacheQuery.class);
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.of(ap));
 
-            assertThatThrownBy(() -> service.changeUserRole(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID, UserRole.GUEST))
+            assertThatThrownBy(() -> service.changeUserRole(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.GUEST))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("already the users role");
         }
@@ -479,19 +466,19 @@ class AppointmentParticipationServiceTest {
         @Test
         void should_changeRoleAndFireEvent_when_validRoleChange() {
             AppointmentParticipation ap = buildParticipation(
-                    buildAppointment(), buildUser(TARGET_USER_ID), UserRole.GUEST, ParticipationStatus.PENDING);
+                    buildAppointment(), TARGET_USER_OIDC_ID, UserRole.GUEST, ParticipationStatus.PENDING);
             @SuppressWarnings("unchecked") PanacheQuery<AppointmentParticipation> q = mock(PanacheQuery.class);
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.of(ap));
 
-            service.changeUserRole(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID, UserRole.ATTENDANT);
+            service.changeUserRole(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.ATTENDANT);
 
             assertThat(ap.getRole()).isEqualTo(UserRole.ATTENDANT);
             ArgumentCaptor<AppointmentParticipationRoleChangedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentParticipationRoleChangedEvent.class);
             verify(appointmentParticipationRoleChangedEvent).fire(captor.capture());
             assertThat(captor.getValue().oldRole()).isEqualTo(UserRole.GUEST);
-            assertThat(captor.getValue().targetUserId()).isEqualTo(TARGET_USER_ID);
+            assertThat(captor.getValue().targetUserOidcId()).isEqualTo(TARGET_USER_OIDC_ID);
         }
     }
 
@@ -518,7 +505,7 @@ class AppointmentParticipationServiceTest {
         void should_throwValidationException_when_userNotParticipating() {
             when(AppointmentParticipation.delete(anyString(), any(Object[].class))).thenReturn(0L);
 
-            assertThatThrownBy(() -> service.removeUserFromAppointment(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID))
+            assertThatThrownBy(() -> service.removeUserFromAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("not a participant");
         }
@@ -528,13 +515,13 @@ class AppointmentParticipationServiceTest {
         void should_removeParticipantAndFireEvent_when_participantFound() {
             when(AppointmentParticipation.delete(anyString(), any(Object[].class))).thenReturn(1L);
 
-            service.removeUserFromAppointment(ACTING_USER_ID, APPOINTMENT_ID, TARGET_USER_ID);
+            service.removeUserFromAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID);
 
             ArgumentCaptor<AppointmentParticipationRemovedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentParticipationRemovedEvent.class);
             verify(appointmentParticipationRemovedEvent).fire(captor.capture());
             assertThat(captor.getValue().appointmentId()).isEqualTo(APPOINTMENT_ID);
-            assertThat(captor.getValue().targetUserId()).isEqualTo(TARGET_USER_ID);
+            assertThat(captor.getValue().targetUserOidcId()).isEqualTo(TARGET_USER_OIDC_ID);
         }
     }
 
@@ -562,7 +549,7 @@ class AppointmentParticipationServiceTest {
         void should_throwValidationException_when_groupNotParticipating() {
             when(AppointmentGroupParticipation.delete(anyString(), any(Object[].class))).thenReturn(0L);
 
-            assertThatThrownBy(() -> service.removeGroupFromAppointment(ACTING_USER_ID, APPOINTMENT_ID, GROUP_ID))
+            assertThatThrownBy(() -> service.removeGroupFromAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("not a participant");
         }
@@ -573,7 +560,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentGroupParticipation.delete(anyString(), any(Object[].class))).thenReturn(1L);
             when(AppointmentParticipation.delete(anyString(), any(Object[].class))).thenReturn(2L);
 
-            service.removeGroupFromAppointment(ACTING_USER_ID, APPOINTMENT_ID, GROUP_ID);
+            service.removeGroupFromAppointment(ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID);
 
             ArgumentCaptor<AppointmentGroupParticipationRemovedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentGroupParticipationRemovedEvent.class);
@@ -608,7 +595,7 @@ class AppointmentParticipationServiceTest {
         // B1=true
         @Test
         void should_throwBadRequestException_when_statusIsNull() {
-            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_ID, APPOINTMENT_ID, null))
+            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_OIDC_ID, APPOINTMENT_ID, null))
                     .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("invalid participation status");
         }
@@ -616,7 +603,7 @@ class AppointmentParticipationServiceTest {
         // B2=true
         @Test
         void should_throwBadRequestException_when_statusIsPending() {
-            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_ID, APPOINTMENT_ID, ParticipationStatus.PENDING))
+            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_OIDC_ID, APPOINTMENT_ID, ParticipationStatus.PENDING))
                     .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("cannot set your participation status back to pending");
         }
@@ -628,7 +615,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_ID, APPOINTMENT_ID, ParticipationStatus.APPROVED))
+            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_OIDC_ID, APPOINTMENT_ID, ParticipationStatus.APPROVED))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("not a participant");
         }
@@ -637,12 +624,12 @@ class AppointmentParticipationServiceTest {
         @Test
         void should_throwValidationException_when_sameStatusSet() {
             AppointmentParticipation ap = buildParticipation(
-                    buildAppointment(), buildUser(ACTING_USER_ID), UserRole.GUEST, ParticipationStatus.APPROVED);
+                    buildAppointment(), ACTING_USER_OIDC_ID, UserRole.GUEST, ParticipationStatus.APPROVED);
             @SuppressWarnings("unchecked") PanacheQuery<AppointmentParticipation> q = mock(PanacheQuery.class);
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.of(ap));
 
-            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_ID, APPOINTMENT_ID, ParticipationStatus.APPROVED))
+            assertThatThrownBy(() -> service.changeParticipationStatus(ACTING_USER_OIDC_ID, APPOINTMENT_ID, ParticipationStatus.APPROVED))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("already your participation status");
         }
@@ -651,7 +638,7 @@ class AppointmentParticipationServiceTest {
         @Test
         void should_changeStatusAndFireEvents_when_validStatusChange() {
             AppointmentParticipation ap = buildParticipation(
-                    buildAppointment(), buildUser(ACTING_USER_ID), UserRole.GUEST, ParticipationStatus.PENDING);
+                    buildAppointment(), ACTING_USER_OIDC_ID, UserRole.GUEST, ParticipationStatus.PENDING);
             // Note: status starts PENDING but PENDING check is on the *incoming* status
             // We set ap status to REJECTED so we can change to APPROVED
             ap.setStatus(ParticipationStatus.REJECTED);
@@ -660,7 +647,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.of(ap));
 
-            service.changeParticipationStatus(ACTING_USER_ID, APPOINTMENT_ID, ParticipationStatus.APPROVED);
+            service.changeParticipationStatus(ACTING_USER_OIDC_ID, APPOINTMENT_ID, ParticipationStatus.APPROVED);
 
             assertThat(ap.getStatus()).isEqualTo(ParticipationStatus.APPROVED);
             ArgumentCaptor<AppointmentParticipationStatusChangedEvent> captor =
@@ -693,19 +680,19 @@ class AppointmentParticipationServiceTest {
         // B1=false — direct (non-group) participation
         @Test
         void should_returnDtosWithoutGroupInfo_when_participationIsNotViaGroup() {
-            User user = buildUser(TARGET_USER_ID);
             AppointmentParticipation ap = buildParticipation(
-                    buildAppointment(), user, UserRole.GUEST, ParticipationStatus.APPROVED);
+                    buildAppointment(), TARGET_USER_OIDC_ID, UserRole.GUEST, ParticipationStatus.APPROVED);
             // groupParticipationId = null (not set)
 
             when(AppointmentParticipation.<AppointmentParticipation>list(anyString(), any(Object[].class)))
                     .thenReturn(List.of(ap));
 
-            List<UserParticipantDto> result = service.getParticipants(APPOINTMENT_ID, ACTING_USER_ID);
+            List<UserParticipantDto> result = service.getParticipants(APPOINTMENT_ID, ACTING_USER_OIDC_ID);
 
             assertThat(result).hasSize(1);
             UserParticipantDto dto = result.get(0);
-            assertThat(dto.getUser_id()).isEqualTo(TARGET_USER_ID);
+            // user_id will be the oidcId since identityPort returns null for unknown ids
+            assertThat(dto.getUser_id()).isEqualTo(TARGET_USER_OIDC_ID);
             assertThat(dto.getRole()).isEqualTo(UserRole.GUEST);
             assertThat(dto.getStatus()).isEqualTo(ParticipationStatus.APPROVED);
             assertThat(dto.getVia_group_id()).isNull();
@@ -715,9 +702,8 @@ class AppointmentParticipationServiceTest {
         // B1=true — participation via group
         @Test
         void should_returnDtosWithGroupInfo_when_participationIsViaGroup() {
-            User user = buildUser(TARGET_USER_ID);
             AppointmentParticipation ap = buildParticipation(
-                    buildAppointment(), user, UserRole.ATTENDANT, ParticipationStatus.PENDING);
+                    buildAppointment(), TARGET_USER_OIDC_ID, UserRole.ATTENDANT, ParticipationStatus.PENDING);
             ap.setGroupParticipationId(GROUP_ID);
 
             Group group = buildGroup(GROUP_ID);
@@ -726,7 +712,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>list(anyString(), any(Object[].class)))
                     .thenReturn(List.of(ap));
 
-            List<UserParticipantDto> result = service.getParticipants(APPOINTMENT_ID, ACTING_USER_ID);
+            List<UserParticipantDto> result = service.getParticipants(APPOINTMENT_ID, ACTING_USER_OIDC_ID);
 
             assertThat(result).hasSize(1);
             UserParticipantDto dto = result.get(0);
@@ -762,7 +748,7 @@ class AppointmentParticipationServiceTest {
             when(AppointmentGroupParticipation.<AppointmentGroupParticipation>list(anyString(), any(Object[].class)))
                     .thenReturn(List.of(agp));
 
-            List<GroupDto> result = service.getGroupParticipants(APPOINTMENT_ID, ACTING_USER_ID);
+            List<GroupDto> result = service.getGroupParticipants(APPOINTMENT_ID, ACTING_USER_OIDC_ID);
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getId()).isEqualTo(GROUP_ID);
