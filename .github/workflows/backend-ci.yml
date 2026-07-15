@@ -108,7 +108,7 @@ jobs:
             VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"
           fi
 
-          IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-date-api
+          IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-backend
 
           echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
