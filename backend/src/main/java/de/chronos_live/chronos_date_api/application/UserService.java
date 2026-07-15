@@ -16,9 +16,14 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.FederatedIdentityRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
+import io.quarkus.cache.CacheResult;
+
 import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -58,8 +63,9 @@ public class UserService {
 
     /**
      * Fetches a UserIdentity from Keycloak Admin API by oidcId.
-     * Used when resolving participants whose JWT is not in scope (e.g. listing group members).
+     * Results are cached (see quarkus.cache.caffeine.user-identity in application.properties).
      */
+    @CacheResult(cacheName = "user-identity")
     public UserIdentity getUserByOidcId(String oidcId) {
         UserRepresentation rep = keycloak.realm(realm).users().get(oidcId).toRepresentation();
         return new UserIdentity(
@@ -71,6 +77,20 @@ public class UserService {
                         ? rep.getAttributes().getOrDefault("picture", List.of()).stream().findFirst().orElse(null)
                         : null
         );
+    }
+
+    /**
+     * Fetches multiple users from Keycloak in parallel, using the per-user cache.
+     * Avoids N+1 by fanning out all requests concurrently and returning a lookup map.
+     */
+    public Map<String, UserIdentity> batchGetUsers(Collection<String> oidcIds) {
+        return oidcIds.stream()
+                .distinct()
+                .parallel()
+                .collect(Collectors.toMap(
+                        id -> id,
+                        this::getUserByOidcId
+                ));
     }
 
     /**

@@ -18,6 +18,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 @Transactional
@@ -83,8 +84,12 @@ public class GroupService {
         LOGGER.debugf("[Principal %s][Group %s] Reading Group Members", requestingUserOidcId, groupId);
         authorizationService.requireReadGroupMembers(groupId, requestingUserOidcId);
         List<GroupMember> members = GroupMember.list("group.id = ?1", groupId);
+        Map<String, UserIdentity> userMap = userService.batchGetUsers(
+                members.stream().map(GroupMember::getUserOidcId).toList()
+        );
         return members.stream()
-                .map(m -> userService.getUserByOidcId(m.getUserOidcId()))
+                .map(m -> userMap.getOrDefault(m.getUserOidcId(),
+                        new UserIdentity(m.getUserOidcId(), null, null, null, null)))
                 .toList();
     }
 

@@ -16,6 +16,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 @Transactional
@@ -233,14 +234,25 @@ public class AppointmentParticipationService {
 
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
 
-        return AppointmentParticipation.<AppointmentParticipation>list("appointment.id = ?1", appointmentId)
-                .stream()
+        List<AppointmentParticipation> participations =
+                AppointmentParticipation.list("appointment.id = ?1", appointmentId);
+
+        // Batch-fetch all users in parallel to avoid N+1 Keycloak calls
+        Map<String, UserIdentity> userMap = userService.batchGetUsers(
+                participations.stream().map(AppointmentParticipation::getUserOidcId).toList()
+        );
+
+        return participations.stream()
                 .map(ap -> {
-                    UserIdentity user = userService.getUserByOidcId(ap.getUserOidcId());
+                    UserIdentity user = userMap.get(ap.getUserOidcId());
                     UserParticipantDto dto = new UserParticipantDto();
-                    dto.setUser_id(user.oidcId());
-                    dto.setName(user.getName());
-                    dto.setProfile_picture_url(user.profilePictureUrl());
+                    if (user != null) {
+                        dto.setUser_id(user.oidcId());
+                        dto.setName(user.getName());
+                        dto.setProfile_picture_url(user.profilePictureUrl());
+                    } else {
+                        dto.setUser_id(ap.getUserOidcId());
+                    }
                     dto.setRole(ap.getRole());
                     dto.setStatus(ap.getStatus());
                     if (ap.getGroupParticipationId() != null) {
