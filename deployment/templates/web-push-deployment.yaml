@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chronos-web-push
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.webPush.replicaCount }}
+  selector:
+    matchLabels:
+      app: chronos-web-push
+  template:
+    metadata:
+      labels:
+        app: chronos-web-push
+    spec:
+      imagePullSecrets:
+        - name: chronos-docker-secret
+      containers:
+        - name: chronos-web-push
+          image: "{{ .Values.webPush.image.repository }}:{{ .Values.webPush.image.tag }}"
+          imagePullPolicy: {{ .Values.webPush.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.webPush.containerPort }}
+          env:
+            {{- range $key, $value := .Values.webPush.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.webPush.envFromSecrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.webPush.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.webPush.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.webPush.readinessProbe | nindent 12 }}

@@ -18,6 +18,13 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
+          - path: /api/v2/push
+            pathType: Prefix
+            backend:
+              service:
+                name: chronos-web-push
+                port:
+                  number: {{ .Values.webPush.service.port }}
           - path: /
             pathType: Prefix
             backend:
