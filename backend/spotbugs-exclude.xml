@@ -77,4 +77,14 @@
         <Class name="de.chronos_live.chronos_date_api.application.WebPushService"/>
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
     </Match>
+
+    <!--
+        SpotBugs cannot see that `result` is read inside the lambda passed to forEach
+        and misclassifies the initial HashMap assignment as a dead store.
+    -->
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.infrastructure.LocalDbIdentityAdapter"/>
+        <Method name="findByIds"/>
+        <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+    </Match>
 </FindBugsFilter>
