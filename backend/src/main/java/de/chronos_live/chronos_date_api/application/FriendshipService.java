@@ -14,6 +14,7 @@ import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.infrastructure.FriendshipRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -36,6 +37,8 @@ public class FriendshipService {
 
     @Inject
     UserService userService;
+    @Inject
+    IdentityPort identityPort;
 
     @Inject
     Event<FriendshipRequestSentEvent> friendshipRequestEvent;
@@ -101,7 +104,7 @@ public class FriendshipService {
         request.setCreatedAt(Instant.now());
         friendshipRepo.persist(request);
 
-        UserIdentity requester = userService.getUserByOidcId(requesterOidcId);
+        UserIdentity requester = identityPort.findById(requesterOidcId);
         friendshipRequestEvent.fire(new FriendshipRequestSentEvent(
                 request.id,
                 requesterOidcId,
@@ -195,11 +198,7 @@ public class FriendshipService {
 
         if (friendOidcIds.isEmpty()) return List.of();
 
-        Map<String, UserIdentity> users = friendOidcIds.stream()
-                .collect(Collectors.toMap(
-                        id -> id,
-                        id -> userService.getUserByOidcId(id)
-                ));
+        Map<String, UserIdentity> users = identityPort.findByIds(friendOidcIds);
 
         Map<String, FriendshipRequest> friendshipMap = friendships.stream()
                 .collect(Collectors.toMap(
@@ -278,8 +277,7 @@ public class FriendshipService {
                 .distinct()
                 .toList();
 
-        Map<String, UserIdentity> users = otherOidcIds.stream()
-                .collect(Collectors.toMap(id -> id, id -> userService.getUserByOidcId(id)));
+        Map<String, UserIdentity> users = identityPort.findByIds(otherOidcIds);
 
         return requests.stream()
                 .map(r -> {

@@ -7,6 +7,7 @@ import de.chronos_live.chronos_date_api.application.events.MessageSentEvent;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -35,6 +36,8 @@ public class MessageService {
     @Inject
     UserService userService;
     @Inject
+    IdentityPort identityPort;
+    @Inject
     Event<MessageSentEvent> messageSentEvent;
     @Inject
     MeterRegistry meterRegistry;
@@ -44,7 +47,7 @@ public class MessageService {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
             Appointment appointment = Appointment.findById(event.appointmentId());
-            UserIdentity user = userService.getUserByOidcId(event.actingUserOidcId());
+            UserIdentity user = identityPort.findById(event.actingUserOidcId());
             String text = "%s hat %s".formatted(user.getName(),
                     event.newParticipationStatus().equals(ParticipationStatus.APPROVED) ? "zugesagt" : "abgesagt");
             persistMessage(text, event.actingUserOidcId(), appointment);
@@ -58,7 +61,7 @@ public class MessageService {
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
         Appointment appointment = Appointment.findById(event.cancelledAppointmentId());
-        UserIdentity user = userService.getUserByOidcId(event.actingUserOidcId());
+        UserIdentity user = identityPort.findById(event.actingUserOidcId());
         String text = "%s hat diesen Termin abgesagt. Er wird nicht stattfinden!".formatted(user.getName());
         persistMessage(text, event.actingUserOidcId(), appointment);
     }
@@ -66,7 +69,7 @@ public class MessageService {
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
-        UserIdentity user = userService.getUserByOidcId(event.actingUserOidcId());
+        UserIdentity user = identityPort.findById(event.actingUserOidcId());
         long hourDelta = event.oldStartTime().until(appointment.getStartTime(), ChronoUnit.HOURS);
         String text;
         if (hourDelta > 0) {

@@ -150,9 +150,4 @@ DROP INDEX IF EXISTS idx_push_notification_log_user_id;
 ALTER TABLE push_notification_log DROP COLUMN user_id;
 CREATE INDEX idx_push_notification_log_user_oidcid ON push_notification_log (user_oidcid);
 
--- ─────────────────────────────────────────────────────────────────────────────
--- Drop the users table (and leftover V1.1.0 backup tables if still present)
--- ─────────────────────────────────────────────────────────────────────────────
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS message_backup;
-DROP TABLE IF EXISTS settings_backup;
+-- users table is dropped in V2.1.0 after user_profiles cache has been seeded

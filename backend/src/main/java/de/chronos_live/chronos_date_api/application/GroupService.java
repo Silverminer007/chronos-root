@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
@@ -29,6 +30,8 @@ public class GroupService {
     AuthorizationService authorizationService;
     @Inject
     UserService userService;
+    @Inject
+    IdentityPort identityPort;
     @Inject
     Event<GroupMemberAddedEvent> groupMemberAddedEvent;
     @Inject
@@ -84,7 +87,7 @@ public class GroupService {
         LOGGER.debugf("[Principal %s][Group %s] Reading Group Members", requestingUserOidcId, groupId);
         authorizationService.requireReadGroupMembers(groupId, requestingUserOidcId);
         List<GroupMember> members = GroupMember.list("group.id = ?1", groupId);
-        Map<String, UserIdentity> userMap = userService.batchGetUsers(
+        Map<String, UserIdentity> userMap = identityPort.findByIds(
                 members.stream().map(GroupMember::getUserOidcId).toList()
         );
         return members.stream()

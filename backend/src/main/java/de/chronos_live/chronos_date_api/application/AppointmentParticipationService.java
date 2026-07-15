@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
@@ -29,6 +30,8 @@ public class AppointmentParticipationService {
     GroupService groupService;
     @Inject
     UserService userService;
+    @Inject
+    IdentityPort identityPort;
     @Inject
     Event<AppointmentParticipationStatusChangedEvent> appointmentParticipationStatusChangedEvent;
     @Inject
@@ -237,8 +240,8 @@ public class AppointmentParticipationService {
         List<AppointmentParticipation> participations =
                 AppointmentParticipation.list("appointment.id = ?1", appointmentId);
 
-        // Batch-fetch all users in parallel to avoid N+1 Keycloak calls
-        Map<String, UserIdentity> userMap = userService.batchGetUsers(
+        // Single IN query for all users — avoids N+1
+        Map<String, UserIdentity> userMap = identityPort.findByIds(
                 participations.stream().map(AppointmentParticipation::getUserOidcId).toList()
         );
 
