@@ -57,7 +57,7 @@ The backend follows a layered architecture within `de.chronos_live.chronos_date_
 | `mapper/` | MapStruct mappers — entity ↔ DTO conversions |
 | `dto/` | Request/response shapes; `PagedResponse<T>` for paginated endpoints |
 | `exception/` | Custom exception hierarchy + JAX-RS `ExceptionMapper` implementations |
-| `security/` | `PrincipalContext` (request-scoped bean holding the resolved `User`) + `PrincipalContextFilter` |
+| `security/` | `PrincipalContext` (request-scoped bean holding the current user's OIDC ID) + `PrincipalContextFilter` |
 | `config/` | CDI producers for `Clock` and push config |
 
 A separate `de.chronos_live.admin` package mirrors the structure above for admin-only endpoints.
@@ -65,8 +65,8 @@ A separate `de.chronos_live.admin` package mirrors the structure above for admin
 **Key cross-cutting patterns:**
 - Services fire CDI events (`@Inject Event<...>`); `WebPushService` and `AppointmentReminderService` observe these to send push notifications asynchronously.
 - Authorization is enforced in `AuthorizationService`, which checks role/participation membership — not in the JAX-RS layer.
-- `PrincipalContextFilter` resolves the JWT → `User` entity once per request and stores it in the request-scoped `PrincipalContext`. All services inject `PrincipalContext` to get the current user.
-- Database schema is managed by **Flyway** migrations in `src/main/resources/db/migration/` (versioned `V<major>.<minor>.<patch>__description.sql`). Tests use an additional `V99.0.0__test_fixtures.sql`.
+- `PrincipalContextFilter` resolves the JWT once per request and stores the OIDC subject in the request-scoped `PrincipalContext`. All services inject `PrincipalContext` to get the current user's OIDC ID.
+- Database schema is managed by **Flyway** migrations in `src/main/resources/db/migration/` (versioned `V<major>.<minor>.<patch>__description.sql`). Tests load additional fixtures from `src/test/resources/db/testdata/`.
 
 ### Code Quality Gates (`./mvnw verify`)
 
@@ -120,7 +120,7 @@ Helm chart targeting Kubernetes. Two environments:
 
 | Environment | Values file | Image tag | Triggered by |
 |---|---|---|---|
-| Production | `values-prod.yaml` | `latest` | push to `master` |
+| Production | `values-prod.yaml` | `latest` | push to `main` |
 | Staging | `values-staging.yaml` | `develop` | push to `develop` |
 
 CI pipeline: backend CI builds + pushes the Docker image, then fires a `repository_dispatch` event which triggers the deployment workflow. The frontend follows the same pattern via `workflow_run` chaining.
