@@ -29,8 +29,6 @@ public class GroupService {
     @Inject
     AuthorizationService authorizationService;
     @Inject
-    UserService userService;
-    @Inject
     IdentityPort identityPort;
     @Inject
     Event<GroupMemberAddedEvent> groupMemberAddedEvent;

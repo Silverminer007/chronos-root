@@ -1,6 +1,6 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.UserService;
+import de.chronos_live.chronos_date_api.application.KeycloakProfileService;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.LinkedAccountDto;
 import de.chronos_live.chronos_date_api.dto.PasskeyDto;
@@ -29,7 +29,7 @@ import java.util.Map;
 @Timed("api.user")
 public class UserResource {
     @Inject
-    UserService userService;
+    KeycloakProfileService keycloakProfileService;
     @Inject
     PrincipalMapper mapper;
     @Inject
@@ -53,7 +53,7 @@ public class UserResource {
     @PATCH
     public Response patchUser(@RequestBody PrincipalDto userDto, @QueryParam("redirectUri") String redirectUri) {
         String oidcId = principalContext.getPrincipal().oidcId();
-        UpdatedUserDto newUser = userService.updateUser(
+        UpdatedUserDto newUser = keycloakProfileService.updateUser(
                 userDto.first_name(), userDto.last_name(), userDto.email(), oidcId, redirectUri);
         return Response.ok(newUser).build();
     }
@@ -67,7 +67,7 @@ public class UserResource {
     @Path("/linked")
     public Response getLinkedAccounts() {
         String oidcId = principalContext.getPrincipal().oidcId();
-        List<LinkedAccountDto> accounts = userService.getLinkedAccounts(oidcId).stream()
+        List<LinkedAccountDto> accounts = keycloakProfileService.getLinkedAccounts(oidcId).stream()
                 .map(fi -> new LinkedAccountDto(fi.getIdentityProvider()))
                 .toList();
         return Response.ok(accounts).build();
@@ -77,7 +77,7 @@ public class UserResource {
     @Path("/linked/{providerId}")
     public Response unlinkAccount(@PathParam("providerId") String providerId) {
         String oidcId = principalContext.getPrincipal().oidcId();
-        userService.unlinkAccount(oidcId, providerId);
+        keycloakProfileService.unlinkAccount(oidcId, providerId);
         return Response.noContent().build();
     }
 
@@ -86,7 +86,7 @@ public class UserResource {
     public Response getLinkUrl(@PathParam("provider") String provider,
                                @QueryParam("redirectUri") String redirectUri) {
         try {
-            String linkUrl = userService.getLinkUrl(provider, redirectUri);
+            String linkUrl = keycloakProfileService.getLinkUrl(provider, redirectUri);
             return Response.ok(Map.of("url", linkUrl)).build();
         } catch (NoSuchAlgorithmException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -96,7 +96,7 @@ public class UserResource {
     @GET
     @Path("/link/passkey")
     public Response getPasskeyRegistrationUrl(@QueryParam("redirectUri") String redirectUri) {
-        String linkUrl = userService.getPasskeyRegistrationUrl(redirectUri);
+        String linkUrl = keycloakProfileService.getPasskeyRegistrationUrl(redirectUri);
         return Response.ok(Map.of("url", linkUrl)).build();
     }
 
@@ -104,7 +104,7 @@ public class UserResource {
     @Path("/unlink/passkey")
     public Response getPasskeyDeletionUrl(@QueryParam("redirectUri") String redirectUri,
                                           @QueryParam("passkeyId") String passkeyId) {
-        String linkUrl = userService.getDeletePasskeyUrl(redirectUri, passkeyId);
+        String linkUrl = keycloakProfileService.getDeletePasskeyUrl(redirectUri, passkeyId);
         return Response.ok(Map.of("url", linkUrl)).build();
     }
 
@@ -112,7 +112,7 @@ public class UserResource {
     @Path("/passkeys")
     public Response getPasskeys() {
         String oidcId = principalContext.getPrincipal().oidcId();
-        List<PasskeyDto> passkeys = userService.getPasskeys(oidcId).stream()
+        List<PasskeyDto> passkeys = keycloakProfileService.getPasskeys(oidcId).stream()
                 .map(c -> new PasskeyDto(c.getId(), c.getUserLabel(),
                         c.getCreatedDate() != null ? Instant.ofEpochMilli(c.getCreatedDate()).toString() : null, null))
                 .toList();
@@ -122,7 +122,7 @@ public class UserResource {
     @GET
     @Path("/change-password")
     public Response getChangePasswordUrl(@QueryParam("redirectUri") String redirectUri) {
-        String linkUrl = userService.getChangePasswordUrl(redirectUri);
+        String linkUrl = keycloakProfileService.getChangePasswordUrl(redirectUri);
         return Response.ok(Map.of("url", linkUrl)).build();
     }
 }

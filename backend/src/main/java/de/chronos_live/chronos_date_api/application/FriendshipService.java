@@ -36,8 +36,6 @@ public class FriendshipService {
     FriendshipRepository friendshipRepo;
 
     @Inject
-    UserService userService;
-    @Inject
     IdentityPort identityPort;
 
     @Inject
@@ -61,7 +59,7 @@ public class FriendshipService {
                 throw new BadRequestException("You must either set addressee_id or email");
             }
             // Resolve oidcId from email via Keycloak Admin API
-            List<UserIdentity> found = userService.searchUsers(email, 1);
+            List<UserIdentity> found = identityPort.search(email, 1);
             if (found.isEmpty() || !email.equalsIgnoreCase(found.get(0).email())) {
                 throw new ResourceNotFoundException("Es wurde kein User mit der E-Mail Adresse " + email + " gefunden");
             }
@@ -247,7 +245,7 @@ public class FriendshipService {
      */
     public List<UserDto> findNonFriends(String search, String oidcId, int limit) {
         Set<String> friendIds = friendshipRepo.getFriendOidcIds(oidcId);
-        return userService.searchUsers(search, limit * 3).stream()
+        return identityPort.search(search, limit * 3).stream()
                 .filter(u -> !u.oidcId().equals(oidcId) && !friendIds.contains(u.oidcId()))
                 .limit(limit)
                 .map(u -> new UserDto(u.oidcId(), u.firstName(), u.lastName()))
@@ -260,7 +258,7 @@ public class FriendshipService {
      */
     public List<UserDto> findRecentNonFriends(String oidcId, int limit) {
         Set<String> friendIds = friendshipRepo.getFriendOidcIds(oidcId);
-        return userService.searchUsers("", limit * 3).stream()
+        return identityPort.search("", limit * 3).stream()
                 .filter(u -> !u.oidcId().equals(oidcId) && !friendIds.contains(u.oidcId()))
                 .limit(limit)
                 .map(u -> new UserDto(u.oidcId(), u.firstName(), u.lastName()))

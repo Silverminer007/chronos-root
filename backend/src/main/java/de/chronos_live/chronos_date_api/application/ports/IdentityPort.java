@@ -3,6 +3,7 @@ package de.chronos_live.chronos_date_api.application.ports;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,4 +31,10 @@ public interface IdentityPort {
      * Called on every authenticated request with the JWT claims to keep names current.
      */
     void upsert(UserIdentity identity);
+
+    /**
+     * Searches for users by name or email. Delegates to the identity provider to ensure
+     * completeness (users not yet in local cache are still findable), and caches results.
+     */
+    List<UserIdentity> search(String query, int limit);
 }

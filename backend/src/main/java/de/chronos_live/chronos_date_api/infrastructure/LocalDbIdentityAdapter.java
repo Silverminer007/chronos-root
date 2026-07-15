@@ -19,10 +19,13 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Implements IdentityPort against a local PostgreSQL cache (user_profiles table).
- * Cache misses fall back to the Keycloak Admin API and are persisted automatically.
- * This is the only class in the codebase that imports Keycloak types — all other
- * classes depend only on UserIdentity and IdentityPort.
+ * The sole class allowed to import Keycloak types for identity reads.
+ * All other domain/application classes depend only on IdentityPort and UserIdentity.
+ *
+ * Read path:   user_profiles table (single IN query for batches)
+ *              → Keycloak Admin API fallback on cache miss (parallel HTTP, sequential persist)
+ * Write path:  JWT claims upserted on every authenticated request (REQUIRES_NEW transaction)
+ * Search path: Keycloak Admin API (complete result set), results cached as side effect
  */
 @ApplicationScoped
 public class LocalDbIdentityAdapter implements IdentityPort {
@@ -34,6 +37,8 @@ public class LocalDbIdentityAdapter implements IdentityPort {
 
     @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
     String realm;
+
+    // ── Reads ────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -52,7 +57,7 @@ public class LocalDbIdentityAdapter implements IdentityPort {
             return Map.of();
         }
 
-        // Single DB query for all cached profiles — avoids N+1
+        // Single IN query — avoids N+1
         Map<String, UserIdentity> result = new HashMap<>();
         UserProfile.<UserProfile>list("oidcId IN ?1", ids)
                 .forEach(p -> result.put(p.oidcId, toIdentity(p)));
@@ -63,26 +68,52 @@ public class LocalDbIdentityAdapter implements IdentityPort {
                 .toList();
 
         if (!missing.isEmpty()) {
-            List<UserIdentity> fetched = missing.parallelStream()
+            missing.parallelStream()
                     .map(this::fetchFromKeycloak)
                     .filter(Objects::nonNull)
-                    .toList();
-            // Persist all cache misses sequentially in the current transaction
-            fetched.forEach(identity -> {
-                persistProfile(identity);
-                result.put(identity.oidcId(), identity);
-            });
+                    .toList()
+                    // Persist sequentially in the current transaction
+                    .forEach(identity -> {
+                        doUpsert(identity);
+                        result.put(identity.oidcId(), identity);
+                    });
         }
 
         return result;
     }
 
     @Override
+    @Transactional
+    public List<UserIdentity> search(String query, int limit) {
+        // Keycloak is authoritative for search — finds users not yet in local cache
+        List<UserIdentity> results = keycloak.realm(realm).users().search(query, 0, limit)
+                .stream()
+                .map(this::repToIdentity)
+                .toList();
+        // Cache results as a side effect so future reads avoid Keycloak
+        results.forEach(this::doUpsert);
+        return results;
+    }
+
+    // ── Writes ───────────────────────────────────────────────────────────────
+
+    /**
+     * Public upsert runs in its own transaction so the filter's DB write
+     * is independent of the main request transaction.
+     */
+    @Override
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void upsert(UserIdentity identity) {
         if (identity.oidcId() == null) {
             return;
         }
+        doUpsert(identity);
+    }
+
+    // ── Internals ────────────────────────────────────────────────────────────
+
+    /** Upsert logic without a transaction annotation — called within an existing TX. */
+    private void doUpsert(UserIdentity identity) {
         int updated = UserProfile.update(
                 "firstName = ?1, lastName = ?2, email = ?3, profilePictureUrl = ?4, updatedAt = ?5"
                         + " WHERE oidcId = ?6",
@@ -90,46 +121,46 @@ public class LocalDbIdentityAdapter implements IdentityPort {
                 identity.profilePictureUrl(), Instant.now(), identity.oidcId()
         );
         if (updated == 0) {
-            persistProfile(identity);
+            UserProfile p = new UserProfile();
+            p.oidcId = identity.oidcId();
+            p.firstName = identity.firstName();
+            p.lastName = identity.lastName();
+            p.email = identity.email();
+            p.profilePictureUrl = identity.profilePictureUrl();
+            p.updatedAt = Instant.now();
+            p.persist();
         }
-    }
-
-    private void persistProfile(UserIdentity identity) {
-        UserProfile p = new UserProfile();
-        p.oidcId = identity.oidcId();
-        p.firstName = identity.firstName();
-        p.lastName = identity.lastName();
-        p.email = identity.email();
-        p.profilePictureUrl = identity.profilePictureUrl();
-        p.updatedAt = Instant.now();
-        p.persist();
     }
 
     private UserIdentity fetchFromKeycloakAndCache(String oidcId) {
         UserIdentity identity = fetchFromKeycloak(oidcId);
         if (identity != null) {
-            persistProfile(identity);
+            doUpsert(identity);
+            return identity;
         }
-        return identity != null ? identity : new UserIdentity(oidcId, null, null, null, null);
+        return new UserIdentity(oidcId, null, null, null, null);
     }
 
     private UserIdentity fetchFromKeycloak(String oidcId) {
         try {
-            UserRepresentation rep = keycloak.realm(realm).users().get(oidcId).toRepresentation();
-            return new UserIdentity(
-                    rep.getId(),
-                    rep.getFirstName(),
-                    rep.getLastName(),
-                    rep.getEmail(),
-                    rep.getAttributes() != null
-                            ? rep.getAttributes().getOrDefault("picture", List.of()).stream()
-                                    .findFirst().orElse(null)
-                            : null
-            );
+            return repToIdentity(keycloak.realm(realm).users().get(oidcId).toRepresentation());
         } catch (Exception e) {
             LOGGER.warnf("Failed to fetch user %s from Keycloak: %s", oidcId, e.getMessage());
             return null;
         }
+    }
+
+    private UserIdentity repToIdentity(UserRepresentation rep) {
+        return new UserIdentity(
+                rep.getId(),
+                rep.getFirstName(),
+                rep.getLastName(),
+                rep.getEmail(),
+                rep.getAttributes() != null
+                        ? rep.getAttributes().getOrDefault("picture", List.of())
+                                .stream().findFirst().orElse(null)
+                        : null
+        );
     }
 
     private UserIdentity toIdentity(UserProfile p) {

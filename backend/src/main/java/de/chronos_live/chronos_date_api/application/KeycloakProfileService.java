@@ -1,6 +1,5 @@
 package de.chronos_live.chronos_date_api.application;
 
-import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.PrincipalDto;
 import de.chronos_live.chronos_date_api.dto.UpdatedUserDto;
 import de.chronos_live.chronos_date_api.exception.BadRequestException;
@@ -9,7 +8,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.CredentialRepresentation;
@@ -22,11 +20,16 @@ import java.util.List;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+/**
+ * Handles Keycloak-specific write operations and OIDC URL generation.
+ * This is the only service class allowed to import Keycloak types alongside
+ * LocalDbIdentityAdapter — all reads go through IdentityPort instead.
+ */
 @ApplicationScoped
 @Transactional
-@Timed("service.user")
-public class UserService {
-    private static final Logger LOGGER = Logger.getLogger(UserService.class);
+@Timed("service.keycloakProfile")
+public class KeycloakProfileService {
+    private static final Logger LOGGER = Logger.getLogger(KeycloakProfileService.class);
 
     @Inject
     Keycloak keycloak;
@@ -40,66 +43,13 @@ public class UserService {
     @ConfigProperty(name = "quarkus.keycloak.admin-client.client-id")
     String clientId;
 
-    /**
-     * Builds a UserIdentity from the current JWT — no database call.
-     */
-    public UserIdentity fromToken(JsonWebToken jwt) {
-        if (jwt.getSubject() == null) {
-            throw new BadRequestException("Authentication invalid");
-        }
-        return new UserIdentity(
-                jwt.getSubject(),
-                jwt.getClaim("given_name"),
-                jwt.getClaim("family_name"),
-                jwt.getClaim("email"),
-                jwt.getClaim("picture")
-        );
-    }
-
-    /**
-     * Fetches a UserIdentity directly from Keycloak Admin API.
-     * Prefer IdentityPort.findById() for normal reads — it uses the local DB cache.
-     * Use this only for Keycloak-specific operations or when freshness is critical.
-     */
-    public UserIdentity getUserByOidcId(String oidcId) {
-        UserRepresentation rep = keycloak.realm(realm).users().get(oidcId).toRepresentation();
-        return new UserIdentity(
-                rep.getId(),
-                rep.getFirstName(),
-                rep.getLastName(),
-                rep.getEmail(),
-                rep.getAttributes() != null
-                        ? rep.getAttributes().getOrDefault("picture", List.of()).stream().findFirst().orElse(null)
-                        : null
-        );
-    }
-
-    /**
-     * Searches Keycloak for users whose name or email matches the query.
-     * Replaces the former DB-based findNonFriends / findRecentNonFriends queries.
-     */
-    public List<UserIdentity> searchUsers(String query, int limit) {
-        return keycloak.realm(realm).users().search(query, 0, limit).stream()
-                .map(rep -> new UserIdentity(
-                        rep.getId(),
-                        rep.getFirstName(),
-                        rep.getLastName(),
-                        rep.getEmail(),
-                        rep.getAttributes() != null
-                                ? rep.getAttributes().getOrDefault("picture", List.of()).stream().findFirst().orElse(null)
-                                : null
-                ))
-                .toList();
-    }
-
-    public UpdatedUserDto updateUser(String firstName, String lastName, String email, String oidcId, String redirectUri) {
+    public UpdatedUserDto updateUser(String firstName, String lastName, String email,
+                                     String oidcId, String redirectUri) {
         LOGGER.debugf("[Principal %s] Updating User in Keycloak", oidcId);
-
         boolean emailChanged = email != null;
         if (emailChanged && redirectUri == null) {
             throw new BadRequestException("Redirect Url must be set to change email address");
         }
-
         UserRepresentation userRep = new UserRepresentation();
         if (firstName != null) userRep.setFirstName(firstName);
         if (lastName != null) userRep.setLastName(lastName);
@@ -108,12 +58,9 @@ public class UserService {
             userRep.setEmailVerified(false);
         }
         keycloak.realm(realm).users().get(oidcId).update(userRep);
-
         if (emailChanged) {
-            keycloak.realm(realm).users().get(oidcId)
-                    .sendVerifyEmail(clientId, redirectUri, 60 * 60);
+            keycloak.realm(realm).users().get(oidcId).sendVerifyEmail(clientId, redirectUri, 60 * 60);
         }
-
         UpdatedUserDto updatedUserDto = new UpdatedUserDto();
         updatedUserDto.setUser(new PrincipalDto(oidcId, firstName, lastName, email));
         updatedUserDto.setVerifyEmailUrl(getVerifyEmailUrl(redirectUri));

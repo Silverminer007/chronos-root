@@ -29,8 +29,6 @@ public class AppointmentParticipationService {
     @Inject
     GroupService groupService;
     @Inject
-    UserService userService;
-    @Inject
     IdentityPort identityPort;
     @Inject
     Event<AppointmentParticipationStatusChangedEvent> appointmentParticipationStatusChangedEvent;

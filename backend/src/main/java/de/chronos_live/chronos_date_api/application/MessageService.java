@@ -34,8 +34,6 @@ public class MessageService {
     @Inject
     MessageQueryService messageQueryService;
     @Inject
-    UserService userService;
-    @Inject
     IdentityPort identityPort;
     @Inject
     Event<MessageSentEvent> messageSentEvent;
