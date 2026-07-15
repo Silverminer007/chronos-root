@@ -68,15 +68,16 @@ public class LocalDbIdentityAdapter implements IdentityPort {
                 .toList();
 
         if (!missing.isEmpty()) {
-            missing.parallelStream()
+            // HTTP-only: parallel Keycloak calls are safe; no JPA inside this stream
+            List<UserIdentity> fetched = missing.parallelStream()
                     .map(this::fetchFromKeycloak)
                     .filter(Objects::nonNull)
-                    .toList()
-                    // Persist sequentially in the current transaction
-                    .forEach(identity -> {
-                        doUpsert(identity);
-                        result.put(identity.oidcId(), identity);
-                    });
+                    .toList();
+            // JPA writes run sequentially on the calling thread within the current transaction
+            for (UserIdentity identity : fetched) {
+                doUpsert(identity);
+                result.put(identity.oidcId(), identity);
+            }
         }
 
         return result;

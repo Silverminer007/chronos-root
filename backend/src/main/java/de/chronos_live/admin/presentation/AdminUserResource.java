@@ -35,7 +35,11 @@ public class AdminUserResource {
     @GET
     @Path("{id}")
     public Response getUserById(@PathParam("id") String oidcId) {
-        AdminUserDto user = adminUserService.getUserByOidcId(oidcId);
-        return Response.ok(user).build();
+        try {
+            AdminUserDto user = adminUserService.getUserByOidcId(oidcId);
+            return Response.ok(user).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
     }
 }

@@ -9,6 +9,26 @@
 -- After this migration, every "user reference" column holds the Keycloak subject UUID (VARCHAR).
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Pre-flight validation
+-- Every user must have a Keycloak OIDC subject assigned before we can backfill.
+-- If any row is missing an oidcid the JOIN-based UPDATE will silently produce
+-- NULL values, which the subsequent SET NOT NULL will then reject with a
+-- cryptic error. Fail fast here with a clear message instead.
+-- ─────────────────────────────────────────────────────────────────────────────
+DO $$
+DECLARE
+    bad_count BIGINT;
+BEGIN
+    SELECT COUNT(*) INTO bad_count FROM users WHERE oidcid IS NULL OR oidcid = '';
+    IF bad_count > 0 THEN
+        RAISE EXCEPTION
+            'V2.0.0 pre-flight failed: % user row(s) have a NULL or empty oidcid. '
+            'All users must have logged in via Keycloak before this migration can run.',
+            bad_count;
+    END IF;
+END $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- appointment_participation  (user_id BIGINT → user_oidcid VARCHAR)
 -- ─────────────────────────────────────────────────────────────────────────────
 ALTER TABLE appointment_participation ADD COLUMN user_oidcid VARCHAR(255);
@@ -82,6 +102,7 @@ SET owner_oidcid = u.oidcid
 FROM users u
 WHERE g.owner_id = u.id;
 
+ALTER TABLE groups ALTER COLUMN owner_oidcid SET NOT NULL;
 ALTER TABLE groups DROP CONSTRAINT IF EXISTS fk_groups_owner;
 ALTER TABLE groups DROP COLUMN owner_id;
 
