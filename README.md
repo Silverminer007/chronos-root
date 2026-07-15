@@ -78,7 +78,7 @@ helm upgrade chronos . -f values-staging.yaml --namespace chronos-staging --inst
 | Deploy to Kubernetes | `.github/workflows/deployment-ci.yml` | push to `deployment/**` or `repository_dispatch` |
 
 **Branch model:**
-- `master` → semantic-versioned Docker image tagged `latest`, triggers production deployment
+- `main` → semantic-versioned Docker image tagged `latest`, triggers production deployment
 - `develop` → Docker image tagged `develop`, triggers staging deployment
 
 The backend CI builds and pushes the Docker image, then fires a `repository_dispatch` event that triggers the deployment workflow. The frontend follows the same pattern via `workflow_run` chaining.

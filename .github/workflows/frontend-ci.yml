@@ -2,10 +2,10 @@ name: Frontend CI
 
 on:
   push:
-    branches: [master, develop]
+    branches: [main, develop]
     paths: ['frontend/**']
   pull_request:
-    branches: [master, develop]
+    branches: [main, develop]
     paths: ['frontend/**']
 
 env:
@@ -147,7 +147,7 @@ jobs:
     name: Docker Build & Push
     runs-on: ubuntu-latest
     needs: [secret-detection, audit-deps, code-quality, e2e-tests]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     permissions:
       contents: write
       packages: write
@@ -158,20 +158,20 @@ jobs:
           fetch-depth: 0
 
       - name: ⚙️ Set up Node.js
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         uses: actions/setup-node@v6
         with:
           node-version: 26
 
       - name: 📦 Install Semantic Release
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         run: |
           npm install -g semantic-release \
             @semantic-release/commit-analyzer
         working-directory: ${{ github.workspace }}
 
       - name: 🚀 Run Semantic Release (GitHub only)
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -183,7 +183,7 @@ jobs:
         run: |
           REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             VERSION=$(git tag --sort=-creatordate | head -1)
           else
             VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"
@@ -211,7 +211,7 @@ jobs:
           docker push $IMAGE:$VERSION
 
       - name: 📦 Re-tag Docker Image (latest)
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         run: |
           docker tag $IMAGE:$VERSION $IMAGE:latest
           docker push $IMAGE:latest
@@ -223,7 +223,7 @@ jobs:
           docker push $IMAGE:develop
 
       - name: 🚀 Trigger Production Deployment
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         run: |
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
