@@ -189,7 +189,7 @@ jobs:
             VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"
           fi
 
-          IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-nuxt
+          IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-frontend
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
