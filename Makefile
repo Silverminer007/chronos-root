@@ -29,11 +29,11 @@ infra:
 	docker compose -f backend/docker-compose.yaml up -d
 
 ## Start the Quarkus backend in dev mode (live reload).
-backend:
+backend: infra
 	cd backend && ./mvnw quarkus:dev
 
 ## Start the Nuxt frontend dev server (HMR).
-frontend:
+frontend: setup
 	cd frontend && npm run dev
 
 ## Stop all infrastructure containers.
