@@ -5,21 +5,16 @@
 -- and used for all profile reads (participant lists, group members, etc.)
 -- to avoid runtime Keycloak Admin API calls.
 
-CREATE SEQUENCE IF NOT EXISTS user_profiles_SEQ START WITH 1 INCREMENT BY 50;
-
 CREATE TABLE user_profiles (
-    id           BIGSERIAL PRIMARY KEY,
-    oidc_id      VARCHAR(255) NOT NULL,
-    first_name   VARCHAR(255),
-    last_name    VARCHAR(255),
-    email        VARCHAR(255),
+    oidc_id             VARCHAR(255) NOT NULL PRIMARY KEY,
+    first_name          VARCHAR(255),
+    last_name           VARCHAR(255),
+    email               VARCHAR(255),
     profile_picture_url VARCHAR(512),
-    updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_user_profiles_oidc_id UNIQUE (oidc_id)
+    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_user_profiles_oidc_id ON user_profiles (oidc_id);
-CREATE INDEX idx_user_profiles_name ON user_profiles (lower(first_name || ' ' || last_name));
+CREATE INDEX idx_user_profiles_name  ON user_profiles (lower(first_name || ' ' || last_name));
 CREATE INDEX idx_user_profiles_email ON user_profiles (lower(email));
 
 -- Seed from the users table (initial cache state from existing data)
