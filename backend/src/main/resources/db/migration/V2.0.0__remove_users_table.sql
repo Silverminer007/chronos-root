@@ -145,6 +145,7 @@ SET sender_oidcid = u.oidcid
 FROM users u
 WHERE m.sender_id = u.id;
 
+ALTER TABLE message ALTER COLUMN sender_oidcid SET NOT NULL;
 ALTER TABLE message DROP CONSTRAINT IF EXISTS fk_message_sender;
 ALTER TABLE message DROP COLUMN sender_id;
 
@@ -196,6 +197,11 @@ UPDATE push_notification_log pnl
 SET user_oidcid = u.oidcid
 FROM users u
 WHERE pnl.user_id = u.id;
+
+-- Drop log rows for deleted users before enforcing NOT NULL.
+-- push_notification_log has no FK to users, so orphaned rows survive user deletion.
+-- Without this delete, any such row would leave user_oidcid NULL and abort the migration.
+DELETE FROM push_notification_log WHERE user_oidcid IS NULL;
 
 ALTER TABLE push_notification_log ALTER COLUMN user_oidcid SET NOT NULL;
 DROP INDEX IF EXISTS idx_push_notification_log_user_id;

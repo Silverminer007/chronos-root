@@ -24,7 +24,11 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -211,7 +215,10 @@ public class FriendshipService {
         return friendOidcIds.stream()
                 .map(friendOidcId -> {
                     UserIdentity friend = users.get(friendOidcId);
-                    if (friend == null) return null;
+                    if (friend == null) {
+                        throw new IllegalStateException(
+                                "Benutzeridentität konnte nicht aufgelöst werden: " + friendOidcId);
+                    }
                     FriendDto dto = new FriendDto();
                     dto.setUser_id(friend.oidcId());
                     dto.setName(friend.getName());
@@ -221,7 +228,6 @@ public class FriendshipService {
                     dto.setFriends_since(fr.getRespondedAt() != null ? fr.getRespondedAt().toString() : null);
                     return dto;
                 })
-                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendDto::getName))
                 .collect(Collectors.toList());
     }
@@ -285,7 +291,10 @@ public class FriendshipService {
                 .map(r -> {
                     String otherOidcId = incoming ? r.getRequesterId() : r.getAddresseeId();
                     UserIdentity otherUser = users.get(otherOidcId);
-                    if (otherUser == null) return null;
+                    if (otherUser == null) {
+                        throw new IllegalStateException(
+                                "Benutzeridentität konnte nicht aufgelöst werden: " + otherOidcId);
+                    }
 
                     FriendshipRequestDto dto = new FriendshipRequestDto();
                     dto.setRequestId(r.id);
@@ -299,7 +308,6 @@ public class FriendshipService {
                     dto.setIncoming(incoming);
                     return dto;
                 })
-                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendshipRequestDto::getCreatedAt).reversed())
                 .collect(Collectors.toList());
     }

@@ -9,6 +9,7 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.ext.Provider;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 /**
  * Builds a UserIdentity from JWT claims on every authenticated request and
@@ -17,6 +18,8 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 @Provider
 @Priority(Priorities.AUTHORIZATION + 1)
 public class PrincipalContextFilter implements ContainerRequestFilter {
+
+    private static final Logger LOGGER = Logger.getLogger(PrincipalContextFilter.class);
 
     @Inject
     PrincipalContext principalContext;
@@ -39,8 +42,13 @@ public class PrincipalContextFilter implements ContainerRequestFilter {
         );
         principalContext.setPrincipal(identity);
 
-        // Keep the local cache fresh — runs in its own transaction (REQUIRES_NEW)
-        identityPort.upsert(identity);
+        // Keep the local cache fresh — runs in its own transaction (REQUIRES_NEW).
+        // A transient DB failure must not abort a valid authenticated request.
+        try {
+            identityPort.upsert(identity);
+        } catch (Exception e) {
+            LOGGER.warnf("Failed to upsert identity cache for user %s: %s", jwt.getSubject(), e.getMessage());
+        }
 
         String path = requestContext.getUriInfo().getPath();
         if (path.startsWith("api/v2/admin/") || path.startsWith("/api/v2/admin/")) {

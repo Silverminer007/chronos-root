@@ -522,7 +522,7 @@ class FriendshipServiceTest {
     /**
      * Coverage plan – getFriends:
      *   B1  friendIds.isEmpty() → true (return empty list) / false (load users + build DTOs)
-     *   B2  friend == null inside mapping stream → skipped via filter(Objects::nonNull)
+     *   B2  friend == null inside mapping stream → throws IllegalStateException
      *
      * Total branches: 3  |  Tests: 3
      */
@@ -555,18 +555,16 @@ class FriendshipServiceTest {
             assertThat(result.get(0).getName()).isEqualTo("Bob Smith");
         }
 
-        // B2 – user data missing in map (null friend filtered out)
+        // B2 – user data missing in map → throws IllegalStateException
         @Test
-        void should_filterOutFriend_when_userDataIsMissing() {
+        void should_throwIllegalStateException_when_friendIdentityUnresolvable() {
             FriendshipRequest fs = buildRequest(REQUEST_ID, REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID, FriendshipStatus.ACCEPTED);
             when(friendshipRepo.getFriendships(REQUESTER_OIDC_ID)).thenReturn(List.of(fs));
 
-            // Return empty map → friend will be null
             when(identityPort.findByIds(anyList())).thenReturn(Map.of());
 
-            List<FriendDto> result = service.getFriends(REQUESTER_OIDC_ID);
-
-            assertThat(result).isEmpty();
+            assertThatThrownBy(() -> service.getFriends(REQUESTER_OIDC_ID))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
@@ -577,7 +575,7 @@ class FriendshipServiceTest {
     /**
      * Coverage plan – getIncomingRequests:
      *   B1  requests.isEmpty() → true (return empty list) / false (build DTOs)
-     *   B2  otherUser == null → skipped via filter
+     *   B2  otherUser == null → throws IllegalStateException
      *   B3  respondedAt == null → null string / not-null string
      *
      * Total branches: 4  |  Tests: 3
@@ -613,16 +611,15 @@ class FriendshipServiceTest {
             assertThat(dto.getRespondedAt()).isNotNull();
         }
 
-        // B2 – user data missing → filtered out
+        // B2 – user data missing → throws IllegalStateException
         @Test
-        void should_filterOutRequest_when_requesterUserDataIsMissing() {
+        void should_throwIllegalStateException_when_requesterIdentityUnresolvable() {
             FriendshipRequest request = buildRequest(REQUEST_ID, REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID, FriendshipStatus.PENDING);
             when(friendshipRepo.getIncomingRequests(ADDRESSEE_OIDC_ID)).thenReturn(List.of(request));
             when(identityPort.findByIds(anyList())).thenReturn(Map.of());
 
-            List<FriendshipRequestDto> result = service.getIncomingRequests(ADDRESSEE_OIDC_ID);
-
-            assertThat(result).isEmpty();
+            assertThatThrownBy(() -> service.getIncomingRequests(ADDRESSEE_OIDC_ID))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
@@ -633,9 +630,10 @@ class FriendshipServiceTest {
     /**
      * Coverage plan – getOutgoingRequests:
      *   B1  requests.isEmpty() → true / false (mirrors incoming)
-     *   B2  respondedAt == null → null string
+     *   B2  otherUser == null → throws IllegalStateException
+     *   B3  respondedAt == null → null string
      *
-     * Total branches: 3  |  Tests: 3
+     * Total branches: 4  |  Tests: 3
      */
     @Nested
     class GetOutgoingRequests {
@@ -668,16 +666,15 @@ class FriendshipServiceTest {
             assertThat(dto.getRespondedAt()).isNull();
         }
 
-        // B2 – outgoing with user data missing
+        // B2 – outgoing with user data missing → throws IllegalStateException
         @Test
-        void should_filterOutRequest_when_addresseeUserDataIsMissing() {
+        void should_throwIllegalStateException_when_addresseeIdentityUnresolvable() {
             FriendshipRequest request = buildRequest(REQUEST_ID, REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID, FriendshipStatus.PENDING);
             when(friendshipRepo.getOutgoingRequests(REQUESTER_OIDC_ID)).thenReturn(List.of(request));
             when(identityPort.findByIds(anyList())).thenReturn(Map.of());
 
-            List<FriendshipRequestDto> result = service.getOutgoingRequests(REQUESTER_OIDC_ID);
-
-            assertThat(result).isEmpty();
+            assertThatThrownBy(() -> service.getOutgoingRequests(REQUESTER_OIDC_ID))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
