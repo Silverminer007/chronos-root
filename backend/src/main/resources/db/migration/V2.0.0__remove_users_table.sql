@@ -95,7 +95,28 @@ CREATE INDEX idx_group_member_user ON group_member (user_oidcid);
 -- ─────────────────────────────────────────────────────────────────────────────
 -- groups  (owner_id BIGINT → owner_oidcid VARCHAR)
 -- Groups with no valid owner are unmanageable and are dropped before migration.
+-- Deletion order respects FK constraints:
+--   appointment_participation (no FK, but references agp rows) →
+--   appointment_group_participations (FK ON DELETE NO ACTION → groups) →
+--   groups (group_member cascades via ON DELETE CASCADE from V1.4.0)
 -- ─────────────────────────────────────────────────────────────────────────────
+DELETE FROM appointment_participation
+WHERE group_participation_id IN (
+    SELECT id FROM appointment_group_participations
+    WHERE group_id IN (
+        SELECT id FROM groups
+        WHERE owner_id IS NULL
+           OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id)
+    )
+);
+
+DELETE FROM appointment_group_participations
+WHERE group_id IN (
+    SELECT id FROM groups
+    WHERE owner_id IS NULL
+       OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id)
+);
+
 DELETE FROM groups
 WHERE owner_id IS NULL
    OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id);
