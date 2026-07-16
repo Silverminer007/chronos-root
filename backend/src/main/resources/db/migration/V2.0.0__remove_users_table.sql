@@ -94,7 +94,12 @@ CREATE INDEX idx_group_member_user ON group_member (user_oidcid);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- groups  (owner_id BIGINT → owner_oidcid VARCHAR)
+-- Groups with no valid owner are unmanageable and are dropped before migration.
 -- ─────────────────────────────────────────────────────────────────────────────
+DELETE FROM groups
+WHERE owner_id IS NULL
+   OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id);
+
 ALTER TABLE groups ADD COLUMN owner_oidcid VARCHAR(255);
 
 UPDATE groups g
@@ -145,6 +150,9 @@ CREATE INDEX idx_pushsubscription_user ON pushsubscription (user_oidcid);
 -- ─────────────────────────────────────────────────────────────────────────────
 -- settings  (user_id BIGINT → user_oidcid VARCHAR)
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Delete orphaned settings rows (user_id was nullable in V1)
+DELETE FROM settings WHERE user_id IS NULL;
+
 ALTER TABLE settings ADD COLUMN user_oidcid VARCHAR(255);
 
 UPDATE settings s
@@ -152,6 +160,7 @@ SET user_oidcid = u.oidcid
 FROM users u
 WHERE s.user_id = u.id;
 
+ALTER TABLE settings ALTER COLUMN user_oidcid SET NOT NULL;
 DROP INDEX IF EXISTS uk3g6qnpteuj5qclay1c6a83ey8;
 ALTER TABLE settings DROP CONSTRAINT IF EXISTS fk_settings_user;
 ALTER TABLE settings DROP COLUMN user_id;
@@ -167,6 +176,7 @@ SET user_oidcid = u.oidcid
 FROM users u
 WHERE pnl.user_id = u.id;
 
+ALTER TABLE push_notification_log ALTER COLUMN user_oidcid SET NOT NULL;
 DROP INDEX IF EXISTS idx_push_notification_log_user_id;
 ALTER TABLE push_notification_log DROP COLUMN user_id;
 CREATE INDEX idx_push_notification_log_user_oidcid ON push_notification_log (user_oidcid);

@@ -13,12 +13,21 @@ import de.chronos_live.chronos_date_api.domain.PushSubscription;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.keycloak.admin.client.Keycloak;
 
 @ApplicationScoped
 @Transactional
 @Timed("service.admin.statistics")
 public class AdminStatisticsService {
+
+    @Inject
+    Keycloak keycloak;
+
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
+    String realm;
 
     public AdminStatisticsDto getStatistics() {
         return new AdminStatisticsDto(
@@ -33,8 +42,7 @@ public class AdminStatisticsService {
     }
 
     private AdminStatisticsDto.UserStatistics getUserStatistics() {
-        // User count is now sourced from Keycloak — not available here without Admin API call
-        return new AdminStatisticsDto.UserStatistics(-1L);
+        return new AdminStatisticsDto.UserStatistics((long) keycloak.realm(realm).users().count());
     }
 
     private AdminStatisticsDto.AppointmentStatistics getAppointmentStatistics() {

@@ -5,6 +5,8 @@
 -- and used for all profile reads (participant lists, group members, etc.)
 -- to avoid runtime Keycloak Admin API calls.
 
+CREATE SEQUENCE IF NOT EXISTS user_profiles_SEQ START WITH 1 INCREMENT BY 50;
+
 CREATE TABLE user_profiles (
     id           BIGSERIAL PRIMARY KEY,
     oidc_id      VARCHAR(255) NOT NULL,

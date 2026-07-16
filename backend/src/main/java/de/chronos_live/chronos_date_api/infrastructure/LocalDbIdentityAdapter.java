@@ -113,24 +113,28 @@ public class LocalDbIdentityAdapter implements IdentityPort {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    /** Upsert logic without a transaction annotation — called within an existing TX. */
+    /** Atomic upsert via INSERT ... ON CONFLICT to avoid the UPDATE-then-INSERT race on first login. */
     private void doUpsert(UserIdentity identity) {
-        int updated = UserProfile.update(
-                "firstName = ?1, lastName = ?2, email = ?3, profilePictureUrl = ?4, updatedAt = ?5"
-                        + " WHERE oidcId = ?6",
-                identity.firstName(), identity.lastName(), identity.email(),
-                identity.profilePictureUrl(), Instant.now(), identity.oidcId()
-        );
-        if (updated == 0) {
-            UserProfile p = new UserProfile();
-            p.oidcId = identity.oidcId();
-            p.firstName = identity.firstName();
-            p.lastName = identity.lastName();
-            p.email = identity.email();
-            p.profilePictureUrl = identity.profilePictureUrl();
-            p.updatedAt = Instant.now();
-            p.persist();
-        }
+        UserProfile.getEntityManager().createNativeQuery(
+                "INSERT INTO user_profiles (oidc_id, first_name, last_name, email, profile_picture_url, updated_at) "
+                + "VALUES (:oidcId, :firstName, :lastName, :email, :profilePictureUrl, :updatedAt) "
+                + "ON CONFLICT (oidc_id) DO UPDATE SET "
+                + "first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, "
+                + "email = EXCLUDED.email, profile_picture_url = EXCLUDED.profile_picture_url, "
+                + "updated_at = EXCLUDED.updated_at")
+                .setParameter("oidcId", identity.oidcId())
+                .setParameter("firstName", identity.firstName())
+                .setParameter("lastName", identity.lastName())
+                .setParameter("email", identity.email())
+                .setParameter("profilePictureUrl", identity.profilePictureUrl())
+                .setParameter("updatedAt", java.sql.Timestamp.from(Instant.now()))
+                .executeUpdate();
+    }
+
+    @Override
+    public boolean existsById(String oidcId) {
+        if (UserProfile.count("oidcId", oidcId) > 0) return true;
+        return fetchFromKeycloak(oidcId) != null;
     }
 
     private UserIdentity fetchFromKeycloakAndCache(String oidcId) {
@@ -139,6 +143,7 @@ public class LocalDbIdentityAdapter implements IdentityPort {
             doUpsert(identity);
             return identity;
         }
+        LOGGER.errorf("User %s not found in Keycloak — returning stub identity", oidcId);
         return new UserIdentity(oidcId, null, null, null, null);
     }
 

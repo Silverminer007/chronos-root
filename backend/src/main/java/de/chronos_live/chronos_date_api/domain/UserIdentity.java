@@ -12,6 +12,7 @@ public record UserIdentity(
         String profilePictureUrl
 ) {
     public String getName() {
-        return firstName + " " + lastName;
+        if (firstName == null && lastName == null) return "Unbekannter Nutzer";
+        return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).strip();
     }
 }

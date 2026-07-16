@@ -10,7 +10,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -28,7 +27,7 @@ public class AdminUserService {
     @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
     String realm;
 
-    public AdminUserListResponse listUsers(int page, int size, Instant lastSeenAfter, Instant lastSeenBefore) {
+    public AdminUserListResponse listUsers(int page, int size) {
         int first = page * size;
         List<UserRepresentation> users = keycloak.realm(realm).users().list(first, size);
         long total = keycloak.realm(realm).users().count();
