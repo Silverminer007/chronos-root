@@ -83,8 +83,8 @@ import static org.mockito.Mockito.*;
 class AppointmentParticipationValidationServiceTest {
 
     // ── Constants ────────────────────────────────────────────────────────────
-    private static final Long APPT_ID     = 42L;
-    private static final Long ACTING_USER = 1L;
+    private static final Long   APPT_ID     = 42L;
+    private static final String ACTING_USER = "oidc-acting-1";
 
     // Instants used by the scheduler tests:
     // future = well beyond "now" so isBefore(Instant.now()) = false

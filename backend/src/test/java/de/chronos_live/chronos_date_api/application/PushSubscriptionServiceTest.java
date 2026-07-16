@@ -1,14 +1,11 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.PushSubscription;
-import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionDto;
 import de.chronos_live.chronos_date_api.infrastructure.PushSubscriptionRepository;
-import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -21,12 +18,12 @@ import static org.mockito.Mockito.*;
  * Unit tests for {@link PushSubscriptionService}.
  *
  * <p>Strategy: {@code @QuarkusTest} + {@code @InjectMock} replaces the
- * {@link PushSubscriptionRepository} CDI bean with a Mockito mock, and
- * {@link PanacheMock} intercepts the static {@code User.findById} call.
+ * {@link PushSubscriptionRepository} CDI bean with a Mockito mock.
+ * User resolution is now done by OIDC ID strings — no User entity or PanacheMock needed.
  *
  * <p><b>Coverage plan</b>
  * <pre>
- * saveSubscription(userId, dto)
+ * saveSubscription(userOidcId, dto)
  *   B1  existing != null → delete + replace  / null → skip delete, just persist
  *   Tests: 2
  *
@@ -38,7 +35,7 @@ import static org.mockito.Mockito.*;
  *   B1  existing != null → true  / null → false
  *   Tests: 2
  *
- * getAllForUser(userId)
+ * getAllForUser(userOidcId)
  *   — no conditional branches; pure delegation to repository.
  *   Tests: 1
  * </pre>
@@ -49,7 +46,7 @@ import static org.mockito.Mockito.*;
 class PushSubscriptionServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long   USER_ID      = 1L;
+    private static final String USER_OIDC_ID = "oidc-user-1";
     private static final String ENDPOINT     = "https://push.example.com/sub/abc";
     private static final String P256DH_KEY   = "p256dhKeyValue";
     private static final String AUTH_KEY     = "authKeyValue";
@@ -72,6 +69,7 @@ class PushSubscriptionServiceTest {
         sub.setEndpoint(ENDPOINT);
         sub.setP256dh(P256DH_KEY);
         sub.setAuth(AUTH_KEY);
+        sub.setUserOidcId(USER_OIDC_ID);
         return sub;
     }
 
@@ -81,19 +79,13 @@ class PushSubscriptionServiceTest {
     @Nested
     class SaveSubscription {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(User.class);
-        }
-
         // B1=true — existing subscription present → delete it first, then persist new one
         @Test
         void should_deleteExistingAndPersistNew_when_endpointAlreadyRegistered() {
             PushSubscription existing = buildSubscription();
             when(repo.findByEndpoint(ENDPOINT)).thenReturn(existing);
-            when(User.<User>findById(USER_ID)).thenReturn(new User());
 
-            service.saveSubscription(USER_ID, buildDto());
+            service.saveSubscription(USER_OIDC_ID, buildDto());
 
             verify(repo).delete(existing);
             verify(repo).persist(any(PushSubscription.class));
@@ -103,9 +95,8 @@ class PushSubscriptionServiceTest {
         @Test
         void should_persistNew_when_endpointIsNotYetRegistered() {
             when(repo.findByEndpoint(ENDPOINT)).thenReturn(null);
-            when(User.<User>findById(USER_ID)).thenReturn(new User());
 
-            service.saveSubscription(USER_ID, buildDto());
+            service.saveSubscription(USER_OIDC_ID, buildDto());
 
             verify(repo, never()).delete(any(PushSubscription.class));
             verify(repo).persist(any(PushSubscription.class));
@@ -176,12 +167,12 @@ class PushSubscriptionServiceTest {
         @Test
         void should_delegateToRepository_when_called() {
             List<PushSubscription> expected = List.of(buildSubscription());
-            when(repo.findByUserId(USER_ID)).thenReturn(expected);
+            when(repo.findByUserOidcId(USER_OIDC_ID)).thenReturn(expected);
 
-            List<PushSubscription> result = service.getAllForUser(USER_ID);
+            List<PushSubscription> result = service.getAllForUser(USER_OIDC_ID);
 
             assertThat(result).isSameAs(expected);
-            verify(repo, times(1)).findByUserId(USER_ID);
+            verify(repo, times(1)).findByUserOidcId(USER_OIDC_ID);
             verifyNoMoreInteractions(repo);
         }
     }

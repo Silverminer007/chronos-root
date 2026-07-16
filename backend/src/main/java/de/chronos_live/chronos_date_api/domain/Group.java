@@ -12,8 +12,8 @@ import java.util.Set;
 @Entity
 @Table(name = "groups")
 public class Group extends PanacheEntity {
-    @ManyToOne
-    private User owner;
+    @Column(name = "owner_oidcid")
+    private String ownerOidcId;
     private String groupName;
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "group")
     @EqualsAndHashCode.Exclude

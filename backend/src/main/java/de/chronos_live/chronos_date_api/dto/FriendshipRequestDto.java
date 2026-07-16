@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FriendshipRequestDto {
     private Long requestId;
-    private Long userId;
+    private String userId;
     private String userName;
     private String userEmail;
     private String profilePictureUrl;

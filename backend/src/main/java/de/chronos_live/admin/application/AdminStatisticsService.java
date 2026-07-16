@@ -1,15 +1,33 @@
 package de.chronos_live.admin.application;
 
-import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.domain.AppointmentParticipation;
+import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
+import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
+import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
+import de.chronos_live.chronos_date_api.domain.Group;
+import de.chronos_live.chronos_date_api.domain.GroupMember;
+import de.chronos_live.chronos_date_api.domain.Message;
+import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
+import de.chronos_live.chronos_date_api.domain.PushSubscription;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.keycloak.admin.client.Keycloak;
 
 @ApplicationScoped
 @Transactional
 @Timed("service.admin.statistics")
 public class AdminStatisticsService {
+
+    @Inject
+    Keycloak keycloak;
+
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
+    String realm;
 
     public AdminStatisticsDto getStatistics() {
         return new AdminStatisticsDto(
@@ -24,7 +42,7 @@ public class AdminStatisticsService {
     }
 
     private AdminStatisticsDto.UserStatistics getUserStatistics() {
-        return new AdminStatisticsDto.UserStatistics(User.count());
+        return new AdminStatisticsDto.UserStatistics((long) keycloak.realm(realm).users().count());
     }
 
     private AdminStatisticsDto.AppointmentStatistics getAppointmentStatistics() {

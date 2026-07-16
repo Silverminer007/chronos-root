@@ -33,7 +33,7 @@ public class AdminPushResource {
     @POST
     @Path("/test/{userId}")
     @RolesAllowed("ADMIN_API")
-    public void sendTest(@PathParam("userId") Long userId, @RequestBody String payload) {
+    public void sendTest(@PathParam("userId") String userId, @RequestBody String payload) {
         if(payload == null || payload.isEmpty()) {
             webPushService.sendToUser(
                     userId,
@@ -53,7 +53,7 @@ public class AdminPushResource {
     @Path("/log")
     @RolesAllowed("ADMIN_API")
     public Response getNotificationLog(
-            @QueryParam("user_id") Long userId,
+            @QueryParam("user_id") String userId,
             @QueryParam("from") String from,
             @QueryParam("to") String to,
             @QueryParam("success") Boolean success,
@@ -76,7 +76,7 @@ public class AdminPushResource {
     private PushNotificationLogDto toDto(PushNotificationLog entry) {
         return new PushNotificationLogDto(
                 entry.id,
-                entry.getUserId(),
+                entry.getUserOidcId(),
                 entry.getNotificationType(),
                 entry.getPayload(),
                 entry.getEndpoint(),

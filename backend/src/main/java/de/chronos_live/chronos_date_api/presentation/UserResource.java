@@ -1,12 +1,13 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.UserService;
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.application.KeycloakProfileService;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.LinkedAccountDto;
 import de.chronos_live.chronos_date_api.dto.PasskeyDto;
 import de.chronos_live.chronos_date_api.dto.PrincipalDto;
 import de.chronos_live.chronos_date_api.dto.UpdatedUserDto;
 import de.chronos_live.chronos_date_api.mapper.PrincipalMapper;
+import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
@@ -28,39 +29,32 @@ import java.util.Map;
 @Timed("api.user")
 public class UserResource {
     @Inject
-    UserService userService;
+    KeycloakProfileService keycloakProfileService;
     @Inject
     PrincipalMapper mapper;
+    @Inject
+    PrincipalContext principalContext;
     @Inject
     JsonWebToken jwt;
 
     @GET
     public Response getUser() {
-        User user = userService.getUser(jwt.getSubject());
+        UserIdentity user = principalContext.getPrincipal();
         return Response.ok(mapper.toDto(user)).build();
     }
 
     @POST
     public Response createUser() {
-        User user =
-                this.userService.createUser(
-                        jwt.getClaim("given_name"),
-                        jwt.getClaim("family_name"),
-                        jwt.getClaim("email"),
-                        jwt.getSubject()
-                );
+        // With Keycloak as source of truth, user "creation" is just reading the JWT.
+        UserIdentity user = principalContext.getPrincipal();
         return Response.ok(mapper.toDto(user)).build();
     }
 
     @PATCH
     public Response patchUser(@RequestBody PrincipalDto userDto, @QueryParam("redirectUri") String redirectUri) {
-        UpdatedUserDto newUser = this.userService.updateUser(
-                userDto.first_name(),
-                userDto.last_name(),
-                userDto.email(),
-                jwt.getSubject(),
-                redirectUri
-        );
+        String oidcId = principalContext.getPrincipal().oidcId();
+        UpdatedUserDto newUser = keycloakProfileService.updateUser(
+                userDto.first_name(), userDto.last_name(), userDto.email(), oidcId, redirectUri);
         return Response.ok(newUser).build();
     }
 
@@ -72,7 +66,8 @@ public class UserResource {
     @GET
     @Path("/linked")
     public Response getLinkedAccounts() {
-        List<LinkedAccountDto> accounts = userService.getLinkedAccounts(jwt.getSubject()).stream()
+        String oidcId = principalContext.getPrincipal().oidcId();
+        List<LinkedAccountDto> accounts = keycloakProfileService.getLinkedAccounts(oidcId).stream()
                 .map(fi -> new LinkedAccountDto(fi.getIdentityProvider()))
                 .toList();
         return Response.ok(accounts).build();
@@ -81,18 +76,17 @@ public class UserResource {
     @DELETE
     @Path("/linked/{providerId}")
     public Response unlinkAccount(@PathParam("providerId") String providerId) {
-        userService.unlinkAccount(jwt.getSubject(), providerId);
+        String oidcId = principalContext.getPrincipal().oidcId();
+        keycloakProfileService.unlinkAccount(oidcId, providerId);
         return Response.noContent().build();
     }
 
     @GET
     @Path("/link/{provider}")
-    public Response getLinkUrl(
-            @PathParam("provider") String provider,
-            @QueryParam("redirectUri") String redirectUri
-    ) {
+    public Response getLinkUrl(@PathParam("provider") String provider,
+                               @QueryParam("redirectUri") String redirectUri) {
         try {
-            String linkUrl = userService.getLinkUrl(provider, redirectUri);
+            String linkUrl = keycloakProfileService.getLinkUrl(provider, redirectUri);
             return Response.ok(Map.of("url", linkUrl)).build();
         } catch (NoSuchAlgorithmException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -101,33 +95,26 @@ public class UserResource {
 
     @GET
     @Path("/link/passkey")
-    public Response getPasskeyRegistrationUrl(
-            @QueryParam("redirectUri") String redirectUri
-    ) {
-        String linkUrl = userService.getPasskeyRegistrationUrl(redirectUri);
+    public Response getPasskeyRegistrationUrl(@QueryParam("redirectUri") String redirectUri) {
+        String linkUrl = keycloakProfileService.getPasskeyRegistrationUrl(redirectUri);
         return Response.ok(Map.of("url", linkUrl)).build();
     }
 
     @GET
     @Path("/unlink/passkey")
-    public Response getPasskeyDeletionUrl(
-            @QueryParam("redirectUri") String redirectUri,
-            @QueryParam("passkeyId") String passkeyId
-    ) {
-        String linkUrl = userService.getDeletePasskeyUrl(redirectUri, passkeyId);
+    public Response getPasskeyDeletionUrl(@QueryParam("redirectUri") String redirectUri,
+                                          @QueryParam("passkeyId") String passkeyId) {
+        String linkUrl = keycloakProfileService.getDeletePasskeyUrl(redirectUri, passkeyId);
         return Response.ok(Map.of("url", linkUrl)).build();
     }
 
     @GET
     @Path("/passkeys")
     public Response getPasskeys() {
-        List<PasskeyDto> passkeys = userService.getPasskeys(jwt.getSubject()).stream()
-                .map(c -> new PasskeyDto(
-                        c.getId(),
-                        c.getUserLabel(),
-                        c.getCreatedDate() != null ? Instant.ofEpochMilli(c.getCreatedDate()).toString() : null,
-                        null
-                ))
+        String oidcId = principalContext.getPrincipal().oidcId();
+        List<PasskeyDto> passkeys = keycloakProfileService.getPasskeys(oidcId).stream()
+                .map(c -> new PasskeyDto(c.getId(), c.getUserLabel(),
+                        c.getCreatedDate() != null ? Instant.ofEpochMilli(c.getCreatedDate()).toString() : null, null))
                 .toList();
         return Response.ok(passkeys).build();
     }
@@ -135,7 +122,7 @@ public class UserResource {
     @GET
     @Path("/change-password")
     public Response getChangePasswordUrl(@QueryParam("redirectUri") String redirectUri) {
-        String linkUrl = userService.getChangePasswordUrl(redirectUri);
+        String linkUrl = keycloakProfileService.getChangePasswordUrl(redirectUri);
         return Response.ok(Map.of("url", linkUrl)).build();
     }
 }

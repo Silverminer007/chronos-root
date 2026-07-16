@@ -3,13 +3,11 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.SettingsDto;
 import de.chronos_live.chronos_date_api.mapper.SettingsMapper;
-import io.agroal.api.AgroalDataSource;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,8 +24,9 @@ import static org.mockito.Mockito.*;
  *
  * <p>Strategy: {@code @QuarkusTest} + {@code @InjectMock} replaces CDI
  * dependencies with Mockito mocks. {@link PanacheMock} intercepts every
- * Panache-enhanced call on {@link Settings} and {@link User} so no real
- * database is ever touched.
+ * Panache-enhanced call on {@link Settings} so no real database is ever touched.
+ * The User entity has been removed — user identity is now represented by OIDC ID
+ * strings. No DB fixture for a users table is needed.
  *
  * <p><b>Untestable branches:</b>
  * <ul>
@@ -35,53 +34,27 @@ import static org.mockito.Mockito.*;
  *       all five {@code AppointmentNotificationSetting} values are handled by their
  *       own {@code if}-branch, so no value can reach the trailing return.</li>
  *   <li>{@code checkSetting} line 49: the {@code appointmentParticipation == null}
- *       guard is unreachable through any public method — every public caller accesses
- *       {@code appointmentParticipation.getUser().id} before calling this method,
- *       which would already NPE if {@code appointmentParticipation} were null.</li>
+ *       guard is unreachable through any public method — every public caller passes
+ *       a non-null participation.</li>
  * </ul>
  */
 @QuarkusTest
 class SettingsServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long USER_ID = 1L;
+    private static final String USER_OIDC_ID = "oidc-user-1";
 
     // ── CDI injection ──────────────────────────────────────────────────────────
     @Inject
     SettingsService service;
 
-    @Inject
-    AgroalDataSource dataSource;
-
     @InjectMock
     SettingsMapper settingsMapper;
 
-    @BeforeEach
-    void insertUserFixture() throws Exception {
-        try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO users (id, firstname, lastname) VALUES (1, 'Test', 'User') ON CONFLICT DO NOTHING");
-        }
-    }
-
-    @AfterEach
-    void cleanupSettingsTestData() throws Exception {
-        try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("DELETE FROM settings WHERE user_id = 1");
-        }
-    }
-
     // ── Test-object builders ───────────────────────────────────────────────────
-    private static User buildUser(Long id) {
-        User u = new User();
-        u.id = id;
-        u.setFirstName("Alice");
-        u.setLastName("Test");
-        return u;
-    }
-
-    private static Settings buildSettings(User user) {
+    private static Settings buildSettings(String userOidcId) {
         Settings s = new Settings();
-        s.setUser(user);
+        s.setUserOidcId(userOidcId);
         s.setAppointmentMoved(AppointmentNotificationSetting.ALL);
         s.setAppointmentMessage(AppointmentNotificationSetting.ATTENDANT);
         s.setAppointmentCancelled(AppointmentNotificationSetting.ALL);
@@ -94,17 +67,17 @@ class SettingsServiceTest {
         return s;
     }
 
-    private static AppointmentParticipation buildParticipation(User user, UserRole role) {
+    private static AppointmentParticipation buildParticipation(String userOidcId, UserRole role) {
         AppointmentParticipation ap = new AppointmentParticipation();
-        ap.setUser(user);
+        ap.setUserOidcId(userOidcId);
         ap.setRole(role);
         ap.setStatus(ParticipationStatus.PENDING);
         return ap;
     }
 
-    private static GroupMember buildGroupMember(User user) {
+    private static GroupMember buildGroupMember(String userOidcId) {
         GroupMember gm = new GroupMember();
-        gm.setUser(user);
+        gm.setUserOidcId(userOidcId);
         return gm;
     }
 
@@ -141,33 +114,28 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         // B1=true — settings record already exists for this user
         @Test
         void should_returnExistingSettings_when_settingsAlreadyExist() {
-            User user = buildUser(USER_ID);
-            Settings existing = buildSettings(user);
+            Settings existing = buildSettings(USER_OIDC_ID);
             stubSettingsFound(existing);
 
-            Settings result = service.getOrCreateSettings(USER_ID);
+            Settings result = service.getOrCreateSettings(USER_OIDC_ID);
 
             assertThat(result).isSameAs(existing);
-            PanacheMock.verifyNoInteractions(User.class);
         }
 
         // B2=true — no settings record exists; default is created and persisted
         @Test
         void should_createDefaultSettingsAndPersist_when_settingsDoNotExist() {
-            User user = buildUser(USER_ID);
             stubSettingsNotFound();
-            when(User.<User>findById(USER_ID)).thenReturn(user);
 
-            Settings result = service.getOrCreateSettings(USER_ID);
+            Settings result = service.getOrCreateSettings(USER_OIDC_ID);
 
             assertThat(result).isNotNull();
-            assertThat(result.getUser()).isSameAs(user);
+            assertThat(result.getUserOidcId()).isEqualTo(USER_OIDC_ID);
             // Verify default values match getDefaultSetting()
             assertThat(result.getAppointmentMoved()).isEqualTo(AppointmentNotificationSetting.ALL);
             assertThat(result.getAppointmentMessage()).isEqualTo(AppointmentNotificationSetting.ATTENDANT);
@@ -178,8 +146,6 @@ class SettingsServiceTest {
             assertThat(result.getAppointmentParticipationStatusPending()).isEqualTo(AppointmentNotificationSetting.ATTENDANT);
             assertThat(result.getAppointmentReminder()).isEqualTo(AppointmentNotificationSetting.ALL);
             assertThat(result.getGroupMemberAdded()).isEqualTo(NotificationSetting.DISABLED);
-            // instance persist() is not interceptable by PanacheMock with single-arg matcher;
-            // default values assertions above confirm the expected persist path was taken
         }
     }
 
@@ -200,19 +166,17 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         @Test
         void should_delegateToMapper_when_called() {
-            User user = buildUser(USER_ID);
-            Settings existing = buildSettings(user);
+            Settings existing = buildSettings(USER_OIDC_ID);
             stubSettingsFound(existing);
 
             SettingsDto dto = new SettingsDto();
             dto.setAppointment_moved("DISABLED");
 
-            service.updateSettings(USER_ID, dto);
+            service.updateSettings(USER_OIDC_ID, dto);
 
             verify(settingsMapper).updateEntityFromDto(dto, existing);
         }
@@ -244,18 +208,16 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         // B1 — null setting (we fabricate a Settings with null appointmentMoved)
         @Test
         void should_returnFalse_when_settingIsNull() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentMoved(null);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.ATTENDANT);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.ATTENDANT);
             boolean result = service.sendAppointmentMovedNotification(ap);
 
             assertThat(result).isFalse();
@@ -264,12 +226,11 @@ class SettingsServiceTest {
         // B3 — DISABLED always returns false regardless of role
         @Test
         void should_returnFalse_when_settingIsDisabled() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentMoved(AppointmentNotificationSetting.DISABLED);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.RESPONSIBLE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.RESPONSIBLE);
             boolean result = service.sendAppointmentMovedNotification(ap);
 
             assertThat(result).isFalse();
@@ -278,12 +239,11 @@ class SettingsServiceTest {
         // B4 true — ALL with role >= GUEST
         @Test
         void should_returnTrue_when_settingAllAndRoleIsGuest() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentMoved(AppointmentNotificationSetting.ALL);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.GUEST);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.GUEST);
             boolean result = service.sendAppointmentMovedNotification(ap);
 
             assertThat(result).isTrue();
@@ -292,12 +252,11 @@ class SettingsServiceTest {
         // B4 false — ALL with role < GUEST (NONE)
         @Test
         void should_returnFalse_when_settingAllAndRoleIsNone() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentMoved(AppointmentNotificationSetting.ALL);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.NONE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.NONE);
             boolean result = service.sendAppointmentMovedNotification(ap);
 
             assertThat(result).isFalse();
@@ -306,12 +265,11 @@ class SettingsServiceTest {
         // B5 true — RESPONSIBLE with role >= RESPONSIBLE
         @Test
         void should_returnTrue_when_settingResponsibleAndRoleIsResponsible() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipantAdded(AppointmentNotificationSetting.RESPONSIBLE);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.RESPONSIBLE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.RESPONSIBLE);
             boolean result = service.sendAppointmentParticipantAddedEventNotification(ap);
 
             assertThat(result).isTrue();
@@ -320,12 +278,11 @@ class SettingsServiceTest {
         // B5 false — RESPONSIBLE with role < RESPONSIBLE (HELPER)
         @Test
         void should_returnFalse_when_settingResponsibleAndRoleIsHelper() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipantAdded(AppointmentNotificationSetting.RESPONSIBLE);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.HELPER);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.HELPER);
             boolean result = service.sendAppointmentParticipantAddedEventNotification(ap);
 
             assertThat(result).isFalse();
@@ -334,12 +291,11 @@ class SettingsServiceTest {
         // B6 true — HELPER with role >= HELPER
         @Test
         void should_returnTrue_when_settingHelperAndRoleIsHelper() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipationStatusChanged(AppointmentNotificationSetting.HELPER);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.HELPER);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.HELPER);
             boolean result = service.sendAppointmentParticipationStatusChangedNotification(ap);
 
             assertThat(result).isTrue();
@@ -348,12 +304,11 @@ class SettingsServiceTest {
         // B6 false — HELPER with role < HELPER (ATTENDANT)
         @Test
         void should_returnFalse_when_settingHelperAndRoleIsAttendant() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipationStatusChanged(AppointmentNotificationSetting.HELPER);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.ATTENDANT);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.ATTENDANT);
             boolean result = service.sendAppointmentParticipationStatusChangedNotification(ap);
 
             assertThat(result).isFalse();
@@ -362,12 +317,11 @@ class SettingsServiceTest {
         // B7 true — ATTENDANT with role >= ATTENDANT
         @Test
         void should_returnTrue_when_settingAttendantAndRoleIsAttendant() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentMessage(AppointmentNotificationSetting.ATTENDANT);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.ATTENDANT);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.ATTENDANT);
             boolean result = service.sendAppointmentMessageSentNotification(ap);
 
             assertThat(result).isTrue();
@@ -376,12 +330,11 @@ class SettingsServiceTest {
         // B7 false — ATTENDANT with role < ATTENDANT (GUEST)
         @Test
         void should_returnFalse_when_settingAttendantAndRoleIsGuest() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentMessage(AppointmentNotificationSetting.ATTENDANT);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.GUEST);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.GUEST);
             boolean result = service.sendAppointmentMessageSentNotification(ap);
 
             assertThat(result).isFalse();
@@ -405,28 +358,25 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         @Test
         void should_returnTrue_when_settingAllAndRoleIsAttendant() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentCancelled(AppointmentNotificationSetting.ALL);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.ATTENDANT);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.ATTENDANT);
             assertThat(service.sendAppointmentCancelledNotification(ap)).isTrue();
         }
 
         @Test
         void should_returnFalse_when_settingDisabled() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentCancelled(AppointmentNotificationSetting.DISABLED);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.RESPONSIBLE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.RESPONSIBLE);
             assertThat(service.sendAppointmentCancelledNotification(ap)).isFalse();
         }
     }
@@ -447,28 +397,25 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         @Test
         void should_returnTrue_when_settingAttendantAndRoleIsAttendant() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipationInvalid(AppointmentNotificationSetting.ATTENDANT);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.ATTENDANT);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.ATTENDANT);
             assertThat(service.sendAppointmentParticipationInvalidNotification(ap)).isTrue();
         }
 
         @Test
         void should_returnFalse_when_settingAttendantAndRoleIsGuest() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipationInvalid(AppointmentNotificationSetting.ATTENDANT);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.GUEST);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.GUEST);
             assertThat(service.sendAppointmentParticipationInvalidNotification(ap)).isFalse();
         }
     }
@@ -489,28 +436,25 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         @Test
         void should_returnTrue_when_settingAttendantAndRoleIsAttendant() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipationStatusPending(AppointmentNotificationSetting.ATTENDANT);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.ATTENDANT);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.ATTENDANT);
             assertThat(service.sendAppointmentParticipationStatusPendingReminderNotification(ap)).isTrue();
         }
 
         @Test
         void should_returnFalse_when_settingDisabled() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentParticipationStatusPending(AppointmentNotificationSetting.DISABLED);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.RESPONSIBLE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.RESPONSIBLE);
             assertThat(service.sendAppointmentParticipationStatusPendingReminderNotification(ap)).isFalse();
         }
     }
@@ -531,28 +475,25 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         @Test
         void should_returnTrue_when_settingAllAndRoleIsGuest() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentReminder(AppointmentNotificationSetting.ALL);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.GUEST);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.GUEST);
             assertThat(service.sendAppointmentReminderNotification(ap)).isTrue();
         }
 
         @Test
         void should_returnFalse_when_settingAllAndRoleIsNone() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setAppointmentReminder(AppointmentNotificationSetting.ALL);
             stubSettingsFound(s);
 
-            AppointmentParticipation ap = buildParticipation(user, UserRole.NONE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.NONE);
             assertThat(service.sendAppointmentReminderNotification(ap)).isFalse();
         }
     }
@@ -574,30 +515,27 @@ class SettingsServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Settings.class);
-            PanacheMock.mock(User.class);
         }
 
         // B1=true
         @Test
         void should_returnTrue_when_groupMemberAddedIsEnabled() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setGroupMemberAdded(NotificationSetting.ENABLED);
             stubSettingsFound(s);
 
-            GroupMember gm = buildGroupMember(user);
+            GroupMember gm = buildGroupMember(USER_OIDC_ID);
             assertThat(service.sendGroupMemberAddedNotification(gm)).isTrue();
         }
 
         // B2=true
         @Test
         void should_returnFalse_when_groupMemberAddedIsDisabled() {
-            User user = buildUser(USER_ID);
-            Settings s = buildSettings(user);
+            Settings s = buildSettings(USER_OIDC_ID);
             s.setGroupMemberAdded(NotificationSetting.DISABLED);
             stubSettingsFound(s);
 
-            GroupMember gm = buildGroupMember(user);
+            GroupMember gm = buildGroupMember(USER_OIDC_ID);
             assertThat(service.sendGroupMemberAddedNotification(gm)).isFalse();
         }
     }
@@ -617,8 +555,7 @@ class SettingsServiceTest {
 
         @Test
         void should_alwaysReturnTrue() {
-            User user = buildUser(USER_ID);
-            AppointmentParticipation ap = buildParticipation(user, UserRole.NONE);
+            AppointmentParticipation ap = buildParticipation(USER_OIDC_ID, UserRole.NONE);
             assertThat(service.sendAppointmentParticipationStatusRecheckRequestedNotification(ap)).isTrue();
         }
     }

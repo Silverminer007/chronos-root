@@ -6,7 +6,7 @@ import de.chronos_live.chronos_date_api.application.events.FriendshipRemovedEven
 import de.chronos_live.chronos_date_api.application.events.FriendshipRequestSentEvent;
 import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
 import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.FriendDto;
 import de.chronos_live.chronos_date_api.dto.FriendshipRequestDto;
 import de.chronos_live.chronos_date_api.dto.UserDto;
@@ -14,9 +14,9 @@ import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.infrastructure.FriendshipRepository;
 import io.micrometer.core.annotation.Timed;
-import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
@@ -24,7 +24,11 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -34,6 +38,9 @@ public class FriendshipService {
 
     @Inject
     FriendshipRepository friendshipRepo;
+
+    @Inject
+    IdentityPort identityPort;
 
     @Inject
     Event<FriendshipRequestSentEvent> friendshipRequestEvent;
@@ -47,348 +54,261 @@ public class FriendshipService {
     @Inject
     Event<FriendshipRemovedEvent> friendshipRemovedEvent;
 
-    public void sendFriendshipRequest(Long requesterId, Long addresseeId, String email) {
-        if (addresseeId == null) {
+    /**
+     * Sends a friendship request, resolving the addressee by email via Keycloak when needed.
+     */
+    public void sendFriendshipRequest(String requesterOidcId, String addresseeOidcId, String email) {
+        if (addresseeOidcId == null) {
             if (email == null) {
                 throw new BadRequestException("You must either set addressee_id or email");
             }
-
-            User addressee =
-                    (User) User.find("email = ?1", email)
-                            .firstResultOptional()
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException("Es wurde kein User mit der E-Mail Adresse " + email + " gefunden"));
-            addresseeId = addressee.id;
+            // Resolve oidcId from email via Keycloak Admin API
+            List<UserIdentity> found = identityPort.search(email, 1);
+            if (found.isEmpty() || !email.equalsIgnoreCase(found.getFirst().email())) {
+                throw new ResourceNotFoundException("Es wurde kein User mit der E-Mail Adresse " + email + " gefunden");
+            }
+            addresseeOidcId = found.getFirst().oidcId();
         }
-        this.sendFriendshipRequest(requesterId, addresseeId);
+        this.sendFriendshipRequest(requesterOidcId, addresseeOidcId);
     }
 
-    /**
-     * Sendet eine Freundschaftsanfrage
-     */
     @Transactional
-    public void sendFriendshipRequest(Long requesterId, Long addresseeId) {
-        LOGGER.debugf("[Principal %s][Addressee %s] Sending Friendship Request", requesterId, addresseeId);
+    public void sendFriendshipRequest(String requesterOidcId, String addresseeOidcId) {
+        LOGGER.debugf("[Principal %s][Addressee %s] Sending Friendship Request", requesterOidcId, addresseeOidcId);
 
-        Log.info("User " + requesterId + " sending friendship request to " + addresseeId);
-
-        // Validierung
-        if (requesterId.equals(addresseeId)) {
+        if (requesterOidcId.equals(addresseeOidcId)) {
             throw new BadRequestException("Du kannst dir nicht selbst eine Freundschaftsanfrage senden");
         }
 
-        // Prüfe ob Empfänger existiert
-        User.findByIdOptional(addresseeId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", addresseeId));
+        if (!identityPort.existsById(addresseeOidcId)) {
+            throw new ResourceNotFoundException("Kein Benutzer mit der ID " + addresseeOidcId + " gefunden");
+        }
 
-        // Prüfe ob bereits eine Anfrage oder Freundschaft existiert
-        Optional<FriendshipRequest> existing = friendshipRepo.findRequest(requesterId, addresseeId);
+        Optional<FriendshipRequest> existing = friendshipRepo.findRequest(requesterOidcId, addresseeOidcId);
         if (existing.isPresent()) {
             FriendshipRequest existingRequest = existing.get();
-
             if (existingRequest.getStatus() == FriendshipStatus.ACCEPTED) {
                 throw new ValidationException("Ihr seid bereits befreundet");
             }
-
             if (existingRequest.getStatus() == FriendshipStatus.PENDING) {
-                // Prüfe Richtung
-                if (existingRequest.getRequesterId().equals(requesterId)) {
+                if (existingRequest.getRequesterId().equals(requesterOidcId)) {
                     throw new ValidationException("Du hast bereits eine Freundschaftsanfrage gesendet");
                 } else {
                     throw new ValidationException(
-                            "Dieser User hat dir bereits eine Freundschaftsanfrage gesendet. " +
-                                    "Bitte nimm diese an."
-                    );
+                            "Dieser User hat dir bereits eine Freundschaftsanfrage gesendet. Bitte nimm diese an.");
                 }
             }
-
-            // Status = DECLINED: Erlaube neue Anfrage nach Ablehnung
             if (existingRequest.getStatus() == FriendshipStatus.DECLINED) {
-                // Lösche alte abgelehnte Anfrage
                 friendshipRepo.delete(existingRequest);
             }
         }
 
-        // Erstelle neue Anfrage
         FriendshipRequest request = new FriendshipRequest();
-        request.setRequesterId(requesterId);
-        request.setAddresseeId(addresseeId);
+        request.setRequesterId(requesterOidcId);
+        request.setAddresseeId(addresseeOidcId);
         request.setStatus(FriendshipStatus.PENDING);
         request.setCreatedAt(Instant.now());
         friendshipRepo.persist(request);
 
-        // Event feuern
-        User requester = User.findById(requesterId);
-        this.friendshipRequestEvent.fire(new FriendshipRequestSentEvent(
+        UserIdentity requester = identityPort.findById(requesterOidcId);
+        friendshipRequestEvent.fire(new FriendshipRequestSentEvent(
                 request.id,
-                requesterId,
-                addresseeId,
+                requesterOidcId,
+                addresseeOidcId,
                 requester.getName()
         ));
-
-        Log.info("Friendship request created with ID " + request.id);
     }
 
-    /**
-     * Nimmt Freundschaftsanfrage an
-     */
     @Transactional
-    public void acceptFriendshipRequest(Long requestId, Long acceptingUserId) {
-        LOGGER.debugf("[Principal %s][Friendship Request %s] Accepting Friendship Request", acceptingUserId, requestId);
-
-        Log.info("User " + acceptingUserId + " accepting friendship request " + requestId);
+    public void acceptFriendshipRequest(Long requestId, String acceptingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Friendship Request %s] Accepting", acceptingUserOidcId, requestId);
 
         FriendshipRequest request = friendshipRepo.findByIdOptional(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Freundschaftsanfrage", requestId));
 
-        // Prüfe ob User der Empfänger ist
-        if (!request.getAddresseeId().equals(acceptingUserId)) {
+        if (!request.getAddresseeId().equals(acceptingUserOidcId)) {
             throw new ForbiddenException("Du kannst nur deine eigenen Freundschaftsanfragen annehmen");
         }
-
-        // Prüfe Status
         if (request.getStatus() != FriendshipStatus.PENDING) {
             throw new ValidationException("Diese Freundschaftsanfrage wurde bereits bearbeitet");
         }
 
-        // Akzeptiere Anfrage
         request.setStatus(FriendshipStatus.ACCEPTED);
         request.setRespondedAt(Instant.now());
 
-        // Event feuern
-        this.friendshipAcceptedEvent.fire(new FriendshipAcceptedEvent(
-                request.id,
-                request.getRequesterId(),
-                request.getAddresseeId()
-        ));
-
-        Log.info("Friendship request accepted");
+        friendshipAcceptedEvent.fire(new FriendshipAcceptedEvent(
+                request.id, request.getRequesterId(), request.getAddresseeId()));
     }
 
-    /**
-     * Lehnt Freundschaftsanfrage ab
-     */
     @Transactional
-    public void declineFriendshipRequest(Long requestId, Long decliningUserId) {
-        LOGGER.debugf("[Principal %s][Friendship Request %s] Declining Friendship Request", decliningUserId, requestId);
-
-        Log.info("User " + decliningUserId + " declining friendship request " + requestId);
+    public void declineFriendshipRequest(Long requestId, String decliningUserOidcId) {
+        LOGGER.debugf("[Principal %s][Friendship Request %s] Declining", decliningUserOidcId, requestId);
 
         FriendshipRequest request = friendshipRepo.findByIdOptional(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Freundschaftsanfrage", requestId));
 
-        // Prüfe ob User der Empfänger ist
-        if (!request.getAddresseeId().equals(decliningUserId)) {
+        if (!request.getAddresseeId().equals(decliningUserOidcId)) {
             throw new ForbiddenException("Du kannst nur deine eigenen Freundschaftsanfragen ablehnen");
         }
-
-        // Prüfe Status
         if (request.getStatus() != FriendshipStatus.PENDING) {
             throw new ValidationException("Diese Freundschaftsanfrage wurde bereits bearbeitet");
         }
 
-        // Lehne ab
         request.setStatus(FriendshipStatus.DECLINED);
         request.setRespondedAt(Instant.now());
 
-        // Event feuern
-        this.friendshipDeclinedEvent.fire(new FriendshipDeclinedEvent(
-                request.id,
-                request.getRequesterId(),
-                request.getAddresseeId()
-        ));
-
-        Log.info("Friendship request declined");
+        friendshipDeclinedEvent.fire(new FriendshipDeclinedEvent(
+                request.id, request.getRequesterId(), request.getAddresseeId()));
     }
 
-    /**
-     * Zieht eigene Freundschaftsanfrage zurück
-     */
     @Transactional
-    public void cancelFriendshipRequest(Long requestId, Long cancellingUserId) {
-        LOGGER.debugf("[Principal %s][Friendship Request %s] Cancelling Friendship Request", cancellingUserId, requestId);
-
-        Log.info("User " + cancellingUserId + " cancelling friendship request " + requestId);
+    public void cancelFriendshipRequest(Long requestId, String cancellingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Friendship Request %s] Cancelling", cancellingUserOidcId, requestId);
 
         FriendshipRequest request = friendshipRepo.findByIdOptional(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Freundschaftsanfrage", requestId));
 
-        // Prüfe ob User der Absender ist
-        if (!request.getRequesterId().equals(cancellingUserId)) {
+        if (!request.getRequesterId().equals(cancellingUserOidcId)) {
             throw new ForbiddenException("Du kannst nur deine eigenen Freundschaftsanfragen zurückziehen");
         }
-
-        // Prüfe Status
         if (request.getStatus() != FriendshipStatus.PENDING) {
             throw new ValidationException("Diese Freundschaftsanfrage wurde bereits bearbeitet");
         }
 
-        // Lösche Anfrage
         friendshipRepo.delete(request);
-
-        Log.info("Friendship request cancelled");
     }
 
-    /**
-     * Entfernt Freundschaft
-     */
     @Transactional
-    public void removeFriendship(Long userId1, Long userId2) {
-        LOGGER.debugf("[Principal %s][User %s] Removing Friendship", userId1, userId2);
+    public void removeFriendship(String oidcId1, String oidcId2) {
+        LOGGER.debugf("[Principal %s][User %s] Removing Friendship", oidcId1, oidcId2);
 
-        Log.info("Removing friendship between " + userId1 + " and " + userId2);
-
-        // Finde Freundschaft
-        FriendshipRequest friendship = friendshipRepo.findFriendship(userId1, userId2)
+        FriendshipRequest friendship = friendshipRepo.findFriendship(oidcId1, oidcId2)
                 .orElseThrow(() -> new ResourceNotFoundException("Ihr seid nicht befreundet"));
 
-        // Prüfe ob einer der beiden User beteiligt ist
-        if (!friendship.getRequesterId().equals(userId1) &&
-                !friendship.getAddresseeId().equals(userId1)) {
+        if (!friendship.getRequesterId().equals(oidcId1) && !friendship.getAddresseeId().equals(oidcId1)) {
             throw new ForbiddenException("Du bist nicht Teil dieser Freundschaft");
         }
 
-        // Lösche Freundschaft
         friendshipRepo.delete(friendship);
-
-        // Event feuern
-        friendshipRemovedEvent.fire(new FriendshipRemovedEvent(userId1, userId2));
-
-        Log.info("Friendship removed");
+        friendshipRemovedEvent.fire(new FriendshipRemovedEvent(oidcId1, oidcId2));
     }
 
-    /**
-     * Lädt alle Freunde eines Users
-     */
-    public List<FriendDto> getFriends(Long userId) {
-        LOGGER.debugf("[Principal %s] Reading Friends", userId);
-        List<FriendshipRequest> friendships = friendshipRepo.getFriendships(userId);
+    public List<FriendDto> getFriends(String oidcId) {
+        LOGGER.debugf("[Principal %s] Reading Friends", oidcId);
+        List<FriendshipRequest> friendships = friendshipRepo.getFriendships(oidcId);
 
-        // Extrahiere Friend-IDs
-        List<Long> friendIds = friendships.stream()
-                .map(f -> f.getRequesterId().equals(userId) ?
-                        f.getAddresseeId() : f.getRequesterId())
+        List<String> friendOidcIds = friendships.stream()
+                .map(f -> f.getRequesterId().equals(oidcId) ? f.getAddresseeId() : f.getRequesterId())
                 .distinct()
                 .toList();
 
-        if (friendIds.isEmpty()) {
-            return List.of();
-        }
+        if (friendOidcIds.isEmpty()) return List.of();
 
-        // Lade User-Daten
-        Map<Long, User> users = User.findByIds(friendIds).stream()
-                .collect(Collectors.toMap(u -> ((User) u).id, u -> (User) u));
+        Map<String, UserIdentity> users = identityPort.findByIds(friendOidcIds);
 
-        // Erstelle Mapping: friendId -> friendship (für friendsSince)
-        Map<Long, FriendshipRequest> friendshipMap = friendships.stream()
+        Map<String, FriendshipRequest> friendshipMap = friendships.stream()
                 .collect(Collectors.toMap(
-                        f -> f.getRequesterId().equals(userId) ?
-                                f.getAddresseeId() : f.getRequesterId(),
+                        f -> f.getRequesterId().equals(oidcId) ? f.getAddresseeId() : f.getRequesterId(),
                         f -> f
                 ));
 
-        // Baue DTOs
-        return friendIds.stream()
-                .map(friendId -> {
-                    User friend = users.get(friendId);
-                    if (friend == null) return null;
-
+        return friendOidcIds.stream()
+                .map(friendOidcId -> {
+                    UserIdentity friend = users.get(friendOidcId);
+                    if (friend == null) {
+                        throw new IllegalStateException(
+                                "Benutzeridentität konnte nicht aufgelöst werden: " + friendOidcId);
+                    }
                     FriendDto dto = new FriendDto();
-                    dto.setUser_id(friend.id);
+                    dto.setUser_id(friend.oidcId());
                     dto.setName(friend.getName());
-                    dto.setEmail(friend.getEmail());
-                    dto.setProfile_picture_url(friend.getProfilePictureUrl());
-                    dto.setFriends_since(friendshipMap.get(friendId).getRespondedAt().toString());
+                    dto.setEmail(friend.email());
+                    dto.setProfile_picture_url(friend.profilePictureUrl());
+                    FriendshipRequest fr = friendshipMap.get(friendOidcId);
+                    dto.setFriends_since(fr.getRespondedAt() != null ? fr.getRespondedAt().toString() : null);
                     return dto;
                 })
-                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendDto::getName))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lädt eingehende Freundschaftsanfragen
-     */
-    public List<FriendshipRequestDto> getIncomingRequests(Long userId) {
-        LOGGER.debugf("[Principal %s] Reading Incoming Friendship Requests", userId);
-        List<FriendshipRequest> requests = friendshipRepo.getIncomingRequests(userId);
-        return buildRequestDTOs(requests, userId, true);
+    public List<FriendshipRequestDto> getIncomingRequests(String oidcId) {
+        LOGGER.debugf("[Principal %s] Reading Incoming Friendship Requests", oidcId);
+        return buildRequestDTOs(friendshipRepo.getIncomingRequests(oidcId), oidcId, true);
     }
 
-    /**
-     * Lädt ausgehende Freundschaftsanfragen
-     */
-    public List<FriendshipRequestDto> getOutgoingRequests(Long userId) {
-        LOGGER.debugf("[Principal %s] Reading Outgoing Friendship Requests", userId);
-        List<FriendshipRequest> requests = friendshipRepo.getOutgoingRequests(userId);
-        return buildRequestDTOs(requests, userId, false);
+    public List<FriendshipRequestDto> getOutgoingRequests(String oidcId) {
+        LOGGER.debugf("[Principal %s] Reading Outgoing Friendship Requests", oidcId);
+        return buildRequestDTOs(friendshipRepo.getOutgoingRequests(oidcId), oidcId, false);
     }
 
-    /**
-     * Gibt Freundschaftsstatus zwischen zwei Usern zurück
-     */
-    public FriendshipStatus getFriendshipStatus(Long userId1, Long userId2) {
-        LOGGER.debugf("[Principal %s][User %s] Reading Friendship Status", userId1, userId2);
-        return friendshipRepo.findRequest(userId1, userId2)
+    public FriendshipStatus getFriendshipStatus(String oidcId1, String oidcId2) {
+        LOGGER.debugf("[Principal %s][User %s] Reading Friendship Status", oidcId1, oidcId2);
+        return friendshipRepo.findRequest(oidcId1, oidcId2)
                 .map(FriendshipRequest::getStatus)
                 .orElse(null);
     }
 
     /**
-     * Hilfsmethode: Baut Request DTOs
+     * Find users who are not yet friends with the given user.
+     * Delegates to Keycloak search, then filters out existing friends.
      */
+    public List<UserDto> findNonFriends(String search, String oidcId, int limit) {
+        Set<String> friendIds = friendshipRepo.getFriendOidcIds(oidcId);
+        return identityPort.search(search, limit * 3).stream()
+                .filter(u -> !u.oidcId().equals(oidcId) && !friendIds.contains(u.oidcId()))
+                .limit(limit)
+                .map(u -> new UserDto(u.oidcId(), u.firstName(), u.lastName()))
+                .toList();
+    }
+
+    /**
+     * Returns recently registered users who are not friends with the given user.
+     * Keycloak doesn't expose a createdAt sort, so this returns the first page of results.
+     */
+    public List<UserDto> findRecentNonFriends(String oidcId, int limit) {
+        Set<String> friendIds = friendshipRepo.getFriendOidcIds(oidcId);
+        return identityPort.search("", limit * 3).stream()
+                .filter(u -> !u.oidcId().equals(oidcId) && !friendIds.contains(u.oidcId()))
+                .limit(limit)
+                .map(u -> new UserDto(u.oidcId(), u.firstName(), u.lastName()))
+                .toList();
+    }
+
     private List<FriendshipRequestDto> buildRequestDTOs(
-            List<FriendshipRequest> requests, Long currentUserId, boolean incoming) {
+            List<FriendshipRequest> requests, String currentOidcId, boolean incoming) {
 
-        if (requests.isEmpty()) {
-            return List.of();
-        }
+        if (requests.isEmpty()) return List.of();
 
-        // Extrahiere User-IDs (der jeweils andere User)
-        List<Long> userIds = requests.stream()
+        List<String> otherOidcIds = requests.stream()
                 .map(r -> incoming ? r.getRequesterId() : r.getAddresseeId())
                 .distinct()
                 .toList();
 
-        // Lade User-Daten
-        Map<Long, User> users = User.findByIds(userIds).stream()
-                .collect(Collectors.toMap(u -> ((User) u).id, u -> (User) u));
+        Map<String, UserIdentity> users = identityPort.findByIds(otherOidcIds);
 
-        // Baue DTOs
         return requests.stream()
                 .map(r -> {
-                    Long otherUserId = incoming ? r.getRequesterId() : r.getAddresseeId();
-                    User otherUser = users.get(otherUserId);
-                    if (otherUser == null) return null;
+                    String otherOidcId = incoming ? r.getRequesterId() : r.getAddresseeId();
+                    UserIdentity otherUser = users.get(otherOidcId);
+                    if (otherUser == null) {
+                        throw new IllegalStateException(
+                                "Benutzeridentität konnte nicht aufgelöst werden: " + otherOidcId);
+                    }
 
                     FriendshipRequestDto dto = new FriendshipRequestDto();
                     dto.setRequestId(r.id);
-                    dto.setUserId(otherUser.id);
+                    dto.setUserId(otherUser.oidcId());
                     dto.setUserName(otherUser.getName());
-                    dto.setUserEmail(otherUser.getEmail());
-                    dto.setProfilePictureUrl(otherUser.getProfilePictureUrl());
+                    dto.setUserEmail(otherUser.email());
+                    dto.setProfilePictureUrl(otherUser.profilePictureUrl());
                     dto.setStatus(r.getStatus());
                     dto.setCreatedAt(r.getCreatedAt().toString());
-                    dto.setRespondedAt(r.getRespondedAt() == null ? null : r.getRespondedAt().toString());
+                    dto.setRespondedAt(r.getRespondedAt() != null ? r.getRespondedAt().toString() : null);
                     dto.setIncoming(incoming);
                     return dto;
                 })
-                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendshipRequestDto::getCreatedAt).reversed())
                 .collect(Collectors.toList());
-    }
-
-    public List<UserDto> findNonFriends(String search, Long userId, int limit) {
-        return this.friendshipRepo.findNonFriends(search, userId, limit)
-                .stream()
-                .map(u -> new UserDto(u.id, u.getFirstName(), u.getLastName()))
-                .toList();
-    }
-
-    public List<UserDto> findRecentNonFriends(Long userId, int limit) {
-        return this.friendshipRepo.findRecentNonFriends(userId, limit)
-                .stream()
-                .map(u -> new UserDto(u.id, u.getFirstName(), u.getLastName()))
-                .toList();
     }
 }

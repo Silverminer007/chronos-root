@@ -1,0 +1,136 @@
+package de.chronos_live.chronos_date_api.application;
+
+import de.chronos_live.chronos_date_api.dto.PrincipalDto;
+import de.chronos_live.chronos_date_api.dto.UpdatedUserDto;
+import de.chronos_live.chronos_date_api.exception.BadRequestException;
+import io.micrometer.core.annotation.Timed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.FederatedIdentityRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
+
+import java.net.URLEncoder;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+/**
+ * Handles Keycloak-specific write operations and OIDC URL generation.
+ * This is the only service class allowed to import Keycloak types alongside
+ * LocalDbIdentityAdapter — all reads go through IdentityPort instead.
+ */
+@ApplicationScoped
+@Transactional
+@Timed("service.keycloakProfile")
+public class KeycloakProfileService {
+    private static final Logger LOGGER = Logger.getLogger(KeycloakProfileService.class);
+
+    @Inject
+    Keycloak keycloak;
+
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
+    String realm;
+
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url")
+    String oidcAuthServerUrl;
+
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.client-id")
+    String clientId;
+
+    public UpdatedUserDto updateUser(String firstName, String lastName, String email,
+                                     String oidcId, String redirectUri) {
+        LOGGER.debugf("[Principal %s] Updating User in Keycloak", oidcId);
+        String currentEmail = email != null
+                ? keycloak.realm(realm).users().get(oidcId).toRepresentation().getEmail()
+                : null;
+        boolean emailChanged = email != null && !email.equalsIgnoreCase(currentEmail);
+        if (emailChanged && redirectUri == null) {
+            throw new BadRequestException("Redirect Url must be set to change email address");
+        }
+        UserRepresentation userRep = new UserRepresentation();
+        if (firstName != null) userRep.setFirstName(firstName);
+        if (lastName != null) userRep.setLastName(lastName);
+        if (emailChanged) {
+            userRep.setEmail(email);
+            userRep.setEmailVerified(false);
+        }
+        keycloak.realm(realm).users().get(oidcId).update(userRep);
+        if (emailChanged) {
+            keycloak.realm(realm).users().get(oidcId).sendVerifyEmail(clientId, redirectUri, 60 * 60);
+        }
+        UpdatedUserDto updatedUserDto = new UpdatedUserDto();
+        updatedUserDto.setUser(new PrincipalDto(oidcId, firstName, lastName, email));
+        updatedUserDto.setVerifyEmailUrl(getVerifyEmailUrl(redirectUri));
+        return updatedUserDto;
+    }
+
+    public List<FederatedIdentityRepresentation> getLinkedAccounts(String oidcId) {
+        return keycloak.realm(realm).users().get(oidcId).getFederatedIdentity();
+    }
+
+    public void unlinkAccount(String oidcId, String providerId) {
+        keycloak.realm(realm).users().get(oidcId).removeFederatedIdentity(providerId);
+    }
+
+    public String getLinkUrl(String provider, String redirectUri) throws NoSuchAlgorithmException {
+        return oidcAuthServerUrl + "/realms/" + realm
+                + "/protocol/openid-connect/auth"
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, UTF_8)
+                + "&response_type=code"
+                + "&scope=openid"
+                + "&kc_action=idp_link:" + provider;
+    }
+
+    public String getPasskeyRegistrationUrl(String redirectUri) {
+        return oidcAuthServerUrl + "/realms/" + realm
+                + "/protocol/openid-connect/auth"
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, UTF_8)
+                + "&response_type=code"
+                + "&scope=openid"
+                + "&kc_action=webauthn-register-passwordless";
+    }
+
+    public String getDeletePasskeyUrl(String redirectUri, String passkeyId) {
+        return oidcAuthServerUrl + "/realms/" + realm
+                + "/protocol/openid-connect/auth"
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, UTF_8)
+                + "&response_type=code"
+                + "&scope=openid"
+                + "&kc_action=delete_credential:" + passkeyId;
+    }
+
+    public String getChangePasswordUrl(String redirectUri) {
+        return oidcAuthServerUrl + "/realms/" + realm
+                + "/protocol/openid-connect/auth"
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, UTF_8)
+                + "&response_type=code"
+                + "&scope=openid"
+                + "&kc_action=UPDATE_PASSWORD";
+    }
+
+    public String getVerifyEmailUrl(String redirectUri) {
+        return oidcAuthServerUrl + "/realms/" + realm
+                + "/protocol/openid-connect/auth"
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, UTF_8)
+                + "&response_type=code"
+                + "&scope=openid"
+                + "&kc_action=VERIFY_EMAIL";
+    }
+
+    public List<CredentialRepresentation> getPasskeys(String oidcId) {
+        return keycloak.realm(realm).users().get(oidcId).credentials().stream()
+                .filter(c -> "webauthn-passwordless".equals(c.getType()))
+                .toList();
+    }
+}

@@ -17,20 +17,20 @@ public class FriendshipQueryService {
     @Inject
     FriendshipRepository friendshipRepo;
 
-    public boolean areFriends(Long userId1, Long userId2) {
-        return friendshipRepo.areFriends(userId1, userId2);
+    public boolean areFriends(String oidcId1, String oidcId2) {
+        return friendshipRepo.areFriends(oidcId1, oidcId2);
     }
 
-    public Set<Long> getFriends(Long userId) {
-        return friendshipRepo.getFriendIds(userId);
+    public Set<String> getFriends(String oidcId) {
+        return friendshipRepo.getFriendOidcIds(oidcId);
     }
 
-    public Optional<FriendshipRequest> findFriendship(Long userId1, Long userId2) {
-        return friendshipRepo.findFriendship(userId1, userId2);
+    public Optional<FriendshipRequest> findFriendship(String oidcId1, String oidcId2) {
+        return friendshipRepo.findFriendship(oidcId1, oidcId2);
     }
 
-    public FriendshipStatus getFriendshipStatus(Long requesterId, Long addresseeId) {
-        return friendshipRepo.findRequest(requesterId, addresseeId)
+    public FriendshipStatus getFriendshipStatus(String requesterOidcId, String addresseeOidcId) {
+        return friendshipRepo.findRequest(requesterOidcId, addresseeOidcId)
                 .map(FriendshipRequest::getStatus)
                 .orElse(null);
     }

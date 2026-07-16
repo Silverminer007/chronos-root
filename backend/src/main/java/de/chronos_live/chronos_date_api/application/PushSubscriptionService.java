@@ -1,7 +1,6 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.PushSubscription;
-import de.chronos_live.chronos_date_api.domain.User;
 import de.chronos_live.chronos_date_api.dto.PushSubscriptionDto;
 import de.chronos_live.chronos_date_api.infrastructure.PushSubscriptionRepository;
 import io.micrometer.core.annotation.Timed;
@@ -22,10 +21,9 @@ public class PushSubscriptionService {
     PushSubscriptionRepository repo;
 
     @Transactional
-    public void saveSubscription(Long userId, PushSubscriptionDto dto) {
-        LOGGER.debugf("[Principal %s] Saving Push Subscription", userId);
+    public void saveSubscription(String userOidcId, PushSubscriptionDto dto) {
+        LOGGER.debugf("[Principal %s] Saving Push Subscription", userOidcId);
 
-        // Replace existing subscription with same endpoint
         PushSubscription existing = repo.findByEndpoint(dto.endpoint());
         if (existing != null) {
             repo.delete(existing);
@@ -35,8 +33,7 @@ public class PushSubscriptionService {
         sub.setEndpoint(dto.endpoint());
         sub.setAuth(dto.keys().auth());
         sub.setP256dh(dto.keys().p256dh());
-        sub.setUser(User.findById(userId));
-
+        sub.setUserOidcId(userOidcId);
         repo.persist(sub);
     }
 
@@ -45,18 +42,14 @@ public class PushSubscriptionService {
         PushSubscription existing = repo.findByEndpoint(endpoint);
         if (existing != null) {
             repo.delete(existing);
-            if (existing.getUser() != null && existing.getUser().id != null) {
-                LOGGER.debugf("[Principal %s] Deleting Push Subscription", existing.getUser().id);
-            }
         }
     }
 
     public boolean isSubscriptionKnown(String endpoint) {
-        PushSubscription existing = repo.findByEndpoint(endpoint);
-        return existing != null;
+        return repo.findByEndpoint(endpoint) != null;
     }
 
-    public List<PushSubscription> getAllForUser(Long userId) {
-        return repo.findByUserId(userId);
+    public List<PushSubscription> getAllForUser(String userOidcId) {
+        return repo.findByUserOidcId(userOidcId);
     }
 }

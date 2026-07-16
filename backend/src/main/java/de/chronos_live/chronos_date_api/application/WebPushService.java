@@ -67,16 +67,16 @@ public class WebPushService {
         return notificationPort.getVapidPublicKey();
     }
 
-    public void sendToUser(Long userId, String title, String body) {
+    public void sendToUser(String userOidcId, String title, String body) {
         JsonObject payload = Json.createObjectBuilder()
                 .add("title", title)
                 .add("body", body)
                 .build();
-        notificationPort.send(userId, payload.toString());
+        notificationPort.send(userOidcId, payload.toString());
     }
 
-    public void sendNotification(Long userId, String payload) {
-        notificationPort.send(userId, payload);
+    public void sendNotification(String userOidcId, String payload) {
+        notificationPort.send(userOidcId, payload);
     }
 
     private String getAndParseAppointment(Long appointmentId) {
@@ -112,7 +112,7 @@ public class WebPushService {
             if (!sendTest.test(participation)) {
                 continue;
             }
-            notificationPort.send(participation.getUser().id, payload);
+            notificationPort.send(participation.getUserOidcId(), payload);
         }
     }
 
@@ -122,7 +122,7 @@ public class WebPushService {
             if (!sendTest.test(groupMember)) {
                 continue;
             }
-            notificationPort.send(groupMember.getUser().id, payload);
+            notificationPort.send(groupMember.getUserOidcId(), payload);
         }
     }
 
@@ -133,8 +133,11 @@ public class WebPushService {
             return;
         }
 
+        UserIdentity sender = userQueryService.findByOidcId(message.getSenderOidcId());
+        String senderName = sender != null ? sender.getName() : "Unknown";
+
         String notificationTitle = "%s schreibt zu %s"
-                .formatted(message.getSender().getName(), message.getAppointment().getName());
+                .formatted(senderName, message.getAppointment().getName());
 
         JsonObject payload = Json.createObjectBuilder()
                 .add("title", notificationTitle)
@@ -142,14 +145,14 @@ public class WebPushService {
                 .build();
 
         this.sendToParticipants(message.getAppointment().id,
-                ap -> !Objects.equals(ap.getUser().id, message.getSender().id)
+                ap -> !Objects.equals(ap.getUserOidcId(), message.getSenderOidcId())
                         && this.settingsService.sendAppointmentMessageSentNotification(ap),
                 payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentMoved(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentMovedEvent event) {
-        User actingUser = userQueryService.findById(event.actingUserId());
+        UserIdentity actingUser = userQueryService.findByOidcId(event.actingUserOidcId());
         if (actingUser == null) {
             return;
         }
@@ -164,19 +167,19 @@ public class WebPushService {
                 .add("appointment", appointmentJson)
                 .add("old_start_time", event.oldStartTime().toString())
                 .add("old_end_time", event.oldEndTime().toString())
-                .add("acting_user_id", event.actingUserId())
+                .add("acting_user_id", event.actingUserOidcId())
                 .add("acting_user_name", actingUser.getName())
                 .build();
 
         this.sendToParticipants(event.appointmentId(),
-                ap -> !Objects.equals(ap.getUser().id, event.actingUserId())
+                ap -> !Objects.equals(ap.getUserOidcId(), event.actingUserOidcId())
                         && this.settingsService.sendAppointmentMovedNotification(ap),
                 payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentCancelled(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentCancelledEvent event) {
-        User actingUser = userQueryService.findById(event.actingUserId());
+        UserIdentity actingUser = userQueryService.findByOidcId(event.actingUserOidcId());
         if (actingUser == null) {
             return;
         }
@@ -193,26 +196,26 @@ public class WebPushService {
                 .build();
 
         this.sendToParticipants(event.cancelledAppointmentId(),
-                ap -> !Objects.equals(ap.getUser().id, event.actingUserId())
+                ap -> !Objects.equals(ap.getUserOidcId(), event.actingUserOidcId())
                         && this.settingsService.sendAppointmentCancelledNotification(ap),
                 payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentParticipantAdded(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentParticipationAddedEvent event) {
-        User actingUser = userQueryService.findById(event.actingUserId());
+        UserIdentity actingUser = userQueryService.findByOidcId(event.actingUserOidcId());
         if (actingUser == null) {
             return;
         }
 
-        User newParticipant = userQueryService.findById(event.targetUserId());
+        UserIdentity newParticipant = userQueryService.findByOidcId(event.targetUserOidcId());
         if (newParticipant == null) {
             return;
         }
 
         String newParticipantRole =
                 this.appointmentParticipationQueryService
-                        .getUserRole(event.appointmentId(), event.targetUserId())
+                        .getUserRole(event.appointmentId(), event.targetUserOidcId())
                         .toString();
 
         String appointmentJson = getAndParseAppointment(event.appointmentId());
@@ -230,14 +233,14 @@ public class WebPushService {
                 .build();
 
         this.sendToParticipants(event.appointmentId(),
-                ap -> !Objects.equals(ap.getUser().id, event.actingUserId())
+                ap -> !Objects.equals(ap.getUserOidcId(), event.actingUserOidcId())
                         && this.settingsService.sendAppointmentParticipantAddedEventNotification(ap),
                 payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentGroupParticipantAdded(@Observes(during = TransactionPhase.AFTER_SUCCESS) AppointmentGroupParticipationAddedEvent event) {
-        User actingUser = userQueryService.findById(event.actingUserId());
+        UserIdentity actingUser = userQueryService.findByOidcId(event.actingUserOidcId());
         if (actingUser == null) {
             return;
         }
@@ -261,7 +264,7 @@ public class WebPushService {
                 .build();
 
         this.sendToParticipants(event.appointmentId(),
-                ap -> !Objects.equals(ap.getUser().id, event.actingUserId())
+                ap -> !Objects.equals(ap.getUserOidcId(), event.actingUserOidcId())
                         && this.settingsService.sendAppointmentParticipantAddedEventNotification(ap),
                 payload.toString());
     }
@@ -270,65 +273,65 @@ public class WebPushService {
     public void onFriendshipRequestSent(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipRequestSentEvent event) {
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "NEW_FRIENDSHIP_REQUEST")
-                .add("requester_id", event.requesterId())
+                .add("requester_id", event.requesterOidcId())
                 .add("requester_name", event.requesterName())
                 .add("request_id", event.requestId())
                 .build();
 
-        notificationPort.send(event.addresseeId(), payload.toString());
+        notificationPort.send(event.addresseeOidcId(), payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onFriendshipAccepted(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipAcceptedEvent event) {
-        User addressee = userQueryService.findById(event.addresseeId());
+        UserIdentity addressee = userQueryService.findByOidcId(event.addresseeOidcId());
         if (addressee == null) {
             return;
         }
 
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "FRIENDSHIP_ACCEPTED")
-                .add("addressee_id", event.addresseeId())
+                .add("addressee_id", event.addresseeOidcId())
                 .add("addressee_name", addressee.getName())
                 .build();
 
-        notificationPort.send(event.addresseeId(), payload.toString());
+        notificationPort.send(event.requesterOidcId(), payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onFriendshipDeclined(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipDeclinedEvent event) {
-        User addressee = userQueryService.findById(event.addresseeId());
+        UserIdentity addressee = userQueryService.findByOidcId(event.addresseeOidcId());
         if (addressee == null) {
             return;
         }
 
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "FRIENDSHIP_DECLINED")
-                .add("addressee_id", event.addresseeId())
+                .add("addressee_id", event.addresseeOidcId())
                 .add("addressee_name", addressee.getName())
                 .build();
 
-        notificationPort.send(event.addresseeId(), payload.toString());
+        notificationPort.send(event.requesterOidcId(), payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onFriendshipRemoved(@Observes(during = TransactionPhase.AFTER_SUCCESS) FriendshipRemovedEvent event) {
-        User actingUser = userQueryService.findById(event.actingUserId());
+        UserIdentity actingUser = userQueryService.findByOidcId(event.actingUserOidcId());
         if (actingUser == null) {
             return;
         }
 
         JsonObject payload = Json.createObjectBuilder()
                 .add("type", "FRIENDSHIP_REMOVED")
-                .add("acting_user_id", event.actingUserId())
+                .add("acting_user_id", event.actingUserOidcId())
                 .add("acting_user_name", actingUser.getName())
                 .build();
 
-        notificationPort.send(event.friendId(), payload.toString());
+        notificationPort.send(event.friendOidcId(), payload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onGroupMemberAdded(@Observes(during = TransactionPhase.AFTER_SUCCESS) GroupMemberAddedEvent event) {
-        User newMember = userQueryService.findById(event.newMemberId());
+        UserIdentity newMember = userQueryService.findByOidcId(event.newMemberOidcId());
         if (newMember == null) {
             return;
         }
@@ -345,7 +348,7 @@ public class WebPushService {
                 .build();
         this.sendToMembers(
                 event.groupId(),
-                gm -> !Objects.equals(newMember.id, gm.getUser().id)
+                gm -> !Objects.equals(newMember.oidcId(), gm.getUserOidcId())
                         && this.settingsService.sendGroupMemberAddedNotification(gm),
                 groupPayload.toString());
 
@@ -354,14 +357,14 @@ public class WebPushService {
                 .add("group", groupJson)
                 .add("new_member", newMember.getName())
                 .build();
-        notificationPort.send(newMember.id, newMemberPayload.toString());
+        notificationPort.send(newMember.oidcId(), newMemberPayload.toString());
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
-            User actingUser = userQueryService.findById(event.actingUserId());
+            UserIdentity actingUser = userQueryService.findByOidcId(event.actingUserOidcId());
             if (actingUser == null) {
                 return;
             }
@@ -379,7 +382,7 @@ public class WebPushService {
                     .build();
 
             this.sendToParticipants(event.appointmentId(),
-                    ap -> !Objects.equals(event.actingUserId(), ap.getUser().id)
+                    ap -> !Objects.equals(event.actingUserOidcId(), ap.getUserOidcId())
                             && this.settingsService.sendAppointmentParticipationStatusChangedNotification(ap),
                     payload.toString());
         } finally {
@@ -469,7 +472,7 @@ public class WebPushService {
                     .add("participation_status", participation.getStatus().toString())
                     .build();
 
-            notificationPort.send(participation.getUser().id, payload.toString());
+            notificationPort.send(participation.getUserOidcId(), payload.toString());
         }
     }
 }

@@ -9,8 +9,8 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = false)
 @Entity
 public class Settings extends PanacheEntity {
-    @OneToOne(cascade = CascadeType.REMOVE)
-    private User user;
+    @Column(name = "user_oidcid")
+    private String userOidcId;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "appointment_moved")
     private AppointmentNotificationSetting appointmentMoved;

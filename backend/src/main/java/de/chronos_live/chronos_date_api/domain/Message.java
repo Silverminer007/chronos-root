@@ -1,9 +1,7 @@
 package de.chronos_live.chronos_date_api.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -17,8 +15,7 @@ public class Message extends PanacheEntity {
     @ManyToOne
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
-    @ManyToOne
-    @JoinColumn(name = "sender_id")
-    private User sender;
+    @Column(name = "sender_oidcid", nullable = false)
+    private String senderOidcId;
     private Instant timeStamp;
 }

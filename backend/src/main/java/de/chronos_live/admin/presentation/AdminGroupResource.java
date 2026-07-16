@@ -30,22 +30,21 @@ public class AdminGroupResource {
         if (dto == null || dto.getOwnerId() == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
-
         GroupDto groupDto = new GroupDto();
         groupDto.setName(dto.getGroupName());
-
-        Group createdGroup = this.groupService.createGroup(dto.getOwnerId(), groupDto);
+        Group createdGroup = groupService.createGroup(dto.getOwnerId(), groupDto);
         return Response.status(Response.Status.CREATED).entity(createdGroup.id).build();
     }
 
     @POST
     @Path("/{groupId}/users/{userId}")
-    public Response addGroupMember(@PathParam("groupId") Long groupId, @PathParam("userId") Long userId) {
-        if (groupId == null || userId == null) {
+    public Response addGroupMember(@PathParam("groupId") Long groupId,
+                                   @PathParam("userId") String targetUserOidcId) {
+        if (groupId == null || targetUserOidcId == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         try {
-            this.groupService.addGroupMember(null, groupId, userId);
+            groupService.addGroupMember(null, groupId, targetUserOidcId);
         } catch (ValidationException ignored) {}
         return Response.ok().build();
     }

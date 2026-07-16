@@ -1,12 +1,15 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
-import de.chronos_live.chronos_date_api.domain.User;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
+import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import io.micrometer.core.annotation.Timed;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,6 +21,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 @Transactional
@@ -26,6 +30,12 @@ public class GroupService {
     private static final Logger LOGGER = Logger.getLogger(GroupService.class);
     @Inject
     AuthorizationService authorizationService;
+    @Inject
+    GroupQueryService groupQueryService;
+    @Inject
+    GroupMapper groupMapper;
+    @Inject
+    IdentityPort identityPort;
     @Inject
     Event<GroupMemberAddedEvent> groupMemberAddedEvent;
     @Inject
@@ -38,72 +48,105 @@ public class GroupService {
     Event<GroupNameChangedEvent> groupNameChangedEvent;
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void onGroupCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) GroupCreatedEvent groupCreatedEvent) {
+    public void onGroupCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) GroupCreatedEvent event) {
         Log.info("Group was created, adding creator to it");
         GroupMember groupMember = new GroupMember();
-        User user = User.findById(groupCreatedEvent.actingUserId());
-        Group group = Group.findById(groupCreatedEvent.groupId());
+        Group group = Group.findById(event.groupId());
         groupMember.setGroup(group);
-        groupMember.setUser(user);
+        groupMember.setUserOidcId(event.actingUserOidcId());
         groupMember.persist();
     }
 
-    public void addGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
-        LOGGER.debugf("[Principal %s][Group %s][User %s] Adding Member", actingUserId, groupId, targetUserId);
+    public void addGroupMember(String actingUserOidcId, Long groupId, String targetUserOidcId) {
+        LOGGER.debugf("[Principal %s][Group %s][User %s] Adding Member", actingUserOidcId, groupId, targetUserOidcId);
 
-        this.authorizationService.requireAddGroupMember(groupId, actingUserId, targetUserId);
-        if(GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId).count() > 0) {
+        authorizationService.requireAddGroupMember(groupId, actingUserOidcId, targetUserOidcId);
+        if (GroupMember.find("group.id = ?1 AND userOidcId = ?2", groupId, targetUserOidcId).count() > 0) {
             throw new ValidationException("user", "This user is already a member of this group");
         }
-        if(Group.findById(groupId) == null) {
+        if (Group.findById(groupId) == null) {
             throw new ResourceNotFoundException("group", groupId);
         }
         GroupMember groupMember = new GroupMember();
-        User user = User.findById(targetUserId);
         Group group = Group.findById(groupId);
         groupMember.setGroup(group);
-        groupMember.setUser(user);
+        groupMember.setUserOidcId(targetUserOidcId);
         groupMember.persist();
-        this.groupMemberAddedEvent.fire(new GroupMemberAddedEvent(groupId, targetUserId, actingUserId));
+        groupMemberAddedEvent.fire(new GroupMemberAddedEvent(groupId, targetUserOidcId, actingUserOidcId));
     }
 
-    public void removeGroupMember(Long actingUserId, Long groupId, Long targetUserId) {
-        LOGGER.debugf("[Principal %s][Group %s][User %s] Removing Member", actingUserId, groupId, targetUserId);
+    public void removeGroupMember(String actingUserOidcId, Long groupId, String targetUserOidcId) {
+        LOGGER.debugf("[Principal %s][Group %s][User %s] Removing Member", actingUserOidcId, groupId, targetUserOidcId);
 
-        this.authorizationService.requireRemoveGroupMember(groupId, actingUserId, targetUserId);
-        GroupMember groupMember = (GroupMember) GroupMember.find("group.id = ?1 AND user.id = ?2", groupId, targetUserId)
-                .firstResultOptional().orElseThrow(() -> new ValidationException("This user is not member of this group"));
+        authorizationService.requireRemoveGroupMember(groupId, actingUserOidcId, targetUserOidcId);
+        GroupMember groupMember = (GroupMember) GroupMember
+                .find("group.id = ?1 AND userOidcId = ?2", groupId, targetUserOidcId)
+                .firstResultOptional()
+                .orElseThrow(() -> new ValidationException("This user is not member of this group"));
         groupMember.delete();
-        this.groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, targetUserId, actingUserId));
+        groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, targetUserOidcId, actingUserOidcId));
     }
 
-    public List<User> getGroupUsers(Long requestingUserId, Long groupId) {
-        LOGGER.debugf("[Principal %s][Group %s] Reading Group Members", requestingUserId, groupId);
-        this.authorizationService.requireReadGroupMembers(groupId, requestingUserId);
-        return GroupMember.list("SELECT gm.user FROM GroupMember gm WHERE gm.group.id = ?1", groupId);
+    public List<UserIdentity> getGroupUsers(String requestingUserOidcId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Group %s] Reading Group Members", requestingUserOidcId, groupId);
+        authorizationService.requireReadGroupMembers(groupId, requestingUserOidcId);
+        List<GroupMember> members = GroupMember.list("group.id = ?1", groupId);
+        Map<String, UserIdentity> userMap = identityPort.findByIds(
+                members.stream().map(GroupMember::getUserOidcId).toList()
+        );
+        return members.stream()
+                .map(m -> userMap.getOrDefault(m.getUserOidcId(),
+                        new UserIdentity(m.getUserOidcId(), null, null, null, null)))
+                .toList();
     }
 
-    public Group createGroup(Long actingUserId, GroupDto createGroupDto) {
+    public List<GroupDto> searchGroups(UserIdentity user, String searchQuery) {
+        LOGGER.debugf("[Principal %s] Searching Groups (query=%s)", user.oidcId(), searchQuery);
+        List<Group> groups = groupQueryService.searchGroups(user, searchQuery);
+        List<GroupDto> dtos = groupMapper.toDtoList(groups);
+
+        List<String> allMemberIds = groups.stream()
+                .filter(g -> g.getMembers() != null)
+                .flatMap(g -> g.getMembers().stream())
+                .map(GroupMember::getUserOidcId)
+                .distinct()
+                .toList();
+
+        if (allMemberIds.isEmpty()) return dtos;
+
+        Map<String, UserIdentity> userMap = identityPort.findByIds(allMemberIds);
+
+        for (GroupDto dto : dtos) {
+            if (dto.getMembers() == null) continue;
+            dto.setMembers(dto.getMembers().stream()
+                    .map(m -> {
+                        UserIdentity u = userMap.get(m.id());
+                        return u != null ? new UserDto(m.id(), u.firstName(), u.lastName()) : m;
+                    })
+                    .toList());
+        }
+        return dtos;
+    }
+
+    public Group createGroup(String actingUserOidcId, GroupDto createGroupDto) {
         if (createGroupDto.getName() == null || createGroupDto.getName().isBlank()) {
             throw new ValidationException("Group name is required");
         }
-        LOGGER.debugf("[Principal %s][Group %s] Creating Group", actingUserId, createGroupDto.getName());
+        LOGGER.debugf("[Principal %s][Group %s] Creating Group", actingUserOidcId, createGroupDto.getName());
 
         Group group = new Group();
         group.setGroupName(createGroupDto.getName());
-
-        User user = User.findById(actingUserId);
-        group.setOwner(user);
+        group.setOwnerOidcId(actingUserOidcId);
         group.persist();
 
-        this.groupCreatedEvent.fire(new GroupCreatedEvent(group.id, actingUserId));
+        groupCreatedEvent.fire(new GroupCreatedEvent(group.id, actingUserOidcId));
         return group;
     }
 
-    public Group editGroup(Long actingUserId, Long groupId, GroupDto groupDto) {
-        LOGGER.debugf("[Principal %s][Group %s] Edit Group", actingUserId, groupId);
+    public Group editGroup(String actingUserOidcId, Long groupId, GroupDto groupDto) {
+        LOGGER.debugf("[Principal %s][Group %s] Edit Group", actingUserOidcId, groupId);
 
-        this.authorizationService.requireEditGroup(groupId, actingUserId);
+        authorizationService.requireEditGroup(groupId, actingUserOidcId);
         if (groupDto.getName() == null || groupDto.getName().isBlank()) {
             throw new ValidationException("Group name is required");
         }
@@ -111,20 +154,20 @@ public class GroupService {
         if (group == null) {
             throw new ResourceNotFoundException("group", groupId);
         }
-        this.groupNameChangedEvent.fire(new GroupNameChangedEvent(groupId, group.getGroupName(), groupDto.getName(), actingUserId));
+        groupNameChangedEvent.fire(new GroupNameChangedEvent(groupId, group.getGroupName(), groupDto.getName(), actingUserOidcId));
         group.setGroupName(groupDto.getName());
         return group;
     }
 
-    public void deleteGroup(Long actingUserId, Long groupId) {
-        LOGGER.debugf("[Principal %s][Group %s] Deleting Group", actingUserId, groupId);
+    public void deleteGroup(String actingUserOidcId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Group %s] Deleting Group", actingUserOidcId, groupId);
 
-        this.authorizationService.requireDeleteGroup(groupId, actingUserId);
+        authorizationService.requireDeleteGroup(groupId, actingUserOidcId);
         Group group = Group.findById(groupId);
         if (group == null) {
             throw new ResourceNotFoundException("group", groupId);
         }
         Group.deleteById(group.id);
-        this.groupDeletedEvent.fire(new GroupDeletedEvent(groupId, actingUserId));
+        groupDeletedEvent.fire(new GroupDeletedEvent(groupId, actingUserOidcId));
     }
 }

@@ -15,8 +15,8 @@ import java.time.OffsetDateTime;
 @Table(name = "push_notification_log")
 public class PushNotificationLog extends PanacheEntity {
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "user_oidcid", nullable = false)
+    private String userOidcId;
 
     @Column(name = "notification_type", length = 100)
     private String notificationType;

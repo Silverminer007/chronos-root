@@ -7,8 +7,10 @@ import de.chronos_live.chronos_date_api.application.events.MessageSentEvent;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
-import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import de.chronos_live.chronos_date_api.dto.MessageDto;
+import de.chronos_live.chronos_date_api.mapper.MessageMapper;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -23,6 +25,7 @@ import org.jboss.logging.Logger;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 @Transactional
@@ -31,13 +34,14 @@ public class MessageService {
     private static final Logger LOGGER = Logger.getLogger(MessageService.class);
     @Inject
     AuthorizationService authorizationService;
-
     @Inject
     MessageQueryService messageQueryService;
-
+    @Inject
+    IdentityPort identityPort;
+    @Inject
+    MessageMapper messageMapper;
     @Inject
     Event<MessageSentEvent> messageSentEvent;
-
     @Inject
     MeterRegistry meterRegistry;
 
@@ -46,17 +50,10 @@ public class MessageService {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
             Appointment appointment = Appointment.findById(event.appointmentId());
-            User user = User.findById(event.actingUserId());
-
-            String messageText = "%s hat %s".formatted(user.getName(), event.newParticipationStatus().equals(ParticipationStatus.APPROVED)
-                    ? "zugesagt" : "abgesagt");
-
-            Message message = new Message();
-            message.setBody(messageText);
-            message.setSender(user);
-            message.setAppointment(appointment);
-            message.setTimeStamp(Instant.now());
-            message.persist();
+            UserIdentity user = identityPort.findById(event.actingUserOidcId());
+            String text = "%s hat %s".formatted(user.getName(),
+                    event.newParticipationStatus().equals(ParticipationStatus.APPROVED) ? "zugesagt" : "abgesagt");
+            persistMessage(text, event.actingUserOidcId(), appointment);
         } finally {
             sample.stop(Timer.builder("observer.message.onParticipationStatusChanged")
                     .description("Time for message creation on participation status change")
@@ -67,93 +64,79 @@ public class MessageService {
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
         Appointment appointment = Appointment.findById(event.cancelledAppointmentId());
-        User user = User.findById(event.actingUserId());
-
-        String messageText = "%s hat diesen Termin abgesagt. Er wird nicht stattfinden!"
-                .formatted(user.getName());
-
-        Message message = new Message();
-        message.setBody(messageText);
-        message.setSender(user);
-        message.setAppointment(appointment);
-        message.setTimeStamp(Instant.now());
-        message.persist();
+        UserIdentity user = identityPort.findById(event.actingUserOidcId());
+        String text = "%s hat diesen Termin abgesagt. Er wird nicht stattfinden!".formatted(user.getName());
+        persistMessage(text, event.actingUserOidcId(), appointment);
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
         Appointment appointment = Appointment.findById(event.appointmentId());
-        User user = User.findById(event.actingUserId());
-
+        UserIdentity user = identityPort.findById(event.actingUserOidcId());
         long hourDelta = event.oldStartTime().until(appointment.getStartTime(), ChronoUnit.HOURS);
-
-        String messageText;
+        String text;
         if (hourDelta > 0) {
-            messageText = "%s hat diesen Termin um %s Stunden verschoben"
-                    .formatted(
-                            user.getName(),
-                            hourDelta
-                    );
+            text = "%s hat diesen Termin um %s Stunden verschoben".formatted(user.getName(), hourDelta);
         } else if (hourDelta < 0) {
-            messageText = "%s hat diesen Termin um %s Stunden vor verlegt"
-                    .formatted(
-                            user.getName(),
-                            hourDelta * -1
-                    );
+            text = "%s hat diesen Termin um %s Stunden vor verlegt".formatted(user.getName(), hourDelta * -1);
         } else {
             hourDelta = event.oldEndTime().until(appointment.getEndTime(), ChronoUnit.HOURS);
             if (hourDelta > 0) {
-                messageText = "%s hat hat das Ende dieses Termins um %s Stunden verschoben"
-                        .formatted(
-                                user.getName(),
-                                hourDelta
-                        );
+                text = "%s hat das Ende dieses Termins um %s Stunden verschoben".formatted(user.getName(), hourDelta);
             } else {
-                messageText = "%s hat hat das Ende dieses Termins um %s Stunden vor verlegt"
-                        .formatted(
-                                user.getName(),
-                                hourDelta * -1
-                        );
+                text = "%s hat das Ende dieses Termins um %s Stunden vor verlegt".formatted(user.getName(), hourDelta * -1);
             }
         }
-
-        Message message = new Message();
-        message.setBody(messageText);
-        message.setSender(user);
-        message.setAppointment(appointment);
-        message.setTimeStamp(Instant.now());
-        message.persist();
+        persistMessage(text, event.actingUserOidcId(), appointment);
     }
 
-    public Message sendMessage(Long appointmentId, String messageText, Long actingUserId) {
-        return this.sendMessage(appointmentId, messageText, actingUserId, Instant.now());
+    public Message sendMessage(Long appointmentId, String messageText, String actingUserOidcId) {
+        return sendMessage(appointmentId, messageText, actingUserOidcId, Instant.now());
     }
 
-    public Message sendMessage(Long appointmentId, String messageText, Long actingUserId, Instant timeStamp) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Sending message", actingUserId, appointmentId);
-
-        this.authorizationService.requireSendMessage(appointmentId, actingUserId);
+    public Message sendMessage(Long appointmentId, String messageText, String actingUserOidcId, Instant timeStamp) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Sending message", actingUserOidcId, appointmentId);
+        authorizationService.requireSendMessage(appointmentId, actingUserOidcId);
         Appointment appointment = Appointment.findById(appointmentId);
-
-        Message message = new Message();
-        message.setBody(messageText);
-        User user = (User) User
-                .findByIdOptional(actingUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("user", actingUserId));
-        message.setSender(user);
-        message.setAppointment(appointment);
-        message.setTimeStamp(timeStamp);
-        message.persist();
-
-        this.messageSentEvent.fire(new MessageSentEvent(message.id));
-
+        Message message = persistMessage(messageText, actingUserOidcId, appointment, timeStamp);
+        messageSentEvent.fire(new MessageSentEvent(message.id));
         return message;
     }
 
-    public List<Message> getMessages(Long appointmentId, Long requestingUserId) {
-        LOGGER.debugf("[Principal %s][Appointment %s] Reading Messages", requestingUserId, appointmentId);
-        this.authorizationService.requireReadAppointment(appointmentId, requestingUserId);
+    public List<MessageDto> getMessages(Long appointmentId, String requestingUserOidcId) {
+        LOGGER.debugf("[Principal %s][Appointment %s] Reading Messages", requestingUserOidcId, appointmentId);
+        authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
+        List<Message> messages = messageQueryService.getMessages(appointmentId);
 
-        return this.messageQueryService.getMessages(appointmentId);
+        Map<String, UserIdentity> senderMap = identityPort.findByIds(
+                messages.stream().map(Message::getSenderOidcId)
+                        .filter(java.util.Objects::nonNull).distinct().toList()
+        );
+
+        return messages.stream()
+                .map(m -> {
+                    MessageDto dto = messageMapper.toDto(m);
+                    UserIdentity sender = senderMap.get(m.getSenderOidcId());
+                    if (sender != null) {
+                        return new MessageDto(dto.id(), dto.sender_id(), sender.getName(),
+                                dto.appointment_id(), dto.body(), dto.timestamp());
+                    }
+                    return dto;
+                })
+                .toList();
+    }
+
+    private Message persistMessage(String text, String senderOidcId, Appointment appointment) {
+        return persistMessage(text, senderOidcId, appointment, Instant.now());
+    }
+
+    private Message persistMessage(String text, String senderOidcId, Appointment appointment, Instant timeStamp) {
+        Message message = new Message();
+        message.setBody(text);
+        message.setSenderOidcId(senderOidcId);
+        message.setAppointment(appointment);
+        message.setTimeStamp(timeStamp);
+        message.persist();
+        return message;
     }
 }

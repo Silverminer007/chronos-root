@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class UserParticipantDto {
 
     // User-Daten
-    private Long user_id;
+    private String user_id;
     private String name;
     private String profile_picture_url;
 
