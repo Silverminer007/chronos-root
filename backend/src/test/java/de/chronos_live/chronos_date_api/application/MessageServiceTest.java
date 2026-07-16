@@ -9,6 +9,7 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import de.chronos_live.chronos_date_api.dto.MessageDto;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -318,13 +320,24 @@ class MessageServiceTest {
     class GetMessages {
 
         @Test
-        void should_returnMessages_when_userIsAuthorized() {
-            List<Message> expected = List.of(new Message());
-            when(messageQueryService.getMessages(APPOINTMENT_ID)).thenReturn(expected);
+        void should_returnEnrichedMessageDtos_when_userIsAuthorized() {
+            Message msg = new Message();
+            msg.id = MESSAGE_ID;
+            msg.setBody(MESSAGE_TEXT);
+            msg.setSenderOidcId(USER_OIDC_ID);
+            msg.setTimeStamp(FIXED_TIMESTAMP);
 
-            List<Message> result = service.getMessages(APPOINTMENT_ID, USER_OIDC_ID);
+            UserIdentity sender = buildUserIdentity(USER_OIDC_ID);
 
-            assertThat(result).isSameAs(expected);
+            when(messageQueryService.getMessages(APPOINTMENT_ID)).thenReturn(List.of(msg));
+            when(identityPort.findByIds(any())).thenReturn(Map.of(USER_OIDC_ID, sender));
+
+            List<MessageDto> result = service.getMessages(APPOINTMENT_ID, USER_OIDC_ID);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().sender_id()).isEqualTo(USER_OIDC_ID);
+            assertThat(result.getFirst().sender_name()).isEqualTo("Max Mustermann");
+            assertThat(result.getFirst().body()).isEqualTo(MESSAGE_TEXT);
             verify(authorizationService).requireReadAppointment(APPOINTMENT_ID, USER_OIDC_ID);
         }
     }

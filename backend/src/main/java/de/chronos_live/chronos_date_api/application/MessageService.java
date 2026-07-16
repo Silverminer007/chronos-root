@@ -109,7 +109,8 @@ public class MessageService {
         List<Message> messages = messageQueryService.getMessages(appointmentId);
 
         Map<String, UserIdentity> senderMap = identityPort.findByIds(
-                messages.stream().map(Message::getSenderOidcId).distinct().toList()
+                messages.stream().map(Message::getSenderOidcId)
+                        .filter(java.util.Objects::nonNull).distinct().toList()
         );
 
         return messages.stream()
