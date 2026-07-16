@@ -8,7 +8,10 @@ import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.AppointmentDto;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
+import de.chronos_live.chronos_date_api.dto.GroupDto;
+import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
+import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import io.micrometer.core.annotation.Timed;
@@ -19,7 +22,9 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -151,20 +156,36 @@ public class AppointmentService {
         return appointment;
     }
 
-    public void enrichParticipants(List<AppointmentDto> dtos) {
-        List<String> oidcIds = dtos.stream()
+    public void enrichAppointmentDtos(List<AppointmentDto> dtos) {
+        // Collect all unique oidcIds across participants, message senders, and group members
+        Set<String> allOidcIds = new HashSet<>();
+        dtos.stream()
                 .filter(d -> d.getParticipants() != null)
                 .flatMap(d -> d.getParticipants().stream())
                 .map(UserParticipantDto::getUser_id)
                 .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+                .forEach(allOidcIds::add);
+        dtos.stream()
+                .filter(d -> d.getMessages() != null)
+                .flatMap(d -> d.getMessages().stream())
+                .map(MessageDto::sender_id)
+                .filter(Objects::nonNull)
+                .forEach(allOidcIds::add);
+        dtos.stream()
+                .filter(d -> d.getGroup_participants() != null)
+                .flatMap(d -> d.getGroup_participants().stream())
+                .filter(g -> g.getMembers() != null)
+                .flatMap(g -> g.getMembers().stream())
+                .map(UserDto::id)
+                .filter(Objects::nonNull)
+                .forEach(allOidcIds::add);
 
-        if (oidcIds.isEmpty()) return;
+        if (allOidcIds.isEmpty()) return;
 
-        Map<String, UserIdentity> userMap = identityPort.findByIds(oidcIds);
+        Map<String, UserIdentity> userMap = identityPort.findByIds(new ArrayList<>(allOidcIds));
 
-        Set<Long> groupIds = dtos.stream()
+        // Batch-fetch group names for via_group_id references
+        Set<Long> viaGroupIds = dtos.stream()
                 .filter(d -> d.getParticipants() != null)
                 .flatMap(d -> d.getParticipants().stream())
                 .map(UserParticipantDto::getVia_group_id)
@@ -172,21 +193,48 @@ public class AppointmentService {
                 .collect(Collectors.toSet());
 
         Map<Long, String> groupNameMap = new HashMap<>();
-        if (!groupIds.isEmpty()) {
-            Group.<Group>list("id in ?1", groupIds)
+        if (!viaGroupIds.isEmpty()) {
+            Group.<Group>list("id in ?1", viaGroupIds)
                     .forEach(g -> groupNameMap.put(g.id, g.getGroupName()));
         }
 
         for (AppointmentDto dto : dtos) {
-            if (dto.getParticipants() == null) continue;
-            for (UserParticipantDto p : dto.getParticipants()) {
-                UserIdentity u = userMap.get(p.getUser_id());
-                if (u != null) {
-                    p.setName(u.getName());
-                    p.setProfile_picture_url(u.profilePictureUrl());
+            // Enrich individual participants
+            if (dto.getParticipants() != null) {
+                for (UserParticipantDto p : dto.getParticipants()) {
+                    UserIdentity u = userMap.get(p.getUser_id());
+                    if (u != null) {
+                        p.setName(u.getName());
+                        p.setProfile_picture_url(u.profilePictureUrl());
+                    }
+                    if (p.getVia_group_id() != null) {
+                        p.setVia_group_name(groupNameMap.get(p.getVia_group_id()));
+                    }
                 }
-                if (p.getVia_group_id() != null) {
-                    p.setVia_group_name(groupNameMap.get(p.getVia_group_id()));
+            }
+
+            // Enrich embedded message sender names (MessageDto is a record — replace instances)
+            if (dto.getMessages() != null) {
+                dto.setMessages(dto.getMessages().stream()
+                        .map(m -> {
+                            UserIdentity sender = userMap.get(m.sender_id());
+                            if (sender == null) return m;
+                            return new MessageDto(m.id(), m.sender_id(), sender.getName(),
+                                    m.appointment_id(), m.body(), m.timestamp());
+                        })
+                        .toList());
+            }
+
+            // Enrich group participant member names (UserDto is a record — replace instances)
+            if (dto.getGroup_participants() != null) {
+                for (GroupDto groupDto : dto.getGroup_participants()) {
+                    if (groupDto.getMembers() == null) continue;
+                    groupDto.setMembers(groupDto.getMembers().stream()
+                            .map(m -> {
+                                UserIdentity u = userMap.get(m.id());
+                                return u != null ? new UserDto(m.id(), u.firstName(), u.lastName()) : m;
+                            })
+                            .toList());
                 }
             }
         }
