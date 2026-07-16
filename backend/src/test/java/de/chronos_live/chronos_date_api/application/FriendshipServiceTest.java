@@ -140,6 +140,7 @@ class FriendshipServiceTest {
 
             // No existing request
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.empty());
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
 
             // Stub identityPort.findById used to load requester for the event
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC_ID, "Alice", "Jones");
@@ -155,6 +156,7 @@ class FriendshipServiceTest {
         @Test
         void should_delegateDirectly_when_addresseeIdIsProvided() {
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.empty());
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC_ID, "Alice", "Jones");
             when(identityPort.findById(REQUESTER_OIDC_ID)).thenReturn(requester);
 
@@ -172,13 +174,14 @@ class FriendshipServiceTest {
     /**
      * Coverage plan – sendFriendshipRequest(requesterId, addresseeId):
      *   B1  requesterId.equals(addresseeId) → throw BadRequestException
-     *   B2  existing request absent → create new request + fire event
-     *   B3  existing ACCEPTED → throw ValidationException ("bereits befreundet")
-     *   B4  existing PENDING, direction = requester sent → throw ValidationException ("bereits gesendet")
-     *   B5  existing PENDING, direction = addressee sent → throw ValidationException ("hat dir bereits gesendet")
-     *   B6  existing DECLINED → delete old request then create new one
+     *   B2  addressee not found in identity provider → throw ResourceNotFoundException
+     *   B3  existing request absent → create new request + fire event
+     *   B4  existing ACCEPTED → throw ValidationException ("bereits befreundet")
+     *   B5  existing PENDING, direction = requester sent → throw ValidationException ("bereits gesendet")
+     *   B6  existing PENDING, direction = addressee sent → throw ValidationException ("hat dir bereits gesendet")
+     *   B7  existing DECLINED → delete old request then create new one
      *
-     * Total branches: 6  |  Tests: 6
+     * Total branches: 7  |  Tests: 7
      */
     @Nested
     class SendFriendshipRequestTwoArg {
@@ -193,7 +196,18 @@ class FriendshipServiceTest {
 
         // B2
         @Test
+        void should_throwResourceNotFoundException_when_addresseeDoesNotExist() {
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.sendFriendshipRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining(ADDRESSEE_OIDC_ID);
+        }
+
+        // B3
+        @Test
         void should_createRequestAndFireEvent_when_noExistingRequest() {
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.empty());
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC_ID, "Alice", "Jones");
             when(identityPort.findById(REQUESTER_OIDC_ID)).thenReturn(requester);
@@ -215,6 +229,8 @@ class FriendshipServiceTest {
         void should_throwValidationException_when_alreadyFriends() {
             FriendshipRequest accepted = buildRequest(REQUEST_ID, REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID, FriendshipStatus.ACCEPTED);
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.of(accepted));
+            when(identityPort.existsById(REQUESTER_OIDC_ID)).thenReturn(true);
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
 
             assertThatThrownBy(() -> service.sendFriendshipRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID))
                     .isInstanceOf(ValidationException.class)
@@ -226,6 +242,8 @@ class FriendshipServiceTest {
         void should_throwValidationException_when_pendingRequestAlreadySentByRequester() {
             FriendshipRequest pending = buildRequest(REQUEST_ID, REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID, FriendshipStatus.PENDING);
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.of(pending));
+            when(identityPort.existsById(REQUESTER_OIDC_ID)).thenReturn(true);
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
 
             assertThatThrownBy(() -> service.sendFriendshipRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID))
                     .isInstanceOf(ValidationException.class)
@@ -238,15 +256,18 @@ class FriendshipServiceTest {
             // Swap: addressee sent the request, requester is addressee in this record
             FriendshipRequest pending = buildRequest(REQUEST_ID, ADDRESSEE_OIDC_ID, REQUESTER_OIDC_ID, FriendshipStatus.PENDING);
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.of(pending));
+            when(identityPort.existsById(REQUESTER_OIDC_ID)).thenReturn(true);
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
 
             assertThatThrownBy(() -> service.sendFriendshipRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("hat dir bereits eine Freundschaftsanfrage gesendet");
         }
 
-        // B6 – existing DECLINED → delete old, create new
+        // B7 – existing DECLINED → delete old, create new
         @Test
         void should_deleteOldDeclinedRequestAndCreateNew_when_previouslyDeclined() {
+            when(identityPort.existsById(ADDRESSEE_OIDC_ID)).thenReturn(true);
             FriendshipRequest declined = buildRequest(REQUEST_ID, REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID, FriendshipStatus.DECLINED);
             when(friendshipRepo.findRequest(REQUESTER_OIDC_ID, ADDRESSEE_OIDC_ID)).thenReturn(Optional.of(declined));
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC_ID, "Alice", "Jones");
