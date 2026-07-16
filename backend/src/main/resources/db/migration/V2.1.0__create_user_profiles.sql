@@ -26,5 +26,3 @@ ON CONFLICT (oidc_id) DO NOTHING;
 -- Drop the users table now that all FK columns have been migrated (V2.0.0)
 -- and the profile data has been preserved in user_profiles
 DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS message_backup;
-DROP TABLE IF EXISTS settings_backup;
