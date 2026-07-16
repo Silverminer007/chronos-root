@@ -17,7 +17,7 @@ public class MessageQueryService {
 
     public Message getMessage(Long messageId) {
         return (Message) Message
-                .find("SELECT m FROM Message m JOIN FETCH m.sender JOIN FETCH m.appointment WHERE m.id = ?1",
+                .find("SELECT m FROM Message m JOIN FETCH m.appointment WHERE m.id = ?1",
                         messageId)
                 .firstResultOptional()
                 .orElseThrow(() -> new ResourceNotFoundException("message", messageId));

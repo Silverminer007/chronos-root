@@ -9,6 +9,8 @@ import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import de.chronos_live.chronos_date_api.dto.MessageDto;
+import de.chronos_live.chronos_date_api.mapper.MessageMapper;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -23,6 +25,7 @@ import org.jboss.logging.Logger;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 @Transactional
@@ -35,6 +38,8 @@ public class MessageService {
     MessageQueryService messageQueryService;
     @Inject
     IdentityPort identityPort;
+    @Inject
+    MessageMapper messageMapper;
     @Inject
     Event<MessageSentEvent> messageSentEvent;
     @Inject
@@ -98,10 +103,26 @@ public class MessageService {
         return message;
     }
 
-    public List<Message> getMessages(Long appointmentId, String requestingUserOidcId) {
+    public List<MessageDto> getMessages(Long appointmentId, String requestingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Reading Messages", requestingUserOidcId, appointmentId);
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
-        return messageQueryService.getMessages(appointmentId);
+        List<Message> messages = messageQueryService.getMessages(appointmentId);
+
+        Map<String, UserIdentity> senderMap = identityPort.findByIds(
+                messages.stream().map(Message::getSenderOidcId).distinct().toList()
+        );
+
+        return messages.stream()
+                .map(m -> {
+                    MessageDto dto = messageMapper.toDto(m);
+                    UserIdentity sender = senderMap.get(m.getSenderOidcId());
+                    if (sender != null) {
+                        return new MessageDto(dto.id(), dto.sender_id(), sender.getName(),
+                                dto.appointment_id(), dto.body(), dto.timestamp());
+                    }
+                    return dto;
+                })
+                .toList();
     }
 
     private Message persistMessage(String text, String senderOidcId, Appointment appointment) {

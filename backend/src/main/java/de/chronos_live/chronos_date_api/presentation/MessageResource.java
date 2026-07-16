@@ -13,8 +13,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
-import java.util.List;
-
 @Path("/api/v2/appointments/{id}/messages")
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)
@@ -32,15 +30,16 @@ public class MessageResource {
     @Path("/")
     public Response getMessagesForEvent(@PathParam("id") Long appointmentId) {
         String oidcId = principalContext.getPrincipal().oidcId();
-        List<Message> messages = messageService.getMessages(appointmentId, oidcId);
-        return Response.ok(messageMapper.toDtoList(messages)).build();
+        return Response.ok(messageService.getMessages(appointmentId, oidcId)).build();
     }
 
     @POST
     @Path("/")
     public Response sendMessage(@PathParam("id") Long appointmentId, @RequestBody MessageDto messageDto) {
-        String oidcId = principalContext.getPrincipal().oidcId();
-        Message newMessage = messageService.sendMessage(appointmentId, messageDto.body(), oidcId);
-        return Response.ok(messageMapper.toDto(newMessage)).build();
+        var principal = principalContext.getPrincipal();
+        Message newMessage = messageService.sendMessage(appointmentId, messageDto.body(), principal.oidcId());
+        MessageDto dto = messageMapper.toDto(newMessage);
+        return Response.ok(new MessageDto(dto.id(), dto.sender_id(), principal.getName(),
+                dto.appointment_id(), dto.body(), dto.timestamp())).build();
     }
 }
