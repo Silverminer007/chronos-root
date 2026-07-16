@@ -3,7 +3,7 @@ name: 🚀 Deploy to Kubernetes
 on:
   push:
     branches: [ main ]
-    paths: [ 'deployment/**' ]
+    paths: [ 'deployment/**', '.github/workflows/deployment-ci.yml' ]
   repository_dispatch:
     types: [ deploy-staging, deploy-production ]
 
