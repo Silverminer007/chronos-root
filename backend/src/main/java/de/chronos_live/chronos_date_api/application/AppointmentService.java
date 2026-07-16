@@ -1,10 +1,15 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
+import de.chronos_live.chronos_date_api.domain.Group;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import de.chronos_live.chronos_date_api.dto.AppointmentDto;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
+import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -14,6 +19,12 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 @Transactional
@@ -24,6 +35,8 @@ public class AppointmentService {
     AuthorizationService authorizationService;
     @Inject
     AppointmentQueryService appointmentQueryService;
+    @Inject
+    IdentityPort identityPort;
     @Inject
     Event<AppointmentMovedEvent> appointmentMovedEvent;
     @Inject
@@ -136,5 +149,46 @@ public class AppointmentService {
         if (!participants) appointment.setParticipants(null);
         if (!groupParticipants) appointment.setGroupParticipants(null);
         return appointment;
+    }
+
+    public void enrichParticipants(List<AppointmentDto> dtos) {
+        List<String> oidcIds = dtos.stream()
+                .filter(d -> d.getParticipants() != null)
+                .flatMap(d -> d.getParticipants().stream())
+                .map(UserParticipantDto::getUser_id)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (oidcIds.isEmpty()) return;
+
+        Map<String, UserIdentity> userMap = identityPort.findByIds(oidcIds);
+
+        Set<Long> groupIds = dtos.stream()
+                .filter(d -> d.getParticipants() != null)
+                .flatMap(d -> d.getParticipants().stream())
+                .map(UserParticipantDto::getVia_group_id)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> groupNameMap = new HashMap<>();
+        if (!groupIds.isEmpty()) {
+            Group.<Group>list("id in ?1", groupIds)
+                    .forEach(g -> groupNameMap.put(g.id, g.getGroupName()));
+        }
+
+        for (AppointmentDto dto : dtos) {
+            if (dto.getParticipants() == null) continue;
+            for (UserParticipantDto p : dto.getParticipants()) {
+                UserIdentity u = userMap.get(p.getUser_id());
+                if (u != null) {
+                    p.setName(u.getName());
+                    p.setProfile_picture_url(u.profilePictureUrl());
+                }
+                if (p.getVia_group_id() != null) {
+                    p.setVia_group_name(groupNameMap.get(p.getVia_group_id()));
+                }
+            }
+        }
     }
 }
