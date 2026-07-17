@@ -6,16 +6,22 @@
 -- to avoid runtime Keycloak Admin API calls.
 
 CREATE TABLE user_profiles (
-    oidc_id             VARCHAR(255) NOT NULL PRIMARY KEY,
-    first_name          VARCHAR(255),
-    last_name           VARCHAR(255),
-    email               VARCHAR(255),
+    id           BIGSERIAL PRIMARY KEY,
+    oidc_id      VARCHAR(255) NOT NULL,
+    first_name   VARCHAR(255),
+    last_name    VARCHAR(255),
+    email        VARCHAR(255),
     profile_picture_url VARCHAR(512),
-    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_profiles_oidc_id UNIQUE (oidc_id)
 );
 
-CREATE INDEX idx_user_profiles_name  ON user_profiles (lower(first_name || ' ' || last_name));
+CREATE INDEX idx_user_profiles_oidc_id ON user_profiles (oidc_id);
+CREATE INDEX idx_user_profiles_name ON user_profiles (lower(first_name || ' ' || last_name));
 CREATE INDEX idx_user_profiles_email ON user_profiles (lower(email));
+
+-- Hibernate allocationSize=50 sequence (mirrors pattern in V1.3.0__create_sequences.sql)
+CREATE SEQUENCE IF NOT EXISTS user_profiles_SEQ START WITH 1 INCREMENT BY 50;
 
 -- Seed from the users table (initial cache state from existing data)
 INSERT INTO user_profiles (oidc_id, first_name, last_name, email, updated_at)
@@ -26,3 +32,5 @@ ON CONFLICT (oidc_id) DO NOTHING;
 -- Drop the users table now that all FK columns have been migrated (V2.0.0)
 -- and the profile data has been preserved in user_profiles
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS message_backup;
+DROP TABLE IF EXISTS settings_backup;

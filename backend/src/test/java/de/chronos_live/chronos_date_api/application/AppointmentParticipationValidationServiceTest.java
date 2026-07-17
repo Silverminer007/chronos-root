@@ -7,12 +7,10 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatistik;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
-import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -341,17 +339,12 @@ class AppointmentParticipationValidationServiceTest {
     @Nested
     class OnAppointmentParticipationStatusChanged {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
-
         // B1: start in the past → early return
         @Test
         void should_returnImmediately_when_appointmentAlreadyStarted() {
             Appointment appt = buildAppointment(APPT_ID, PAST_START, PAST_END,
                     AppointmentStatus.PLANNED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentParticipationStatusChanged(
                     statusChangedEvent(APPT_ID, ParticipationStatus.APPROVED));
@@ -364,7 +357,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_appointmentIsCancelled() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.CANCELLED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentParticipationStatusChanged(
                     statusChangedEvent(APPT_ID, ParticipationStatus.APPROVED));
@@ -377,7 +370,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_appointmentIsDeleted() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.DELETED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentParticipationStatusChanged(
                     statusChangedEvent(APPT_ID, ParticipationStatus.REJECTED));
@@ -390,7 +383,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_rejectedAndAlreadyNotEnough() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.NOT_ENOUGH_ATTENDEES, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentParticipationStatusChanged(
                     new AppointmentParticipationStatusChangedEvent(
@@ -405,7 +398,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_notFireEvent_when_plannedAndEnoughParticipantsRemaining() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.PLANNED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             // 5 total, 1 rejected → 5-1=4 >= 2 minimum
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(5, 2, 1));
@@ -422,7 +415,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_setNotEnoughAndFire_when_plannedAndNotEnoughParticipantsRemaining() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.PLANNED, 5);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             // 3 total, 1 rejected → 3-1=2 < 5 minimum
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(3, 1, 1));
@@ -442,7 +435,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_notChangeStatus_when_notEnoughAndStillNotEnoughParticipants() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.NOT_ENOUGH_ATTENDEES, 5);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             // 3 total, 1 rejected → 2 < 5 minimum
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(3, 1, 1));
@@ -459,7 +452,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_setPlanned_when_notEnoughButNowEnoughParticipants() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.NOT_ENOUGH_ATTENDEES, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             // 5 total, 0 rejected → 5 >= 2 minimum
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(5, 3, 0));
@@ -478,11 +471,6 @@ class AppointmentParticipationValidationServiceTest {
     @Nested
     class OnAppointmentEdited {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
-
         private AppointmentEditedEvent editedEvent() {
             return new AppointmentEditedEvent(APPT_ID);
         }
@@ -492,7 +480,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_minimalAttendeesIsNull() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.PLANNED, null);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentEdited(editedEvent());
 
@@ -505,7 +493,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_appointmentAlreadyStarted() {
             Appointment appt = buildAppointment(APPT_ID, PAST_START, PAST_END,
                     AppointmentStatus.PLANNED, 3);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentEdited(editedEvent());
 
@@ -518,7 +506,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_appointmentIsCancelled() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.CANCELLED, 3);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentEdited(editedEvent());
 
@@ -531,7 +519,7 @@ class AppointmentParticipationValidationServiceTest {
         void should_returnImmediately_when_appointmentIsDeleted() {
             Appointment appt = buildAppointment(APPT_ID, FUTURE_START, FUTURE_END_SHORT,
                     AppointmentStatus.DELETED, 3);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
 
             service.onAppointmentEdited(editedEvent());
 
@@ -547,7 +535,7 @@ class AppointmentParticipationValidationServiceTest {
             Instant start = Instant.now().plus(35, ChronoUnit.DAYS);
             Instant end   = start.plus(25, ChronoUnit.HOURS); // >= 24h
             Appointment appt = buildAppointment(APPT_ID, start, end, AppointmentStatus.PLANNED, 3);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(5, 3, 0)); // 3 approved >= 3 min
 
@@ -562,7 +550,7 @@ class AppointmentParticipationValidationServiceTest {
             Instant start = Instant.now().plus(35, ChronoUnit.DAYS);
             Instant end   = start.plus(25, ChronoUnit.HOURS); // >= 24h
             Appointment appt = buildAppointment(APPT_ID, start, end, AppointmentStatus.PLANNED, 5);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(3, 2, 0)); // 2 approved < 5 min
 
@@ -584,7 +572,7 @@ class AppointmentParticipationValidationServiceTest {
             Instant start = nextWeekdayFromNow(63);
             Instant end   = start.plus(2, ChronoUnit.HOURS); // < 24h
             Appointment appt = buildAppointment(APPT_ID, start, end, AppointmentStatus.PLANNED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             // 4 total, 0 rejected → 4-0=4 >= 2 min
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(4, 2, 0));
@@ -600,7 +588,7 @@ class AppointmentParticipationValidationServiceTest {
             Instant start = nextWeekdayFromNow(63); // 9 weeks from now, weekday
             Instant end   = start.plus(2, ChronoUnit.HOURS);
             Appointment appt = buildAppointment(APPT_ID, start, end, AppointmentStatus.PLANNED, 5);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             // 3 total, 1 rejected → 3-1=2 < 5 min
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(3, 1, 1));
@@ -619,7 +607,7 @@ class AppointmentParticipationValidationServiceTest {
             Instant start = nextWeekendFromNow(70); // 10 weeks from now, weekend
             Instant end   = start.plus(3, ChronoUnit.HOURS); // < 24h
             Appointment appt = buildAppointment(APPT_ID, start, end, AppointmentStatus.PLANNED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(4, 2, 0));
 
@@ -635,7 +623,7 @@ class AppointmentParticipationValidationServiceTest {
             Instant start = nextWeekdayFromNow(0); // weekday within today
             Instant end   = start.plus(2, ChronoUnit.HOURS);
             Appointment appt = buildAppointment(APPT_ID, start, end, AppointmentStatus.PLANNED, 2);
-            when(Appointment.<Appointment>findById(APPT_ID)).thenReturn(appt);
+            when(appointmentQueryService.findById(APPT_ID)).thenReturn(appt);
             when(appointmentParticipationQueryService.getParticipationStatistik(APPT_ID))
                     .thenReturn(new ParticipationStatistik(5, 3, 0)); // 3 approved >= 2 min
 

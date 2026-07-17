@@ -7,6 +7,9 @@ import de.chronos_live.chronos_date_api.dto.GroupDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.BadRequestException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentParticipationRepository;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -31,6 +34,12 @@ public class AppointmentParticipationService {
     @Inject
     IdentityPort identityPort;
     @Inject
+    AppointmentRepository appointmentRepository;
+    @Inject
+    AppointmentParticipationRepository participationRepository;
+    @Inject
+    GroupRepository groupRepository;
+    @Inject
     Event<AppointmentParticipationStatusChangedEvent> appointmentParticipationStatusChangedEvent;
     @Inject
     Event<AppointmentParticipationRoleChangedEvent> appointmentParticipationRoleChangedEvent;
@@ -48,22 +57,19 @@ public class AppointmentParticipationService {
         AppointmentParticipation participation = new AppointmentParticipation();
         participation.setStatus(ParticipationStatus.PENDING);
         participation.setRole(UserRole.RESPONSIBLE);
-        participation.setAppointment(Appointment.findById(event.appointmentId()));
+        participation.setAppointment(appointmentRepository.findById(event.appointmentId()));
         participation.setUserOidcId(event.creatorOidcId());
-        participation.persist();
+        participationRepository.persist(participation);
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onGroupMemberAdded(@Observes GroupMemberAddedEvent event) {
         List<AppointmentGroupParticipation> groupParticipations =
-                AppointmentGroupParticipation.find("group.id = ?1", event.groupId()).list();
+                participationRepository.listGroupParticipationsByGroup(event.groupId());
 
         for (AppointmentGroupParticipation agp : groupParticipations) {
-            boolean alreadyParticipant = AppointmentParticipation
-                    .find("appointment.id = ?1 AND userOidcId = ?2",
-                            agp.getAppointment().id, event.newMemberOidcId())
-                    .count() > 0;
-            if (alreadyParticipant) continue;
+            if (participationRepository.existsByAppointmentAndUser(
+                    agp.getAppointment().id, event.newMemberOidcId())) continue;
 
             AppointmentParticipation participation = new AppointmentParticipation();
             participation.setStatus(ParticipationStatus.PENDING);
@@ -71,15 +77,13 @@ public class AppointmentParticipationService {
             participation.setAppointment(agp.getAppointment());
             participation.setGroupParticipationId(event.groupId());
             participation.setUserOidcId(event.newMemberOidcId());
-            participation.persist();
+            participationRepository.persist(participation);
         }
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onGroupMemberRemoved(@Observes GroupMemberRemovedEvent event) {
-        AppointmentParticipation
-                .delete("groupParticipationId = ?1 AND userOidcId = ?2",
-                        event.groupId(), event.removedMemberOidcId());
+        participationRepository.deleteByGroupAndUser(event.groupId(), event.removedMemberOidcId());
     }
 
     public void addUserToAppointment(String actingUserOidcId, Long appointmentId, String targetUserOidcId, UserRole role) {
@@ -88,18 +92,16 @@ public class AppointmentParticipationService {
 
         authorizationService.requireAddUserToAppointment(appointmentId, actingUserOidcId, targetUserOidcId);
 
-        if (AppointmentParticipation
-                .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, targetUserOidcId)
-                .count() > 0) {
+        if (participationRepository.existsByAppointmentAndUser(appointmentId, targetUserOidcId)) {
             throw new ValidationException("This user is already a participant of this appointment");
         }
 
         AppointmentParticipation participation = new AppointmentParticipation();
         participation.setStatus(ParticipationStatus.PENDING);
         participation.setRole(role);
-        participation.setAppointment(Appointment.findById(appointmentId));
+        participation.setAppointment(appointmentRepository.findById(appointmentId));
         participation.setUserOidcId(targetUserOidcId);
-        participation.persist();
+        participationRepository.persist(participation);
 
         appointmentParticipationAddedEvent.fire(
                 new AppointmentParticipationAddedEvent(appointmentId, targetUserOidcId, actingUserOidcId));
@@ -111,25 +113,21 @@ public class AppointmentParticipationService {
 
         authorizationService.requireAddGroupToAppointment(appointmentId, actingUserOidcId, groupId);
 
-        if (AppointmentGroupParticipation
-                .find("appointment.id = ?1 AND group.id = ?2", appointmentId, groupId)
-                .count() > 0) {
+        if (participationRepository.existsGroupParticipation(appointmentId, groupId)) {
             throw new ValidationException("This group is already a participant of this appointment");
         }
 
-        Appointment appointment = Appointment.findById(appointmentId);
-        Group group = Group.findById(groupId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
+        Group group = groupRepository.findById(groupId);
 
         AppointmentGroupParticipation agp = new AppointmentGroupParticipation();
         agp.setGroup(group);
         agp.setAppointment(appointment);
         agp.setRole(role);
-        agp.persist();
+        participationRepository.persistGroupParticipation(agp);
 
         for (UserIdentity user : groupService.getGroupUsers(actingUserOidcId, groupId)) {
-            if (AppointmentParticipation
-                    .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, user.oidcId())
-                    .count() > 0) continue;
+            if (participationRepository.existsByAppointmentAndUser(appointmentId, user.oidcId())) continue;
 
             AppointmentParticipation participation = new AppointmentParticipation();
             participation.setStatus(ParticipationStatus.PENDING);
@@ -137,7 +135,7 @@ public class AppointmentParticipationService {
             participation.setAppointment(appointment);
             participation.setUserOidcId(user.oidcId());
             participation.setGroupParticipationId(groupId);
-            participation.persist();
+            participationRepository.persist(participation);
         }
 
         appointmentGroupParticipationAddedEvent.fire(
@@ -152,11 +150,9 @@ public class AppointmentParticipationService {
 
         if (newRole == null) throw new BadRequestException("invalid role");
 
-        AppointmentParticipation participation = (AppointmentParticipation)
-                AppointmentParticipation
-                        .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, targetUserOidcId)
-                        .firstResultOptional()
-                        .orElseThrow(() -> new ValidationException("This user is not a participant of this event"));
+        AppointmentParticipation participation = participationRepository
+                .findByAppointmentAndUser(appointmentId, targetUserOidcId)
+                .orElseThrow(() -> new ValidationException("This user is not a participant of this event"));
 
         if (newRole.equals(participation.getRole())) {
             throw new ValidationException("this is already the users role");
@@ -174,8 +170,7 @@ public class AppointmentParticipationService {
 
         authorizationService.requireRemoveParticipantFromAppointment(appointmentId, actingUserOidcId, targetUserOidcId);
 
-        long removed = AppointmentParticipation
-                .delete("appointment.id = ?1 AND userOidcId = ?2", appointmentId, targetUserOidcId);
+        long removed = participationRepository.deleteByAppointmentAndUser(appointmentId, targetUserOidcId);
         if (removed < 1) {
             throw new ValidationException("This user is not a participant of this event");
         }
@@ -190,12 +185,11 @@ public class AppointmentParticipationService {
 
         authorizationService.requireRemoveGroupFromAppointment(appointmentId, actingUserOidcId, groupId);
 
-        long deleted = AppointmentGroupParticipation
-                .delete("appointment.id = ?1 AND group.id = ?2", appointmentId, groupId);
+        long deleted = participationRepository.deleteGroupParticipation(appointmentId, groupId);
         if (deleted < 1) {
             throw new ValidationException("This group is not a participant of this appointment");
         }
-        AppointmentParticipation.delete("groupParticipationId = ?1 AND appointment.id = ?2", groupId, appointmentId);
+        participationRepository.deleteByGroupAndAppointment(groupId, appointmentId);
 
         appointmentGroupParticipationRemovedEvent.fire(
                 new AppointmentGroupParticipationRemovedEvent(appointmentId, groupId, actingUserOidcId));
@@ -211,11 +205,9 @@ public class AppointmentParticipationService {
             throw new BadRequestException("you cannot set your participation status back to pending");
         }
 
-        AppointmentParticipation participation = (AppointmentParticipation)
-                AppointmentParticipation
-                        .find("appointment.id = ?1 AND userOidcId = ?2", appointmentId, userOidcId)
-                        .firstResultOptional()
-                        .orElseThrow(() -> new ValidationException("This user is not a participant of this event"));
+        AppointmentParticipation participation = participationRepository
+                .findByAppointmentAndUser(appointmentId, userOidcId)
+                .orElseThrow(() -> new ValidationException("This user is not a participant of this event"));
 
         if (status.equals(participation.getStatus())) {
             throw new ValidationException("this is already your participation status");
@@ -235,10 +227,8 @@ public class AppointmentParticipationService {
 
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
 
-        List<AppointmentParticipation> participations =
-                AppointmentParticipation.list("appointment.id = ?1", appointmentId);
+        List<AppointmentParticipation> participations = participationRepository.listByAppointment(appointmentId);
 
-        // Single IN query for all users — avoids N+1
         Map<String, UserIdentity> userMap = identityPort.findByIds(
                 participations.stream().map(AppointmentParticipation::getUserOidcId).toList()
         );
@@ -257,7 +247,7 @@ public class AppointmentParticipationService {
                     dto.setRole(ap.getRole());
                     dto.setStatus(ap.getStatus());
                     if (ap.getGroupParticipationId() != null) {
-                        Group group = Group.findById(ap.getGroupParticipationId());
+                        Group group = groupRepository.findById(ap.getGroupParticipationId());
                         dto.setVia_group_id(group.id);
                         dto.setVia_group_name(group.getGroupName());
                     }
@@ -271,14 +261,8 @@ public class AppointmentParticipationService {
 
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
 
-        List<AppointmentGroupParticipation> list =
-                AppointmentGroupParticipation.list(
-                        "SELECT agp FROM AppointmentGroupParticipation agp " +
-                                "JOIN agp.group g JOIN g.members m " +
-                                "WHERE agp.appointment.id = ?1 AND m.userOidcId = ?2",
-                        appointmentId, requestingUserOidcId);
-
-        return list.stream()
+        return participationRepository.listGroupParticipationsForUser(appointmentId, requestingUserOidcId)
+                .stream()
                 .map(agp -> {
                     GroupDto dto = new GroupDto();
                     dto.setId(agp.getGroup().id);

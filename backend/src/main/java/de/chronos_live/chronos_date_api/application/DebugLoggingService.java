@@ -6,6 +6,7 @@ import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
+import jakarta.inject.Inject;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -15,6 +16,9 @@ import java.util.List;
 
 @ApplicationScoped
 public class DebugLoggingService {
+    @Inject
+    AppointmentQueryService appointmentQueryService;
+
     public void onAppointmentParticipationStatusConfirmation(@Observes AppointmentParticipationStatusConfirmationEvent event) {
         Log.debugf("[Notifications] onAppointmentParticipationStatusConfirmation Appointment ID %s", event.appointmentId());
     }
@@ -32,7 +36,7 @@ public class DebugLoggingService {
     }
 
     public void onAppointmentParticipationPendingReminder(@Observes AppointmentParticipationStatusPendingReminderEvent event) {
-        Appointment appointment = Appointment.findById(event.appointmentId());
+        Appointment appointment = appointmentQueryService.findById(event.appointmentId());
 
         Instant targetTime = appointment.getStartTime();
         if(appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) >= 24) {

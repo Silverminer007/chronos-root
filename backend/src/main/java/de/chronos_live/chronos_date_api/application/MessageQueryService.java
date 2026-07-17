@@ -1,9 +1,10 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.Message;
-import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import java.util.List;
 
@@ -11,15 +12,14 @@ import java.util.List;
 @Timed("service.messageQuery")
 public class MessageQueryService {
 
+    @Inject
+    MessageRepository messageRepository;
+
     public List<Message> getMessages(Long appointmentId) {
-        return Message.find("appointment.id = ?1 ORDER BY timeStamp DESC", appointmentId).list();
+        return messageRepository.listByAppointment(appointmentId);
     }
 
     public Message getMessage(Long messageId) {
-        return (Message) Message
-                .find("SELECT m FROM Message m JOIN FETCH m.appointment WHERE m.id = ?1",
-                        messageId)
-                .firstResultOptional()
-                .orElseThrow(() -> new ResourceNotFoundException("message", messageId));
+        return messageRepository.findByIdOrThrow(messageId);
     }
 }

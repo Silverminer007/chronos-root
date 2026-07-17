@@ -14,6 +14,7 @@ import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -41,7 +42,7 @@ public class AppointmentService {
     @Inject
     AppointmentQueryService appointmentQueryService;
     @Inject
-    IdentityPort identityPort;
+    AppointmentRepository appointmentRepository;
     @Inject
     Event<AppointmentMovedEvent> appointmentMovedEvent;
     @Inject
@@ -79,7 +80,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatedAt(Instant.now());
         appointment.setLastUpdate(Instant.now());
-        appointment.persist();
+        appointmentRepository.persist(appointment);
 
         LOGGER.debugf("[Principal %s][Appointment %s] Created Appointment", creatorOidcId, appointment.id);
         appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorOidcId));
@@ -130,7 +131,7 @@ public class AppointmentService {
     public void deleteAppointment(Long appointmentId, String actingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Delete Appointment", actingUserOidcId, appointmentId);
         authorizationService.requireDeleteAppointment(appointmentId, actingUserOidcId);
-        Appointment appointment = Appointment.findById(appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) return;
         appointment.setStatus(AppointmentStatus.DELETED);
         appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserOidcId));
@@ -139,7 +140,7 @@ public class AppointmentService {
     public void cancelAppointment(Long appointmentId, String actingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Cancel Appointment", actingUserOidcId, appointmentId);
         authorizationService.requireCancelAppointment(appointmentId, actingUserOidcId);
-        Appointment appointment = Appointment.findById(appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) return;
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserOidcId));

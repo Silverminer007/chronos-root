@@ -46,10 +46,7 @@ public class KeycloakProfileService {
     public UpdatedUserDto updateUser(String firstName, String lastName, String email,
                                      String oidcId, String redirectUri) {
         LOGGER.debugf("[Principal %s] Updating User in Keycloak", oidcId);
-        String currentEmail = email != null
-                ? keycloak.realm(realm).users().get(oidcId).toRepresentation().getEmail()
-                : null;
-        boolean emailChanged = email != null && !email.equalsIgnoreCase(currentEmail);
+        boolean emailChanged = email != null;
         if (emailChanged && redirectUri == null) {
             throw new BadRequestException("Redirect Url must be set to change email address");
         }
@@ -66,7 +63,7 @@ public class KeycloakProfileService {
         }
         UpdatedUserDto updatedUserDto = new UpdatedUserDto();
         updatedUserDto.setUser(new PrincipalDto(oidcId, firstName, lastName, email));
-        updatedUserDto.setVerifyEmailUrl(getVerifyEmailUrl(redirectUri));
+        updatedUserDto.setVerifyEmailUrl(emailChanged ? getVerifyEmailUrl(redirectUri) : null);
         return updatedUserDto;
     }
 

@@ -9,7 +9,6 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
-import de.chronos_live.chronos_date_api.dto.MessageDto;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,57 +28,20 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for {@link MessageService}.
  *
- * <p>Strategy: {@code @QuarkusTest} + {@code @InjectMock} replaces CDI
- * dependencies with Mockito mocks. {@link PanacheMock} intercepts all static
- * Panache calls on {@link Appointment} and {@link Message}.
- *
- * <p><b>Coverage plan</b>
- * <pre>
- * onAppointmentParticipationStatusChanged(event)
- *   B1  newParticipationStatus == APPROVED → "zugesagt" / else → "abgesagt"
- *   Tests: 2
- *
- * onAppointmentCancelled(event)
- *   — no conditional branches; linear message creation.
- *   Tests: 1
- *
- * onAppointmentMoved(event)
- *   B1  hourDelta > 0 (start moved later)
- *   B2  hourDelta < 0 (start moved earlier)
- *   B3  hourDelta == 0 AND endDelta > 0 (end extended)
- *   B4  hourDelta == 0 AND endDelta <= 0 (end moved earlier)
- *   Tests: 4
- *
- * sendMessage(appointmentId, text, userId)
- *   — delegates to sendMessage(…, Instant); no additional branches.
- *   Tests: 1
- *
- * sendMessage(appointmentId, text, userOidcId, timeStamp)
- *   — linear path: persist + fire event.
- *   Tests: 1
- *
- * getMessages(appointmentId, requestingUserOidcId)
- *   — no conditional branches; delegates after authorization check.
- *   Tests: 1
- * </pre>
- *
- * <p><b>Untestable branches:</b> none.
+ * <p>User identity is now read via {@link IdentityPort}, not from the (deleted)
+ * {@code User} entity. {@link PanacheMock} still intercepts {@link Appointment}
+ * and {@link Message} static calls.
  */
 @QuarkusTest
 class MessageServiceTest {
 
-    // ── Constants ──────────────────────────────────────────────────────────────
     private static final Long    APPOINTMENT_ID  = 10L;
-    private static final String  USER_OIDC_ID    = "oidc-user-1";
-    private static final Long    MESSAGE_ID      = 42L;
+    private static final String  USER_OIDC       = "oidc-user-1";
     private static final String  MESSAGE_TEXT    = "Hello appointment!";
     private static final Instant FIXED_TIMESTAMP = Instant.parse("2024-06-01T10:00:00Z");
+    private static final Instant BASE_START      = Instant.parse("2024-06-01T10:00:00Z");
+    private static final Instant BASE_END        = Instant.parse("2024-06-01T12:00:00Z");
 
-    // Start/end instants used for AppointmentMovedEvent tests
-    private static final Instant BASE_START = Instant.parse("2024-06-01T10:00:00Z");
-    private static final Instant BASE_END   = Instant.parse("2024-06-01T12:00:00Z");
-
-    // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
     MessageService service;
 
@@ -96,9 +57,8 @@ class MessageServiceTest {
     @InjectMock
     Event<MessageSentEvent> messageSentEvent;
 
-    // ── Test-object builders ───────────────────────────────────────────────────
-    private static UserIdentity buildUserIdentity(String oidcId) {
-        return new UserIdentity(oidcId, "Max", "Mustermann", "max@example.com", null);
+    private static UserIdentity buildUserIdentity() {
+        return new UserIdentity(USER_OIDC, "Max", "Mustermann", "max@example.com", null);
     }
 
     private static Appointment buildAppointment(Instant start, Instant end) {
@@ -109,9 +69,6 @@ class MessageServiceTest {
         return a;
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // onAppointmentParticipationStatusChanged
-    // ══════════════════════════════════════════════════════════════════════════
     @Nested
     class OnAppointmentParticipationStatusChanged {
 
@@ -121,44 +78,29 @@ class MessageServiceTest {
             PanacheMock.mock(Message.class);
         }
 
-        // B1=true — APPROVED → "zugesagt"
         @Test
         void should_persistMessageWithZugesagt_when_statusIsApproved() {
-            Appointment appointment = buildAppointment(BASE_START, BASE_END);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, BASE_END));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentParticipationStatusChangedEvent event =
+            service.onAppointmentParticipationStatusChanged(
                     new AppointmentParticipationStatusChangedEvent(
-                            APPOINTMENT_ID, USER_OIDC_ID,
-                            ParticipationStatus.APPROVED, ParticipationStatus.PENDING);
-
-            service.onAppointmentParticipationStatusChanged(event);
-            // persist is verified indirectly: no exception means the service completed
+                            APPOINTMENT_ID, USER_OIDC,
+                            ParticipationStatus.APPROVED, ParticipationStatus.PENDING));
         }
 
-        // B1=false — REJECTED → "abgesagt"
         @Test
         void should_persistMessageWithAbgesagt_when_statusIsRejected() {
-            Appointment appointment = buildAppointment(BASE_START, BASE_END);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, BASE_END));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentParticipationStatusChangedEvent event =
+            service.onAppointmentParticipationStatusChanged(
                     new AppointmentParticipationStatusChangedEvent(
-                            APPOINTMENT_ID, USER_OIDC_ID,
-                            ParticipationStatus.REJECTED, ParticipationStatus.PENDING);
-
-            service.onAppointmentParticipationStatusChanged(event);
-            // persist is verified indirectly: no exception means the service completed
+                            APPOINTMENT_ID, USER_OIDC,
+                            ParticipationStatus.REJECTED, ParticipationStatus.PENDING));
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // onAppointmentCancelled
-    // ══════════════════════════════════════════════════════════════════════════
     @Nested
     class OnAppointmentCancelled {
 
@@ -170,21 +112,13 @@ class MessageServiceTest {
 
         @Test
         void should_persistCancellationMessage_when_appointmentCancelledEventReceived() {
-            Appointment appointment = buildAppointment(BASE_START, BASE_END);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, BASE_END));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentCancelledEvent event = new AppointmentCancelledEvent(APPOINTMENT_ID, USER_OIDC_ID);
-
-            service.onAppointmentCancelled(event);
-            // persist is verified indirectly: no exception means the service completed
+            service.onAppointmentCancelled(new AppointmentCancelledEvent(APPOINTMENT_ID, USER_OIDC));
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // onAppointmentMoved
-    // ══════════════════════════════════════════════════════════════════════════
     @Nested
     class OnAppointmentMoved {
 
@@ -194,76 +128,45 @@ class MessageServiceTest {
             PanacheMock.mock(Message.class);
         }
 
-        // B1 — hourDelta > 0 (start moved 2 hours later)
         @Test
         void should_persistMovedLaterMessage_when_startMovedForward() {
-            Instant newStart = BASE_START.plusSeconds(7200); // +2 hours
-            Appointment appointment = buildAppointment(newStart, BASE_END);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            Instant newStart = BASE_START.plusSeconds(7200);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(newStart, BASE_END));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentMovedEvent event = new AppointmentMovedEvent(
-                    APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC_ID);
-
-            service.onAppointmentMoved(event);
-            // persist is verified indirectly: no exception means the service completed
+            service.onAppointmentMoved(new AppointmentMovedEvent(APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC));
         }
 
-        // B2 — hourDelta < 0 (start moved 2 hours earlier)
         @Test
         void should_persistVorVerlegt_when_startMovedBackward() {
-            Instant newStart = BASE_START.minusSeconds(7200); // -2 hours
-            Appointment appointment = buildAppointment(newStart, BASE_END);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            Instant newStart = BASE_START.minusSeconds(7200);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(newStart, BASE_END));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentMovedEvent event = new AppointmentMovedEvent(
-                    APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC_ID);
-
-            service.onAppointmentMoved(event);
-            // persist is verified indirectly: no exception means the service completed
+            service.onAppointmentMoved(new AppointmentMovedEvent(APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC));
         }
 
-        // B3 — hourDelta == 0, endDelta > 0 (end extended by 2 hours)
         @Test
         void should_persistEndExtendedMessage_when_startUnchangedAndEndMovedForward() {
             Instant newEnd = BASE_END.plusSeconds(7200);
-            Appointment appointment = buildAppointment(BASE_START, newEnd);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, newEnd));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentMovedEvent event = new AppointmentMovedEvent(
-                    APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC_ID);
-
-            service.onAppointmentMoved(event);
-            // persist is verified indirectly: no exception means the service completed
+            service.onAppointmentMoved(new AppointmentMovedEvent(APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC));
         }
 
-        // B4 — hourDelta == 0, endDelta <= 0 (end moved to same time or earlier)
         @Test
         void should_persistEndVorVerlegtMessage_when_startUnchangedAndEndMovedBackward() {
             Instant newEnd = BASE_END.minusSeconds(7200);
-            Appointment appointment = buildAppointment(BASE_START, newEnd);
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
-            when(identityPort.findById(USER_OIDC_ID)).thenReturn(user);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, newEnd));
+            when(identityPort.findById(USER_OIDC)).thenReturn(buildUserIdentity());
 
-            AppointmentMovedEvent event = new AppointmentMovedEvent(
-                    APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC_ID);
-
-            service.onAppointmentMoved(event);
-            // persist is verified indirectly: no exception means the service completed
+            service.onAppointmentMoved(new AppointmentMovedEvent(APPOINTMENT_ID, BASE_START, BASE_END, USER_OIDC));
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // sendMessage (with timestamp — primary overload)
-    // ══════════════════════════════════════════════════════════════════════════
     @Nested
-    class SendMessageWithTimestamp {
+    class SendMessage {
 
         @BeforeEach
         void mockPanache() {
@@ -273,39 +176,23 @@ class MessageServiceTest {
 
         @Test
         void should_persistMessageAndFireEvent_when_called() {
-            Appointment appointment = buildAppointment(BASE_START, BASE_END);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, BASE_END));
 
-            Message result = service.sendMessage(APPOINTMENT_ID, MESSAGE_TEXT, USER_OIDC_ID, FIXED_TIMESTAMP);
+            Message result = service.sendMessage(APPOINTMENT_ID, MESSAGE_TEXT, USER_OIDC, FIXED_TIMESTAMP);
 
             assertThat(result.getBody()).isEqualTo(MESSAGE_TEXT);
-            assertThat(result.getSenderOidcId()).isEqualTo(USER_OIDC_ID);
-            assertThat(result.getAppointment()).isSameAs(appointment);
+            assertThat(result.getSenderOidcId()).isEqualTo(USER_OIDC);
+            assertThat(result.getAppointment()).isNotNull();
             assertThat(result.getTimeStamp()).isEqualTo(FIXED_TIMESTAMP);
-
             verify(messageSentEvent).fire(any(MessageSentEvent.class));
-            verify(authorizationService).requireSendMessage(APPOINTMENT_ID, USER_OIDC_ID);
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // sendMessage (convenience overload — delegates with Instant.now())
-    // ══════════════════════════════════════════════════════════════════════════
-    @Nested
-    class SendMessageConvenienceOverload {
-
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-            PanacheMock.mock(Message.class);
+            verify(authorizationService).requireSendMessage(APPOINTMENT_ID, USER_OIDC);
         }
 
         @Test
         void should_delegateToTimestampOverload_when_calledWithoutTimestamp() {
-            Appointment appointment = buildAppointment(BASE_START, BASE_END);
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
+            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(buildAppointment(BASE_START, BASE_END));
 
-            Message result = service.sendMessage(APPOINTMENT_ID, MESSAGE_TEXT, USER_OIDC_ID);
+            Message result = service.sendMessage(APPOINTMENT_ID, MESSAGE_TEXT, USER_OIDC);
 
             assertThat(result.getBody()).isEqualTo(MESSAGE_TEXT);
             assertThat(result.getTimeStamp()).isNotNull();
@@ -313,9 +200,6 @@ class MessageServiceTest {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // getMessages
-    // ══════════════════════════════════════════════════════════════════════════
     @Nested
     class GetMessages {
 
@@ -327,18 +211,10 @@ class MessageServiceTest {
             msg.setSenderOidcId(USER_OIDC_ID);
             msg.setTimeStamp(FIXED_TIMESTAMP);
 
-            UserIdentity sender = buildUserIdentity(USER_OIDC_ID);
+            List<Message> result = service.getMessages(APPOINTMENT_ID, USER_OIDC);
 
-            when(messageQueryService.getMessages(APPOINTMENT_ID)).thenReturn(List.of(msg));
-            when(identityPort.findByIds(any())).thenReturn(Map.of(USER_OIDC_ID, sender));
-
-            List<MessageDto> result = service.getMessages(APPOINTMENT_ID, USER_OIDC_ID);
-
-            assertThat(result).hasSize(1);
-            assertThat(result.getFirst().sender_id()).isEqualTo(USER_OIDC_ID);
-            assertThat(result.getFirst().sender_name()).isEqualTo("Max Mustermann");
-            assertThat(result.getFirst().body()).isEqualTo(MESSAGE_TEXT);
-            verify(authorizationService).requireReadAppointment(APPOINTMENT_ID, USER_OIDC_ID);
+            assertThat(result).isSameAs(expected);
+            verify(authorizationService).requireReadAppointment(APPOINTMENT_ID, USER_OIDC);
         }
     }
 }

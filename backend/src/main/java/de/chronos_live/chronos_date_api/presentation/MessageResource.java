@@ -30,16 +30,15 @@ public class MessageResource {
     @Path("/")
     public Response getMessagesForEvent(@PathParam("id") Long appointmentId) {
         String oidcId = principalContext.getPrincipal().oidcId();
-        return Response.ok(messageService.getMessages(appointmentId, oidcId)).build();
+        List<Message> messages = messageService.getMessages(appointmentId, oidcId);
+        return Response.ok(messageMapper.toDtoList(messages)).build();
     }
 
     @POST
     @Path("/")
     public Response sendMessage(@PathParam("id") Long appointmentId, @RequestBody MessageDto messageDto) {
-        var principal = principalContext.getPrincipal();
-        Message newMessage = messageService.sendMessage(appointmentId, messageDto.body(), principal.oidcId());
-        MessageDto dto = messageMapper.toDto(newMessage);
-        return Response.ok(new MessageDto(dto.id(), dto.sender_id(), principal.getName(),
-                dto.appointment_id(), dto.body(), dto.timestamp())).build();
+        String oidcId = principalContext.getPrincipal().oidcId();
+        Message newMessage = messageService.sendMessage(appointmentId, messageDto.body(), oidcId);
+        return Response.ok(messageMapper.toDto(newMessage)).build();
     }
 }

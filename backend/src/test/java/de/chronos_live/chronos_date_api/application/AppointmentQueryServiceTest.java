@@ -4,7 +4,6 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -12,29 +11,20 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link AppointmentQueryService}.
  *
- * Strategy: @QuarkusTest with PanacheMock intercepts every static Panache call
- * (Appointment.find / Appointment.count) so no real database is ever touched.
- * The injected AppointmentRepository is replaced by a Mockito mock via @InjectMock.
- *
- * Infrastructure requirements:
- *   - Docker must be available so that Quarkus DevServices can start a PostgreSQL
- *     container (needed to satisfy the datasource extension at startup).
- *   - Flyway and Hibernate schema validation are disabled in
- *     src/test/resources/application.properties, so the empty container is fine.
+ * Strategy: @QuarkusTest with @InjectMock replaces AppointmentRepository with a
+ * Mockito mock. AppointmentQueryService is a pure delegator, so tests verify
+ * correct delegation and argument passing.
  */
 @QuarkusTest
 class AppointmentQueryServiceTest {
@@ -42,9 +32,8 @@ class AppointmentQueryServiceTest {
     // ── Constants ──────────────────────────────────────────────────────────────
     private static final Long   APPOINTMENT_ID = 42L;
     private static final Long   UNKNOWN_ID     = 999L;
-    private static final String USER_ID        = "oidc-user-1";
+    private static final String USER_OIDC      = "oidc-user-1";
 
-    /** A fixed reference instant used as the "now" anchor in timing tests. */
     private static final Instant T0    = Instant.parse("2024-06-01T12:00:00Z");
     private static final Instant AFTER  = Instant.parse("2024-06-01T08:00:00Z");
     private static final Instant BEFORE = Instant.parse("2024-06-01T18:00:00Z");
@@ -74,18 +63,9 @@ class AppointmentQueryServiceTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // getAppointment
+    // getAppointment — delegates to appointmentRepository.getAppointment()
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – getAppointment:
-     *   B1  if (messages)          → true / false
-     *   B2  if (participants)      → true / false
-     *   B3  if (groupParticipants) → true / false
-     *   B4  Optional.isPresent()   → true (appointment returned) / false (exception)
-     *
-     * Total branches: 8  |  Tests: 5
-     */
     @Nested
     class GetAppointment {
 
@@ -94,79 +74,48 @@ class AppointmentQueryServiceTest {
             PanacheMock.mock(Appointment.class);
         }
 
-        // B1=false, B2=false, B3=false, B4=true
         @Test
         void should_returnAppointment_when_allFlagsFalse() {
             Appointment expected = buildAppointment();
-            ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(sqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.of(expected));
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, false, false, false)).thenReturn(expected);
 
             Appointment result = service.getAppointment(APPOINTMENT_ID, false, false, false);
 
             assertThat(result).isSameAs(expected);
-            assertThat(sqlCaptor.getValue())
-                    .doesNotContain("LEFT JOIN FETCH a.messages")
-                    .doesNotContain("LEFT JOIN FETCH a.participants")
-                    .doesNotContain("LEFT JOIN FETCH a.groupParticipants")
-                    .contains("WHERE a.id = ?1 AND a.status != ?2");
+            verify(appointmentRepository).getAppointment(APPOINTMENT_ID, false, false, false);
         }
 
-        // B1=true
         @Test
-        void should_appendMessagesJoin_when_messagesFlagIsTrue() {
-            ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(sqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.of(buildAppointment()));
+        void should_delegateWithMessagesFlag_when_messagesFlagIsTrue() {
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, true, false, false)).thenReturn(buildAppointment());
 
             service.getAppointment(APPOINTMENT_ID, true, false, false);
 
-            assertThat(sqlCaptor.getValue())
-                    .contains("LEFT JOIN FETCH a.messages")
-                    .doesNotContain("LEFT JOIN FETCH a.participants")
-                    .doesNotContain("LEFT JOIN FETCH a.groupParticipants");
+            verify(appointmentRepository).getAppointment(APPOINTMENT_ID, true, false, false);
         }
 
-        // B2=true
         @Test
-        void should_appendParticipantsJoin_when_participantsFlagIsTrue() {
-            ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(sqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.of(buildAppointment()));
+        void should_delegateWithParticipantsFlag_when_participantsFlagIsTrue() {
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, false, true, false)).thenReturn(buildAppointment());
 
             service.getAppointment(APPOINTMENT_ID, false, true, false);
 
-            assertThat(sqlCaptor.getValue())
-                    .contains("LEFT JOIN FETCH a.participants p")
-                    .doesNotContain("LEFT JOIN FETCH a.messages")
-                    .doesNotContain("LEFT JOIN FETCH a.groupParticipants");
+            verify(appointmentRepository).getAppointment(APPOINTMENT_ID, false, true, false);
         }
 
-        // B3=true
         @Test
-        void should_appendGroupParticipantsJoin_when_groupParticipantsFlagIsTrue() {
-            ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(sqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.of(buildAppointment()));
+        void should_delegateWithGroupParticipantsFlag_when_groupParticipantsFlagIsTrue() {
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, false, false, true)).thenReturn(buildAppointment());
 
             service.getAppointment(APPOINTMENT_ID, false, false, true);
 
-            assertThat(sqlCaptor.getValue())
-                    .contains("LEFT JOIN FETCH a.groupParticipants gp LEFT JOIN FETCH gp.group g LEFT JOIN FETCH g.members")
-                    .doesNotContain("LEFT JOIN FETCH a.messages")
-                    .doesNotContain("LEFT JOIN FETCH a.participants p");
+            verify(appointmentRepository).getAppointment(APPOINTMENT_ID, false, false, true);
         }
 
-        // B4=false  →  ResourceNotFoundException must be thrown with correct message
         @Test
         void should_throwResourceNotFoundException_when_appointmentNotFound() {
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.empty());
+            when(appointmentRepository.getAppointment(UNKNOWN_ID, false, false, false))
+                    .thenThrow(new ResourceNotFoundException("appointment", UNKNOWN_ID));
 
             assertThatThrownBy(() -> service.getAppointment(UNKNOWN_ID, false, false, false))
                     .isInstanceOf(ResourceNotFoundException.class)
@@ -175,20 +124,9 @@ class AppointmentQueryServiceTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // search
+    // search — delegates to appointmentRepository.search()
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – search:
-     *   B1  if (messages)                    → true / false
-     *   B2  if (participants)                → true / false
-     *   B3  if (groupParticipants)           → true / false
-     *   B4  if (query != null)  [WHERE]      → true / false
-     *   B5  ternary query != null  [params]  → true / false  (same condition as B4)
-     *
-     * Total branches: 10  |  Tests: 5
-     * B4 and B5 are covered by the same two tests (null/non-null query).
-     */
     @Nested
     class Search {
 
@@ -197,95 +135,66 @@ class AppointmentQueryServiceTest {
             PanacheMock.mock(Appointment.class);
         }
 
-        // B1=false, B2=false, B3=false, B4=false, B5=false
         @Test
         void should_returnSearchResult_when_queryIsNull() {
-            ArgumentCaptor<String> countSqlCaptor = ArgumentCaptor.forClass(String.class);
-            ArgumentCaptor<String> findSqlCaptor  = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-
-            when(Appointment.count(countSqlCaptor.capture(), any(Object[].class))).thenReturn(1L);
-            when(Appointment.<Appointment>find(findSqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.page(anyInt(), anyInt())).thenReturn(q);
-            when(q.list()).thenReturn(List.of(buildAppointment()));
+            AppointmentRepository.SearchResult repoResult =
+                    new AppointmentRepository.SearchResult(List.of(buildAppointment()), 1L);
+            when(appointmentRepository.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false))
+                    .thenReturn(repoResult);
 
             AppointmentQueryService.SearchResult result =
-                    service.search(USER_ID, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false);
+                    service.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false);
 
             assertThat(result.total()).isEqualTo(1L);
             assertThat(result.items()).hasSize(1);
-            // query=null → no ?5 placeholder and no LIKE clause
-            assertThat(countSqlCaptor.getValue()).doesNotContain("?5").doesNotContain("LIKE");
-            assertThat(findSqlCaptor.getValue()).doesNotContain("?5").doesNotContain("LIKE");
+            verify(appointmentRepository).search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false);
         }
 
-        // B4=true, B5=true  →  LIKE clause + ?5 must appear in both SQL strings
         @Test
-        void should_appendLikeFilter_when_queryIsNotNull() {
-            ArgumentCaptor<String> countSqlCaptor = ArgumentCaptor.forClass(String.class);
-            ArgumentCaptor<String> findSqlCaptor  = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-
-            when(Appointment.count(countSqlCaptor.capture(), any(Object[].class))).thenReturn(3L);
-            when(Appointment.<Appointment>find(findSqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.page(anyInt(), anyInt())).thenReturn(q);
-            when(q.list()).thenReturn(List.of(buildAppointment(), buildAppointment(), buildAppointment()));
+        void should_returnSearchResult_when_queryIsNotNull() {
+            List<Appointment> items = List.of(buildAppointment(), buildAppointment(), buildAppointment());
+            AppointmentRepository.SearchResult repoResult = new AppointmentRepository.SearchResult(items, 3L);
+            when(appointmentRepository.search(USER_OIDC, "meeting", AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false))
+                    .thenReturn(repoResult);
 
             AppointmentQueryService.SearchResult result =
-                    service.search(USER_ID, "meeting", AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false);
+                    service.search(USER_OIDC, "meeting", AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, false);
 
             assertThat(result.total()).isEqualTo(3L);
-            assertThat(countSqlCaptor.getValue()).contains("LIKE").contains("?5");
-            assertThat(findSqlCaptor.getValue()).contains("LIKE").contains("?5");
+            assertThat(result.items()).hasSize(3);
         }
 
-        // B1=true
         @Test
-        void should_appendMessagesJoin_when_messagesFlagIsTrue() {
-            ArgumentCaptor<String> findSqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
+        void should_delegateWithMessagesFlag_when_messagesFlagIsTrue() {
+            AppointmentRepository.SearchResult repoResult = new AppointmentRepository.SearchResult(List.of(), 0L);
+            when(appointmentRepository.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, true, false, false))
+                    .thenReturn(repoResult);
 
-            when(Appointment.count(anyString(), any(Object[].class))).thenReturn(0L);
-            when(Appointment.<Appointment>find(findSqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.page(anyInt(), anyInt())).thenReturn(q);
-            when(q.list()).thenReturn(List.of());
+            service.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, true, false, false);
 
-            service.search(USER_ID, null, AFTER, BEFORE, PAGE, PAGE_SIZE, true, false, false);
-
-            assertThat(findSqlCaptor.getValue()).contains("LEFT JOIN FETCH a.messages");
+            verify(appointmentRepository).search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, true, false, false);
         }
 
-        // B2=true
         @Test
-        void should_appendParticipantsJoin_when_participantsFlagIsTrue() {
-            ArgumentCaptor<String> findSqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
+        void should_delegateWithParticipantsFlag_when_participantsFlagIsTrue() {
+            AppointmentRepository.SearchResult repoResult = new AppointmentRepository.SearchResult(List.of(), 0L);
+            when(appointmentRepository.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, true, false))
+                    .thenReturn(repoResult);
 
-            when(Appointment.count(anyString(), any(Object[].class))).thenReturn(0L);
-            when(Appointment.<Appointment>find(findSqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.page(anyInt(), anyInt())).thenReturn(q);
-            when(q.list()).thenReturn(List.of());
+            service.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, true, false);
 
-            service.search(USER_ID, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, true, false);
-
-            assertThat(findSqlCaptor.getValue())
-                    .contains("LEFT JOIN FETCH a.participants part");
+            verify(appointmentRepository).search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, true, false);
         }
 
-        // B3=true
         @Test
-        void should_appendGroupParticipantsJoin_when_groupParticipantsFlagIsTrue() {
-            ArgumentCaptor<String> findSqlCaptor = ArgumentCaptor.forClass(String.class);
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
+        void should_delegateWithGroupParticipantsFlag_when_groupParticipantsFlagIsTrue() {
+            AppointmentRepository.SearchResult repoResult = new AppointmentRepository.SearchResult(List.of(), 0L);
+            when(appointmentRepository.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, true))
+                    .thenReturn(repoResult);
 
-            when(Appointment.count(anyString(), any(Object[].class))).thenReturn(0L);
-            when(Appointment.<Appointment>find(findSqlCaptor.capture(), any(Object[].class))).thenReturn(q);
-            when(q.page(anyInt(), anyInt())).thenReturn(q);
-            when(q.list()).thenReturn(List.of());
+            service.search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, true);
 
-            service.search(USER_ID, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, true);
-
-            assertThat(findSqlCaptor.getValue()).contains("LEFT JOIN FETCH a.groupParticipants");
+            verify(appointmentRepository).search(USER_OIDC, null, AFTER, BEFORE, PAGE, PAGE_SIZE, false, false, true);
         }
     }
 
@@ -293,43 +202,20 @@ class AppointmentQueryServiceTest {
     // getNonCancelledAppointmentsStartingAt
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – getNonCancelledAppointmentsStartingAt:
-     *   No conditional branches. Single linear delegation.
-     *   Verifies the ±30-second window arithmetic.
-     *
-     * Total branches: 0  |  Tests: 1
-     */
     @Nested
     class GetNonCancelledAppointmentsStartingAt {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
-
         @Test
         void should_delegateWithCorrectTimeWindow_when_calledWithInstant() {
-            Instant expectedBefore = T0.plusSeconds(30);   // passed as ?1
-            Instant expectedAfter  = T0.minusSeconds(30);  // passed as ?2
-
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.list()).thenReturn(List.of(buildAppointment()));
+            Instant expectedAfter  = T0.minusSeconds(30);
+            Instant expectedBefore = T0.plusSeconds(30);
+            List<Appointment> expected = List.of(buildAppointment());
+            when(appointmentRepository.findNonCancelledBetween(expectedAfter, expectedBefore)).thenReturn(expected);
 
             List<Appointment> result = service.getNonCancelledAppointmentsStartingAt(T0);
 
             assertThat(result).hasSize(1);
-
-            // Capture the varargs array (Mockito treats Object... as a single Object[] param)
-            // and assert each element individually to verify the ±30 s arithmetic.
-            ArgumentCaptor<Object[]> paramsCaptor = ArgumentCaptor.forClass(Object[].class);
-            PanacheMock.verify(Appointment.class).<Appointment>find(anyString(), paramsCaptor.capture());
-            Object[] params = paramsCaptor.getValue();
-            assertThat(params[0]).isEqualTo(expectedBefore);
-            assertThat(params[1]).isEqualTo(expectedAfter);
-            assertThat(params[2]).isEqualTo(AppointmentStatus.DELETED);
-            assertThat(params[3]).isEqualTo(AppointmentStatus.CANCELLED);
+            verify(appointmentRepository).findNonCancelledBetween(expectedAfter, expectedBefore);
         }
     }
 
@@ -337,38 +223,23 @@ class AppointmentQueryServiceTest {
     // getNonCancelledAppointmentsStartingBetween
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – getNonCancelledAppointmentsStartingBetween:
-     *   No conditional branches. Direct Panache delegation.
-     *   Two result variants for line-coverage completeness.
-     *
-     * Total branches: 0  |  Tests: 2
-     */
     @Nested
     class GetNonCancelledAppointmentsStartingBetween {
-
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
 
         @Test
         void should_returnAppointments_when_found() {
             Appointment a = buildAppointment();
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.list()).thenReturn(List.of(a));
+            when(appointmentRepository.findNonCancelledBetween(AFTER, BEFORE)).thenReturn(List.of(a));
 
             List<Appointment> result = service.getNonCancelledAppointmentsStartingBetween(AFTER, BEFORE);
 
             assertThat(result).containsExactly(a);
+            verify(appointmentRepository).findNonCancelledBetween(AFTER, BEFORE);
         }
 
         @Test
         void should_returnEmptyList_when_noneFound() {
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.list()).thenReturn(List.of());
+            when(appointmentRepository.findNonCancelledBetween(AFTER, BEFORE)).thenReturn(List.of());
 
             List<Appointment> result = service.getNonCancelledAppointmentsStartingBetween(AFTER, BEFORE);
 
@@ -380,37 +251,23 @@ class AppointmentQueryServiceTest {
     // getPlannedAppointmentsStartingBetween
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – getPlannedAppointmentsStartingBetween:
-     *   No conditional branches. Direct Panache delegation.
-     *
-     * Total branches: 0  |  Tests: 2
-     */
     @Nested
     class GetPlannedAppointmentsStartingBetween {
-
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
 
         @Test
         void should_returnPlannedAppointments_when_found() {
             Appointment a = buildAppointment();
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.list()).thenReturn(List.of(a));
+            when(appointmentRepository.findPlannedBetween(AFTER, BEFORE)).thenReturn(List.of(a));
 
             List<Appointment> result = service.getPlannedAppointmentsStartingBetween(AFTER, BEFORE);
 
             assertThat(result).containsExactly(a);
+            verify(appointmentRepository).findPlannedBetween(AFTER, BEFORE);
         }
 
         @Test
         void should_returnEmptyList_when_noneFound() {
-            @SuppressWarnings("unchecked") PanacheQuery<Appointment> q = mock(PanacheQuery.class);
-            when(Appointment.<Appointment>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.list()).thenReturn(List.of());
+            when(appointmentRepository.findPlannedBetween(AFTER, BEFORE)).thenReturn(List.of());
 
             List<Appointment> result = service.getPlannedAppointmentsStartingBetween(AFTER, BEFORE);
 
@@ -422,12 +279,6 @@ class AppointmentQueryServiceTest {
     // findMatchingAppointments
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – findMatchingAppointments:
-     *   No conditional branches. Pure delegation to AppointmentRepository.
-     *
-     * Total branches: 0  |  Tests: 1
-     */
     @Nested
     class FindMatchingAppointments {
 
@@ -450,12 +301,6 @@ class AppointmentQueryServiceTest {
     // findMatchingWeekdayAppointments
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – findMatchingWeekdayAppointments:
-     *   No conditional branches. Pure delegation to AppointmentRepository.
-     *
-     * Total branches: 0  |  Tests: 1
-     */
     @Nested
     class FindMatchingWeekdayAppointments {
 
@@ -478,12 +323,6 @@ class AppointmentQueryServiceTest {
     // findMatchingWeekendAppointments
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Coverage plan – findMatchingWeekendAppointments:
-     *   No conditional branches. Pure delegation to AppointmentRepository.
-     *
-     * Total branches: 0  |  Tests: 1
-     */
     @Nested
     class FindMatchingWeekendAppointments {
 

@@ -15,7 +15,7 @@ public class Message extends PanacheEntity {
     @ManyToOne
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
-    @Column(name = "sender_oidcid", nullable = false)
+    @Column(name = "sender_oidcid")
     private String senderOidcId;
     private Instant timeStamp;
 }

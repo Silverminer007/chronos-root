@@ -1,16 +1,15 @@
 package de.chronos_live.admin.application;
 
-import de.chronos_live.chronos_date_api.domain.Appointment;
-import de.chronos_live.chronos_date_api.domain.AppointmentParticipation;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
-import de.chronos_live.chronos_date_api.domain.FriendshipRequest;
 import de.chronos_live.chronos_date_api.domain.FriendshipStatus;
-import de.chronos_live.chronos_date_api.domain.Group;
-import de.chronos_live.chronos_date_api.domain.GroupMember;
-import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
-import de.chronos_live.chronos_date_api.domain.PushSubscription;
 import de.chronos_live.chronos_date_api.dto.AdminStatisticsDto;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentParticipationRepository;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.FriendshipRepository;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
+import de.chronos_live.chronos_date_api.infrastructure.PushSubscriptionRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,6 +21,18 @@ import org.keycloak.admin.client.Keycloak;
 @Transactional
 @Timed("service.admin.statistics")
 public class AdminStatisticsService {
+    @Inject
+    AppointmentRepository appointmentRepository;
+    @Inject
+    AppointmentParticipationRepository participationRepository;
+    @Inject
+    GroupRepository groupRepository;
+    @Inject
+    FriendshipRepository friendshipRepository;
+    @Inject
+    MessageRepository messageRepository;
+    @Inject
+    PushSubscriptionRepository pushSubscriptionRepository;
 
     @Inject
     Keycloak keycloak;
@@ -42,49 +53,50 @@ public class AdminStatisticsService {
     }
 
     private AdminStatisticsDto.UserStatistics getUserStatistics() {
-        return new AdminStatisticsDto.UserStatistics((long) keycloak.realm(realm).users().count());
+        // User count is now sourced from Keycloak — not available here without Admin API call
+        return new AdminStatisticsDto.UserStatistics(-1L);
     }
 
     private AdminStatisticsDto.AppointmentStatistics getAppointmentStatistics() {
         return new AdminStatisticsDto.AppointmentStatistics(
-                Appointment.count(),
-                Appointment.count("status", AppointmentStatus.PLANNED),
-                Appointment.count("status", AppointmentStatus.CANCELLED),
-                Appointment.count("status", AppointmentStatus.DELETED),
-                Appointment.count("status", AppointmentStatus.NOT_ENOUGH_ATTENDEES)
+                appointmentRepository.count(),
+                appointmentRepository.countByStatus(AppointmentStatus.PLANNED),
+                appointmentRepository.countByStatus(AppointmentStatus.CANCELLED),
+                appointmentRepository.countByStatus(AppointmentStatus.DELETED),
+                appointmentRepository.countByStatus(AppointmentStatus.NOT_ENOUGH_ATTENDEES)
         );
     }
 
     private AdminStatisticsDto.ParticipationStatistics getParticipationStatistics() {
         return new AdminStatisticsDto.ParticipationStatistics(
-                AppointmentParticipation.count(),
-                AppointmentParticipation.count("status", ParticipationStatus.PENDING),
-                AppointmentParticipation.count("status", ParticipationStatus.APPROVED),
-                AppointmentParticipation.count("status", ParticipationStatus.REJECTED)
+                participationRepository.count(),
+                participationRepository.countByStatus(ParticipationStatus.PENDING),
+                participationRepository.countByStatus(ParticipationStatus.APPROVED),
+                participationRepository.countByStatus(ParticipationStatus.REJECTED)
         );
     }
 
     private AdminStatisticsDto.GroupStatistics getGroupStatistics() {
         return new AdminStatisticsDto.GroupStatistics(
-                Group.count(),
-                GroupMember.count()
+                groupRepository.count(),
+                groupRepository.countMembers()
         );
     }
 
     private AdminStatisticsDto.FriendshipStatistics getFriendshipStatistics() {
         return new AdminStatisticsDto.FriendshipStatistics(
-                FriendshipRequest.count(),
-                FriendshipRequest.count("status", FriendshipStatus.PENDING),
-                FriendshipRequest.count("status", FriendshipStatus.ACCEPTED),
-                FriendshipRequest.count("status", FriendshipStatus.DECLINED)
+                friendshipRepository.count(),
+                friendshipRepository.count("status", FriendshipStatus.PENDING),
+                friendshipRepository.count("status", FriendshipStatus.ACCEPTED),
+                friendshipRepository.count("status", FriendshipStatus.DECLINED)
         );
     }
 
     private AdminStatisticsDto.MessageStatistics getMessageStatistics() {
-        return new AdminStatisticsDto.MessageStatistics(Message.count());
+        return new AdminStatisticsDto.MessageStatistics(messageRepository.count());
     }
 
     private AdminStatisticsDto.PushSubscriptionStatistics getPushSubscriptionStatistics() {
-        return new AdminStatisticsDto.PushSubscriptionStatistics(PushSubscription.count());
+        return new AdminStatisticsDto.PushSubscriptionStatistics(pushSubscriptionRepository.count());
     }
 }

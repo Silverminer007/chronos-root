@@ -33,12 +33,6 @@ public interface IdentityPort {
     void upsert(UserIdentity identity);
 
     /**
-     * Returns true if a user with the given oidcId exists in the local cache or the identity provider.
-     * Used to validate that a target user exists before performing actions on their behalf.
-     */
-    boolean existsById(String oidcId);
-
-    /**
      * Searches for users by name or email. Delegates to the identity provider to ensure
      * completeness (users not yet in local cache are still findable), and caches results.
      */

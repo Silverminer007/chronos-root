@@ -3,8 +3,10 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import java.util.List;
 
@@ -12,30 +14,26 @@ import java.util.List;
 @Timed("service.groupQuery")
 public class GroupQueryService {
 
+    @Inject
+    GroupRepository groupRepository;
+
     public List<Group> searchGroups(UserIdentity user, String searchQuery) {
-        String sqlQuery = "SELECT g FROM GroupMember gm JOIN gm.group g";
-        sqlQuery += " LEFT JOIN FETCH g.members";
-        sqlQuery += " WHERE gm.userOidcId = ?1";
-        if (searchQuery != null && !searchQuery.isEmpty()) {
-            sqlQuery += " AND lower(g.groupName) LIKE lower(?2)";
-            return Group.find(sqlQuery, user.oidcId(), "%" + searchQuery + "%").list();
-        }
-        return Group.find(sqlQuery, user.oidcId()).list();
+        return groupRepository.searchGroups(user, searchQuery);
     }
 
     public boolean isGroupMember(Long groupId, String userOidcId) {
-        return GroupMember.find("group.id = ?1 AND userOidcId = ?2", groupId, userOidcId).count() > 0;
+        return groupRepository.isMember(groupId, userOidcId);
     }
 
     public boolean isGroupOwner(Long groupId, String userOidcId) {
-        return Group.count("id = ?1 AND ownerOidcId = ?2", groupId, userOidcId) > 0;
+        return groupRepository.isOwner(groupId, userOidcId);
     }
 
     public List<GroupMember> getGroupMembers(Long groupId) {
-        return GroupMember.find("group.id = ?1", groupId).list();
+        return groupRepository.listMembers(groupId);
     }
 
     public Group findById(Long id) {
-        return Group.findById(id);
+        return groupRepository.findById(id);
     }
 }

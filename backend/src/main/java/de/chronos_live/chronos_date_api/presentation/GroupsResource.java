@@ -26,6 +26,8 @@ public class GroupsResource {
     @Inject
     GroupService groupService;
     @Inject
+    GroupQueryService groupQueryService;
+    @Inject
     PrincipalContext principalContext;
     @Inject
     GroupMapper groupMapper;
@@ -36,7 +38,8 @@ public class GroupsResource {
     @Path("/")
     public Response getGroups(@QueryParam("search") String search) {
         UserIdentity user = principalContext.getPrincipal();
-        return Response.ok(groupService.searchGroups(user, search)).build();
+        List<Group> groups = groupQueryService.searchGroups(user, search);
+        return Response.ok(groupMapper.toDtoList(groups)).build();
     }
 
     @POST

@@ -6,8 +6,6 @@ import de.chronos_live.chronos_date_api.domain.UserProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.ServiceUnavailableException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import org.keycloak.admin.client.Keycloak;
@@ -18,13 +16,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The sole class allowed to import Keycloak types for identity reads.
  * All other domain/application classes depend only on IdentityPort and UserIdentity.
  *
  * Read path:   user_profiles table (single IN query for batches)
- *              → Keycloak Admin API fallback on cache miss (sequential, then persisted via REQUIRES_NEW)
+ *              → Keycloak Admin API fallback on cache miss (parallel HTTP, sequential persist)
  * Write path:  JWT claims upserted on every authenticated request (REQUIRES_NEW transaction)
  * Search path: Keycloak Admin API (complete result set), results cached as side effect
  */
@@ -35,11 +34,6 @@ public class LocalDbIdentityAdapter implements IdentityPort {
 
     @Inject
     Keycloak keycloak;
-
-    // Self-injection so that internal callers go through the CDI proxy,
-    // ensuring @Transactional(REQUIRES_NEW) on upsert() is honoured.
-    @Inject
-    LocalDbIdentityAdapter self;
 
     @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
     String realm;
@@ -74,18 +68,14 @@ public class LocalDbIdentityAdapter implements IdentityPort {
                 .toList();
 
         if (!missing.isEmpty()) {
-            // fetchFromKeycloak throws ServiceUnavailableException on infrastructure failure;
-            // it never returns null — deleted users come back as a sentinel.
-            List<UserIdentity> fetched = missing.stream()
+            // HTTP-only: parallel Keycloak calls are safe; no JPA inside this stream
+            List<UserIdentity> fetched = missing.parallelStream()
                     .map(this::fetchFromKeycloak)
+                    .filter(Objects::nonNull)
                     .toList();
-            // Each upsert runs in its own REQUIRES_NEW transaction via the CDI proxy,
-            // so cache writes survive an outer transaction rollback.
-            // Deleted sentinels are not persisted — Keycloak remains authoritative for absence.
+            // JPA writes run sequentially on the calling thread within the current transaction
             for (UserIdentity identity : fetched) {
-                if (!identity.isDeleted()) {
-                    self.upsert(identity);
-                }
+                doUpsert(identity);
                 result.put(identity.oidcId(), identity);
             }
         }
@@ -101,9 +91,8 @@ public class LocalDbIdentityAdapter implements IdentityPort {
                 .stream()
                 .map(this::repToIdentity)
                 .toList();
-        // Cache results as a side effect so future reads avoid Keycloak.
-        // Each upsert runs in its own REQUIRES_NEW transaction via the CDI proxy.
-        results.forEach(self::upsert);
+        // Cache results as a side effect so future reads avoid Keycloak
+        results.forEach(this::doUpsert);
         return results;
     }
 
@@ -124,48 +113,41 @@ public class LocalDbIdentityAdapter implements IdentityPort {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    /** Atomic upsert via INSERT ... ON CONFLICT to avoid the UPDATE-then-INSERT race on first login. */
+    /** Upsert logic without a transaction annotation — called within an existing TX. */
     private void doUpsert(UserIdentity identity) {
-        UserProfile.getEntityManager().createNativeQuery(
-                "INSERT INTO user_profiles (oidc_id, first_name, last_name, email, profile_picture_url, updated_at) "
-                + "VALUES (:oidcId, :firstName, :lastName, :email, :profilePictureUrl, :updatedAt) "
-                + "ON CONFLICT (oidc_id) DO UPDATE SET "
-                + "first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, "
-                + "email = EXCLUDED.email, profile_picture_url = EXCLUDED.profile_picture_url, "
-                + "updated_at = EXCLUDED.updated_at")
-                .setParameter("oidcId", identity.oidcId())
-                .setParameter("firstName", identity.firstName())
-                .setParameter("lastName", identity.lastName())
-                .setParameter("email", identity.email())
-                .setParameter("profilePictureUrl", identity.profilePictureUrl())
-                .setParameter("updatedAt", java.sql.Timestamp.from(Instant.now()))
-                .executeUpdate();
-    }
-
-    @Override
-    @Transactional
-    public boolean existsById(String oidcId) {
-        if (UserProfile.count("oidcId", oidcId) > 0) return true;
-        return fetchFromKeycloak(oidcId) != null;
+        int updated = UserProfile.update(
+                "firstName = ?1, lastName = ?2, email = ?3, profilePictureUrl = ?4, updatedAt = ?5"
+                        + " WHERE oidcId = ?6",
+                identity.firstName(), identity.lastName(), identity.email(),
+                identity.profilePictureUrl(), Instant.now(), identity.oidcId()
+        );
+        if (updated == 0) {
+            UserProfile p = new UserProfile();
+            p.oidcId = identity.oidcId();
+            p.firstName = identity.firstName();
+            p.lastName = identity.lastName();
+            p.email = identity.email();
+            p.profilePictureUrl = identity.profilePictureUrl();
+            p.updatedAt = Instant.now();
+            UserProfile.persist(p);
+        }
     }
 
     private UserIdentity fetchFromKeycloakAndCache(String oidcId) {
         UserIdentity identity = fetchFromKeycloak(oidcId);
-        if (!identity.isDeleted()) {
-            self.upsert(identity);
+        if (identity != null) {
+            doUpsert(identity);
+            return identity;
         }
-        return identity;
+        return new UserIdentity(oidcId, null, null, null, null);
     }
 
     private UserIdentity fetchFromKeycloak(String oidcId) {
         try {
             return repToIdentity(keycloak.realm(realm).users().get(oidcId).toRepresentation());
-        } catch (NotFoundException e) {
-            LOGGER.infof("User %s not found in Keycloak — returning deleted sentinel", oidcId);
-            return UserIdentity.deleted(oidcId);
         } catch (Exception e) {
-            LOGGER.errorf("Keycloak unavailable while fetching user %s: %s", oidcId, e.getMessage());
-            throw new ServiceUnavailableException("Keycloak nicht erreichbar");
+            LOGGER.warnf("Failed to fetch user %s from Keycloak: %s", oidcId, e.getMessage());
+            return null;
         }
     }
 

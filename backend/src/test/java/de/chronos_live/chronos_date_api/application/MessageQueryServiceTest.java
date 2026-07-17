@@ -46,10 +46,10 @@ import static org.mockito.Mockito.when;
 class MessageQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long   APPOINTMENT_ID    = 10L;
-    private static final Long   MESSAGE_ID        = 42L;
-    private static final Long   UNKNOWN_ID        = 999L;
-    private static final String SENDER_OIDC_ID    = "oidc-sender-1";
+    private static final Long   APPOINTMENT_ID  = 10L;
+    private static final Long   MESSAGE_ID      = 42L;
+    private static final Long   UNKNOWN_ID      = 999L;
+    private static final String SENDER_OIDC     = "oidc-user-1";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
@@ -63,7 +63,7 @@ class MessageQueryServiceTest {
         Message m = new Message();
         m.id = MESSAGE_ID;
         m.setBody("Hello!");
-        m.setSenderOidcId(SENDER_OIDC_ID);
+        m.setSenderOidcId(SENDER_OIDC);
         m.setAppointment(appointment);
         m.setTimeStamp(Instant.parse("2024-06-01T10:00:00Z"));
         return m;

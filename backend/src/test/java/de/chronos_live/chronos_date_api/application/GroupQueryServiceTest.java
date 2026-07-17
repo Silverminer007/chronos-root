@@ -32,24 +32,24 @@ import static org.mockito.Mockito.*;
 class GroupQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    private static final Long   GROUP_ID      = 10L;
-    private static final String USER_OIDC_ID  = "oidc-user-1";
-    private static final String SEARCH        = "alpha";
+    private static final Long   GROUP_ID  = 10L;
+    private static final String USER_OIDC = "oidc-user-1";
+    private static final String SEARCH    = "alpha";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
     GroupQueryService service;
 
     // ── Test-object builders ──────────────────────────────────────────────────
-    private static UserIdentity buildUserIdentity(String oidcId) {
-        return new UserIdentity(oidcId, "Test", "User", "test@example.com", null);
+    private static UserIdentity buildUserIdentity() {
+        return new UserIdentity(USER_OIDC, "Test", "User", "test@example.com", null);
     }
 
     private static Group buildGroup(Long id, String name) {
         Group g = new Group();
         g.id = id;
         g.setGroupName(name);
-        g.setOwnerOidcId(USER_OIDC_ID);
+        g.setOwnerOidcId(USER_OIDC);
         return g;
     }
 
@@ -66,14 +66,11 @@ class GroupQueryServiceTest {
 
     /**
      * Coverage plan – searchGroups:
-     *   B1  searchQuery == null → call Group.find with only user.oidcId (no LIKE clause)
-     *   B2  searchQuery.isEmpty() → call Group.find with only user.oidcId
-     *   B3  searchQuery non-empty → call Group.find with user.oidcId AND the LIKE clause
+     *   B1  searchQuery == null → call Group.find with only userOidcId (no LIKE clause)
+     *   B2  searchQuery.isEmpty() → call Group.find with only userOidcId
+     *   B3  searchQuery non-empty → call Group.find with userOidcId AND the LIKE clause
      *
      * Total branches: 3  |  Tests: 3
-     *
-     * Note: the compound condition {@code searchQuery != null && !searchQuery.isEmpty()}
-     * covers B1 (null) and B2 (empty) as the false branch.
      */
     @Nested
     class SearchGroups {
@@ -87,7 +84,7 @@ class GroupQueryServiceTest {
         @Test
         void should_findWithoutLikeClause_when_searchQueryIsNull() {
             Group group = buildGroup(GROUP_ID, "Alpha Team");
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
+            UserIdentity user = buildUserIdentity();
 
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             @SuppressWarnings("unchecked") PanacheQuery<Group> q = mock(PanacheQuery.class);
@@ -104,7 +101,7 @@ class GroupQueryServiceTest {
         @Test
         void should_findWithoutLikeClause_when_searchQueryIsEmpty() {
             Group group = buildGroup(GROUP_ID, "Beta Group");
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
+            UserIdentity user = buildUserIdentity();
 
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             @SuppressWarnings("unchecked") PanacheQuery<Group> q = mock(PanacheQuery.class);
@@ -121,7 +118,7 @@ class GroupQueryServiceTest {
         @Test
         void should_appendLikeClause_when_searchQueryIsNonEmpty() {
             Group group = buildGroup(GROUP_ID, "Alpha Team");
-            UserIdentity user = buildUserIdentity(USER_OIDC_ID);
+            UserIdentity user = buildUserIdentity();
 
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             ArgumentCaptor<Object[]> paramsCaptor = ArgumentCaptor.forClass(Object[].class);
@@ -136,7 +133,7 @@ class GroupQueryServiceTest {
 
             PanacheMock.verify(Group.class).<Group>find(anyString(), paramsCaptor.capture());
             Object[] params = paramsCaptor.getValue();
-            assertThat(params[0]).isEqualTo(USER_OIDC_ID);
+            assertThat(params[0]).isEqualTo(USER_OIDC);
             assertThat(params[1].toString()).isEqualTo("%" + SEARCH + "%");
         }
     }
@@ -167,7 +164,7 @@ class GroupQueryServiceTest {
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(gmQuery);
             when(gmQuery.count()).thenReturn(1L);
 
-            boolean result = service.isGroupMember(GROUP_ID, USER_OIDC_ID);
+            boolean result = service.isGroupMember(GROUP_ID, USER_OIDC);
 
             assertThat(result).isTrue();
         }
@@ -179,7 +176,7 @@ class GroupQueryServiceTest {
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(gmQuery);
             when(gmQuery.count()).thenReturn(0L);
 
-            boolean result = service.isGroupMember(GROUP_ID, USER_OIDC_ID);
+            boolean result = service.isGroupMember(GROUP_ID, USER_OIDC);
 
             assertThat(result).isFalse();
         }
@@ -209,7 +206,7 @@ class GroupQueryServiceTest {
         void should_returnTrue_when_userIsOwner() {
             when(Group.count(anyString(), any(Object[].class))).thenReturn(1L);
 
-            boolean result = service.isGroupOwner(GROUP_ID, USER_OIDC_ID);
+            boolean result = service.isGroupOwner(GROUP_ID, USER_OIDC);
 
             assertThat(result).isTrue();
         }
@@ -219,7 +216,7 @@ class GroupQueryServiceTest {
         void should_returnFalse_when_userIsNotOwner() {
             when(Group.count(anyString(), any(Object[].class))).thenReturn(0L);
 
-            boolean result = service.isGroupOwner(GROUP_ID, USER_OIDC_ID);
+            boolean result = service.isGroupOwner(GROUP_ID, USER_OIDC);
 
             assertThat(result).isFalse();
         }
@@ -246,7 +243,7 @@ class GroupQueryServiceTest {
         @Test
         void should_returnMembers_when_membersExist() {
             Group group = buildGroup(GROUP_ID, "Team");
-            GroupMember member = buildGroupMember(group, USER_OIDC_ID);
+            GroupMember member = buildGroupMember(group, USER_OIDC);
 
             @SuppressWarnings("unchecked") PanacheQuery<GroupMember> q = mock(PanacheQuery.class);
             when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(q);

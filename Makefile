@@ -8,13 +8,12 @@ endif
 
 ## Start the full dev environment (infrastructure + backend + frontend).
 ## Requires tmux; otherwise prints instructions for separate terminals.
-## Run `make setup` once after checkout before using this target.
 dev: infra
 	@echo "Infrastructure is up."
 	@if command -v tmux >/dev/null 2>&1; then \
-		tmux has-session -t chronos-dev 2>/dev/null || tmux new-session -d -s chronos-dev; \
-		tmux new-window -t chronos-dev: -n backend  "make backend;  read"; \
-		tmux new-window -t chronos-dev: -n frontend "make frontend; read"; \
+		tmux new-session -d -s chronos-dev 2>/dev/null || true; \
+		tmux new-window -t chronos-dev: -n backend  "cd backend  && ./mvnw quarkus:dev; read"; \
+		tmux new-window -t chronos-dev: -n frontend "cd frontend && npm run dev;        read"; \
 		tmux select-window -t chronos-dev:backend; \
 		tmux attach-session -t chronos-dev; \
 	else \
@@ -29,11 +28,11 @@ infra:
 	docker compose -f backend/docker-compose.yaml up -d
 
 ## Start the Quarkus backend in dev mode (live reload).
-backend: infra
+backend:
 	cd backend && ./mvnw quarkus:dev
 
 ## Start the Nuxt frontend dev server (HMR).
-frontend: setup
+frontend:
 	cd frontend && npm run dev
 
 ## Stop all infrastructure containers.

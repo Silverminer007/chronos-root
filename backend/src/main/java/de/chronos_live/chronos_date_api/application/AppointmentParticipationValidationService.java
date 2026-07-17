@@ -107,7 +107,7 @@ public class AppointmentParticipationValidationService {
     public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
-            Appointment appointment = Appointment.findById(event.appointmentId());
+            Appointment appointment = appointmentQueryService.findById(event.appointmentId());
 
             if (appointment.getStartTime().isBefore(Instant.now())) {
                 return;
@@ -152,7 +152,7 @@ public class AppointmentParticipationValidationService {
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentEdited(@Observes AppointmentEditedEvent event) {
         // Falls sich die mindest Teilnehmenden Zahl geändert hat
-        Appointment appointment = Appointment.findById(event.appointmentId());
+        Appointment appointment = appointmentQueryService.findById(event.appointmentId());
 
         if(appointment.getMinimalAttendees() == null) {
             return;

@@ -1,8 +1,8 @@
 package de.chronos_live.chronos_date_api.domain;
 
 /**
- * Represents a resolved user identity.
- * Use {@link #deleted(String)} to construct a sentinel for users removed from Keycloak.
+ * Represents the currently authenticated user, populated purely from the Keycloak JWT.
+ * No database lookup required — Keycloak is the source of truth.
  */
 public record UserIdentity(
         String oidcId,
@@ -11,18 +11,7 @@ public record UserIdentity(
         String email,
         String profilePictureUrl
 ) {
-    /** Sentinel for a Keycloak user that no longer exists (404). Never persisted to user_profiles. */
-    public static UserIdentity deleted(String oidcId) {
-        return new UserIdentity(oidcId, null, null, null, null);
-    }
-
-    /** True when this identity represents a user deleted from Keycloak. */
-    public boolean isDeleted() {
-        return firstName == null && lastName == null && email == null;
-    }
-
     public String getName() {
-        if (isDeleted()) return "Gelöschter Benutzer";
-        return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).strip();
+        return firstName + " " + lastName;
     }
 }

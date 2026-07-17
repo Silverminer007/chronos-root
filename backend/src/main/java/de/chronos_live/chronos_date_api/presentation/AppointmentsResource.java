@@ -53,9 +53,9 @@ public class AppointmentsResource {
                 participants != null && participants,
                 groups != null && groups);
 
-        var dtos = appointmentMapper.toDtoList(result.items());
-        appointmentService.enrichAppointmentDtos(dtos);
-        var response = new PagedResponse<>(dtos, new PagedResponse.Meta(page, size, result.total()));
+        var response = new PagedResponse<>(
+                appointmentMapper.toDtoList(result.items()),
+                new PagedResponse.Meta(page, size, result.total()));
         return Response.ok(response).build();
     }
 
@@ -71,9 +71,7 @@ public class AppointmentsResource {
                 includeMessages != null && includeMessages,
                 includeParticipants != null && includeParticipants,
                 includeGroupParticipants != null && includeGroupParticipants);
-        var dto = appointmentMapper.toDto(appointment);
-        appointmentService.enrichAppointmentDtos(List.of(dto));
-        return Response.ok(dto).build();
+        return Response.ok(appointmentMapper.toDto(appointment)).build();
     }
 
     @POST

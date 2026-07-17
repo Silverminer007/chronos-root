@@ -94,33 +94,7 @@ CREATE INDEX idx_group_member_user ON group_member (user_oidcid);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- groups  (owner_id BIGINT → owner_oidcid VARCHAR)
--- Groups with no valid owner are unmanageable and are dropped before migration.
--- Deletion order respects FK constraints:
---   appointment_participation (no FK, but references agp rows) →
---   appointment_group_participations (FK ON DELETE NO ACTION → groups) →
---   groups (group_member cascades via ON DELETE CASCADE from V1.4.0)
 -- ─────────────────────────────────────────────────────────────────────────────
-DELETE FROM appointment_participation
-WHERE group_participation_id IN (
-    SELECT id FROM appointment_group_participations
-    WHERE group_id IN (
-        SELECT id FROM groups
-        WHERE owner_id IS NULL
-           OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id)
-    )
-);
-
-DELETE FROM appointment_group_participations
-WHERE group_id IN (
-    SELECT id FROM groups
-    WHERE owner_id IS NULL
-       OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id)
-);
-
-DELETE FROM groups
-WHERE owner_id IS NULL
-   OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = groups.owner_id);
-
 ALTER TABLE groups ADD COLUMN owner_oidcid VARCHAR(255);
 
 UPDATE groups g
@@ -145,7 +119,6 @@ SET sender_oidcid = u.oidcid
 FROM users u
 WHERE m.sender_id = u.id;
 
-ALTER TABLE message ALTER COLUMN sender_oidcid SET NOT NULL;
 ALTER TABLE message DROP CONSTRAINT IF EXISTS fk_message_sender;
 ALTER TABLE message DROP COLUMN sender_id;
 
@@ -172,9 +145,6 @@ CREATE INDEX idx_pushsubscription_user ON pushsubscription (user_oidcid);
 -- ─────────────────────────────────────────────────────────────────────────────
 -- settings  (user_id BIGINT → user_oidcid VARCHAR)
 -- ─────────────────────────────────────────────────────────────────────────────
--- Delete orphaned settings rows (user_id was nullable in V1)
-DELETE FROM settings WHERE user_id IS NULL;
-
 ALTER TABLE settings ADD COLUMN user_oidcid VARCHAR(255);
 
 UPDATE settings s
@@ -182,7 +152,6 @@ SET user_oidcid = u.oidcid
 FROM users u
 WHERE s.user_id = u.id;
 
-ALTER TABLE settings ALTER COLUMN user_oidcid SET NOT NULL;
 DROP INDEX IF EXISTS uk3g6qnpteuj5qclay1c6a83ey8;
 ALTER TABLE settings DROP CONSTRAINT IF EXISTS fk_settings_user;
 ALTER TABLE settings DROP COLUMN user_id;
@@ -198,12 +167,6 @@ SET user_oidcid = u.oidcid
 FROM users u
 WHERE pnl.user_id = u.id;
 
--- Drop log rows for deleted users before enforcing NOT NULL.
--- push_notification_log has no FK to users, so orphaned rows survive user deletion.
--- Without this delete, any such row would leave user_oidcid NULL and abort the migration.
-DELETE FROM push_notification_log WHERE user_oidcid IS NULL;
-
-ALTER TABLE push_notification_log ALTER COLUMN user_oidcid SET NOT NULL;
 DROP INDEX IF EXISTS idx_push_notification_log_user_id;
 ALTER TABLE push_notification_log DROP COLUMN user_id;
 CREATE INDEX idx_push_notification_log_user_oidcid ON push_notification_log (user_oidcid);

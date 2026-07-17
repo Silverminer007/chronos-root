@@ -35,7 +35,7 @@ class AppointmentParticipationQueryServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
     private static final Long   APPOINTMENT_ID = 10L;
-    private static final String USER_ID        = "oidc-user-1";
+    private static final String USER_OIDC      = "oidc-user-1";
 
     // ── CDI injection ─────────────────────────────────────────────────────────
     @Inject
@@ -76,7 +76,7 @@ class AppointmentParticipationQueryServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.of(ap));
 
-            UserRole result = service.getUserRole(APPOINTMENT_ID, USER_ID);
+            UserRole result = service.getUserRole(APPOINTMENT_ID, USER_OIDC);
 
             assertThat(result).isEqualTo(UserRole.RESPONSIBLE);
         }
@@ -88,7 +88,7 @@ class AppointmentParticipationQueryServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.empty());
 
-            UserRole result = service.getUserRole(APPOINTMENT_ID, USER_ID);
+            UserRole result = service.getUserRole(APPOINTMENT_ID, USER_OIDC);
 
             assertThat(result).isEqualTo(UserRole.NONE);
         }
@@ -121,7 +121,7 @@ class AppointmentParticipationQueryServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.of(ap));
 
-            ParticipationStatus result = service.getUserStatus(APPOINTMENT_ID, USER_ID);
+            ParticipationStatus result = service.getUserStatus(APPOINTMENT_ID, USER_OIDC);
 
             assertThat(result).isEqualTo(ParticipationStatus.APPROVED);
         }
@@ -133,7 +133,7 @@ class AppointmentParticipationQueryServiceTest {
             when(AppointmentParticipation.<AppointmentParticipation>find(anyString(), any(Object[].class))).thenReturn(q);
             when(q.firstResultOptional()).thenReturn(Optional.empty());
 
-            ParticipationStatus result = service.getUserStatus(APPOINTMENT_ID, USER_ID);
+            ParticipationStatus result = service.getUserStatus(APPOINTMENT_ID, USER_OIDC);
 
             assertThat(result).isEqualTo(ParticipationStatus.PENDING);
         }

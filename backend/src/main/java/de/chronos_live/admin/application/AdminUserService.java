@@ -28,7 +28,7 @@ public class AdminUserService {
     @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
     String realm;
 
-    public AdminUserListResponse listUsers(int page, int size) {
+    public AdminUserListResponse listUsers(int page, int size, Instant lastSeenAfter, Instant lastSeenBefore) {
         int first = page * size;
         List<UserRepresentation> users = keycloak.realm(realm).users().list(first, size);
         long total = keycloak.realm(realm).users().count();

@@ -64,10 +64,10 @@ public class FriendshipService {
             }
             // Resolve oidcId from email via Keycloak Admin API
             List<UserIdentity> found = identityPort.search(email, 1);
-            if (found.isEmpty() || !email.equalsIgnoreCase(found.getFirst().email())) {
+            if (found.isEmpty() || !email.equalsIgnoreCase(found.get(0).email())) {
                 throw new ResourceNotFoundException("Es wurde kein User mit der E-Mail Adresse " + email + " gefunden");
             }
-            addresseeOidcId = found.getFirst().oidcId();
+            addresseeOidcId = found.get(0).oidcId();
         }
         this.sendFriendshipRequest(requesterOidcId, addresseeOidcId);
     }
@@ -78,10 +78,6 @@ public class FriendshipService {
 
         if (requesterOidcId.equals(addresseeOidcId)) {
             throw new BadRequestException("Du kannst dir nicht selbst eine Freundschaftsanfrage senden");
-        }
-
-        if (!identityPort.existsById(addresseeOidcId)) {
-            throw new ResourceNotFoundException("Kein Benutzer mit der ID " + addresseeOidcId + " gefunden");
         }
 
         Optional<FriendshipRequest> existing = friendshipRepo.findRequest(requesterOidcId, addresseeOidcId);
@@ -215,10 +211,7 @@ public class FriendshipService {
         return friendOidcIds.stream()
                 .map(friendOidcId -> {
                     UserIdentity friend = users.get(friendOidcId);
-                    if (friend == null) {
-                        throw new IllegalStateException(
-                                "Benutzeridentität konnte nicht aufgelöst werden: " + friendOidcId);
-                    }
+                    if (friend == null) return null;
                     FriendDto dto = new FriendDto();
                     dto.setUser_id(friend.oidcId());
                     dto.setName(friend.getName());
@@ -291,10 +284,7 @@ public class FriendshipService {
                 .map(r -> {
                     String otherOidcId = incoming ? r.getRequesterId() : r.getAddresseeId();
                     UserIdentity otherUser = users.get(otherOidcId);
-                    if (otherUser == null) {
-                        throw new IllegalStateException(
-                                "Benutzeridentität konnte nicht aufgelöst werden: " + otherOidcId);
-                    }
+                    if (otherUser == null) return null;
 
                     FriendshipRequestDto dto = new FriendshipRequestDto();
                     dto.setRequestId(r.id);

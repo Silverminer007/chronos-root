@@ -40,7 +40,7 @@ class AppointmentServiceTest {
 
     // ── Constants ──────────────────────────────────────────────────────────────
     private static final Long   APPOINTMENT_ID = 42L;
-    private static final String USER_ID        = "oidc-user-1";
+    private static final String USER_OIDC      = "oidc-user-1";
 
     private static final String  START_STR     = "2024-06-01T09:00:00Z";
     private static final String  END_STR       = "2024-06-01T17:00:00Z";
@@ -117,7 +117,7 @@ class AppointmentServiceTest {
             CreateAppointmentDto dto = new CreateAppointmentDto(
                     "   ", null, START_STR, END_STR, null, null);
 
-            assertThatThrownBy(() -> service.createAppointment(dto, USER_ID))
+            assertThatThrownBy(() -> service.createAppointment(dto, USER_OIDC))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("name");
         }
@@ -128,7 +128,7 @@ class AppointmentServiceTest {
             CreateAppointmentDto dto = new CreateAppointmentDto(
                     "Name", null, START_STR, null, null, null);
 
-            assertThatThrownBy(() -> service.createAppointment(dto, USER_ID))
+            assertThatThrownBy(() -> service.createAppointment(dto, USER_OIDC))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("end");
         }
@@ -139,7 +139,7 @@ class AppointmentServiceTest {
             CreateAppointmentDto dto = new CreateAppointmentDto(
                     "Name", null, null, END_STR, null, null);
 
-            assertThatThrownBy(() -> service.createAppointment(dto, USER_ID))
+            assertThatThrownBy(() -> service.createAppointment(dto, USER_OIDC))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("start");
         }
@@ -150,7 +150,7 @@ class AppointmentServiceTest {
             CreateAppointmentDto dto = new CreateAppointmentDto(
                     "Name", null, END_STR, START_STR, null, null);
 
-            assertThatThrownBy(() -> service.createAppointment(dto, USER_ID))
+            assertThatThrownBy(() -> service.createAppointment(dto, USER_OIDC))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("end");
         }
@@ -161,7 +161,7 @@ class AppointmentServiceTest {
             CreateAppointmentDto dto = new CreateAppointmentDto(
                     "Name", null, START_STR, END_STR, null, -1);
 
-            assertThatThrownBy(() -> service.createAppointment(dto, USER_ID))
+            assertThatThrownBy(() -> service.createAppointment(dto, USER_OIDC))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("minimal_attendees");
         }
@@ -175,7 +175,7 @@ class AppointmentServiceTest {
             ArgumentCaptor<AppointmentCreatedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentCreatedEvent.class);
 
-            Appointment result = service.createAppointment(dto, USER_ID);
+            Appointment result = service.createAppointment(dto, USER_OIDC);
 
             assertThat(result.getName()).isEqualTo("Name");
             assertThat(result.getDescription()).isEqualTo("A description");
@@ -186,7 +186,7 @@ class AppointmentServiceTest {
             assertThat(result.getMinimalAttendees()).isEqualTo(5);
 
             verify(appointmentCreatedEvent).fire(captor.capture());
-            assertThat(captor.getValue().creatorOidcId()).isEqualTo(USER_ID);
+            assertThat(captor.getValue().creatorOidcId()).isEqualTo(USER_OIDC);
         }
 
         // B2=false (null description), B3=false (null venue), B7=false (null minAttendees)
@@ -195,7 +195,7 @@ class AppointmentServiceTest {
             CreateAppointmentDto dto = new CreateAppointmentDto(
                     "Name", null, START_STR, END_STR, null, null);
 
-            Appointment result = service.createAppointment(dto, USER_ID);
+            Appointment result = service.createAppointment(dto, USER_OIDC);
 
             assertThat(result.getDescription()).isNull();
             assertThat(result.getVenue()).isNull();
@@ -237,7 +237,7 @@ class AppointmentServiceTest {
             UpdateAppointmentDto dto = new UpdateAppointmentDto(
                     "   ", null, null, null, null, null);
 
-            assertThatThrownBy(() -> service.updateAppointment(APPOINTMENT_ID, USER_ID, dto))
+            assertThatThrownBy(() -> service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("name");
         }
@@ -249,7 +249,7 @@ class AppointmentServiceTest {
             UpdateAppointmentDto dto = new UpdateAppointmentDto(
                     null, null, NEW_END_STR, NEW_START_STR, null, null);
 
-            assertThatThrownBy(() -> service.updateAppointment(APPOINTMENT_ID, USER_ID, dto))
+            assertThatThrownBy(() -> service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("end");
         }
@@ -263,7 +263,7 @@ class AppointmentServiceTest {
             ArgumentCaptor<AppointmentMovedEvent> movedCaptor =
                     ArgumentCaptor.forClass(AppointmentMovedEvent.class);
 
-            Appointment result = service.updateAppointment(APPOINTMENT_ID, USER_ID, dto);
+            Appointment result = service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto);
 
             assertThat(result.getName()).isEqualTo("Updated");
             assertThat(result.getDescription()).isEqualTo("New desc");
@@ -275,7 +275,7 @@ class AppointmentServiceTest {
             verify(appointmentMovedEvent).fire(movedCaptor.capture());
             assertThat(movedCaptor.getValue().oldStartTime()).isEqualTo(START);
             assertThat(movedCaptor.getValue().oldEndTime()).isEqualTo(END);
-            assertThat(movedCaptor.getValue().actingUserOidcId()).isEqualTo(USER_ID);
+            assertThat(movedCaptor.getValue().actingUserOidcId()).isEqualTo(USER_OIDC);
 
             verify(appointmentEditedEvent).fire(any(AppointmentEditedEvent.class));
         }
@@ -286,7 +286,7 @@ class AppointmentServiceTest {
             UpdateAppointmentDto dto = new UpdateAppointmentDto(
                     null, null, null, null, null, null);
 
-            service.updateAppointment(APPOINTMENT_ID, USER_ID, dto);
+            service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto);
 
             verify(appointmentMovedEvent, never()).fire(any());
             verify(appointmentEditedEvent).fire(any(AppointmentEditedEvent.class));
@@ -298,7 +298,7 @@ class AppointmentServiceTest {
             UpdateAppointmentDto dto = new UpdateAppointmentDto(
                     null, null, NEW_START_STR, null, null, null);
 
-            Appointment result = service.updateAppointment(APPOINTMENT_ID, USER_ID, dto);
+            Appointment result = service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto);
 
             assertThat(result.getStartTime()).isEqualTo(NEW_START);
             assertThat(result.getEndTime()).isEqualTo(END);
@@ -311,7 +311,7 @@ class AppointmentServiceTest {
             UpdateAppointmentDto dto = new UpdateAppointmentDto(
                     null, null, null, NEW_END_STR, null, null);
 
-            Appointment result = service.updateAppointment(APPOINTMENT_ID, USER_ID, dto);
+            Appointment result = service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto);
 
             assertThat(result.getEndTime()).isEqualTo(NEW_END);
             assertThat(result.getStartTime()).isEqualTo(START);
@@ -342,7 +342,7 @@ class AppointmentServiceTest {
         void should_doNothing_when_appointmentNotFound() {
             when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(null);
 
-            service.deleteAppointment(APPOINTMENT_ID, USER_ID);
+            service.deleteAppointment(APPOINTMENT_ID, USER_OIDC);
 
             verify(appointmentDeletedEvent, never()).fire(any());
         }
@@ -356,11 +356,11 @@ class AppointmentServiceTest {
             ArgumentCaptor<AppointmentDeletedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentDeletedEvent.class);
 
-            service.deleteAppointment(APPOINTMENT_ID, USER_ID);
+            service.deleteAppointment(APPOINTMENT_ID, USER_OIDC);
 
             assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.DELETED);
             verify(appointmentDeletedEvent).fire(captor.capture());
-            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(USER_OIDC);
             assertThat(captor.getValue().deletedAppointmentId()).isEqualTo(APPOINTMENT_ID);
         }
     }
@@ -388,7 +388,7 @@ class AppointmentServiceTest {
         void should_doNothing_when_appointmentNotFoundOnCancel() {
             when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(null);
 
-            service.cancelAppointment(APPOINTMENT_ID, USER_ID);
+            service.cancelAppointment(APPOINTMENT_ID, USER_OIDC);
 
             verify(appointmentCancelledEvent, never()).fire(any());
         }
@@ -402,11 +402,11 @@ class AppointmentServiceTest {
             ArgumentCaptor<AppointmentCancelledEvent> captor =
                     ArgumentCaptor.forClass(AppointmentCancelledEvent.class);
 
-            service.cancelAppointment(APPOINTMENT_ID, USER_ID);
+            service.cancelAppointment(APPOINTMENT_ID, USER_OIDC);
 
             assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             verify(appointmentCancelledEvent).fire(captor.capture());
-            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(USER_ID);
+            assertThat(captor.getValue().actingUserOidcId()).isEqualTo(USER_OIDC);
             assertThat(captor.getValue().cancelledAppointmentId()).isEqualTo(APPOINTMENT_ID);
         }
     }
@@ -433,7 +433,7 @@ class AppointmentServiceTest {
             when(appointmentQueryService.getAppointment(APPOINTMENT_ID, false, false, false))
                     .thenReturn(appointment);
 
-            Appointment result = service.getAppointment(APPOINTMENT_ID, USER_ID, false, false, false);
+            Appointment result = service.getAppointment(APPOINTMENT_ID, USER_OIDC, false, false, false);
 
             assertThat(result.getMessages()).isNull();
             assertThat(result.getParticipants()).isNull();
@@ -450,7 +450,7 @@ class AppointmentServiceTest {
             when(appointmentQueryService.getAppointment(APPOINTMENT_ID, true, true, true))
                     .thenReturn(appointment);
 
-            Appointment result = service.getAppointment(APPOINTMENT_ID, USER_ID, true, true, true);
+            Appointment result = service.getAppointment(APPOINTMENT_ID, USER_OIDC, true, true, true);
 
             assertThat(result.getMessages()).isNotNull();
             assertThat(result.getParticipants()).isNotNull();

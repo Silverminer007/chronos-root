@@ -19,6 +19,10 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
     <Match>
+        <Class name="de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository$SearchResult"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
         <Class name="de.chronos_live.chronos_date_api.application.reminder.ReminderRuleEngine"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
@@ -77,10 +81,23 @@
         <Class name="de.chronos_live.chronos_date_api.application.WebPushService"/>
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
     </Match>
-
     <!--
-        SpotBugs cannot see that `result` is read inside the lambda passed to forEach
-        and misclassifies the initial HashMap assignment as a dead store.
+        findById() on Panache repositories can return null when the entity has been
+        concurrently deleted. SpotBugs cannot trace this through the generic static
+        call (Group.findById / Appointment.findById) and flags the guard as redundant.
+    -->
+    <Match>
+        <Class name="de.chronos_live.admin.application.AdminGroupService"/>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    </Match>
+    <Match>
+        <Class name="de.chronos_live.chronos_date_api.application.AppointmentService"/>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    </Match>
+    <!--
+        SpotBugs cannot track that the HashMap assigned to `result` is subsequently
+        mutated and read via lambda captures (forEach/parallelStream). This is a
+        false positive: the map is populated in lambdas and returned at the method end.
     -->
     <Match>
         <Class name="de.chronos_live.chronos_date_api.infrastructure.LocalDbIdentityAdapter"/>
