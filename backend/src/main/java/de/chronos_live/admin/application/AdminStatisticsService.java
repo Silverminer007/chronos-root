@@ -14,8 +14,6 @@ import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.keycloak.admin.client.Keycloak;
 
 @ApplicationScoped
 @Transactional
@@ -33,12 +31,6 @@ public class AdminStatisticsService {
     MessageRepository messageRepository;
     @Inject
     PushSubscriptionRepository pushSubscriptionRepository;
-
-    @Inject
-    Keycloak keycloak;
-
-    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm")
-    String realm;
 
     public AdminStatisticsDto getStatistics() {
         return new AdminStatisticsDto(

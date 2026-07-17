@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -221,6 +222,7 @@ public class FriendshipService {
                     dto.setFriends_since(fr.getRespondedAt() != null ? fr.getRespondedAt().toString() : null);
                     return dto;
                 })
+                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendDto::getName))
                 .collect(Collectors.toList());
     }
@@ -298,6 +300,7 @@ public class FriendshipService {
                     dto.setIncoming(incoming);
                     return dto;
                 })
+                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(FriendshipRequestDto::getCreatedAt).reversed())
                 .collect(Collectors.toList());
     }
