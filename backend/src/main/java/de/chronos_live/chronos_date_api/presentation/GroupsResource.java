@@ -1,5 +1,6 @@
 package de.chronos_live.chronos_date_api.presentation;
 
+import de.chronos_live.chronos_date_api.application.GroupQueryService;
 import de.chronos_live.chronos_date_api.application.GroupService;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;

@@ -44,6 +44,8 @@ public class AppointmentService {
     @Inject
     AppointmentRepository appointmentRepository;
     @Inject
+    IdentityPort identityPort;
+    @Inject
     Event<AppointmentMovedEvent> appointmentMovedEvent;
     @Inject
     Event<AppointmentCancelledEvent> appointmentCancelledEvent;

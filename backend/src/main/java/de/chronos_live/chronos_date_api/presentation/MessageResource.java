@@ -13,6 +13,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
+import java.util.List;
+
 @Path("/api/v2/appointments/{id}/messages")
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)

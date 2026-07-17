@@ -6,7 +6,6 @@ import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
-import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
