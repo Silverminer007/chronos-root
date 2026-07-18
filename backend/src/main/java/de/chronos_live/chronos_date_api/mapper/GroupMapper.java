@@ -21,5 +21,6 @@ public interface GroupMapper {
 
     @Mapping(target = "groupName", source = "name")
     @Mapping(target = "members", source = "members")
+    @Mapping(target = "deletedAt", ignore = true)
     Group toEntity(GroupDto dto);
 }

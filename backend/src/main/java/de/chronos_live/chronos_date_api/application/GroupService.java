@@ -21,6 +21,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -64,11 +65,12 @@ public class GroupService {
         if (groupRepository.isMember(groupId, targetUserOidcId)) {
             throw new ValidationException("user", "This user is already a member of this group");
         }
-        if (groupRepository.findById(groupId) == null) {
+        Group group = groupRepository.findById(groupId);
+        if (group == null) {
             throw new ResourceNotFoundException("group", groupId);
         }
         GroupMember groupMember = new GroupMember();
-        groupMember.setGroup(groupRepository.findById(groupId));
+        groupMember.setGroup(group);
         groupMember.setUserOidcId(targetUserOidcId);
         groupRepository.persistMember(groupMember);
         groupMemberAddedEvent.fire(new GroupMemberAddedEvent(groupId, targetUserOidcId, actingUserOidcId));
@@ -82,6 +84,23 @@ public class GroupService {
                 .orElseThrow(() -> new ValidationException("This user is not member of this group"));
         groupRepository.deleteMember(groupMember);
         groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, targetUserOidcId, actingUserOidcId));
+
+        if (groupRepository.countMembers(groupId) == 0) {
+            softDeleteGroup(groupId);
+        }
+    }
+
+    public void leaveGroup(String actingUserOidcId, Long groupId) {
+        LOGGER.debugf("[Principal %s][Group %s] Leaving Group", actingUserOidcId, groupId);
+
+        GroupMember groupMember = groupRepository.findMember(groupId, actingUserOidcId)
+                .orElseThrow(() -> new ValidationException("Du bist kein Mitglied dieser Gruppe"));
+        groupRepository.deleteMember(groupMember);
+        groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, actingUserOidcId, actingUserOidcId));
+
+        if (groupRepository.countMembers(groupId) == 0) {
+            softDeleteGroup(groupId);
+        }
     }
 
     public List<UserIdentity> getGroupUsers(String requestingUserOidcId, Long groupId) {
@@ -133,7 +152,6 @@ public class GroupService {
 
         Group group = new Group();
         group.setGroupName(createGroupDto.getName());
-        group.setOwnerOidcId(actingUserOidcId);
         groupRepository.persist(group);
 
         groupCreatedEvent.fire(new GroupCreatedEvent(group.id, actingUserOidcId));
@@ -164,7 +182,17 @@ public class GroupService {
         if (group == null) {
             throw new ResourceNotFoundException("group", groupId);
         }
-        groupRepository.deleteById(group.id);
+        if (groupRepository.hasFutureAppointments(groupId)) {
+            throw new ValidationException("Diese Gruppe kann nicht gelöscht werden, da noch zukünftige Termine existieren");
+        }
+        softDeleteGroup(groupId);
         groupDeletedEvent.fire(new GroupDeletedEvent(groupId, actingUserOidcId));
+    }
+
+    private void softDeleteGroup(Long groupId) {
+        Group group = groupRepository.findById(groupId);
+        if (group != null) {
+            group.setDeletedAt(Instant.now());
+        }
     }
 }

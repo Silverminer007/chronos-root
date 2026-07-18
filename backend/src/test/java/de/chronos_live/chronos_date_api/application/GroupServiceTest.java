@@ -6,6 +6,7 @@ import de.chronos_live.chronos_date_api.application.events.GroupMemberAddedEvent
 import de.chronos_live.chronos_date_api.application.events.GroupMemberRemovedEvent;
 import de.chronos_live.chronos_date_api.application.events.GroupNameChangedEvent;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
+import de.chronos_live.chronos_date_api.domain.AppointmentGroupParticipation;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
@@ -73,7 +74,7 @@ class GroupServiceTest {
     @BeforeEach
     void insertGroupFixtures() throws Exception {
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO groups (id, groupname, owner_oidcid) VALUES (10, 'Test Group', 'oidc-acting-1') ON CONFLICT DO NOTHING");
+            stmt.execute("INSERT INTO groups (id, groupname) VALUES (10, 'Test Group') ON CONFLICT DO NOTHING");
         }
     }
 
@@ -108,7 +109,6 @@ class GroupServiceTest {
         Group g = new Group();
         g.id = id;
         g.setGroupName(name);
-        g.setOwnerOidcId(ACTING_USER_OIDC_ID);
         return g;
     }
 
@@ -324,7 +324,6 @@ class GroupServiceTest {
             Group result = service.createGroup(ACTING_USER_OIDC_ID, buildGroupDto(GROUP_NAME));
 
             assertThat(result.getGroupName()).isEqualTo(GROUP_NAME);
-            assertThat(result.getOwnerOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
             verify(groupCreatedEvent).fire(captor.capture());
             assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
         }
@@ -405,7 +404,7 @@ class GroupServiceTest {
     /**
      * Coverage plan – deleteGroup:
      *   B1  group not found (null) → throw ResourceNotFoundException
-     *   B2  happy path → deleteById + fire event
+     *   B2  happy path → soft-delete (set deletedAt) + fire event
      * <p>
      * Total branches: 2  |  Tests: 2
      */
@@ -415,6 +414,7 @@ class GroupServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Group.class);
+            PanacheMock.mock(AppointmentGroupParticipation.class);
         }
 
         // B1
@@ -431,19 +431,20 @@ class GroupServiceTest {
 
         // B2
         @Test
-        void should_deleteGroupAndFireEvent_when_groupFound() {
+        void should_softDeleteGroupAndFireEvent_when_groupFound() {
             Group group = buildGroup(GROUP_ID, GROUP_NAME);
             when(Group.<Group>findById(GROUP_ID)).thenReturn(group);
-            when(Group.deleteById(GROUP_ID)).thenReturn(true);
+            when(AppointmentGroupParticipation
+                    .count(anyString(), any(Object[].class))).thenReturn(0L);
             ArgumentCaptor<GroupDeletedEvent> captor =
                     ArgumentCaptor.forClass(GroupDeletedEvent.class);
 
             service.deleteGroup(ACTING_USER_OIDC_ID, GROUP_ID);
 
-            PanacheMock.verify(Group.class).deleteById(GROUP_ID);
             verify(groupDeletedEvent).fire(captor.capture());
             assertThat(captor.getValue().groupId()).isEqualTo(GROUP_ID);
             assertThat(captor.getValue().actingUserOidcId()).isEqualTo(ACTING_USER_OIDC_ID);
+            assertThat(group.getDeletedAt()).isNotNull();
         }
     }
 }

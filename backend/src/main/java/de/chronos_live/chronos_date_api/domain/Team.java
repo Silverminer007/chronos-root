@@ -11,12 +11,15 @@ import java.util.Set;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "groups")
-public class Group extends PanacheEntity {
-    private String groupName;
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "group")
+@Table(name = "team")
+public class Team extends PanacheEntity {
+    @Column(nullable = false)
+    private String name;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "team")
     @EqualsAndHashCode.Exclude
-    private Set<GroupMember> members;
+    private Set<TeamMember> members;
 }

@@ -44,7 +44,7 @@ onUnmounted(() => {
   groupsStore.clearCurrentGroup();
 });
 
-const handleAddMember = async (userId: number) => {
+const handleAddMember = async (userId: string) => {
   try {
     await groupsStore.addMember(groupId.value, userId);
     toast.add({
@@ -63,7 +63,7 @@ const handleAddMember = async (userId: number) => {
   }
 };
 
-const handleRemoveMember = async (userId: number) => {
+const handleRemoveMember = async (userId: string) => {
   try {
     await groupsStore.removeMember(groupId.value, userId);
     toast.add({
@@ -83,10 +83,8 @@ const handleRemoveMember = async (userId: number) => {
 };
 
 const handleLeaveGroup = async () => {
-  if (!currentUserId.value) return;
-
   try {
-    await groupsStore.leaveGroup(groupId.value, currentUserId.value);
+    await groupsStore.leaveGroup(groupId.value);
     toast.add({
       severity: 'info',
       summary: 'Gruppe verlassen',

@@ -12,7 +12,7 @@ const step = ref(1)
 const TOTAL_STEPS = 6
 const saving = ref(false)
 const picker = ref<{
-  getSelectedUsers: () => { id: number; role: string }[]
+  getSelectedUsers: () => { id: string; role: string }[]
   getSelectedGroups: () => { id: number; role: string }[]
 } | null>(null)
 const stepDirection = ref<'forward' | 'back'>('forward')

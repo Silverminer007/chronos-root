@@ -17,7 +17,7 @@ export type ParticipationStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type AppointmentStatus =  "PLANNED" | "CANCELLED" | "DELETED" | "NOT_ENOUGH_ATTENDEES";
 
 export interface UserParticipant {
-    user_id: number,
+    user_id: string,
     name: string,
     profile_picture_url: string,
     role: Role,
@@ -40,14 +40,14 @@ export interface Group {
 }
 
 export interface User {
-    id: number,
+    id: string,
     first_name: string | null,
     last_name: string | null,
     email: string | null,
 }
 
 export interface Friend {
-    user_id: number,
+    user_id: string,
     name: string,
     email: string,
     profile_picture_url: string,
@@ -77,6 +77,34 @@ export interface Message {
 
 export interface LinkedAccount {
     provider: string;
+}
+
+export type TeamRole = 'OWNER' | 'ADMIN' | 'MEMBER'
+export type TeamInviteType = 'MULTI_USE' | 'SINGLE_USE'
+export type TeamInviteStatus = 'ACTIVE' | 'REVOKED' | 'USED'
+
+export interface TeamMember {
+    userId: string
+    firstName: string | null
+    lastName: string | null
+    role: TeamRole
+}
+
+export interface Team {
+    id: number
+    name: string
+    members: TeamMember[]
+}
+
+export interface TeamInvite {
+    id: number
+    token: string
+    type: TeamInviteType
+    targetEmail: string | null
+    expiresAt: string | null
+    status: TeamInviteStatus
+    useCount: number
+    createdAt: string
 }
 
 export interface Passkey {

@@ -61,8 +61,15 @@ public class GroupsResource {
         String oidcId = principalContext.getPrincipal().oidcId();
         Group updated = groupService.editGroup(oidcId, groupId, groupDto);
         updated.setMembers(null);
-        updated.setOwnerOidcId(null);
         return Response.ok(groupMapper.toDto(updated)).build();
+    }
+
+    @POST
+    @Path("/{groupId}/leave")
+    public Response leaveGroup(@PathParam("groupId") Long groupId) {
+        String oidcId = principalContext.getPrincipal().oidcId();
+        groupService.leaveGroup(oidcId, groupId);
+        return Response.noContent().build();
     }
 
     @GET
