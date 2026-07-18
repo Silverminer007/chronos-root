@@ -10,6 +10,7 @@ import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.MessageDto;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -88,7 +89,7 @@ class MessageServiceTest {
     AuthorizationService authorizationService;
 
     @InjectMock
-    MessageQueryService messageQueryService;
+    MessageRepository messageRepository;
 
     @InjectMock
     IdentityPort identityPort;
@@ -321,15 +322,17 @@ class MessageServiceTest {
 
         @Test
         void should_returnEnrichedMessageDtos_when_userIsAuthorized() {
+            Appointment appt = buildAppointment(BASE_START, BASE_END);
             Message msg = new Message();
             msg.id = MESSAGE_ID;
             msg.setBody(MESSAGE_TEXT);
             msg.setSenderOidcId(USER_OIDC_ID);
             msg.setTimeStamp(FIXED_TIMESTAMP);
+            msg.setAppointment(appt);
 
             UserIdentity sender = buildUserIdentity(USER_OIDC_ID);
 
-            when(messageQueryService.getMessages(APPOINTMENT_ID)).thenReturn(List.of(msg));
+            when(messageRepository.listByAppointment(APPOINTMENT_ID)).thenReturn(List.of(msg));
             when(identityPort.findByIds(any())).thenReturn(Map.of(USER_OIDC_ID, sender));
 
             List<MessageDto> result = service.getMessages(APPOINTMENT_ID, USER_OIDC_ID);

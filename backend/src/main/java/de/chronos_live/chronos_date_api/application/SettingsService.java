@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.SettingsDto;
+import de.chronos_live.chronos_date_api.infrastructure.SettingsRepository;
 import de.chronos_live.chronos_date_api.mapper.SettingsMapper;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,6 +18,8 @@ public class SettingsService {
 
     @Inject
     SettingsMapper settingsMapper;
+    @Inject
+    SettingsRepository settingsRepository;
 
     private Settings getDefaultSetting() {
         Settings s = new Settings();
@@ -33,10 +36,10 @@ public class SettingsService {
     }
 
     public Settings getOrCreateSettings(String userOidcId) {
-        return (Settings) Settings.find("userOidcId", userOidcId).firstResultOptional().orElseGet(() -> {
+        return settingsRepository.findByUserOidcId(userOidcId).orElseGet(() -> {
             Settings setting = getDefaultSetting();
             setting.setUserOidcId(userOidcId);
-            setting.persist();
+            settingsRepository.persist(setting);
             return setting;
         });
     }

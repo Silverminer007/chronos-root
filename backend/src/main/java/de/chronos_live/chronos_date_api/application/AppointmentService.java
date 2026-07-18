@@ -4,7 +4,6 @@ import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
-import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.AppointmentDto;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
@@ -14,6 +13,8 @@ import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -39,7 +40,9 @@ public class AppointmentService {
     @Inject
     AuthorizationService authorizationService;
     @Inject
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
+    @Inject
+    GroupRepository groupRepository;
     @Inject
     IdentityPort identityPort;
     @Inject
@@ -79,7 +82,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatedAt(Instant.now());
         appointment.setLastUpdate(Instant.now());
-        appointment.persist();
+        appointmentRepository.persist(appointment);
 
         LOGGER.debugf("[Principal %s][Appointment %s] Created Appointment", creatorOidcId, appointment.id);
         appointmentCreatedEvent.fire(new AppointmentCreatedEvent(appointment.id, creatorOidcId));
@@ -130,7 +133,7 @@ public class AppointmentService {
     public void deleteAppointment(Long appointmentId, String actingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Delete Appointment", actingUserOidcId, appointmentId);
         authorizationService.requireDeleteAppointment(appointmentId, actingUserOidcId);
-        Appointment appointment = Appointment.findById(appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) return;
         appointment.setStatus(AppointmentStatus.DELETED);
         appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserOidcId));
@@ -139,7 +142,7 @@ public class AppointmentService {
     public void cancelAppointment(Long appointmentId, String actingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Cancel Appointment", actingUserOidcId, appointmentId);
         authorizationService.requireCancelAppointment(appointmentId, actingUserOidcId);
-        Appointment appointment = Appointment.findById(appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) return;
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserOidcId));
@@ -149,7 +152,7 @@ public class AppointmentService {
                                       boolean messages, boolean participants, boolean groupParticipants) {
         LOGGER.debugf("[Principal %s][Appointment %s] Read Appointment", requestingUserOidcId, appointmentId);
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
-        Appointment appointment = appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
+        Appointment appointment = appointmentRepository.getAppointment(appointmentId, messages, participants, groupParticipants);
         if (!messages) appointment.setMessages(null);
         if (!participants) appointment.setParticipants(null);
         if (!groupParticipants) appointment.setGroupParticipants(null);
@@ -194,7 +197,7 @@ public class AppointmentService {
 
         Map<Long, String> groupNameMap = new HashMap<>();
         if (!viaGroupIds.isEmpty()) {
-            Group.<Group>list("id in ?1", viaGroupIds)
+            groupRepository.findByIds(viaGroupIds)
                     .forEach(g -> groupNameMap.put(g.id, g.getGroupName()));
         }
 

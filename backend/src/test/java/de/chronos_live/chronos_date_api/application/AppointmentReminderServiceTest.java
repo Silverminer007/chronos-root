@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.reminder.ReminderRuleEngine;
 import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -19,7 +20,7 @@ import static org.mockito.Mockito.*;
  * Unit tests for {@link AppointmentReminderService}.
  *
  * <p>Strategy: {@code @QuarkusTest} + {@code @InjectMock} replaces all three CDI
- * dependencies ({@link AppointmentQueryService}, {@link ReminderRuleEngine}, {@link Clock})
+ * dependencies ({@link AppointmentRepository}, {@link ReminderRuleEngine}, {@link Clock})
  * with Mockito mocks. The service has a single linear method with no conditional branches;
  * the only observable behaviour is the correct delegation sequence.
  *
@@ -38,7 +39,7 @@ class AppointmentReminderServiceTest {
     AppointmentReminderService service;
 
     @InjectMock
-    AppointmentQueryService queryService;
+    AppointmentRepository appointmentRepository;
 
     @InjectMock
     ReminderRuleEngine engine;
@@ -72,15 +73,15 @@ class AppointmentReminderServiceTest {
         void should_fetchAppointmentsIn20WeeksWindowAndEvaluate_when_called() {
             List<Appointment> appointments = List.of(buildAppointment());
             when(clock.instant()).thenReturn(NOW);
-            when(queryService.getNonCancelledAppointmentsStartingBetween(NOW, EXPECTED_BEFORE))
+            when(appointmentRepository.findNonCancelledBetween(NOW, EXPECTED_BEFORE))
                     .thenReturn(appointments);
 
             service.sendPendingReminders();
 
             verify(clock).instant();
-            verify(queryService).getNonCancelledAppointmentsStartingBetween(NOW, EXPECTED_BEFORE);
+            verify(appointmentRepository).findNonCancelledBetween(NOW, EXPECTED_BEFORE);
             verify(engine).evaluate(appointments, NOW);
-            verifyNoMoreInteractions(queryService, engine);
+            verifyNoMoreInteractions(appointmentRepository, engine);
         }
     }
 }

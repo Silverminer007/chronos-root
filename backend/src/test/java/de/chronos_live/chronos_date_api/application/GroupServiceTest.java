@@ -261,7 +261,9 @@ class GroupServiceTest {
         void should_returnUserIdentities_when_authorized() {
             GroupMember member = new GroupMember();
             member.setUserOidcId(TARGET_USER_OIDC_ID);
-            when(GroupMember.list(anyString(), any(Object[].class))).thenReturn(List.of(member));
+            @SuppressWarnings("unchecked") PanacheQuery<GroupMember> gmq = mock(PanacheQuery.class);
+            when(GroupMember.<GroupMember>find(anyString(), any(Object[].class))).thenReturn(gmq);
+            when(gmq.list()).thenReturn(List.of(member));
 
             UserIdentity userIdentity = buildUserIdentity(TARGET_USER_OIDC_ID);
             when(identityPort.findByIds(anyList())).thenReturn(

@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -65,7 +66,7 @@ class AuthorizationServiceTest {
     AppointmentParticipationQueryService appointmentParticipationQueryService;
 
     @InjectMock
-    GroupQueryService groupQueryService;
+    GroupRepository groupRepository;
 
     @InjectMock
     FriendshipQueryService friendshipQueryService;
@@ -279,7 +280,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_responsibleButNotGroupMember() {
             asUser(UserRole.RESPONSIBLE);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(false);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireAddGroupToAppointment(APPT_ID, ACTING_USER, GROUP_ID))
                     .isInstanceOf(ForbiddenException.class)
@@ -289,7 +290,7 @@ class AuthorizationServiceTest {
         @Test
         void should_allowAccess_when_responsibleAndGroupMember() {
             asUser(UserRole.RESPONSIBLE);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(true);
 
             assertThatCode(() -> service.requireAddGroupToAppointment(APPT_ID, ACTING_USER, GROUP_ID))
                     .doesNotThrowAnyException();
@@ -408,7 +409,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_actingUserIsNotGroupMember() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(false);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireAddGroupMember(GROUP_ID, ACTING_USER, TARGET_USER))
                     .isInstanceOf(ForbiddenException.class)
@@ -418,7 +419,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_groupMemberButTargetIsNotFriend() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(true);
             when(friendshipQueryService.areFriends(ACTING_USER, TARGET_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireAddGroupMember(GROUP_ID, ACTING_USER, TARGET_USER))
@@ -429,7 +430,7 @@ class AuthorizationServiceTest {
         @Test
         void should_allowAccess_when_groupMemberAndTargetIsFriend() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(true);
             when(friendshipQueryService.areFriends(ACTING_USER, TARGET_USER)).thenReturn(true);
 
             assertThatCode(() -> service.requireAddGroupMember(GROUP_ID, ACTING_USER, TARGET_USER))
@@ -463,7 +464,7 @@ class AuthorizationServiceTest {
         @Test
         void should_allowAccess_when_actingUserIsGroupOwner() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupOwner(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isOwner(GROUP_ID, ACTING_USER)).thenReturn(true);
 
             assertThatCode(() -> service.requireRemoveGroupMember(GROUP_ID, ACTING_USER, TARGET_USER))
                     .doesNotThrowAnyException();
@@ -472,7 +473,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_actingUserIsNotGroupOwner() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupOwner(GROUP_ID, ACTING_USER)).thenReturn(false);
+            when(groupRepository.isOwner(GROUP_ID, ACTING_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireRemoveGroupMember(GROUP_ID, ACTING_USER, TARGET_USER))
                     .isInstanceOf(ForbiddenException.class)
@@ -496,7 +497,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_notGroupMember() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(false);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireReadGroupMembers(GROUP_ID, ACTING_USER))
                     .isInstanceOf(ForbiddenException.class)
@@ -506,7 +507,7 @@ class AuthorizationServiceTest {
         @Test
         void should_allowAccess_when_isGroupMember() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupMember(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isMember(GROUP_ID, ACTING_USER)).thenReturn(true);
 
             assertThatCode(() -> service.requireReadGroupMembers(GROUP_ID, ACTING_USER))
                     .doesNotThrowAnyException();
@@ -529,7 +530,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_notGroupOwner() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupOwner(GROUP_ID, ACTING_USER)).thenReturn(false);
+            when(groupRepository.isOwner(GROUP_ID, ACTING_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireEditGroup(GROUP_ID, ACTING_USER))
                     .isInstanceOf(ForbiddenException.class)
@@ -539,7 +540,7 @@ class AuthorizationServiceTest {
         @Test
         void should_allowAccess_when_isGroupOwner() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupOwner(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isOwner(GROUP_ID, ACTING_USER)).thenReturn(true);
 
             assertThatCode(() -> service.requireEditGroup(GROUP_ID, ACTING_USER))
                     .doesNotThrowAnyException();
@@ -562,7 +563,7 @@ class AuthorizationServiceTest {
         @Test
         void should_throwForbidden_when_notGroupOwner() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupOwner(GROUP_ID, ACTING_USER)).thenReturn(false);
+            when(groupRepository.isOwner(GROUP_ID, ACTING_USER)).thenReturn(false);
 
             assertThatThrownBy(() -> service.requireDeleteGroup(GROUP_ID, ACTING_USER))
                     .isInstanceOf(ForbiddenException.class)
@@ -572,7 +573,7 @@ class AuthorizationServiceTest {
         @Test
         void should_allowAccess_when_isGroupOwner() {
             when(principalContext.isAdminRequest()).thenReturn(false);
-            when(groupQueryService.isGroupOwner(GROUP_ID, ACTING_USER)).thenReturn(true);
+            when(groupRepository.isOwner(GROUP_ID, ACTING_USER)).thenReturn(true);
 
             assertThatCode(() -> service.requireDeleteGroup(GROUP_ID, ACTING_USER))
                     .doesNotThrowAnyException();

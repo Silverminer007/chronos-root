@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.application.ports.NotificationPort;
 import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.PushAppointmentMapper;
 import io.micrometer.core.annotation.Timed;
@@ -49,13 +52,13 @@ public class WebPushService {
     AppointmentParticipationQueryService appointmentParticipationQueryService;
 
     @Inject
-    MessageQueryService messageQueryService;
+    MessageRepository messageRepository;
 
     @Inject
-    GroupQueryService groupQueryService;
+    GroupRepository groupRepository;
 
     @Inject
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
 
     @Inject
     UserQueryService userQueryService;
@@ -80,7 +83,7 @@ public class WebPushService {
     }
 
     private String getAndParseAppointment(Long appointmentId) {
-        Appointment appointment = appointmentQueryService.findById(appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) {
             return null;
         }
@@ -93,7 +96,7 @@ public class WebPushService {
     }
 
     private String getAndParseGroup(Long groupId) {
-        Group group = groupQueryService.findById(groupId);
+        Group group = groupRepository.findById(groupId);
         if (group == null) {
             return null;
         }
@@ -117,7 +120,7 @@ public class WebPushService {
     }
 
     private void sendToMembers(Long groupId, Predicate<GroupMember> sendTest, String payload) {
-        List<GroupMember> members = this.groupQueryService.getGroupMembers(groupId);
+        List<GroupMember> members = this.groupRepository.listMembers(groupId);
         for (GroupMember groupMember : members) {
             if (!sendTest.test(groupMember)) {
                 continue;
@@ -128,10 +131,7 @@ public class WebPushService {
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentMessageSent(@Observes(during = TransactionPhase.AFTER_SUCCESS) MessageSentEvent event) {
-        Message message = this.messageQueryService.getMessage(event.messageId());
-        if (message == null) {
-            return;
-        }
+        Message message = this.messageRepository.findByIdOrThrow(event.messageId());
 
         UserIdentity sender = userQueryService.findByOidcId(message.getSenderOidcId());
         String senderName = sender != null ? sender.getName() : "Unknown";
@@ -245,7 +245,7 @@ public class WebPushService {
             return;
         }
 
-        Group newGroupParticipant = groupQueryService.findById(event.groupId());
+        Group newGroupParticipant = groupRepository.findById(event.groupId());
         if (newGroupParticipant == null) {
             return;
         }

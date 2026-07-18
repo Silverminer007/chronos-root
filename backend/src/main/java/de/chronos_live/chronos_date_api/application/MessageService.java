@@ -10,6 +10,8 @@ import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.MessageDto;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import de.chronos_live.chronos_date_api.mapper.MessageMapper;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -35,9 +37,11 @@ public class MessageService {
     @Inject
     AuthorizationService authorizationService;
     @Inject
-    MessageQueryService messageQueryService;
-    @Inject
     IdentityPort identityPort;
+    @Inject
+    AppointmentRepository appointmentRepository;
+    @Inject
+    MessageRepository messageRepository;
     @Inject
     MessageMapper messageMapper;
     @Inject
@@ -49,7 +53,7 @@ public class MessageService {
     public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
-            Appointment appointment = Appointment.findById(event.appointmentId());
+            Appointment appointment = appointmentRepository.findById(event.appointmentId());
             UserIdentity user = identityPort.findById(event.actingUserOidcId());
             String text = "%s hat %s".formatted(user.getName(),
                     event.newParticipationStatus().equals(ParticipationStatus.APPROVED) ? "zugesagt" : "abgesagt");
@@ -63,7 +67,7 @@ public class MessageService {
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentCancelled(@Observes AppointmentCancelledEvent event) {
-        Appointment appointment = Appointment.findById(event.cancelledAppointmentId());
+        Appointment appointment = appointmentRepository.findById(event.cancelledAppointmentId());
         UserIdentity user = identityPort.findById(event.actingUserOidcId());
         String text = "%s hat diesen Termin abgesagt. Er wird nicht stattfinden!".formatted(user.getName());
         persistMessage(text, event.actingUserOidcId(), appointment);
@@ -71,7 +75,7 @@ public class MessageService {
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
-        Appointment appointment = Appointment.findById(event.appointmentId());
+        Appointment appointment = appointmentRepository.findById(event.appointmentId());
         UserIdentity user = identityPort.findById(event.actingUserOidcId());
         long hourDelta = event.oldStartTime().until(appointment.getStartTime(), ChronoUnit.HOURS);
         String text;
@@ -97,7 +101,7 @@ public class MessageService {
     public Message sendMessage(Long appointmentId, String messageText, String actingUserOidcId, Instant timeStamp) {
         LOGGER.debugf("[Principal %s][Appointment %s] Sending message", actingUserOidcId, appointmentId);
         authorizationService.requireSendMessage(appointmentId, actingUserOidcId);
-        Appointment appointment = Appointment.findById(appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId);
         Message message = persistMessage(messageText, actingUserOidcId, appointment, timeStamp);
         messageSentEvent.fire(new MessageSentEvent(message.id));
         return message;
@@ -106,7 +110,7 @@ public class MessageService {
     public List<MessageDto> getMessages(Long appointmentId, String requestingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Reading Messages", requestingUserOidcId, appointmentId);
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
-        List<Message> messages = messageQueryService.getMessages(appointmentId);
+        List<Message> messages = messageRepository.listByAppointment(appointmentId);
 
         Map<String, UserIdentity> senderMap = identityPort.findByIds(
                 messages.stream().map(Message::getSenderOidcId)
@@ -136,7 +140,7 @@ public class MessageService {
         message.setSenderOidcId(senderOidcId);
         message.setAppointment(appointment);
         message.setTimeStamp(timeStamp);
-        message.persist();
+        messageRepository.persist(message);
         return message;
     }
 }

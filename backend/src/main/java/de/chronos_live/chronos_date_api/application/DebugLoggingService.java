@@ -1,11 +1,13 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
+import jakarta.inject.Inject;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -15,6 +17,9 @@ import java.util.List;
 
 @ApplicationScoped
 public class DebugLoggingService {
+    @Inject
+    AppointmentRepository appointmentRepository;
+
     public void onAppointmentParticipationStatusConfirmation(@Observes AppointmentParticipationStatusConfirmationEvent event) {
         Log.debugf("[Notifications] onAppointmentParticipationStatusConfirmation Appointment ID %s", event.appointmentId());
     }
@@ -32,7 +37,7 @@ public class DebugLoggingService {
     }
 
     public void onAppointmentParticipationPendingReminder(@Observes AppointmentParticipationStatusPendingReminderEvent event) {
-        Appointment appointment = Appointment.findById(event.appointmentId());
+        Appointment appointment = appointmentRepository.findById(event.appointmentId());
 
         Instant targetTime = appointment.getStartTime();
         if(appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) >= 24) {
