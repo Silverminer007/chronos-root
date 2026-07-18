@@ -128,6 +128,56 @@ backend:
     initialDelaySeconds: 5
     periodSeconds: 5
 
+webPush:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/silverminer007/chronos-web-push
+    tag: latest
+    pullPolicy: Always
+  containerPort: 3001
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  env:
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    DB_NAME: "chronos"
+    DB_USER: "postgres"
+    KEYCLOAK_ISSUER: "https://auth.chronos-live.de/realms/chronos"
+    PORT: "3001"
+  envFromSecrets:
+    - name: DB_PASSWORD
+      secretName: chronos-secret
+      secretKey: database_password
+    - name: VAPID_PUBLIC_KEY
+      secretName: chronos-secret
+      secretKey: vapid_public_key
+    - name: VAPID_PRIVATE_KEY
+      secretName: chronos-secret
+      secretKey: vapid_private_key
+    - name: VAPID_MAILTO
+      secretName: chronos-secret
+      secretKey: vapid_mailto
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3001
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3001
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
 postgresql:
   enabled: true
   image:

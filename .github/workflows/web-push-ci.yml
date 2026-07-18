@@ -1,0 +1,176 @@
+name: Web-Push CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['web-push/**']
+  pull_request:
+    branches: [main, develop]
+    paths: ['web-push/**']
+
+env:
+  REGISTRY: ghcr.io
+
+defaults:
+  run:
+    working-directory: web-push
+
+jobs:
+  # ── Secret Detection ──────────────────────────────────────────────────────
+  secret-detection:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Dependency Vulnerability Audit ───────────────────────────────────────
+  audit-deps:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: web-push/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+
+  # ── TypeScript type check ─────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: web-push/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+
+  # ── Tests ─────────────────────────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: web-push/package-lock.json
+      - run: npm ci
+      - run: npm test
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+
+  # ── Build ─────────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: web-push/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  # ── Docker Build & Push ───────────────────────────────────────────────────
+  build-and-push:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [secret-detection, audit-deps, typecheck, test, build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Calculate Image Name and Version tag
+        run: |
+          REPO_OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            VERSION=$(git tag --sort=-creatordate | head -1)
+          else
+            VERSION="develop-$(echo ${{ github.sha }} | cut -c1-8)"
+          fi
+
+          IMAGE=ghcr.io/$REPO_OWNER_LC/chronos-web-push
+
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "**Image**: $IMAGE:$VERSION" >> $GITHUB_STEP_SUMMARY
+        working-directory: ${{ github.workspace }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Docker Image
+        run: |
+          docker build -t $IMAGE:$VERSION -f Dockerfile .
+          docker push $IMAGE:$VERSION
+
+      - name: Re-tag Docker Image (latest)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag $IMAGE:$VERSION $IMAGE:latest
+          docker push $IMAGE:latest
+
+      - name: Re-tag Docker Image (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          docker tag $IMAGE:$VERSION $IMAGE:develop
+          docker push $IMAGE:develop
+
+      - name: Trigger Production Deployment
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{
+              "event_type":"deploy-production",
+              "client_payload":{
+                "service":"web-push",
+                "version":"${{env.VERSION}}",
+                "image":"${{env.IMAGE}}"
+              }
+            }'
+        working-directory: ${{ github.workspace }}
+
+      - name: Trigger Staging Deployment
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{
+              "event_type":"deploy-staging",
+              "client_payload":{
+                "service":"web-push",
+                "version":"${{env.VERSION}}",
+                "image":"${{env.IMAGE}}"
+              }
+            }'
+        working-directory: ${{ github.workspace }}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chronos-web-push
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.webPush.service.type }}
+  selector:
+    app: chronos-web-push
+  ports:
+    - port: {{ .Values.webPush.service.port }}
+      targetPort: {{ .Values.webPush.containerPort }}
