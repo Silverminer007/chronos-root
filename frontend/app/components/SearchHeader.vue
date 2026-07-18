@@ -21,10 +21,10 @@ const items = ref([
         }
       },
       {
-        label: 'Freunde',
-        iconName: 'lucide:users',
+        label: 'Teams',
+        iconName: 'lucide:shield-check',
         command: () => {
-          navigateTo('/friends')
+          navigateTo('/teams')
         }
       },
       {

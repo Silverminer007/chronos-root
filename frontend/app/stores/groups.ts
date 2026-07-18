@@ -69,11 +69,11 @@ export const useGroupsStore = defineStore('groups', {
             }
         },
 
-        async createGroup(name: string) {
+        async createGroup(name: string, teamId: number) {
             try {
                 const response = await $fetch<Group>('/api/v2/groups', {
                     method: 'POST',
-                    body: {name}
+                    body: {name, teamId}
                 })
 
                 if (response) {
@@ -100,7 +100,7 @@ export const useGroupsStore = defineStore('groups', {
             }
         },
 
-        async addMember(groupId: number, userId: number) {
+        async addMember(groupId: number, userId: string) {
             try {
                 await $fetch(`/api/v2/groups/${groupId}/user/${userId}`, {
                     method: 'POST'
@@ -118,7 +118,7 @@ export const useGroupsStore = defineStore('groups', {
             }
         },
 
-        async removeMember(groupId: number, userId: number) {
+        async removeMember(groupId: number, userId: string) {
             try {
                 await $fetch(`/api/v2/groups/${groupId}/user/${userId}`, {
                     method: 'DELETE'
@@ -136,12 +136,10 @@ export const useGroupsStore = defineStore('groups', {
             }
         },
 
-        async leaveGroup(groupId: number, userId: number) {
-            // This is essentially removeMember but for the current user
-            // The calling code should handle navigation after this
+        async leaveGroup(groupId: number) {
             try {
-                await $fetch(`/api/v2/groups/${groupId}/user/${userId}`, {
-                    method: 'DELETE'
+                await $fetch(`/api/v2/groups/${groupId}/leave`, {
+                    method: 'POST'
                 })
 
                 this.groups = this.groups.filter(g => g.id !== groupId)

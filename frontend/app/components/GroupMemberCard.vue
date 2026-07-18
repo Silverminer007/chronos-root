@@ -7,7 +7,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  remove: [userId: number];
+  remove: [userId: string];
 }>();
 
 const fullName = computed(() => `${props.member.first_name} ${props.member.last_name}`);

@@ -2,8 +2,8 @@
 -- Also advance all Hibernate sequences past the fixture IDs to avoid PK conflicts.
 -- Note: the users table has been removed; user identity is now sourced from Keycloak (OIDC).
 
-INSERT INTO groups (id, groupname, owner_oidcid) VALUES (3, 'Test Group', 'oidc-user-1') ON CONFLICT DO NOTHING;
-INSERT INTO groups (id, groupname, owner_oidcid) VALUES (10, 'Test Group 10', 'oidc-user-1') ON CONFLICT DO NOTHING;
+INSERT INTO groups (id, groupname, team_id) VALUES (3, 'Test Group', 1) ON CONFLICT DO NOTHING;
+INSERT INTO groups (id, groupname, team_id) VALUES (10, 'Test Group 10', 1) ON CONFLICT DO NOTHING;
 
 INSERT INTO appointment (id, name) VALUES (10, 'Test Appointment') ON CONFLICT DO NOTHING;
 
@@ -18,3 +18,6 @@ SELECT setval('message_seq', 1000, false);
 SELECT setval('pushsubscription_seq', 1000, false);
 SELECT setval('settings_seq', 1000, false);
 SELECT setval('push_notification_log_seq', 1000, false);
+SELECT setval('team_seq', 1000, false);
+SELECT setval('team_member_seq', 1000, false);
+SELECT setval('team_invite_seq', 1000, false);

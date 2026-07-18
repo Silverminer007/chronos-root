@@ -1,11 +1,14 @@
 package de.chronos_live.chronos_date_api.infrastructure;
 
+import de.chronos_live.chronos_date_api.domain.AppointmentGroupParticipation;
+import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,7 +19,8 @@ public class GroupRepository implements PanacheRepository<Group> {
     // ── Group queries ─────────────────────────────────────────────────────────
 
     public List<Group> searchGroups(UserIdentity user, String searchQuery) {
-        String sql = "SELECT g FROM GroupMember gm JOIN gm.group g LEFT JOIN FETCH g.members WHERE gm.userOidcId = ?1";
+        String sql = "SELECT g FROM GroupMember gm JOIN gm.group g LEFT JOIN FETCH g.members"
+                + " WHERE gm.userOidcId = ?1 AND g.deletedAt IS NULL";
         if (searchQuery != null && !searchQuery.isEmpty()) {
             return Group.<Group>find(sql + " AND lower(g.groupName) LIKE lower(?2)",
                     user.oidcId(), "%" + searchQuery + "%").list();
@@ -25,7 +29,7 @@ public class GroupRepository implements PanacheRepository<Group> {
     }
 
     public List<Group> findByIds(Set<Long> ids) {
-        return Group.<Group>find("id in ?1", ids).list();
+        return Group.<Group>find("id in ?1 AND deletedAt IS NULL", ids).list();
     }
 
     @Override
@@ -38,8 +42,11 @@ public class GroupRepository implements PanacheRepository<Group> {
         return Group.deleteById(id);
     }
 
-    public boolean isOwner(Long groupId, String userOidcId) {
-        return Group.count("id = ?1 AND ownerOidcId = ?2", groupId, userOidcId) > 0;
+    public boolean hasFutureAppointments(Long groupId) {
+        return AppointmentGroupParticipation.count(
+                "group.id = ?1 AND appointment.startTime > ?2 AND appointment.status != ?3",
+                groupId, Instant.now(), AppointmentStatus.CANCELLED
+        ) > 0;
     }
 
     // ── GroupMember queries ───────────────────────────────────────────────────
@@ -57,6 +64,14 @@ public class GroupRepository implements PanacheRepository<Group> {
                 .firstResultOptional();
     }
 
+    public long countMembers() {
+        return GroupMember.count();
+    }
+
+    public long countMembers(Long groupId) {
+        return GroupMember.count("group.id = ?1", groupId);
+    }
+
     public void persistMember(GroupMember member) {
         member.persist();
     }
@@ -65,7 +80,14 @@ public class GroupRepository implements PanacheRepository<Group> {
         member.delete();
     }
 
-    public long countMembers() {
-        return GroupMember.count();
+    public void deleteAllMembers(Long groupId) {
+        GroupMember.delete("group.id = ?1", groupId);
+    }
+
+    public List<GroupMember> listMembershipsInTeam(Long teamId, String userOidcId) {
+        return GroupMember.<GroupMember>find(
+                "userOidcId = ?1 AND group.team.id = ?2 AND group.deletedAt IS NULL",
+                userOidcId, teamId
+        ).list();
     }
 }

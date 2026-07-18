@@ -77,19 +77,19 @@ export const useAppointmentsStore = defineStore('appointments', {
 
         // Teilnahme des aktuellen Benutzers
         getCurrentUserParticipation: () => {
-            return (appointment: Appointment, userId: number) =>
+            return (appointment: Appointment, userId: string) =>
                 appointment.participants?.find(p => p.user_id === userId)
         },
 
         // Prüfen ob Benutzer zugesagt hat
         hasApproved: () => {
-            return (appointment: Appointment, userId: number) =>
+            return (appointment: Appointment, userId: string) =>
                 appointment.participants?.some(p => p.user_id === userId && p.status === 'APPROVED') || false
         },
 
         // Prüfen ob Benutzer abgesagt hat
         hasRejected: () => {
-            return (appointment: Appointment, userId: number) =>
+            return (appointment: Appointment, userId: string) =>
                 appointment.participants?.some(p => p.user_id === userId && p.status === 'REJECTED') || false
         },
 
@@ -299,7 +299,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         // Teilnehmer hinzufügen
-        async addParticipant(appointmentId: number, userId: number, role: string) {
+        async addParticipant(appointmentId: number, userId: string, role: string) {
             try {
                 await $fetch(`/api/v2/appointments/${appointmentId}/participants/users`, {
                     method: 'POST',
@@ -314,7 +314,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         // Teilnehmer entfernen
-        async removeParticipant(appointmentId: number, userId: number) {
+        async removeParticipant(appointmentId: number, userId: string) {
             try {
                 await $fetch(`/api/v2/appointments/${appointmentId}/participants/users/${userId}`, {
                     method: 'DELETE'
@@ -328,7 +328,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         },
 
         // Teilnehmerrolle ändern
-        async changeParticipantRole(appointmentId: number, userId: number, role: string) {
+        async changeParticipantRole(appointmentId: number, userId: string, role: string) {
             try {
                 await $fetch(`/api/v2/appointments/${appointmentId}/participants/users/${userId}`, {
                     method: 'PATCH',
