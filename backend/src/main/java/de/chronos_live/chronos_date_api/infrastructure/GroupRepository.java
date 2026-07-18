@@ -8,6 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @ApplicationScoped
 public class GroupRepository implements PanacheRepository<Group> {
@@ -21,6 +22,10 @@ public class GroupRepository implements PanacheRepository<Group> {
                     user.oidcId(), "%" + searchQuery + "%").list();
         }
         return Group.<Group>find(sql, user.oidcId()).list();
+    }
+
+    public List<Group> findByIds(Set<Long> ids) {
+        return Group.<Group>find("id in ?1", ids).list();
     }
 
     @Override

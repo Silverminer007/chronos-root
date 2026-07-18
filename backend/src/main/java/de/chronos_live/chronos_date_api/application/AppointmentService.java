@@ -15,6 +15,7 @@ import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -43,6 +44,8 @@ public class AppointmentService {
     AppointmentQueryService appointmentQueryService;
     @Inject
     AppointmentRepository appointmentRepository;
+    @Inject
+    GroupRepository groupRepository;
     @Inject
     IdentityPort identityPort;
     @Inject
@@ -197,7 +200,7 @@ public class AppointmentService {
 
         Map<Long, String> groupNameMap = new HashMap<>();
         if (!viaGroupIds.isEmpty()) {
-            Group.<Group>list("id in ?1", viaGroupIds)
+            groupRepository.findByIds(viaGroupIds)
                     .forEach(g -> groupNameMap.put(g.id, g.getGroupName()));
         }
 

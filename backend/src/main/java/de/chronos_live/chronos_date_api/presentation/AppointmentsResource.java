@@ -17,6 +17,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import java.time.Instant;
+import java.util.List;
 
 @Path("/api/v2/appointments")
 @PermitAll
@@ -52,9 +53,9 @@ public class AppointmentsResource {
                 participants != null && participants,
                 groups != null && groups);
 
-        var response = new PagedResponse<>(
-                appointmentMapper.toDtoList(result.items()),
-                new PagedResponse.Meta(page, size, result.total()));
+        var dtos = appointmentMapper.toDtoList(result.items());
+        appointmentService.enrichAppointmentDtos(dtos);
+        var response = new PagedResponse<>(dtos, new PagedResponse.Meta(page, size, result.total()));
         return Response.ok(response).build();
     }
 
@@ -70,7 +71,9 @@ public class AppointmentsResource {
                 includeMessages != null && includeMessages,
                 includeParticipants != null && includeParticipants,
                 includeGroupParticipants != null && includeGroupParticipants);
-        return Response.ok(appointmentMapper.toDto(appointment)).build();
+        var dto = appointmentMapper.toDto(appointment);
+        appointmentService.enrichAppointmentDtos(List.of(dto));
+        return Response.ok(dto).build();
     }
 
     @POST

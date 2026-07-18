@@ -6,7 +6,9 @@ import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
+import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import io.micrometer.core.annotation.Timed;
@@ -33,6 +35,8 @@ public class GroupService {
     IdentityPort identityPort;
     @Inject
     GroupRepository groupRepository;
+    @Inject
+    GroupMapper groupMapper;
     @Inject
     Event<GroupMemberAddedEvent> groupMemberAddedEvent;
     @Inject
@@ -91,6 +95,34 @@ public class GroupService {
                 .map(m -> userMap.getOrDefault(m.getUserOidcId(),
                         new UserIdentity(m.getUserOidcId(), null, null, null, null)))
                 .toList();
+    }
+
+    public List<GroupDto> searchGroups(UserIdentity user, String searchQuery) {
+        LOGGER.debugf("[Principal %s] Searching Groups (query=%s)", user.oidcId(), searchQuery);
+        List<Group> groups = groupRepository.searchGroups(user, searchQuery);
+        List<GroupDto> dtos = groupMapper.toDtoList(groups);
+
+        List<String> allMemberIds = groups.stream()
+                .filter(g -> g.getMembers() != null)
+                .flatMap(g -> g.getMembers().stream())
+                .map(GroupMember::getUserOidcId)
+                .distinct()
+                .toList();
+
+        if (allMemberIds.isEmpty()) return dtos;
+
+        Map<String, UserIdentity> userMap = identityPort.findByIds(allMemberIds);
+
+        for (GroupDto dto : dtos) {
+            if (dto.getMembers() == null) continue;
+            dto.setMembers(dto.getMembers().stream()
+                    .map(m -> {
+                        UserIdentity u = userMap.get(m.id());
+                        return u != null ? new UserDto(m.id(), u.firstName(), u.lastName()) : m;
+                    })
+                    .toList());
+        }
+        return dtos;
     }
 
     public Group createGroup(String actingUserOidcId, GroupDto createGroupDto) {

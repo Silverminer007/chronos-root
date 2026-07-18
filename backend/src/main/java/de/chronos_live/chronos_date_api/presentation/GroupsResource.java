@@ -1,6 +1,5 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.GroupQueryService;
 import de.chronos_live.chronos_date_api.application.GroupService;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
@@ -27,8 +26,6 @@ public class GroupsResource {
     @Inject
     GroupService groupService;
     @Inject
-    GroupQueryService groupQueryService;
-    @Inject
     PrincipalContext principalContext;
     @Inject
     GroupMapper groupMapper;
@@ -39,8 +36,7 @@ public class GroupsResource {
     @Path("/")
     public Response getGroups(@QueryParam("search") String search) {
         UserIdentity user = principalContext.getPrincipal();
-        List<Group> groups = groupQueryService.searchGroups(user, search);
-        return Response.ok(groupMapper.toDtoList(groups)).build();
+        return Response.ok(groupService.searchGroups(user, search)).build();
     }
 
     @POST

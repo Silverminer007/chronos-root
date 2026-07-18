@@ -65,10 +65,10 @@ public class FriendshipService {
             }
             // Resolve oidcId from email via Keycloak Admin API
             List<UserIdentity> found = identityPort.search(email, 1);
-            if (found.isEmpty() || !email.equalsIgnoreCase(found.get(0).email())) {
+            if (found.isEmpty() || !email.equalsIgnoreCase(found.getFirst().email())) {
                 throw new ResourceNotFoundException("Es wurde kein User mit der E-Mail Adresse " + email + " gefunden");
             }
-            addresseeOidcId = found.get(0).oidcId();
+            addresseeOidcId = found.getFirst().oidcId();
         }
         this.sendFriendshipRequest(requesterOidcId, addresseeOidcId);
     }

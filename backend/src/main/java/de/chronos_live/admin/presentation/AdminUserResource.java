@@ -25,10 +25,8 @@ public class AdminUserResource {
     @GET
     @Path("/")
     public Response listUsers(@QueryParam("page") @DefaultValue("0") int page,
-                              @QueryParam("size") @DefaultValue("20") int size,
-                              @QueryParam("lastSeenAfter") String lastSeenAfter,
-                              @QueryParam("lastSeenBefore") String lastSeenBefore) {
-        AdminUserListResponse response = adminUserService.listUsers(page, size, null, null);
+                              @QueryParam("size") @DefaultValue("20") int size) {
+        AdminUserListResponse response = adminUserService.listUsers(page, size);
         return Response.ok(response).build();
     }
 
