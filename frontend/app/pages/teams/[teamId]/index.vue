@@ -1,15 +1,29 @@
 <script setup lang="ts">
 import {useTeamsStore} from '~/stores/teams';
+import {useAuthStore} from '~/stores/auth';
 import {useToast} from 'primevue/usetoast';
 import type {TeamMember, TeamRole} from '~/types';
 
 const route = useRoute();
 const router = useRouter();
 const teamsStore = useTeamsStore();
+const authStore = useAuthStore();
 const toast = useToast();
+
+const myOidcId = computed(() => authStore.user?.id ?? null);
 
 const teamId = computed(() => Number(route.params.teamId));
 const team = computed(() => teamsStore.currentTeam);
+
+const sortedMembers = computed(() => {
+  const members = team.value?.members;
+  if (!members) return [];
+  return [...members].sort((a, b) => {
+    if (a.userId === myOidcId.value) return -1;
+    if (b.userId === myOidcId.value) return 1;
+    return 0;
+  });
+});
 
 const pendingRoleChange = ref<{ member: TeamMember; newRole: TeamRole } | null>(null);
 const showRoleDialog = ref(false);
@@ -153,7 +167,7 @@ const confirmTransfer = async () => {
 
           <div class="divide-y divide-gray-100 dark:divide-neutral-700">
             <div
-                v-for="member in team.members"
+                v-for="member in sortedMembers"
                 :key="member.userId"
                 class="flex items-center justify-between gap-4 px-6 py-4"
             >
@@ -165,7 +179,13 @@ const confirmTransfer = async () => {
                   </span>
                 </div>
                 <div class="min-w-0">
-                  <p class="font-medium text-gray-900 dark:text-white truncate">{{ memberDisplayName(member) }}</p>
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium text-gray-900 dark:text-white truncate">{{ memberDisplayName(member) }}</p>
+                    <span
+                        v-if="member.userId === myOidcId"
+                        class="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                    >Du</span>
+                  </div>
                   <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-0.5" :class="roleBadgeClass(member.role)">
                     {{ roleLabel(member.role) }}
                   </span>
