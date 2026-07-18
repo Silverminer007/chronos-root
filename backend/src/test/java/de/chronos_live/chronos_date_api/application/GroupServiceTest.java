@@ -80,7 +80,7 @@ class GroupServiceTest {
     @BeforeEach
     void insertGroupFixtures() throws Exception {
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO groups (id, groupname) VALUES (10, 'Test Group') ON CONFLICT DO NOTHING");
+            stmt.execute("INSERT INTO groups (id, groupname, owner_oidcid) VALUES (10, 'Test Group', 'oidc-acting-user') ON CONFLICT DO NOTHING");
         }
     }
 

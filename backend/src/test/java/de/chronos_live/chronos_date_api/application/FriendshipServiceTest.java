@@ -111,6 +111,7 @@ class FriendshipServiceTest {
         void should_resolveAddresseeByEmail_when_addresseeIdNullAndEmailFound() {
             UserIdentity addressee = buildUserIdentity(ADDRESSEE_OIDC, "Bob", "Smith");
             when(identityPort.search(EMAIL, 1)).thenReturn(List.of(addressee));
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.empty());
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC, "Alice", "Jones");
             when(identityPort.findById(REQUESTER_OIDC)).thenReturn(requester);

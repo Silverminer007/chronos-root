@@ -206,15 +206,22 @@ class MessageServiceTest {
 
         @Test
         void should_returnEnrichedMessageDtos_when_userIsAuthorized() {
+            Appointment appt = buildAppointment(BASE_START, BASE_END);
             Message msg = new Message();
-            msg.id = MESSAGE_ID;
+            msg.id = 50L;
             msg.setBody(MESSAGE_TEXT);
-            msg.setSenderOidcId(USER_OIDC_ID);
+            msg.setSenderOidcId(USER_OIDC);
             msg.setTimeStamp(FIXED_TIMESTAMP);
+            msg.setAppointment(appt);
 
-            List<Message> result = service.getMessages(APPOINTMENT_ID, USER_OIDC);
+            when(messageRepository.listByAppointment(APPOINTMENT_ID)).thenReturn(List.of(msg));
+            when(identityPort.findByIds(any())).thenReturn(java.util.Map.of(
+                    USER_OIDC, buildUserIdentity()));
 
-            assertThat(result).isSameAs(expected);
+            var result = service.getMessages(APPOINTMENT_ID, USER_OIDC);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).sender_name()).isEqualTo("Max Mustermann");
             verify(authorizationService).requireReadAppointment(APPOINTMENT_ID, USER_OIDC);
         }
     }

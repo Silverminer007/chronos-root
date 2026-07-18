@@ -75,9 +75,6 @@ class AppointmentParticipationServiceTest {
     @InjectMock
     Event<AppointmentGroupParticipationRemovedEvent> appointmentGroupParticipationRemovedEvent;
 
-    @InjectMock
-    IdentityPort identityPort;
-
     @Inject
     AgroalDataSource dataSource;
 

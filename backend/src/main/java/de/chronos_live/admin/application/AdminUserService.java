@@ -10,6 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
 
+import java.time.Instant;
 import java.util.List;
 
 /**

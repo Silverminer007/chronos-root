@@ -4,7 +4,6 @@ import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
-import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.AppointmentDto;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;

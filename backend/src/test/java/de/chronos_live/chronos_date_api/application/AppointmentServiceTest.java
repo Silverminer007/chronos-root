@@ -333,15 +333,10 @@ class AppointmentServiceTest {
     @Nested
     class DeleteAppointment {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
-
         // B1=true
         @Test
         void should_doNothing_when_appointmentNotFound() {
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(null);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(null);
 
             service.deleteAppointment(APPOINTMENT_ID, USER_OIDC);
 
@@ -353,7 +348,7 @@ class AppointmentServiceTest {
         void should_setStatusDeletedAndFireEvent_when_appointmentFound() {
             Appointment appointment = buildAppointment();
             appointment.id = APPOINTMENT_ID;
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(appointment);
             ArgumentCaptor<AppointmentDeletedEvent> captor =
                     ArgumentCaptor.forClass(AppointmentDeletedEvent.class);
 
@@ -379,15 +374,10 @@ class AppointmentServiceTest {
     @Nested
     class CancelAppointment {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(Appointment.class);
-        }
-
         // B1=true
         @Test
         void should_doNothing_when_appointmentNotFoundOnCancel() {
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(null);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(null);
 
             service.cancelAppointment(APPOINTMENT_ID, USER_OIDC);
 
@@ -399,7 +389,7 @@ class AppointmentServiceTest {
         void should_setStatusCancelledAndFireEvent_when_appointmentFound() {
             Appointment appointment = buildAppointment();
             appointment.id = APPOINTMENT_ID;
-            when(Appointment.<Appointment>findById(APPOINTMENT_ID)).thenReturn(appointment);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(appointment);
             ArgumentCaptor<AppointmentCancelledEvent> captor =
                     ArgumentCaptor.forClass(AppointmentCancelledEvent.class);
 
