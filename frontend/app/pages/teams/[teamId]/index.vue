@@ -15,6 +15,9 @@ const myOidcId = computed(() => authStore.user?.id ?? null);
 const teamId = computed(() => Number(route.params.teamId));
 const team = computed(() => teamsStore.currentTeam);
 
+const myRole = computed(() => team.value?.members.find(m => m.userId === myOidcId.value)?.role ?? null);
+const canManageRoles = computed(() => myRole.value === 'OWNER' || myRole.value === 'ADMIN');
+
 const sortedMembers = computed(() => {
   const members = team.value?.members;
   if (!members) return [];
@@ -75,9 +78,8 @@ const confirmRoleChange = async () => {
       detail: `${memberDisplayName(member)} ist jetzt ${roleLabel(newRole)}`,
       life: 3000
     });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Rolle konnte nicht geändert werden';
-    toast.add({severity: 'error', summary: 'Fehler', detail: msg, life: 4000});
+  } catch {
+    toast.add({severity: 'error', summary: 'Fehler', detail: teamsStore.error ?? 'Rolle konnte nicht geändert werden', life: 4000});
   } finally {
     showRoleDialog.value = false;
     pendingRoleChange.value = null;
@@ -100,9 +102,8 @@ const confirmTransfer = async () => {
       detail: `${memberDisplayName(target)} ist jetzt Eigentümer`,
       life: 3000
     });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Übertragung fehlgeschlagen';
-    toast.add({severity: 'error', summary: 'Fehler', detail: msg, life: 4000});
+  } catch {
+    toast.add({severity: 'error', summary: 'Fehler', detail: teamsStore.error ?? 'Übertragung fehlgeschlagen', life: 4000});
   } finally {
     showTransferDialog.value = false;
     pendingTransfer.value = null;
@@ -192,8 +193,8 @@ const confirmTransfer = async () => {
                 </div>
               </div>
 
-              <!-- Role actions -->
-              <div class="flex items-center gap-2 shrink-0">
+              <!-- Role actions — only visible to OWNERs/ADMINs and not on their own row -->
+              <div v-if="canManageRoles && member.userId !== myOidcId" class="flex items-center gap-2 shrink-0">
                 <template v-if="member.role === 'MEMBER'">
                   <button
                       class="text-xs px-3 py-1.5 rounded-lg font-medium text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
