@@ -37,6 +37,35 @@ const showRemoveDialog = ref(false);
 const pendingRemove = ref<TeamMember | null>(null);
 const removing = ref(false);
 
+const editingName = ref(false);
+const nameInput = ref('');
+const savingName = ref(false);
+
+const startEditName = () => {
+  nameInput.value = team.value?.name ?? '';
+  editingName.value = true;
+};
+
+const cancelEditName = () => {
+  editingName.value = false;
+};
+
+const saveTeamName = async () => {
+  if (!nameInput.value.trim() || nameInput.value.trim() === team.value?.name) {
+    editingName.value = false;
+    return;
+  }
+  savingName.value = true;
+  try {
+    await teamsStore.renameTeam(teamId.value, nameInput.value.trim());
+    editingName.value = false;
+  } catch {
+    toast.add({severity: 'error', summary: 'Fehler', detail: teamsStore.error ?? 'Teamname konnte nicht geändert werden', life: 4000});
+  } finally {
+    savingName.value = false;
+  }
+};
+
 onMounted(async () => {
   try {
     await teamsStore.fetchTeam(teamId.value);
@@ -179,7 +208,42 @@ const confirmTransfer = async () => {
                 <Icon name="lucide:shield-check" class="text-purple-600 dark:text-purple-400 text-2xl" />
               </div>
               <div>
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ team.name }}</h1>
+                <!-- Inline name edit -->
+                <div v-if="editingName" class="flex items-center gap-2">
+                  <input
+                      v-model="nameInput"
+                      type="text"
+                      class="text-2xl sm:text-3xl font-bold bg-transparent border-b-2 border-purple-500 text-gray-900 dark:text-white outline-none w-48 sm:w-64"
+                      maxlength="64"
+                      autofocus
+                      @keyup.enter="saveTeamName"
+                      @keyup.escape="cancelEditName"
+                  />
+                  <button
+                      class="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
+                      :disabled="savingName"
+                      @click="saveTeamName"
+                  >
+                    <Icon :name="savingName ? 'lucide:loader-2' : 'lucide:check'" :class="{'animate-spin': savingName}" />
+                  </button>
+                  <button
+                      class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+                      @click="cancelEditName"
+                  >
+                    <Icon name="lucide:x" />
+                  </button>
+                </div>
+                <div v-else class="flex items-center gap-2">
+                  <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ team.name }}</h1>
+                  <button
+                      v-if="canManageRoles"
+                      class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      title="Teamname ändern"
+                      @click="startEditName"
+                  >
+                    <Icon name="lucide:pencil" class="text-base" />
+                  </button>
+                </div>
                 <p class="text-gray-500 dark:text-gray-400 mt-1">
                   {{ team.members?.length || 0 }}
                   {{ (team.members?.length || 0) === 1 ? 'Mitglied' : 'Mitglieder' }}

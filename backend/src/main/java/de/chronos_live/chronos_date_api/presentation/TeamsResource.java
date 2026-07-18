@@ -49,6 +49,16 @@ public class TeamsResource {
         return Response.ok(teamService.getTeam(oidcId, teamId)).build();
     }
 
+    @PATCH
+    @Path("/{teamId}")
+    public Response renameTeam(
+            @PathParam("teamId") Long teamId,
+            @RequestBody CreateTeamDto dto) {
+        String oidcId = principalContext.getPrincipal().oidcId();
+        teamService.renameTeam(oidcId, teamId, dto.getName());
+        return Response.noContent().build();
+    }
+
     @PUT
     @Path("/{teamId}/members/{targetOidcId}/role")
     public Response updateMemberRole(

@@ -85,6 +85,19 @@ export const useTeamsStore = defineStore('teams', {
             }
         },
 
+        async renameTeam(teamId: number, name: string) {
+            try {
+                await $fetch(`/api/v2/teams/${teamId}`, {
+                    method: 'PATCH',
+                    body: {name}
+                })
+                await this.fetchTeam(teamId)
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Teamname konnte nicht geändert werden')
+                throw err
+            }
+        },
+
         async transferOwnership(teamId: number, targetOidcId: string) {
             try {
                 await $fetch(`/api/v2/teams/${teamId}/members/${targetOidcId}/transfer-ownership`, {

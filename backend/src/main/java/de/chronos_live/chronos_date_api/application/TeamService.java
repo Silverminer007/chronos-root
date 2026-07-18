@@ -165,6 +165,21 @@ public class TeamService {
         teamMemberRemovedEvent.fire(new TeamMemberRemovedEvent(teamId, targetUserOidcId, actingUserOidcId));
     }
 
+    public void renameTeam(String actingUserOidcId, Long teamId, String newName) {
+        LOGGER.debugf("[Principal %s][Team %s] Renaming team to '%s'", actingUserOidcId, teamId, newName);
+        if (newName == null || newName.isBlank()) {
+            throw new ValidationException("Teamname darf nicht leer sein");
+        }
+        if (!teamRepository.isAdminOrOwner(teamId, actingUserOidcId)) {
+            throw new ForbiddenException("Nur Admins und der Eigentümer können den Teamnamen ändern");
+        }
+        Team team = teamRepository.findById(teamId);
+        if (team == null) {
+            throw new ResourceNotFoundException("team", teamId);
+        }
+        team.setName(newName.trim());
+    }
+
     public void transferOwnership(String actingUserOidcId, Long teamId, String targetUserOidcId) {
         LOGGER.debugf("[Principal %s][Team %s] Transferring ownership to %s",
                 actingUserOidcId, teamId, targetUserOidcId);
