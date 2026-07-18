@@ -36,6 +36,7 @@ export interface ParticipantGroup {
 export interface Group {
     id: number,
     name: string,
+    teamId: number,
     members: User[];
 }
 

@@ -69,11 +69,11 @@ export const useGroupsStore = defineStore('groups', {
             }
         },
 
-        async createGroup(name: string) {
+        async createGroup(name: string, teamId: number) {
             try {
                 const response = await $fetch<Group>('/api/v2/groups', {
                     method: 'POST',
-                    body: {name}
+                    body: {name, teamId}
                 })
 
                 if (response) {

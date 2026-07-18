@@ -1,6 +1,7 @@
 package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.*;
+import de.chronos_live.chronos_date_api.infrastructure.TeamRepository;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
@@ -48,6 +49,8 @@ public class GroupService {
     Event<GroupDeletedEvent> groupDeletedEvent;
     @Inject
     Event<GroupNameChangedEvent> groupNameChangedEvent;
+    @Inject
+    TeamRepository teamRepository;
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onGroupCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) GroupCreatedEvent event) {
@@ -144,14 +147,40 @@ public class GroupService {
         return dtos;
     }
 
+    public void onTeamMemberRemoved(@Observes TeamMemberRemovedEvent event) {
+        LOGGER.infof("Team member %s removed from team %s — cascading group membership cleanup",
+                event.removedUserOidcId(), event.teamId());
+        List<GroupMember> memberships = groupRepository.listMembershipsInTeam(event.teamId(), event.removedUserOidcId());
+        for (GroupMember membership : memberships) {
+            Long groupId = membership.getGroup().id;
+            groupRepository.deleteMember(membership);
+            groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, event.removedUserOidcId(), event.actingUserOidcId()));
+            if (groupRepository.countMembers(groupId) == 0) {
+                softDeleteGroup(groupId);
+            }
+        }
+    }
+
     public Group createGroup(String actingUserOidcId, GroupDto createGroupDto) {
         if (createGroupDto.getName() == null || createGroupDto.getName().isBlank()) {
             throw new ValidationException("Group name is required");
         }
-        LOGGER.debugf("[Principal %s][Group %s] Creating Group", actingUserOidcId, createGroupDto.getName());
+        if (createGroupDto.getTeamId() == null) {
+            throw new ValidationException("Team ist erforderlich");
+        }
+        de.chronos_live.chronos_date_api.domain.Team team = teamRepository.findById(createGroupDto.getTeamId());
+        if (team == null) {
+            throw new ResourceNotFoundException("team", createGroupDto.getTeamId());
+        }
+        if (!teamRepository.isMember(createGroupDto.getTeamId(), actingUserOidcId)) {
+            throw new de.chronos_live.chronos_date_api.exception.ForbiddenException("Du bist kein Mitglied dieses Teams");
+        }
+        LOGGER.debugf("[Principal %s][Group %s] Creating Group in team %s",
+                actingUserOidcId, createGroupDto.getName(), createGroupDto.getTeamId());
 
         Group group = new Group();
         group.setGroupName(createGroupDto.getName());
+        group.setTeam(team);
         groupRepository.persist(group);
 
         groupCreatedEvent.fire(new GroupCreatedEvent(group.id, actingUserOidcId));

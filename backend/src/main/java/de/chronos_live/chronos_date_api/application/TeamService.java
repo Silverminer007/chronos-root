@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.TeamCreatedEvent;
 import de.chronos_live.chronos_date_api.application.events.TeamMemberJoinedEvent;
+import de.chronos_live.chronos_date_api.application.events.TeamMemberRemovedEvent;
 import de.chronos_live.chronos_date_api.application.events.TeamMemberRoleChangedEvent;
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.Team;
@@ -47,6 +48,8 @@ public class TeamService {
     Event<TeamMemberJoinedEvent> teamMemberJoinedEvent;
     @Inject
     Event<TeamMemberRoleChangedEvent> teamMemberRoleChangedEvent;
+    @Inject
+    Event<TeamMemberRemovedEvent> teamMemberRemovedEvent;
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onTeamCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) TeamCreatedEvent event) {
@@ -159,6 +162,7 @@ public class TeamService {
         }
 
         teamRepository.deleteMember(teamId, targetUserOidcId);
+        teamMemberRemovedEvent.fire(new TeamMemberRemovedEvent(teamId, targetUserOidcId, actingUserOidcId));
     }
 
     public void transferOwnership(String actingUserOidcId, Long teamId, String targetUserOidcId) {

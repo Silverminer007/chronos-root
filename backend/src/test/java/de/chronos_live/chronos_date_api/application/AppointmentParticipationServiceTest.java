@@ -93,7 +93,7 @@ class AppointmentParticipationServiceTest {
     void insertTestGroupFixture() throws Exception {
         try (var conn = dataSource.getConnection();
              var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO groups (id, groupname) VALUES (3, 'Test Group') ON CONFLICT DO NOTHING");
+            stmt.execute("INSERT INTO groups (id, groupname, team_id) VALUES (3, 'Test Group', 1) ON CONFLICT DO NOTHING");
         }
     }
 

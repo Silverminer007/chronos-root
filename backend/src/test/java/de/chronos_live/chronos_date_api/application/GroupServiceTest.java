@@ -9,8 +9,10 @@ import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.AppointmentGroupParticipation;
 import de.chronos_live.chronos_date_api.domain.Group;
 import de.chronos_live.chronos_date_api.domain.GroupMember;
+import de.chronos_live.chronos_date_api.domain.Team;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.dto.GroupDto;
+import de.chronos_live.chronos_date_api.infrastructure.TeamRepository;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import io.agroal.api.AgroalDataSource;
@@ -55,6 +57,7 @@ class GroupServiceTest {
     private static final String ACTING_USER_OIDC_ID  = "oidc-acting-1";
     private static final String TARGET_USER_OIDC_ID  = "oidc-target-2";
     private static final Long   GROUP_ID             = 10L;
+    private static final Long   TEAM_ID              = 1L;
     private static final String GROUP_NAME           = "Test Group";
     private static final String NEW_GROUP_NAME       = "Renamed Group";
 
@@ -74,7 +77,7 @@ class GroupServiceTest {
     @BeforeEach
     void insertGroupFixtures() throws Exception {
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            stmt.execute("INSERT INTO groups (id, groupname) VALUES (10, 'Test Group') ON CONFLICT DO NOTHING");
+            stmt.execute("INSERT INTO groups (id, groupname, team_id) VALUES (10, 'Test Group', 1) ON CONFLICT DO NOTHING");
         }
     }
 
@@ -100,6 +103,9 @@ class GroupServiceTest {
     @InjectMock
     Event<GroupNameChangedEvent> groupNameChangedEvent;
 
+    @InjectMock
+    TeamRepository teamRepository;
+
     // ── Test-object builders ──────────────────────────────────────────────────
     private static UserIdentity buildUserIdentity(String oidcId) {
         return new UserIdentity(oidcId, "Test", "User", "test@example.com", null);
@@ -115,7 +121,16 @@ class GroupServiceTest {
     private static GroupDto buildGroupDto(String name) {
         GroupDto dto = new GroupDto();
         dto.setName(name);
+        dto.setTeamId(TEAM_ID);
         return dto;
+    }
+
+    private static Team buildTeam(Long id) {
+        Team t = new Team();
+        t.id = id;
+        t.setName("Test Team");
+        t.setCreatedAt(java.time.Instant.now());
+        return t;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -297,6 +312,8 @@ class GroupServiceTest {
         @BeforeEach
         void mockPanache() {
             PanacheMock.mock(Group.class);
+            when(teamRepository.findById(TEAM_ID)).thenReturn(buildTeam(TEAM_ID));
+            when(teamRepository.isMember(TEAM_ID, ACTING_USER_OIDC_ID)).thenReturn(true);
         }
 
         // B1

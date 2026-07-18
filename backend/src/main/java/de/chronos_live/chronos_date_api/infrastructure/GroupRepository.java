@@ -83,4 +83,11 @@ public class GroupRepository implements PanacheRepository<Group> {
     public void deleteAllMembers(Long groupId) {
         GroupMember.delete("group.id = ?1", groupId);
     }
+
+    public List<GroupMember> listMembershipsInTeam(Long teamId, String userOidcId) {
+        return GroupMember.<GroupMember>find(
+                "userOidcId = ?1 AND group.team.id = ?2 AND group.deletedAt IS NULL",
+                userOidcId, teamId
+        ).list();
+    }
 }

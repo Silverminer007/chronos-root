@@ -16,6 +16,9 @@ public class Group extends PanacheEntity {
     private String groupName;
     @Column(name = "deleted_at")
     private Instant deletedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id", nullable = false)
+    private Team team;
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "group")
     @EqualsAndHashCode.Exclude
     private Set<GroupMember> members;
