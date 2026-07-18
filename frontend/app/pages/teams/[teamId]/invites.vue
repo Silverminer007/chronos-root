@@ -3,6 +3,7 @@ import {useTeamsStore} from '~/stores/teams';
 import {useTeamInvitesStore} from '~/stores/teamInvites';
 import {useToast} from 'primevue/usetoast';
 import type {TeamInvite, TeamInviteType} from '~/types';
+import ConfirmDialog from '~/components/ConfirmDialog.vue';
 
 const route = useRoute();
 const router = useRouter();

@@ -2,6 +2,7 @@
 import {useAuthStore} from '~/stores/auth';
 import {useGroupsStore} from '~/stores/groups';
 import {useToast} from 'primevue/usetoast';
+import ConfirmDialog from '~/components/ConfirmDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -258,7 +259,7 @@ const goBack = () => {
         title="Gruppe verlassen"
         message="Möchtest du diese Gruppe wirklich verlassen?"
         confirm-text="Verlassen"
-        confirm-color="gray"
+        confirm-color="red"
         @close="showLeaveDialog = false"
         @confirm="handleLeaveGroup"
     />

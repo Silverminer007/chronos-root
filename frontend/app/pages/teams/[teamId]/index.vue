@@ -3,6 +3,7 @@ import {useTeamsStore} from '~/stores/teams';
 import {useAuthStore} from '~/stores/auth';
 import {useToast} from 'primevue/usetoast';
 import type {TeamMember, TeamRole} from '~/types';
+import ConfirmDialog from '~/components/ConfirmDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -264,7 +265,6 @@ const confirmTransfer = async () => {
           ? `${memberDisplayName(pendingRoleChange.member)} wird zu ${roleLabel(pendingRoleChange.newRole)} geändert. Fortfahren?`
           : ''"
         confirm-text="Ändern"
-        confirm-color="blue"
         @close="showRoleDialog = false; pendingRoleChange = null"
         @confirm="confirmRoleChange"
     />
