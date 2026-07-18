@@ -1,10 +1,12 @@
 package de.chronos_live.chronos_date_api.presentation;
 
 import de.chronos_live.chronos_date_api.application.TeamInviteService;
+import de.chronos_live.chronos_date_api.dto.InvitePreviewDto;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.micrometer.core.annotation.Timed;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -21,6 +23,12 @@ public class TeamJoinResource {
     TeamInviteService inviteService;
     @Inject
     PrincipalContext principalContext;
+
+    @GET
+    @Path("/{token}")
+    public InvitePreviewDto previewInvite(@PathParam("token") String token) {
+        return inviteService.getInvitePreview(token);
+    }
 
     @POST
     @Path("/{token}")

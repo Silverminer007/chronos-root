@@ -3,6 +3,7 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.application.events.TeamMemberJoinedEvent;
 import de.chronos_live.chronos_date_api.domain.*;
 import de.chronos_live.chronos_date_api.dto.CreateInviteDto;
+import de.chronos_live.chronos_date_api.dto.InvitePreviewDto;
 import de.chronos_live.chronos_date_api.dto.TeamInviteDto;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
@@ -37,6 +38,12 @@ public class TeamInviteService {
     TeamInviteMapper inviteMapper;
     @Inject
     Event<TeamMemberJoinedEvent> teamMemberJoinedEvent;
+
+    public InvitePreviewDto getInvitePreview(String token) {
+        TeamInvite invite = inviteRepository.findByToken(token)
+                .orElseThrow(() -> new ResourceNotFoundException("Einladungslink nicht gefunden"));
+        return new InvitePreviewDto(invite.getTeam().getName());
+    }
 
     public List<TeamInviteDto> listInvites(String actingUserOidcId, Long teamId) {
         requireAdminOrOwner(teamId, actingUserOidcId);

@@ -10,9 +10,16 @@ const isLoggedIn = ref(false);
 const joining = ref(false);
 const joined = ref(false);
 const error = ref('');
+const teamName = ref<string | null>(null);
 
 onMounted(async () => {
   isLoggedIn.value = await authStore.checkSession();
+  try {
+    const preview = await $fetch<{teamName: string}>(`/api/v2/invite/${token.value}`);
+    teamName.value = preview.teamName;
+  } catch {
+    // Invite may not exist — the join call will surface the error
+  }
 });
 
 const handleJoin = async () => {
@@ -71,7 +78,8 @@ const loginUrl = computed(() => {
         <div class="w-16 h-16 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon name="lucide:shield-check" class="text-3xl text-purple-600 dark:text-purple-400" />
         </div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Team-Einladung</h1>
+        <p class="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Team-Einladung</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ teamName ?? '…' }}</h1>
         <p class="text-gray-600 dark:text-gray-400 mb-8">Melde dich an, um dem Team beizutreten.</p>
         <a
             :href="loginUrl"
@@ -89,8 +97,9 @@ const loginUrl = computed(() => {
         <div class="w-16 h-16 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon name="lucide:shield-check" class="text-3xl text-purple-600 dark:text-purple-400" />
         </div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Team-Einladung</h1>
-        <p class="text-gray-600 dark:text-gray-400 mb-8">Du wurdest eingeladen, einem Team beizutreten.</p>
+        <p class="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Team-Einladung</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ teamName ?? '…' }}</h1>
+        <p class="text-gray-600 dark:text-gray-400 mb-8">Du wurdest eingeladen, diesem Team beizutreten.</p>
         <button
             :disabled="joining"
             class="w-full px-6 py-3 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
