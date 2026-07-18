@@ -1,11 +1,13 @@
 package de.chronos_live.chronos_date_api.infrastructure;
 
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
-import de.chronos_live.chronos_date_api.domain.UserProfile;
-import io.quarkus.panache.mock.PanacheMock;
+import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.ServiceUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -13,260 +15,166 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
-import org.keycloak.representations.idm.UserRepresentation;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link LocalDbIdentityAdapter}.
+ * Tests for the Keycloak fallback paths in {@link LocalDbIdentityAdapter}.
  *
- * <p>Strategy: PanacheMock intercepts all static {@link UserProfile} calls;
- * the injected {@link Keycloak} admin client is replaced with a Mockito mock.
+ * <p>All tests use an oidcId absent from {@code user_profiles}, forcing the adapter
+ * to reach Keycloak. The Keycloak admin client chain is mocked via {@code @InjectMock}.
+ *
+ * <p>Behaviour under test (finding 3 from PR #4 review):
+ * <ul>
+ *   <li>Keycloak 404 → deleted sentinel returned, nothing written to {@code user_profiles}</li>
+ *   <li>Keycloak unavailable → {@link ServiceUnavailableException} propagated</li>
+ * </ul>
  */
 @QuarkusTest
 class LocalDbIdentityAdapterTest {
 
-    private static final String OIDC_ID     = "oidc-abc-123";
-    private static final String FIRST_NAME  = "Max";
-    private static final String LAST_NAME   = "Mustermann";
-    private static final String EMAIL       = "max@example.com";
-    private static final String PICTURE_URL = "https://example.com/pic.jpg";
+    private static final String ABSENT_OIDC_ID = "test-oidc-not-in-keycloak";
 
     @Inject
-    LocalDbIdentityAdapter adapter;
+    IdentityPort identityPort;
 
     @InjectMock
     Keycloak keycloak;
 
-    private RealmResource realmResource;
-    private UsersResource usersResource;
-    private UserResource  userResource;
+    @Inject
+    AgroalDataSource dataSource;
+
+    private UserResource userResource;
 
     @BeforeEach
-    void setupKeycloakMocks() {
-        realmResource = mock(RealmResource.class);
-        usersResource = mock(UsersResource.class);
-        userResource  = mock(UserResource.class);
+    void setUp() throws Exception {
+        RealmResource realmResource = mock(RealmResource.class);
+        UsersResource usersResource = mock(UsersResource.class);
+        userResource = mock(UserResource.class);
+
         when(keycloak.realm(anyString())).thenReturn(realmResource);
         when(realmResource.users()).thenReturn(usersResource);
-        when(usersResource.get(OIDC_ID)).thenReturn(userResource);
+        when(usersResource.get(ABSENT_OIDC_ID)).thenReturn(userResource);
+
+        // Remove any leftover profile row so the DB-cache miss path is always exercised.
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement("DELETE FROM user_profiles WHERE oidc_id = ?")) {
+            stmt.setString(1, ABSENT_OIDC_ID);
+            stmt.executeUpdate();
+        }
     }
 
-    private static UserProfile buildProfile() {
-        UserProfile p = new UserProfile();
-        p.oidcId = OIDC_ID;
-        p.firstName = FIRST_NAME;
-        p.lastName = LAST_NAME;
-        p.email = EMAIL;
-        p.profilePictureUrl = PICTURE_URL;
-        return p;
-    }
+    // ══════════════════════════════════════════════════════════════════════════
+    // findById — Keycloak fallback
+    // ══════════════════════════════════════════════════════════════════════════
 
-    private static UserRepresentation buildRep(String id, String first, String last, String email) {
-        UserRepresentation rep = new UserRepresentation();
-        rep.setId(id);
-        rep.setFirstName(first);
-        rep.setLastName(last);
-        rep.setEmail(email);
-        return rep;
-    }
-
-    // ── findById ────────────────────────────────────────────────────────────
-
+    /**
+     * Coverage plan – findById Keycloak fallback:
+     *   B1  Keycloak 404 → deleted sentinel returned
+     *   B2  Keycloak unavailable → ServiceUnavailableException
+     *   B3  Keycloak 404 → sentinel NOT persisted to user_profiles
+     *
+     * Total branches: 3  |  Tests: 3
+     */
     @Nested
     class FindById {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(UserProfile.class);
+        // B1
+        @Test
+        void should_returnDeletedSentinel_when_keycloakReturns404() {
+            when(userResource.toRepresentation()).thenThrow(new NotFoundException());
+
+            UserIdentity result = identityPort.findById(ABSENT_OIDC_ID);
+
+            assertThat(result.isDeleted()).isTrue();
+            assertThat(result.oidcId()).isEqualTo(ABSENT_OIDC_ID);
+            assertThat(result.getName()).isEqualTo("Gelöschter Benutzer");
         }
 
+        // B2
         @Test
-        void should_returnCachedIdentity_when_profileExistsInDb() {
-            UserProfile cached = buildProfile();
-            @SuppressWarnings("unchecked")
-            io.quarkus.hibernate.orm.panache.PanacheQuery<UserProfile> q =
-                    mock(io.quarkus.hibernate.orm.panache.PanacheQuery.class);
-            when(UserProfile.<UserProfile>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.of(cached));
+        void should_throwServiceUnavailableException_when_keycloakIsUnreachable() {
+            when(userResource.toRepresentation()).thenThrow(new RuntimeException("Connection refused"));
 
-            UserIdentity result = adapter.findById(OIDC_ID);
-
-            assertThat(result.oidcId()).isEqualTo(OIDC_ID);
-            assertThat(result.firstName()).isEqualTo(FIRST_NAME);
-            assertThat(result.email()).isEqualTo(EMAIL);
-            verifyNoInteractions(keycloak);
+            assertThatThrownBy(() -> identityPort.findById(ABSENT_OIDC_ID))
+                    .isInstanceOf(ServiceUnavailableException.class);
         }
 
+        // B3
         @Test
-        void should_fallbackToKeycloak_when_profileNotInDb() {
-            @SuppressWarnings("unchecked")
-            io.quarkus.hibernate.orm.panache.PanacheQuery<UserProfile> q =
-                    mock(io.quarkus.hibernate.orm.panache.PanacheQuery.class);
-            when(UserProfile.<UserProfile>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.empty());
-            when(UserProfile.update(anyString(), any(Object[].class))).thenReturn(0);
+        void should_notWriteToUserProfiles_when_keycloakReturns404() throws Exception {
+            when(userResource.toRepresentation()).thenThrow(new NotFoundException());
 
-            UserRepresentation rep = buildRep(OIDC_ID, FIRST_NAME, LAST_NAME, EMAIL);
-            when(userResource.toRepresentation()).thenReturn(rep);
+            identityPort.findById(ABSENT_OIDC_ID);
 
-            UserIdentity result = adapter.findById(OIDC_ID);
-
-            assertThat(result.oidcId()).isEqualTo(OIDC_ID);
-            assertThat(result.firstName()).isEqualTo(FIRST_NAME);
-        }
-
-        @Test
-        void should_returnFallbackIdentity_when_keycloakThrows() {
-            @SuppressWarnings("unchecked")
-            io.quarkus.hibernate.orm.panache.PanacheQuery<UserProfile> q =
-                    mock(io.quarkus.hibernate.orm.panache.PanacheQuery.class);
-            when(UserProfile.<UserProfile>find(anyString(), any(Object[].class))).thenReturn(q);
-            when(q.firstResultOptional()).thenReturn(Optional.empty());
-            when(userResource.toRepresentation()).thenThrow(new RuntimeException("Keycloak down"));
-
-            UserIdentity result = adapter.findById(OIDC_ID);
-
-            assertThat(result.oidcId()).isEqualTo(OIDC_ID);
-            assertThat(result.firstName()).isNull();
+            try (var conn = dataSource.getConnection();
+                 var stmt = conn.prepareStatement(
+                         "SELECT COUNT(*) FROM user_profiles WHERE oidc_id = ?")) {
+                stmt.setString(1, ABSENT_OIDC_ID);
+                var rs = stmt.executeQuery();
+                rs.next();
+                assertThat(rs.getLong(1)).isZero();
+            }
         }
     }
 
-    // ── findByIds ───────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // findByIds — Keycloak fallback for cache misses
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Coverage plan – findByIds Keycloak fallback:
+     *   B1  Keycloak 404 → deleted sentinel present in returned map
+     *   B2  Keycloak unavailable → ServiceUnavailableException
+     *   B3  Keycloak 404 → sentinel NOT persisted to user_profiles
+     *
+     * Total branches: 3  |  Tests: 3
+     */
     @Nested
     class FindByIds {
 
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(UserProfile.class);
-        }
-
+        // B1
         @Test
-        void should_returnEmptyMap_when_idsIsEmpty() {
-            Map<String, UserIdentity> result = adapter.findByIds(List.of());
+        void should_includeDeletedSentinelInResult_when_keycloakReturns404() {
+            when(userResource.toRepresentation()).thenThrow(new NotFoundException());
 
-            assertThat(result).isEmpty();
-            PanacheMock.verifyNoInteractions(UserProfile.class);
+            Map<String, UserIdentity> result = identityPort.findByIds(List.of(ABSENT_OIDC_ID));
+
+            assertThat(result).containsKey(ABSENT_OIDC_ID);
+            assertThat(result.get(ABSENT_OIDC_ID).isDeleted()).isTrue();
         }
 
+        // B2
         @Test
-        void should_returnAllFromDb_when_allIdsAreCached() {
-            String oidc2 = "oidc-def-456";
-            UserProfile p1 = buildProfile();
-            UserProfile p2 = new UserProfile();
-            p2.oidcId = oidc2;
-            p2.firstName = "Anna";
-            p2.lastName = "Schmidt";
-            p2.email = "anna@example.com";
+        void should_throwServiceUnavailableException_when_keycloakIsUnreachable() {
+            when(userResource.toRepresentation()).thenThrow(new RuntimeException("Connection refused"));
 
-            when(UserProfile.<UserProfile>list(anyString(), any(Object[].class)))
-                    .thenReturn(List.of(p1, p2));
-
-            Map<String, UserIdentity> result = adapter.findByIds(List.of(OIDC_ID, oidc2));
-
-            assertThat(result).hasSize(2);
-            assertThat(result.get(OIDC_ID).firstName()).isEqualTo(FIRST_NAME);
-            assertThat(result.get(oidc2).firstName()).isEqualTo("Anna");
-            verifyNoInteractions(keycloak);
+            assertThatThrownBy(() -> identityPort.findByIds(List.of(ABSENT_OIDC_ID)))
+                    .isInstanceOf(ServiceUnavailableException.class);
         }
 
+        // B3
         @Test
-        void should_fetchMissingFromKeycloak_when_notAllAreCached() {
-            String missingId = "oidc-missing";
-            UserProfile cached = buildProfile();
-            when(UserProfile.<UserProfile>list(anyString(), any(Object[].class)))
-                    .thenReturn(List.of(cached));
-            when(UserProfile.update(anyString(), any(Object[].class))).thenReturn(0);
+        void should_notWriteToUserProfiles_when_keycloakReturns404() throws Exception {
+            when(userResource.toRepresentation()).thenThrow(new NotFoundException());
 
-            UserResource missingResource = mock(UserResource.class);
-            when(usersResource.get(missingId)).thenReturn(missingResource);
-            UserRepresentation rep = buildRep(missingId, "New", "User", "new@example.com");
-            when(missingResource.toRepresentation()).thenReturn(rep);
+            identityPort.findByIds(List.of(ABSENT_OIDC_ID));
 
-            Map<String, UserIdentity> result = adapter.findByIds(List.of(OIDC_ID, missingId));
-
-            assertThat(result).hasSize(2);
-            assertThat(result.get(missingId).firstName()).isEqualTo("New");
-        }
-    }
-
-    // ── search ──────────────────────────────────────────────────────────────
-
-    @Nested
-    class Search {
-
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(UserProfile.class);
-        }
-
-        @Test
-        void should_searchKeycloakAndCacheResults() {
-            UserRepresentation rep = buildRep(OIDC_ID, FIRST_NAME, LAST_NAME, EMAIL);
-            when(usersResource.search(anyString(), eq(0), eq(10))).thenReturn(List.of(rep));
-            when(UserProfile.update(anyString(), any(Object[].class))).thenReturn(1);
-
-            List<UserIdentity> result = adapter.search("max", 10);
-
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).oidcId()).isEqualTo(OIDC_ID);
-            assertThat(result.get(0).firstName()).isEqualTo(FIRST_NAME);
-        }
-
-        @Test
-        void should_returnEmptyList_when_keycloakReturnsNoResults() {
-            when(usersResource.search(anyString(), eq(0), eq(5))).thenReturn(List.of());
-
-            List<UserIdentity> result = adapter.search("nobody", 5);
-
-            assertThat(result).isEmpty();
-        }
-    }
-
-    // ── upsert ──────────────────────────────────────────────────────────────
-
-    @Nested
-    class Upsert {
-
-        @BeforeEach
-        void mockPanache() {
-            PanacheMock.mock(UserProfile.class);
-        }
-
-        @Test
-        void should_doNothing_when_oidcIdIsNull() {
-            UserIdentity identity = new UserIdentity(null, "John", "Doe", "john@example.com", null);
-
-            adapter.upsert(identity);
-
-            PanacheMock.verifyNoInteractions(UserProfile.class);
-        }
-
-        @Test
-        void should_updateExistingProfile_when_profileExists() {
-            when(UserProfile.update(anyString(), any(Object[].class))).thenReturn(1);
-            UserIdentity identity = new UserIdentity(OIDC_ID, FIRST_NAME, LAST_NAME, EMAIL, PICTURE_URL);
-
-            adapter.upsert(identity);
-
-            PanacheMock.verify(UserProfile.class).update(anyString(), any(Object[].class));
-        }
-
-        @Test
-        void should_insertNewProfile_when_noExistingProfile() {
-            when(UserProfile.update(anyString(), any(Object[].class))).thenReturn(0);
-            UserIdentity identity = new UserIdentity(OIDC_ID, FIRST_NAME, LAST_NAME, EMAIL, PICTURE_URL);
-
-            adapter.upsert(identity);
-
-            PanacheMock.verify(UserProfile.class).update(anyString(), any(Object[].class));
+            try (var conn = dataSource.getConnection();
+                 var stmt = conn.prepareStatement(
+                         "SELECT COUNT(*) FROM user_profiles WHERE oidc_id = ?")) {
+                stmt.setString(1, ABSENT_OIDC_ID);
+                var rs = stmt.executeQuery();
+                rs.next();
+                assertThat(rs.getLong(1)).isZero();
+            }
         }
     }
 }

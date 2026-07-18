@@ -123,6 +123,7 @@ class FriendshipServiceTest {
 
         @Test
         void should_delegateDirectly_when_addresseeIdIsProvided() {
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.empty());
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC, "Alice", "Jones");
             when(identityPort.findById(REQUESTER_OIDC)).thenReturn(requester);
@@ -146,6 +147,7 @@ class FriendshipServiceTest {
 
         @Test
         void should_createRequestAndFireEvent_when_noExistingRequest() {
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.empty());
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC, "Alice", "Jones");
             when(identityPort.findById(REQUESTER_OIDC)).thenReturn(requester);
@@ -164,6 +166,7 @@ class FriendshipServiceTest {
 
         @Test
         void should_throwValidationException_when_alreadyFriends() {
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             FriendshipRequest accepted = buildRequest(REQUEST_ID, REQUESTER_OIDC, ADDRESSEE_OIDC, FriendshipStatus.ACCEPTED);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.of(accepted));
 
@@ -174,6 +177,7 @@ class FriendshipServiceTest {
 
         @Test
         void should_throwValidationException_when_pendingRequestAlreadySentByRequester() {
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             FriendshipRequest pending = buildRequest(REQUEST_ID, REQUESTER_OIDC, ADDRESSEE_OIDC, FriendshipStatus.PENDING);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.of(pending));
 
@@ -184,6 +188,7 @@ class FriendshipServiceTest {
 
         @Test
         void should_throwValidationException_when_pendingRequestSentByAddressee() {
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             FriendshipRequest pending = buildRequest(REQUEST_ID, ADDRESSEE_OIDC, REQUESTER_OIDC, FriendshipStatus.PENDING);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.of(pending));
 
@@ -194,6 +199,7 @@ class FriendshipServiceTest {
 
         @Test
         void should_deleteOldDeclinedRequestAndCreateNew_when_previouslyDeclined() {
+            when(identityPort.existsById(ADDRESSEE_OIDC)).thenReturn(true);
             FriendshipRequest declined = buildRequest(REQUEST_ID, REQUESTER_OIDC, ADDRESSEE_OIDC, FriendshipStatus.DECLINED);
             when(friendshipRepo.findRequest(REQUESTER_OIDC, ADDRESSEE_OIDC)).thenReturn(Optional.of(declined));
             UserIdentity requester = buildUserIdentity(REQUESTER_OIDC, "Alice", "Jones");

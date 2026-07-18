@@ -1,9 +1,9 @@
 package de.chronos_live.chronos_date_api.domain;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,15 +17,11 @@ import java.time.Instant;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Entity
-@Table(
-    name = "user_profiles",
-    indexes = {
-        @Index(name = "idx_user_profiles_oidc_id", columnList = "oidc_id", unique = true)
-    }
-)
-public class UserProfile extends PanacheEntity {
+@Table(name = "user_profiles")
+public class UserProfile extends PanacheEntityBase {
 
-    @Column(name = "oidc_id", nullable = false, unique = true, length = 255)
+    @Id
+    @Column(name = "oidc_id", nullable = false, length = 255)
     public String oidcId;
 
     @Column(name = "first_name", length = 255)

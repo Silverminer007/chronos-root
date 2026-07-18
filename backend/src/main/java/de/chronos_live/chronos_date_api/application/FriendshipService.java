@@ -81,6 +81,10 @@ public class FriendshipService {
             throw new BadRequestException("Du kannst dir nicht selbst eine Freundschaftsanfrage senden");
         }
 
+        if (!identityPort.existsById(addresseeOidcId)) {
+            throw new ResourceNotFoundException("Kein Benutzer mit der ID " + addresseeOidcId + " gefunden");
+        }
+
         Optional<FriendshipRequest> existing = friendshipRepo.findRequest(requesterOidcId, addresseeOidcId);
         if (existing.isPresent()) {
             FriendshipRequest existingRequest = existing.get();
