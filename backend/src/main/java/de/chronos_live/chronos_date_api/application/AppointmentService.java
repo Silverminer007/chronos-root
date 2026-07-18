@@ -41,8 +41,6 @@ public class AppointmentService {
     @Inject
     AuthorizationService authorizationService;
     @Inject
-    AppointmentQueryService appointmentQueryService;
-    @Inject
     AppointmentRepository appointmentRepository;
     @Inject
     GroupRepository groupRepository;
@@ -155,7 +153,7 @@ public class AppointmentService {
                                       boolean messages, boolean participants, boolean groupParticipants) {
         LOGGER.debugf("[Principal %s][Appointment %s] Read Appointment", requestingUserOidcId, appointmentId);
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
-        Appointment appointment = appointmentQueryService.getAppointment(appointmentId, messages, participants, groupParticipants);
+        Appointment appointment = appointmentRepository.getAppointment(appointmentId, messages, participants, groupParticipants);
         if (!messages) appointment.setMessages(null);
         if (!participants) appointment.setParticipants(null);
         if (!groupParticipants) appointment.setGroupParticipants(null);

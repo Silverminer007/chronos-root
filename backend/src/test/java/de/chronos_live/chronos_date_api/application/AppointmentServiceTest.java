@@ -6,6 +6,7 @@ import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -60,7 +61,7 @@ class AppointmentServiceTest {
     AuthorizationService authorizationService;
 
     @InjectMock
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
 
     @InjectMock
     Event<AppointmentCreatedEvent> appointmentCreatedEvent;
@@ -227,7 +228,7 @@ class AppointmentServiceTest {
 
         @BeforeEach
         void stubQueryService() {
-            when(appointmentQueryService.getAppointment(APPOINTMENT_ID, true, true, true))
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, true, true, true))
                     .thenReturn(buildAppointment());
         }
 
@@ -430,7 +431,7 @@ class AppointmentServiceTest {
         @Test
         void should_nullifyUnfetchedCollections_when_allFlagsFalse() {
             Appointment appointment = buildAppointment();
-            when(appointmentQueryService.getAppointment(APPOINTMENT_ID, false, false, false))
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, false, false, false))
                     .thenReturn(appointment);
 
             Appointment result = service.getAppointment(APPOINTMENT_ID, USER_OIDC, false, false, false);
@@ -447,7 +448,7 @@ class AppointmentServiceTest {
             appointment.setMessages(Set.of());
             appointment.setParticipants(Set.of());
             appointment.setGroupParticipants(Set.of());
-            when(appointmentQueryService.getAppointment(APPOINTMENT_ID, true, true, true))
+            when(appointmentRepository.getAppointment(APPOINTMENT_ID, true, true, true))
                     .thenReturn(appointment);
 
             Appointment result = service.getAppointment(APPOINTMENT_ID, USER_OIDC, true, true, true);

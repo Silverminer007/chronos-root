@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -15,7 +16,7 @@ public class AuthorizationService {
     @Inject
     AppointmentParticipationQueryService appointmentParticipationQueryService;
     @Inject
-    GroupQueryService groupQueryService;
+    GroupRepository groupRepository;
     @Inject
     FriendshipQueryService friendshipQueryService;
     @Inject
@@ -74,7 +75,7 @@ public class AuthorizationService {
         if (!UserRole.RESPONSIBLE.equals(role)) {
             throw new ForbiddenException("You have to be responsible for this appointment");
         }
-        if (!groupQueryService.isGroupMember(groupId, actingUserOidcId)) {
+        if (!groupRepository.isMember(groupId, actingUserOidcId)) {
             throw new ForbiddenException("You can only add groups, you're a member of");
         }
     }
@@ -105,7 +106,7 @@ public class AuthorizationService {
 
     public void requireAddGroupMember(Long groupId, String actingUserOidcId, String targetUserOidcId) {
         if (isAdminRequest()) return;
-        if (!groupQueryService.isGroupMember(groupId, actingUserOidcId)) {
+        if (!groupRepository.isMember(groupId, actingUserOidcId)) {
             throw new ForbiddenException("You can only add members to group you are a member of");
         }
         if (!friendshipQueryService.areFriends(actingUserOidcId, targetUserOidcId)) {
@@ -118,7 +119,7 @@ public class AuthorizationService {
         if (Objects.equals(actingUserOidcId, targetUserOidcId)) {
             throw new ForbiddenException("You cannot remove yourself from a group");
         }
-        if (groupQueryService.isGroupOwner(groupId, actingUserOidcId)) {
+        if (groupRepository.isOwner(groupId, actingUserOidcId)) {
             return;
         }
         throw new ForbiddenException("Only the group owner can remove members");
@@ -126,7 +127,7 @@ public class AuthorizationService {
 
     public void requireReadGroupMembers(Long groupId, String requestingUserOidcId) {
         if (isAdminRequest()) return;
-        if (groupQueryService.isGroupMember(groupId, requestingUserOidcId)) {
+        if (groupRepository.isMember(groupId, requestingUserOidcId)) {
             return;
         }
         throw new ForbiddenException("You are not a member of this group");
@@ -134,7 +135,7 @@ public class AuthorizationService {
 
     public void requireEditGroup(Long groupId, String actingUserOidcId) {
         if (isAdminRequest()) return;
-        if (groupQueryService.isGroupOwner(groupId, actingUserOidcId)) {
+        if (groupRepository.isOwner(groupId, actingUserOidcId)) {
             return;
         }
         throw new ForbiddenException("Only the group owner can edit a group");
@@ -142,7 +143,7 @@ public class AuthorizationService {
 
     public void requireDeleteGroup(Long groupId, String actingUserOidcId) {
         if (isAdminRequest()) return;
-        if (groupQueryService.isGroupOwner(groupId, actingUserOidcId)) {
+        if (groupRepository.isOwner(groupId, actingUserOidcId)) {
             return;
         }
         throw new ForbiddenException("Only the group owner can delete a group");

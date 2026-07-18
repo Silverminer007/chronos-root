@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationStatusConfirmationEvent;
 import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -16,7 +17,7 @@ import java.util.List;
 @ApplicationScoped
 public class AppointmentParticipationStatusConfirmationService {
     @Inject
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
 
     @Inject
     Event<AppointmentParticipationStatusConfirmationEvent> appointmentParticipationStatusConfirmationEvent;
@@ -34,7 +35,7 @@ public class AppointmentParticipationStatusConfirmationService {
         Instant in30DaysAnd14Minutes = in30Days.plusSeconds(60 * 14);
 
         List<Appointment> longAppointments =
-                this.appointmentQueryService.getNonCancelledAppointmentsStartingBetween(in30Days, in30DaysAnd14Minutes);
+                this.appointmentRepository.findNonCancelledBetween(in30Days, in30DaysAnd14Minutes);
 
         for (Appointment appointment : longAppointments) {
             if (appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) < 24) {
@@ -48,7 +49,7 @@ public class AppointmentParticipationStatusConfirmationService {
         Instant in7Days = Instant.now().plusSeconds(60 * 60 * 24 * 7);
         Instant in7DaysAnd14Minutes = in7Days.plusSeconds(60 * 14);
         List<Appointment> weekendAppointments =
-                this.appointmentQueryService.getNonCancelledAppointmentsStartingBetween(in7Days, in7DaysAnd14Minutes);
+                this.appointmentRepository.findNonCancelledBetween(in7Days, in7DaysAnd14Minutes);
         for (Appointment appointment : weekendAppointments) {
             List<DayOfWeek> weekdays = List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY);
             if (weekdays.contains(appointment.getStartTime().atZone(ZoneOffset.UTC).getDayOfWeek())) {

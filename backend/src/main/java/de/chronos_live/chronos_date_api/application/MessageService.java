@@ -37,8 +37,6 @@ public class MessageService {
     @Inject
     AuthorizationService authorizationService;
     @Inject
-    MessageQueryService messageQueryService;
-    @Inject
     IdentityPort identityPort;
     @Inject
     AppointmentRepository appointmentRepository;
@@ -112,7 +110,7 @@ public class MessageService {
     public List<MessageDto> getMessages(Long appointmentId, String requestingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Reading Messages", requestingUserOidcId, appointmentId);
         authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
-        List<Message> messages = messageQueryService.getMessages(appointmentId);
+        List<Message> messages = messageRepository.listByAppointment(appointmentId);
 
         Map<String, UserIdentity> senderMap = identityPort.findByIds(
                 messages.stream().map(Message::getSenderOidcId)

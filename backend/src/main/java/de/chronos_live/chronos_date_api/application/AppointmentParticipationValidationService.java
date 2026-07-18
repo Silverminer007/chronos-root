@@ -4,6 +4,7 @@ import de.chronos_live.chronos_date_api.application.events.AppointmentEditedEven
 import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationInvalidEvent;
 import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationStatusChangedEvent;
 import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatistik;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
@@ -28,7 +29,7 @@ import java.util.List;
 @Timed("service.participationValidation")
 public class AppointmentParticipationValidationService {
     @Inject
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
 
     @Inject
     AppointmentParticipationQueryService appointmentParticipationQueryService;
@@ -51,7 +52,7 @@ public class AppointmentParticipationValidationService {
         // Wenn Fr - So -> 2 Wochen vorher
         Instant in8Weeks = Instant.now().plusSeconds(60 * 60 * 24 * 7 * 8);
         Instant in8WeeksAnd14Minutes = in8Weeks.plusSeconds(60 * 14);
-        List<Appointment> longAppointments = this.appointmentQueryService.getPlannedAppointmentsStartingBetween(in8Weeks, in8WeeksAnd14Minutes);
+        List<Appointment> longAppointments = this.appointmentRepository.findPlannedBetween(in8Weeks, in8WeeksAnd14Minutes);
         for (Appointment appointment : longAppointments) {
             if (appointment.getStartTime().until(appointment.getEndTime(), ChronoUnit.HOURS) < 24) {
                 continue;
@@ -61,7 +62,7 @@ public class AppointmentParticipationValidationService {
 
         Instant in1Weeks = Instant.now().plusSeconds(60 * 60 * 24 * 7);
         Instant in1WeeksAnd14Minutes = in1Weeks.plusSeconds(60 * 14);
-        List<Appointment> weekdayAppointments = this.appointmentQueryService.getPlannedAppointmentsStartingBetween(in1Weeks, in1WeeksAnd14Minutes);
+        List<Appointment> weekdayAppointments = this.appointmentRepository.findPlannedBetween(in1Weeks, in1WeeksAnd14Minutes);
         for (Appointment appointment : weekdayAppointments) {
             if (!this.isWeekdayAtUTC(appointment.getStartTime())) {
                 continue;
@@ -71,7 +72,7 @@ public class AppointmentParticipationValidationService {
 
         Instant in2Weeks = Instant.now().plusSeconds(60 * 60 * 24 * 7 * 2);
         Instant in2WeeksAnd14Minutes = in2Weeks.plusSeconds(60 * 14);
-        List<Appointment> weekendAppointments = this.appointmentQueryService.getPlannedAppointmentsStartingBetween(in2Weeks, in2WeeksAnd14Minutes);
+        List<Appointment> weekendAppointments = this.appointmentRepository.findPlannedBetween(in2Weeks, in2WeeksAnd14Minutes);
         for (Appointment appointment : weekendAppointments) {
             if (this.isWeekdayAtUTC(appointment.getStartTime())) {
                 continue;
@@ -107,7 +108,7 @@ public class AppointmentParticipationValidationService {
     public void onAppointmentParticipationStatusChanged(@ObservesAsync AppointmentParticipationStatusChangedEvent event) {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
-            Appointment appointment = appointmentQueryService.findById(event.appointmentId());
+            Appointment appointment = appointmentRepository.findById(event.appointmentId());
 
             if (appointment.getStartTime().isBefore(Instant.now())) {
                 return;
@@ -152,7 +153,7 @@ public class AppointmentParticipationValidationService {
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onAppointmentEdited(@Observes AppointmentEditedEvent event) {
         // Falls sich die mindest Teilnehmenden Zahl geändert hat
-        Appointment appointment = appointmentQueryService.findById(event.appointmentId());
+        Appointment appointment = appointmentRepository.findById(event.appointmentId());
 
         if(appointment.getMinimalAttendees() == null) {
             return;

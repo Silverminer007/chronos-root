@@ -1,7 +1,7 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.application.AppointmentQueryService;
 import de.chronos_live.chronos_date_api.application.AppointmentService;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.PagedResponse;
@@ -28,7 +28,7 @@ public class AppointmentsResource {
     @Inject
     AppointmentService appointmentService;
     @Inject
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
     @Inject
     PrincipalContext principalContext;
     @Inject
@@ -47,7 +47,7 @@ public class AppointmentsResource {
         if (size == null) size = 10;
         if (page == null) page = 0;
 
-        AppointmentQueryService.SearchResult result = appointmentQueryService.search(
+        AppointmentRepository.SearchResult result = appointmentRepository.search(
                 oidcId, search, after, before, page, size,
                 messages != null && messages,
                 participants != null && participants,

@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.application;
 
 import de.chronos_live.chronos_date_api.application.events.AppointmentParticipationStatusConfirmationEvent;
 import de.chronos_live.chronos_date_api.domain.Appointment;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.event.Event;
@@ -28,7 +29,7 @@ import static org.mockito.Mockito.*;
  * <p><b>Untestable branches:</b><br>
  * The 30-day and 7-day time windows are computed from {@code Instant.now()} inside
  * the method; they cannot be injected without refactoring. The tests therefore stub
- * {@code getNonCancelledAppointmentsStartingBetween} to accept {@code any()} matchers
+ * {@code findNonCancelledBetween} to accept {@code any()} matchers
  * and focus on the conditional logic that follows (long-duration filter and weekday
  * filter).
  */
@@ -49,7 +50,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
     AppointmentParticipationStatusConfirmationService service;
 
     @InjectMock
-    AppointmentQueryService appointmentQueryService;
+    AppointmentRepository appointmentRepository;
 
     @InjectMock
     LeaderElectionService leaderElectionService;
@@ -86,7 +87,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
 
             service.triggerAppointmentParticipationStatusConfirmation();
 
-            verifyNoInteractions(appointmentQueryService);
+            verifyNoInteractions(appointmentRepository);
             verifyNoInteractions(appointmentParticipationStatusConfirmationEvent);
         }
     }
@@ -114,7 +115,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
             when(leaderElectionService.isLeader()).thenReturn(true);
             // first call: 30-day window → returns long appointment
             // second call: 7-day window → empty (no weekend tests here)
-            when(appointmentQueryService.getNonCancelledAppointmentsStartingBetween(any(Instant.class), any(Instant.class)))
+            when(appointmentRepository.findNonCancelledBetween(any(Instant.class), any(Instant.class)))
                     .thenReturn(List.of(longAppt))
                     .thenReturn(List.of());
 
@@ -133,7 +134,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
             Appointment shortAppt = buildAppointment(APPOINTMENT_ID_1, start, end);
 
             when(leaderElectionService.isLeader()).thenReturn(true);
-            when(appointmentQueryService.getNonCancelledAppointmentsStartingBetween(any(Instant.class), any(Instant.class)))
+            when(appointmentRepository.findNonCancelledBetween(any(Instant.class), any(Instant.class)))
                     .thenReturn(List.of(shortAppt))
                     .thenReturn(List.of());
 
@@ -167,7 +168,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
             when(leaderElectionService.isLeader()).thenReturn(true);
             // first call: 30-day window → empty
             // second call: 7-day window → weekend appointment
-            when(appointmentQueryService.getNonCancelledAppointmentsStartingBetween(any(Instant.class), any(Instant.class)))
+            when(appointmentRepository.findNonCancelledBetween(any(Instant.class), any(Instant.class)))
                     .thenReturn(List.of())
                     .thenReturn(List.of(weekendAppt));
 
@@ -186,7 +187,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
                     MONDAY_START, MONDAY_START.plus(1, ChronoUnit.HOURS));
 
             when(leaderElectionService.isLeader()).thenReturn(true);
-            when(appointmentQueryService.getNonCancelledAppointmentsStartingBetween(any(Instant.class), any(Instant.class)))
+            when(appointmentRepository.findNonCancelledBetween(any(Instant.class), any(Instant.class)))
                     .thenReturn(List.of())
                     .thenReturn(List.of(weekdayAppt));
 
@@ -218,7 +219,7 @@ class AppointmentParticipationStatusConfirmationServiceTest {
                     SATURDAY_START, SATURDAY_START.plus(2, ChronoUnit.HOURS));
 
             when(leaderElectionService.isLeader()).thenReturn(true);
-            when(appointmentQueryService.getNonCancelledAppointmentsStartingBetween(any(Instant.class), any(Instant.class)))
+            when(appointmentRepository.findNonCancelledBetween(any(Instant.class), any(Instant.class)))
                     .thenReturn(List.of(longAppt))
                     .thenReturn(List.of(weekendAppt));
 
@@ -226,9 +227,9 @@ class AppointmentParticipationStatusConfirmationServiceTest {
 
             verify(appointmentParticipationStatusConfirmationEvent, times(2))
                     .fire(any(AppointmentParticipationStatusConfirmationEvent.class));
-            // Verify getNonCancelledAppointmentsStartingBetween was called exactly twice
-            verify(appointmentQueryService, times(2))
-                    .getNonCancelledAppointmentsStartingBetween(any(Instant.class), any(Instant.class));
+            // Verify findNonCancelledBetween was called exactly twice
+            verify(appointmentRepository, times(2))
+                    .findNonCancelledBetween(any(Instant.class), any(Instant.class));
         }
     }
 }

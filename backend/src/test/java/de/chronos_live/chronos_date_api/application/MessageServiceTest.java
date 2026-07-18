@@ -9,6 +9,7 @@ import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.Message;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import io.quarkus.panache.mock.PanacheMock;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -49,7 +50,7 @@ class MessageServiceTest {
     AuthorizationService authorizationService;
 
     @InjectMock
-    MessageQueryService messageQueryService;
+    MessageRepository messageRepository;
 
     @InjectMock
     IdentityPort identityPort;

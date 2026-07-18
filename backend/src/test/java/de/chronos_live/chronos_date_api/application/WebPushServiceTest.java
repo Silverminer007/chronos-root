@@ -4,6 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.chronos_live.chronos_date_api.application.events.*;
 import de.chronos_live.chronos_date_api.application.ports.NotificationPort;
 import de.chronos_live.chronos_date_api.domain.*;
+import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
+import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
+import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.mapper.PushAppointmentMapper;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -46,11 +50,11 @@ class WebPushServiceTest {
     // ── Mocks ──────────────────────────────────────────────────────────────────
     @Mock NotificationPort                          notificationPort;
     @Mock UserQueryService                          userQueryService;
-    @Mock AppointmentQueryService                   appointmentQueryService;
-    @Mock GroupQueryService                         groupQueryService;
+    @Mock AppointmentRepository                     appointmentRepository;
+    @Mock GroupRepository                           groupRepository;
     @Mock SettingsService                           settingsService;
     @Mock AppointmentParticipationQueryService      appointmentParticipationQueryService;
-    @Mock MessageQueryService                       messageQueryService;
+    @Mock MessageRepository                         messageRepository;
     @Mock PushAppointmentMapper                     appointmentMapper;
     @Mock GroupMapper                               groupMapper;
     @Mock ObjectMapper                              objectMapper;
@@ -251,7 +255,7 @@ class WebPushServiceTest {
 
         @BeforeEach
         void stubAppointmentLookup() throws Exception {
-            lenient().when(appointmentQueryService.findById(APPOINTMENT_ID))
+            lenient().when(appointmentRepository.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Team Event"));
             lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
         }
@@ -301,7 +305,7 @@ class WebPushServiceTest {
         void does_nothing_when_appointment_not_found() {
             when(userQueryService.findByOidcId(ACTING_USER_OIDC))
                     .thenReturn(identity(ACTING_USER_OIDC, "A", "B"));
-            when(appointmentQueryService.findById(APPOINTMENT_ID)).thenReturn(null);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(null);
 
             webPushService.onAppointmentMoved(
                     new AppointmentMovedEvent(APPOINTMENT_ID, Instant.now(), Instant.now(), ACTING_USER_OIDC));
@@ -315,7 +319,7 @@ class WebPushServiceTest {
 
         @BeforeEach
         void stubAppointmentLookup() throws Exception {
-            lenient().when(appointmentQueryService.findById(APPOINTMENT_ID))
+            lenient().when(appointmentRepository.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Team Event"));
             lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
         }
@@ -353,7 +357,7 @@ class WebPushServiceTest {
 
         @Test
         void sends_PARTICIPATION_REMINDER_to_all_participants_allowed_by_settings() throws Exception {
-            when(appointmentQueryService.findById(APPOINTMENT_ID))
+            when(appointmentRepository.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Team Event"));
             when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
@@ -367,7 +371,7 @@ class WebPushServiceTest {
 
         @Test
         void does_nothing_when_appointment_not_found() {
-            when(appointmentQueryService.findById(APPOINTMENT_ID)).thenReturn(null);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(null);
 
             webPushService.onAppointmentReminder(new AppointmentReminderEvent(APPOINTMENT_ID));
 
@@ -386,7 +390,7 @@ class WebPushServiceTest {
             message.setAppointment(appt);
             message.setBody("Hello everyone!");
 
-            when(messageQueryService.getMessage(MESSAGE_ID)).thenReturn(message);
+            when(messageRepository.findByIdOrThrow(MESSAGE_ID)).thenReturn(message);
             when(userQueryService.findByOidcId(ACTING_USER_OIDC))
                     .thenReturn(identity(ACTING_USER_OIDC, "Alice", "Sender"));
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
@@ -403,9 +407,12 @@ class WebPushServiceTest {
 
         @Test
         void does_nothing_when_message_not_found() {
-            when(messageQueryService.getMessage(MESSAGE_ID)).thenReturn(null);
+            when(messageRepository.findByIdOrThrow(MESSAGE_ID))
+                    .thenThrow(new ResourceNotFoundException("message", MESSAGE_ID));
 
-            webPushService.onAppointmentMessageSent(new MessageSentEvent(MESSAGE_ID));
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> webPushService.onAppointmentMessageSent(new MessageSentEvent(MESSAGE_ID)))
+                    .isInstanceOf(ResourceNotFoundException.class);
 
             verifyNoInteractions(notificationPort);
         }
@@ -416,7 +423,7 @@ class WebPushServiceTest {
 
         @BeforeEach
         void stubGroupLookup() throws Exception {
-            lenient().when(groupQueryService.findById(GROUP_ID)).thenReturn(group(GROUP_ID, "Dev Team"));
+            lenient().when(groupRepository.findById(GROUP_ID)).thenReturn(group(GROUP_ID, "Dev Team"));
             lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":3}");
         }
 
@@ -424,7 +431,7 @@ class WebPushServiceTest {
         void sends_group_notification_to_members_and_personal_notification_to_new_member() {
             when(userQueryService.findByOidcId(TARGET_USER_OIDC))
                     .thenReturn(identity(TARGET_USER_OIDC, "Bob", "New"));
-            when(groupQueryService.getGroupMembers(GROUP_ID))
+            when(groupRepository.listMembers(GROUP_ID))
                     .thenReturn(List.of(groupMember(ACTING_USER_OIDC)));
             when(settingsService.sendGroupMemberAddedNotification(any())).thenReturn(true);
 
@@ -454,7 +461,7 @@ class WebPushServiceTest {
         void does_nothing_when_group_not_found() {
             when(userQueryService.findByOidcId(TARGET_USER_OIDC))
                     .thenReturn(identity(TARGET_USER_OIDC, "Bob", "New"));
-            when(groupQueryService.findById(GROUP_ID)).thenReturn(null);
+            when(groupRepository.findById(GROUP_ID)).thenReturn(null);
 
             webPushService.onGroupMemberAdded(
                     new GroupMemberAddedEvent(GROUP_ID, TARGET_USER_OIDC, ACTING_USER_OIDC));
@@ -468,7 +475,7 @@ class WebPushServiceTest {
 
         @BeforeEach
         void stubAppointmentLookup() throws Exception {
-            lenient().when(appointmentQueryService.findById(APPOINTMENT_ID))
+            lenient().when(appointmentRepository.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Team Event"));
             lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
         }
@@ -552,7 +559,7 @@ class WebPushServiceTest {
 
         @Test
         void does_nothing_when_appointment_not_found() {
-            when(appointmentQueryService.findById(APPOINTMENT_ID)).thenReturn(null);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(null);
 
             webPushService.onAppointmentParticipationStatusPendingReminder(
                     new AppointmentParticipationStatusPendingReminderEvent(APPOINTMENT_ID));
@@ -568,7 +575,7 @@ class WebPushServiceTest {
         void sends_PARTICIPATION_STATUS_CHANGED_to_other_participants() throws Exception {
             when(userQueryService.findByOidcId(ACTING_USER_OIDC))
                     .thenReturn(identity(ACTING_USER_OIDC, "Alice", "Test"));
-            when(appointmentQueryService.findById(APPOINTMENT_ID))
+            when(appointmentRepository.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Test"));
             when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
             when(appointmentParticipationQueryService.getParticipants(APPOINTMENT_ID))
@@ -590,7 +597,7 @@ class WebPushServiceTest {
         void does_not_notify_acting_user_themselves() throws Exception {
             when(userQueryService.findByOidcId(ACTING_USER_OIDC))
                     .thenReturn(identity(ACTING_USER_OIDC, "Alice", "Test"));
-            when(appointmentQueryService.findById(APPOINTMENT_ID))
+            when(appointmentRepository.findById(APPOINTMENT_ID))
                     .thenReturn(appointment(APPOINTMENT_ID, "Test"));
             when(objectMapper.writeValueAsString(any())).thenReturn("{\"id\":10}");
             // Actor is the only participant — the filter excludes them
