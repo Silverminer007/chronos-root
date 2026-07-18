@@ -133,6 +133,34 @@ public class TeamService {
         teamMemberRoleChangedEvent.fire(new TeamMemberRoleChangedEvent(teamId, targetUserOidcId, oldRole, newRole, actingUserOidcId));
     }
 
+    public void removeMember(String actingUserOidcId, Long teamId, String targetUserOidcId) {
+        LOGGER.debugf("[Principal %s][Team %s][Target %s] Removing member",
+                actingUserOidcId, teamId, targetUserOidcId);
+
+        TeamMember actingMember = teamRepository.findMember(teamId, actingUserOidcId)
+                .orElseThrow(() -> new ForbiddenException("Du bist kein Mitglied dieses Teams"));
+        TeamMember targetMember = teamRepository.findMember(teamId, targetUserOidcId)
+                .orElseThrow(() -> new ResourceNotFoundException("Mitglied nicht gefunden"));
+
+        TeamRole actingRole = actingMember.getRole();
+        TeamRole targetRole = targetMember.getRole();
+
+        if (targetRole == TeamRole.OWNER) {
+            throw new ForbiddenException("Der Eigentümer kann nicht entfernt werden");
+        }
+        if (actingUserOidcId.equals(targetUserOidcId)) {
+            throw new ValidationException("Nutze 'Team verlassen' um das Team zu verlassen");
+        }
+        if (actingRole == TeamRole.ADMIN && targetRole == TeamRole.ADMIN) {
+            throw new ForbiddenException("Nur der Team-Eigentümer kann Admins entfernen");
+        }
+        if (actingRole == TeamRole.MEMBER) {
+            throw new ForbiddenException("Nur Admins und der Eigentümer können Mitglieder entfernen");
+        }
+
+        teamRepository.deleteMember(teamId, targetUserOidcId);
+    }
+
     public void transferOwnership(String actingUserOidcId, Long teamId, String targetUserOidcId) {
         LOGGER.debugf("[Principal %s][Team %s] Transferring ownership to %s",
                 actingUserOidcId, teamId, targetUserOidcId);

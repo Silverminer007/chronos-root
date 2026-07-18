@@ -33,6 +33,8 @@ const pendingRoleChange = ref<{ member: TeamMember; newRole: TeamRole } | null>(
 const showRoleDialog = ref(false);
 const showTransferDialog = ref(false);
 const pendingTransfer = ref<TeamMember | null>(null);
+const showRemoveDialog = ref(false);
+const pendingRemove = ref<TeamMember | null>(null);
 
 onMounted(async () => {
   try {
@@ -84,6 +86,37 @@ const confirmRoleChange = async () => {
   } finally {
     showRoleDialog.value = false;
     pendingRoleChange.value = null;
+  }
+};
+
+const canRemoveMember = (member: TeamMember): boolean => {
+  if (!myRole.value || member.userId === myOidcId.value) return false;
+  if (member.role === 'OWNER') return false;
+  if (myRole.value === 'OWNER') return true;
+  return myRole.value === 'ADMIN' && member.role === 'MEMBER';
+};
+
+const requestRemove = (member: TeamMember) => {
+  pendingRemove.value = member;
+  showRemoveDialog.value = true;
+};
+
+const confirmRemove = async () => {
+  if (!pendingRemove.value) return;
+  const target = pendingRemove.value;
+  try {
+    await teamsStore.removeMember(teamId.value, target.userId);
+    toast.add({
+      severity: 'success',
+      summary: 'Mitglied entfernt',
+      detail: `${memberDisplayName(target)} wurde aus dem Team entfernt`,
+      life: 3000
+    });
+  } catch {
+    toast.add({severity: 'error', summary: 'Fehler', detail: teamsStore.error ?? 'Mitglied konnte nicht entfernt werden', life: 4000});
+  } finally {
+    showRemoveDialog.value = false;
+    pendingRemove.value = null;
   }
 };
 
@@ -218,9 +251,14 @@ const confirmTransfer = async () => {
                     Eigentümer
                   </button>
                 </template>
-                <template v-else-if="member.role === 'OWNER'">
-                  <!-- Owner row — no self-action buttons; transfer available to other members via their rows -->
-                </template>
+                <button
+                    v-if="canRemoveMember(member)"
+                    class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    title="Mitglied entfernen"
+                    @click="requestRemove(member)"
+                >
+                  <Icon name="lucide:user-minus" />
+                </button>
               </div>
             </div>
 
@@ -267,6 +305,19 @@ const confirmTransfer = async () => {
         confirm-text="Ändern"
         @close="showRoleDialog = false; pendingRoleChange = null"
         @confirm="confirmRoleChange"
+    />
+
+    <!-- Remove Member Confirm Dialog -->
+    <ConfirmDialog
+        :visible="showRemoveDialog"
+        title="Mitglied entfernen"
+        :message="pendingRemove
+          ? `${memberDisplayName(pendingRemove)} wirklich aus dem Team entfernen?`
+          : ''"
+        confirm-text="Entfernen"
+        confirm-color="red"
+        @close="showRemoveDialog = false; pendingRemove = null"
+        @confirm="confirmRemove"
     />
 
     <!-- Transfer Ownership Confirm Dialog -->

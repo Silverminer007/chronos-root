@@ -63,6 +63,10 @@ public class TeamRepository implements PanacheRepository<Team> {
         member.persist();
     }
 
+    public void deleteMember(Long teamId, String userOidcId) {
+        TeamMember.delete("team.id = ?1 AND userOidcId = ?2", teamId, userOidcId);
+    }
+
     public Set<Long> findTeamIds(String userOidcId) {
         return TeamMember.<TeamMember>find("userOidcId = ?1", userOidcId)
                 .stream()

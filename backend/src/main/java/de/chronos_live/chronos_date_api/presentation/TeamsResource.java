@@ -60,6 +60,16 @@ public class TeamsResource {
         return Response.noContent().build();
     }
 
+    @DELETE
+    @Path("/{teamId}/members/{targetOidcId}")
+    public Response removeMember(
+            @PathParam("teamId") Long teamId,
+            @PathParam("targetOidcId") String targetOidcId) {
+        String oidcId = principalContext.getPrincipal().oidcId();
+        teamService.removeMember(oidcId, teamId, targetOidcId);
+        return Response.noContent().build();
+    }
+
     @POST
     @Path("/{teamId}/members/{targetOidcId}/transfer-ownership")
     public Response transferOwnership(

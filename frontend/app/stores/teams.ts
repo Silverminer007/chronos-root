@@ -73,6 +73,18 @@ export const useTeamsStore = defineStore('teams', {
             }
         },
 
+        async removeMember(teamId: number, targetOidcId: string) {
+            try {
+                await $fetch(`/api/v2/teams/${teamId}/members/${targetOidcId}`, {
+                    method: 'DELETE'
+                })
+                await this.fetchTeam(teamId)
+            } catch (err) {
+                this.error = getErrorMessage(err, 'Mitglied konnte nicht entfernt werden')
+                throw err
+            }
+        },
+
         async transferOwnership(teamId: number, targetOidcId: string) {
             try {
                 await $fetch(`/api/v2/teams/${teamId}/members/${targetOidcId}/transfer-ownership`, {
