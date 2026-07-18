@@ -67,6 +67,14 @@ public class TeamRepository implements PanacheRepository<Team> {
         TeamMember.delete("team.id = ?1 AND userOidcId = ?2", teamId, userOidcId);
     }
 
+    public boolean sharesAnyTeamWithAny(String userOidcId, List<String> otherOidcIds) {
+        if (otherOidcIds == null || otherOidcIds.isEmpty()) return false;
+        return TeamMember.count(
+                "userOidcId IN ?1 AND team.id IN " +
+                "(SELECT tm.team.id FROM TeamMember tm WHERE tm.userOidcId = ?2)",
+                otherOidcIds, userOidcId) > 0;
+    }
+
     public Set<Long> findTeamIds(String userOidcId) {
         return TeamMember.<TeamMember>find("userOidcId = ?1", userOidcId)
                 .stream()

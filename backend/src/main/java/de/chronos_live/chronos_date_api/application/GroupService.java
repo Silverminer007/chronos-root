@@ -11,6 +11,7 @@ import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.mapper.GroupMapper;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
+import de.chronos_live.chronos_date_api.infrastructure.AppointmentParticipationRepository;
 import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
 import io.micrometer.core.annotation.Timed;
 import io.quarkus.logging.Log;
@@ -51,6 +52,8 @@ public class GroupService {
     Event<GroupNameChangedEvent> groupNameChangedEvent;
     @Inject
     TeamRepository teamRepository;
+    @Inject
+    AppointmentParticipationRepository participationRepository;
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onGroupCreated(@Observes(during = TransactionPhase.AFTER_SUCCESS) GroupCreatedEvent event) {
@@ -157,6 +160,19 @@ public class GroupService {
             groupMemberRemovedEvent.fire(new GroupMemberRemovedEvent(groupId, event.removedUserOidcId(), event.actingUserOidcId()));
             if (groupRepository.countMembers(groupId) == 0) {
                 softDeleteGroup(groupId);
+            }
+        }
+        // After group cleanup (group-based appointment participations removed in separate TX):
+        // remove remaining direct participations where the user is now isolated
+        // (no shared team with any other appointment participant).
+        List<Long> appointmentIds = participationRepository.findAppointmentIdsByUser(event.removedUserOidcId());
+        for (Long appointmentId : appointmentIds) {
+            List<String> others = participationRepository.findParticipantOidcIdsByAppointment(
+                    appointmentId, event.removedUserOidcId());
+            if (!others.isEmpty() && !teamRepository.sharesAnyTeamWithAny(event.removedUserOidcId(), others)) {
+                participationRepository.deleteByAppointmentAndUser(appointmentId, event.removedUserOidcId());
+                LOGGER.infof("Removed isolated user %s from appointment %d — no shared team with remaining participants",
+                        event.removedUserOidcId(), appointmentId);
             }
         }
     }

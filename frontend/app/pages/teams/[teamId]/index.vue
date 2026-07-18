@@ -314,6 +314,10 @@ const confirmTransfer = async () => {
         :message="pendingRemove
           ? `${memberDisplayName(pendingRemove)} wirklich aus dem Team entfernen?`
           : ''"
+        :warnings="[
+          'Das Mitglied wird aus allen Gruppen dieses Teams entfernt.',
+          'Das Mitglied wird aus Terminen entfernt, für die kein anderes gemeinsames Team mehr besteht.'
+        ]"
         confirm-text="Entfernen"
         confirm-color="red"
         @close="showRemoveDialog = false; pendingRemove = null"

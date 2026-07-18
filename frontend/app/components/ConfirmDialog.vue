@@ -5,10 +5,12 @@ interface Props {
   message: string;
   confirmText: string;
   confirmColor?: 'red' | 'purple' | 'green';
+  warnings?: string[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  confirmColor: 'purple'
+  confirmColor: 'purple',
+  warnings: () => []
 });
 
 const emit = defineEmits<{
@@ -87,8 +89,13 @@ const confirm = () => {
       </div>
 
       <!-- Content -->
-      <div class="p-6">
+      <div class="p-6 space-y-4">
         <p class="text-gray-700 dark:text-gray-300">{{ message }}</p>
+        <div v-if="warnings?.length" class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <ul class="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside">
+            <li v-for="w in warnings" :key="w">{{ w }}</li>
+          </ul>
+        </div>
       </div>
 
       <!-- Footer -->
