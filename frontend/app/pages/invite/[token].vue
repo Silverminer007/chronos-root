@@ -14,11 +14,12 @@ const teamName = ref<string | null>(null);
 
 onMounted(async () => {
   isLoggedIn.value = await authStore.checkSession();
+  if (!isLoggedIn.value) return;
   try {
     const preview = await $fetch<{teamName: string}>(`/api/v2/invite/${token.value}`);
     teamName.value = preview.teamName;
   } catch {
-    // Invite may not exist — the join call will surface the error
+    error.value = 'Dieser Einladungslink ist ungültig oder existiert nicht.';
   }
 });
 
@@ -78,8 +79,7 @@ const loginUrl = computed(() => {
         <div class="w-16 h-16 bg-linear-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon name="lucide:shield-check" class="text-3xl text-purple-600 dark:text-purple-400" />
         </div>
-        <p class="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Team-Einladung</p>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ teamName ?? '…' }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Team-Einladung</h1>
         <p class="text-gray-600 dark:text-gray-400 mb-8">Melde dich an, um dem Team beizutreten.</p>
         <a
             :href="loginUrl"
