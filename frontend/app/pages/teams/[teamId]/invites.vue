@@ -127,10 +127,8 @@ const confirmRevoke = async () => {
 
           <div class="flex items-center justify-between gap-4">
             <div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                {{ team?.name ?? '…' }}
-              </h1>
-              <p class="text-gray-500 dark:text-gray-400 mt-1">Einladungslinks</p>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Einladungslinks</h1>
+              <p class="text-gray-500 dark:text-gray-400 mt-1">{{ team?.name }}</p>
             </div>
             <button
                 class="hidden sm:flex px-4 py-2.5 rounded-lg font-medium text-white bg-linear-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg items-center gap-2"
