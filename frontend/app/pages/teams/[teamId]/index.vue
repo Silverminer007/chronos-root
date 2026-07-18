@@ -35,6 +35,7 @@ const showTransferDialog = ref(false);
 const pendingTransfer = ref<TeamMember | null>(null);
 const showRemoveDialog = ref(false);
 const pendingRemove = ref<TeamMember | null>(null);
+const removing = ref(false);
 
 onMounted(async () => {
   try {
@@ -104,6 +105,7 @@ const requestRemove = (member: TeamMember) => {
 const confirmRemove = async () => {
   if (!pendingRemove.value) return;
   const target = pendingRemove.value;
+  removing.value = true;
   try {
     await teamsStore.removeMember(teamId.value, target.userId);
     toast.add({
@@ -112,11 +114,12 @@ const confirmRemove = async () => {
       detail: `${memberDisplayName(target)} wurde aus dem Team entfernt`,
       life: 3000
     });
+    showRemoveDialog.value = false;
+    pendingRemove.value = null;
   } catch {
     toast.add({severity: 'error', summary: 'Fehler', detail: teamsStore.error ?? 'Mitglied konnte nicht entfernt werden', life: 4000});
   } finally {
-    showRemoveDialog.value = false;
-    pendingRemove.value = null;
+    removing.value = false;
   }
 };
 
@@ -315,9 +318,10 @@ const confirmTransfer = async () => {
           ? `${memberDisplayName(pendingRemove)} wirklich aus dem Team entfernen?`
           : ''"
         :warnings="[
-          'Das Mitglied wird aus allen Gruppen dieses Teams entfernt.',
-          'Das Mitglied wird aus Terminen entfernt, für die kein anderes gemeinsames Team mehr besteht.'
+          'Der Benutzer verliert Zugriff auf alle Gruppen dieses Teams.',
+          'Der Benutzer verliert Zugriff auf alle Termine, zu denen er/sie durch dieses Team eingeladen wurde.'
         ]"
+        :loading="removing"
         confirm-text="Entfernen"
         confirm-color="red"
         @close="showRemoveDialog = false; pendingRemove = null"
