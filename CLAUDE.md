@@ -2,6 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage roles: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo with `CONTEXT.md` at root + `docs/adr/`. See `docs/agents/domain.md`.
+
+---
+
 ## Purpose
 
 Chronos is a group scheduling and appointment management app for youth organisations. Users create appointments, invite friends and groups, track participation, and receive push notifications. The entire UI is in **German**.
