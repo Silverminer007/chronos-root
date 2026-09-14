@@ -4,17 +4,29 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use chronos_date_api::database::init_pool;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
+use chronos_date_api::appointments::handlers::{AppState, get_appointment, list_appointments};
 
 #[tokio::main]
 async fn main() {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
+    // Initialize database pool
+    let pool = init_pool(Default::default())
+        .await
+        .expect("Failed to initialize database pool");
+
     // Initialize token validator with Keycloak URL from environment
     let keycloak_url = std::env::var("KEYCLOAK_URL")
         .unwrap_or_else(|_| "http://localhost:8080/realms/chronos".to_string());
     let validator = Arc::new(TokenValidator::new(keycloak_url));
+
+    // Create application state
+    let app_state = Arc::new(AppState {
+        db_pool: pool.clone(),
+    });
 
     // Build router with health check endpoints (public)
     let public_routes = Router::new()
@@ -23,12 +35,17 @@ async fn main() {
         .route("/health", get(health_live));
 
     // Protected routes require authentication
-    let protected_routes = Router::new().route("/api/v2/me", get(get_user_info)).layer(
-        middleware::from_fn_with_state(
-            validator.clone(),
-            chronos_date_api::security::middleware::auth_middleware,
-        ),
-    );
+    let protected_routes = Router::new()
+        .route("/api/v2/me", get(get_user_info))
+        .route("/api/v2/appointments", get(list_appointments))
+        .route("/api/v2/appointments/:id", get(get_appointment))
+        .with_state(app_state)
+        .layer(
+            middleware::from_fn_with_state(
+                validator.clone(),
+                chronos_date_api::security::middleware::auth_middleware,
+            ),
+        );
 
     // Combine all routes
     let app = Router::new().merge(public_routes).merge(protected_routes);
