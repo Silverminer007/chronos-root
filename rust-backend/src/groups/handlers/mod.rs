@@ -8,7 +8,7 @@ use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::groups::models::{CreateGroupRequest, FriendshipResponse, GroupResponse, SendFriendshipRequestRequest, UpdateGroupRequest};
+use crate::groups::models::{CreateGroupRequest, FriendshipResponse, GroupMember, GroupResponse, SendFriendshipRequestRequest, UpdateGroupRequest};
 use crate::groups::services::{FriendshipService, GroupService};
 use crate::security::PrincipalContext;
 
@@ -16,6 +16,21 @@ use crate::security::PrincipalContext;
 pub struct GroupHandlerState {
     pub group_service: Arc<GroupService>,
     pub friendship_service: Arc<FriendshipService>,
+}
+
+// ===== Error Handling Helper =====
+
+/// Convert service error messages to HTTP responses
+fn error_to_response(error_msg: &str) -> (StatusCode, Json<serde_json::Value>) {
+    if error_msg.contains("Not authorized") {
+        (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized to perform this action"})))
+    } else if error_msg.contains("not found") || error_msg.contains("Not found") {
+        (StatusCode::NOT_FOUND, Json(json!({"error": "Resource not found"})))
+    } else if error_msg.contains("yourself") {
+        (StatusCode::BAD_REQUEST, Json(json!({"error": error_msg})))
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Internal server error"})))
+    }
 }
 
 // ===== Group Handlers =====
@@ -64,11 +79,8 @@ pub async fn update_group(
         Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "Group not found"}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to update group: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to update group"}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }
@@ -84,11 +96,8 @@ pub async fn delete_group(
         Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "Group not found"}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to delete group: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to delete group"}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }
@@ -103,13 +112,8 @@ pub async fn add_group_member(
         Ok(_) => (StatusCode::CREATED, Json(json!({"success": true}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to add group member: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else if e.to_string().contains("not found") {
-                (StatusCode::NOT_FOUND, Json(json!({"error": "Group not found"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to add member"}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }
@@ -125,13 +129,8 @@ pub async fn remove_group_member(
         Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "Member not found"}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to remove group member: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else if e.to_string().contains("not found") {
-                (StatusCode::NOT_FOUND, Json(json!({"error": "Group not found"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to remove member"}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }
@@ -163,13 +162,8 @@ pub async fn accept_friendship(
         Ok(friendship) => (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response(),
         Err(e) => {
             tracing::error!("Failed to accept friendship: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else if e.to_string().contains("not found") {
-                (StatusCode::NOT_FOUND, Json(json!({"error": "Friendship request not found"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }
@@ -184,13 +178,8 @@ pub async fn decline_friendship(
         Ok(friendship) => (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response(),
         Err(e) => {
             tracing::error!("Failed to decline friendship: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else if e.to_string().contains("not found") {
-                (StatusCode::NOT_FOUND, Json(json!({"error": "Friendship request not found"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }
@@ -206,11 +195,47 @@ pub async fn delete_friendship(
         Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "Friendship not found"}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to delete friendship: {}", e);
-            if e.to_string().contains("Not authorized") {
-                (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized"}))).into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
-            }
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
+        }
+    }
+}
+
+// ===== Additional Endpoints =====
+
+/// GET /api/v2/groups/:id/members - List members of a group (owner only)
+pub async fn list_group_members(
+    State(state): State<GroupHandlerState>,
+    Path(group_id): Path<Uuid>,
+    principal: PrincipalContext,
+) -> impl IntoResponse {
+    match state.group_service.list_members(group_id, principal.user_id()).await {
+        Ok(members) => {
+            let member_ids: Vec<Uuid> = members.iter().map(|m| m.user_id).collect();
+            (StatusCode::OK, Json(json!({"members": member_ids}))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to list group members: {}", e);
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
+        }
+    }
+}
+
+/// GET /api/v2/friendships - List pending friendship requests for the user
+pub async fn list_pending_friendships(
+    State(state): State<GroupHandlerState>,
+    principal: PrincipalContext,
+) -> impl IntoResponse {
+    match state.friendship_service.list_pending_requests(principal.user_id()).await {
+        Ok(requests) => {
+            let responses: Vec<FriendshipResponse> = requests.into_iter().map(|f| f.into()).collect();
+            (StatusCode::OK, Json(responses)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to list pending friendships: {}", e);
+            let (status, response) = error_to_response(&e.to_string());
+            (status, response).into_response()
         }
     }
 }

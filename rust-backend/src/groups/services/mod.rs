@@ -49,9 +49,27 @@ impl GroupService {
         Ok(GroupRepository::get_by_id(&self.pool, id).await?)
     }
 
-    /// List all groups for a user
+    /// List all groups for a user (both owned and member of)
     pub async fn list_groups(&self, user_id: Uuid) -> Result<Vec<Group>, Box<dyn std::error::Error + Send + Sync>> {
-        Ok(GroupRepository::list_by_owner(&self.pool, user_id).await?)
+        Ok(GroupRepository::list_for_user(&self.pool, user_id).await?)
+    }
+
+    /// List all members of a group (only owner can list)
+    pub async fn list_members(
+        &self,
+        group_id: Uuid,
+        requester_id: Uuid,
+    ) -> Result<Vec<GroupMember>, Box<dyn std::error::Error + Send + Sync>> {
+        // Check authorization - only owner can list members
+        let group = GroupRepository::get_by_id(&self.pool, group_id)
+            .await?
+            .ok_or("Group not found")?;
+
+        if group.owner_id != requester_id {
+            return Err("Not authorized to list group members".into());
+        }
+
+        Ok(GroupMemberRepository::get_members(&self.pool, group_id).await?)
     }
 
     /// Update a group (only owner can update)
@@ -75,8 +93,8 @@ impl GroupService {
         let updated = GroupRepository::update(&self.pool, group_id, name.clone(), description).await?;
 
         if let Some(ref updated_group) = updated {
-            // Fire the GroupNameChangedEvent if name was updated
-            if name.is_some() {
+            // Fire the GroupNameChangedEvent if any field was updated
+            if name.is_some() || description.is_some() {
                 let event = Event::new(
                     "GroupNameChangedEvent",
                     json!(GroupNameChangedEvent {
@@ -337,5 +355,19 @@ impl FriendshipService {
     /// List all friendships for a user
     pub async fn list_friendships(&self, user_id: Uuid) -> Result<Vec<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(FriendshipRepository::list_for_user(&self.pool, user_id).await?)
+    }
+
+    /// List pending friendship requests for a user (only as recipient)
+    pub async fn list_pending_requests(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
+        let friendships = FriendshipRepository::list_for_user(&self.pool, user_id).await?;
+        // Filter to only show pending requests where user is the recipient
+        let pending: Vec<Friendship> = friendships
+            .into_iter()
+            .filter(|f| f.recipient_id == user_id && f.status == "PENDING")
+            .collect();
+        Ok(pending)
     }
 }

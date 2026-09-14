@@ -37,7 +37,23 @@ impl GroupRepository {
             .await
     }
 
-    /// List all groups for a user
+    /// List all groups for a user (both owned and member of)
+    pub async fn list_for_user(pool: &PgPool, user_id: Uuid) -> Result<Vec<Group>, sqlx::Error> {
+        sqlx::query_as::<_, Group>(
+            r#"
+            SELECT DISTINCT g.id, g.name, g.description, g.owner_id, g.created_at, g.updated_at
+            FROM groups g
+            WHERE g.owner_id = $1
+               OR g.id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+            ORDER BY g.created_at DESC
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+    }
+
+    /// List all groups for a user (owned only)
     pub async fn list_by_owner(pool: &PgPool, owner_id: Uuid) -> Result<Vec<Group>, sqlx::Error> {
         sqlx::query_as::<_, Group>(
             "SELECT id, name, description, owner_id, created_at, updated_at FROM groups WHERE owner_id = $1 ORDER BY created_at DESC",
