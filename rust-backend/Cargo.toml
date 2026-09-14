@@ -10,10 +10,6 @@ edition = "2021"
 name = "chronos_date_api"
 path = "src/main.rs"
 
-[features]
-default = ["web"]
-web = ["axum", "tokio", "serde", "serde_json", "tracing", "tracing-subscriber"]
-
 [dependencies]
 # Web framework and async runtime
 axum = "0.7"
@@ -26,6 +22,9 @@ serde_json = "1.0"
 # Logging
 tracing = "0.1"
 tracing-subscriber = "0.3"
+
+# Time support
+chrono = { version = "0.4", features = ["serde"] }
 
 # JWT and security
 jsonwebtoken = "9"
