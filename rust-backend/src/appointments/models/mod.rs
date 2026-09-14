@@ -256,9 +256,18 @@ mod tests {
     #[test]
     fn test_user_role_serialization() {
         assert_eq!(serde_json::to_string(&UserRole::None).unwrap(), "\"NONE\"");
-        assert_eq!(serde_json::to_string(&UserRole::Guest).unwrap(), "\"GUEST\"");
-        assert_eq!(serde_json::to_string(&UserRole::Attendant).unwrap(), "\"ATTENDANT\"");
-        assert_eq!(serde_json::to_string(&UserRole::Helper).unwrap(), "\"HELPER\"");
+        assert_eq!(
+            serde_json::to_string(&UserRole::Guest).unwrap(),
+            "\"GUEST\""
+        );
+        assert_eq!(
+            serde_json::to_string(&UserRole::Attendant).unwrap(),
+            "\"ATTENDANT\""
+        );
+        assert_eq!(
+            serde_json::to_string(&UserRole::Helper).unwrap(),
+            "\"HELPER\""
+        );
         assert_eq!(
             serde_json::to_string(&UserRole::Responsible).unwrap(),
             "\"RESPONSIBLE\""
