@@ -1,10 +1,13 @@
 /// Integration tests for appointment GET endpoints
 #[cfg(test)]
 mod appointment_endpoint_tests {
-    use chronos_date_api::appointments::models::Appointment;
-    use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures, TestAuthHelper};
-    use uuid::Uuid;
     use chrono::Utc;
+    use uuid::Uuid;
+
+    use chronos_date_api::appointments::models::Appointment;
+    use chronos_date_api::test_utils::{
+        AppointmentFixture, TestAuthHelper, TestDb, TestFixtures,
+    };
 
     #[tokio::test]
     #[ignore]

@@ -1,5 +1,5 @@
 use axum::{
-    extract::Path, http::StatusCode, middleware, response::IntoResponse, routing::get, Json, Router,
+    middleware, response::IntoResponse, routing::get, Json, Router,
 };
 use std::net::SocketAddr;
 use std::sync::Arc;

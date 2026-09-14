@@ -76,7 +76,7 @@ pub async fn list_appointments(
     // Get user ID from the authenticated principal
     // Note: principal.user_id() returns String, we need to convert to UUID
     let user_id_str = principal.user_id();
-    let user_id = uuid::Uuid::parse_str(&user_id_str)
+    let user_id = Uuid::parse_str(&user_id_str)
         .map_err(|_| AppointmentError::DatabaseError)?;
 
     // List only appointments visible to this user

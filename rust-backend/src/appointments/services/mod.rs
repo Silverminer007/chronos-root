@@ -8,8 +8,10 @@ use chrono::{DateTime, Utc};
 pub struct ListAppointmentsQuery {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
-    pub sort_by: Option<String>,   // "date" or "title"
-    pub sort_dir: Option<String>,  // "asc" or "desc"
+    /// Sort by field: "date" or "title"
+    pub sort_by: Option<String>,
+    /// Sort direction: "asc" or "desc"
+    pub sort_dir: Option<String>,
 }
 
 impl Default for ListAppointmentsQuery {
@@ -131,7 +133,6 @@ impl AppointmentService {
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(20) as usize;
 
-        let end = (offset + limit).min(sorted_appointments.len());
         Ok(sorted_appointments
             .into_iter()
             .skip(offset)
@@ -166,7 +167,6 @@ impl AppointmentService {
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(20) as usize;
 
-        let end = (offset + limit).min(sorted_appointments.len());
         Ok(sorted_appointments
             .into_iter()
             .skip(offset)
