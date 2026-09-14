@@ -99,6 +99,98 @@ impl AppointmentEventHandler {
         Ok(())
     }
 
+    /// Handle appointment updated event
+    pub async fn handle_appointment_updated(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("Handling appointment updated event: {}", event.id);
+
+        let appointment_id = event.payload
+            .get("appointment_id")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing appointment_id")?;
+
+        let title = event.payload
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Termin");
+
+        let participant_ids: Vec<Uuid> = event.payload
+            .get("participant_ids")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|id| {
+                id.as_str().and_then(|s| Uuid::parse_str(s).ok())
+            }).collect())
+            .unwrap_or_default();
+
+        let payload = NotificationPayload {
+            title: format!("Termin aktualisiert: {}", title),
+            body: "Ein Termin wurde aktualisiert".to_string(),
+            data: Some(serde_json::json!({
+                "appointment_id": appointment_id,
+                "type": "appointment_updated"
+            })),
+        };
+
+        for user_id in participant_ids {
+            self.send_notification_to_user(&user_id, &payload).await;
+        }
+
+        Ok(())
+    }
+
+    /// Handle friendship request sent event
+    pub async fn handle_friendship_request_sent(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("Handling friendship request sent event: {}", event.id);
+
+        let recipient_id = event.payload
+            .get("recipient_id")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing recipient_id")?;
+
+        let sender_name = event.payload
+            .get("sender_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Jemand");
+
+        let recipient_uuid = Uuid::parse_str(recipient_id)?;
+        let payload = NotificationPayload {
+            title: "Freundschaftsanfrage".to_string(),
+            body: format!("{} möchte dein Freund sein", sender_name),
+            data: Some(serde_json::json!({
+                "type": "friendship_request_sent"
+            })),
+        };
+
+        self.send_notification_to_user(&recipient_uuid, &payload).await;
+        Ok(())
+    }
+
+    /// Handle reminder event
+    pub async fn handle_reminder(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("Handling reminder event: {}", event.id);
+
+        let user_id = event.payload
+            .get("user_id")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing user_id")?;
+
+        let appointment_title = event.payload
+            .get("appointment_title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Termin");
+
+        let user_uuid = Uuid::parse_str(user_id)?;
+        let payload = NotificationPayload {
+            title: "Erinnerung".to_string(),
+            body: format!("Erinnerung für: {}", appointment_title),
+            data: Some(serde_json::json!({
+                "type": "reminder"
+            })),
+        };
+
+        self.send_notification_to_user(&user_uuid, &payload).await;
+        Ok(())
+    }
+
     /// Send a notification to a user
     async fn send_notification_to_user(
         &self,
