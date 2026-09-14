@@ -4,11 +4,9 @@ mod appointment_mutation_tests {
     use chronos_date_api::appointments::models::{
         CreateAppointmentRequest, MoveAppointmentRequest, UpdateAppointmentRequest,
     };
-    use chronos_date_api::appointments::repository::AppointmentRepository;
-    use chronos_date_api::appointments::services::AppointmentService;
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
-    use chrono::Utc;
     use uuid::Uuid;
+    use chrono::Utc;
 
     #[tokio::test]
     #[ignore]
@@ -28,8 +26,11 @@ mod appointment_mutation_tests {
         let now = Utc::now();
 
         // Create the appointment
-        let repo = AppointmentRepository::new(db.pool().clone());
-        let service = AppointmentService::new(repo);
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
+        let service =
+            chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         let created = service
             .create_appointment(
