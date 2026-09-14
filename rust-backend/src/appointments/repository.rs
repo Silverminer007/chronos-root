@@ -1,9 +1,27 @@
 use crate::appointments::models::Appointment;
-use crate::database::repository::{Repository, RepositoryError};
-use async_trait::async_trait;
-use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+
+/// Errors that can occur in the repository layer
+#[derive(Debug)]
+pub enum RepositoryError {
+    DatabaseError(String),
+    NotFound,
+    InvalidInput(String),
+}
+
+impl std::fmt::Display for RepositoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RepositoryError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+            RepositoryError::NotFound => write!(f, "Not found"),
+            RepositoryError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for RepositoryError {}
 
 /// AppointmentRepository provides data access for Appointment entities
 pub struct AppointmentRepository {
@@ -15,12 +33,9 @@ impl AppointmentRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-}
 
-#[async_trait]
-impl Repository<Appointment> for AppointmentRepository {
     /// Find an appointment by its ID
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
              FROM appointments WHERE id = $1"
@@ -32,7 +47,7 @@ impl Repository<Appointment> for AppointmentRepository {
     }
 
     /// Find all appointments
-    async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
+    pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
              FROM appointments ORDER BY start_time DESC"
@@ -42,75 +57,47 @@ impl Repository<Appointment> for AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Create a new appointment
-    async fn create(&self, entity: Appointment) -> Result<Appointment, RepositoryError> {
-        let now = Utc::now();
-        let result = sqlx::query_as::<_, Appointment>(
-            "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at"
-        )
-        .bind(entity.id)
-        .bind(&entity.title)
-        .bind(&entity.description)
-        .bind(entity.start_time)
-        .bind(entity.end_time)
-        .bind(&entity.location)
-        .bind(entity.creator_id)
-        .bind(now)
-        .bind(now)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            if e.to_string().contains("valid_times") {
-                RepositoryError::InvalidInput("end_time must be after start_time".to_string())
-            } else {
-                RepositoryError::DatabaseError(e.to_string())
-            }
-        })?;
-
-        Ok(result)
-    }
-
-    /// Update an existing appointment
-    async fn update(
-        &self,
-        id: Uuid,
-        entity: Appointment,
-    ) -> Result<Option<Appointment>, RepositoryError> {
-        let now = Utc::now();
+    /// Find appointments by creator_id
+    pub async fn find_by_creator(&self, creator_id: Uuid) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "UPDATE appointments
-             SET title = $2, description = $3, start_time = $4, end_time = $5, location = $6, updated_at = $7
-             WHERE id = $1
-             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at"
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+             FROM appointments WHERE creator_id = $1 ORDER BY start_time DESC"
         )
-        .bind(id)
-        .bind(&entity.title)
-        .bind(&entity.description)
-        .bind(entity.start_time)
-        .bind(entity.end_time)
-        .bind(&entity.location)
-        .bind(now)
-        .fetch_optional(&self.pool)
+        .bind(creator_id)
+        .fetch_all(&self.pool)
         .await
-        .map_err(|e| {
-            if e.to_string().contains("valid_times") {
-                RepositoryError::InvalidInput("end_time must be after start_time".to_string())
-            } else {
-                RepositoryError::DatabaseError(e.to_string())
-            }
-        })
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Delete an appointment
-    async fn delete(&self, id: Uuid) -> Result<bool, RepositoryError> {
-        let result = sqlx::query("DELETE FROM appointments WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+    /// Find appointments visible to a user (created by user or user is a participant)
+    pub async fn find_visible_to_user(&self, user_id: Uuid) -> Result<Vec<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(
+            "SELECT DISTINCT a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at
+             FROM appointments a
+             LEFT JOIN appointment_participants ap ON a.id = ap.appointment_id
+             WHERE a.creator_id = $1 OR ap.user_id = $1
+             ORDER BY a.start_time DESC"
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
 
-        Ok(result.rows_affected() > 0)
+    /// Find appointments by date range
+    pub async fn find_by_date_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+             FROM appointments WHERE start_time >= $1 AND end_time <= $2 ORDER BY start_time ASC"
+        )
+        .bind(start)
+        .bind(end)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 }

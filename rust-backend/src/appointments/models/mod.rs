@@ -1,6 +1,8 @@
 // Data models for appointments
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use uuid::Uuid;
 
 /// Participation status for an appointment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,18 +35,18 @@ pub enum UserRole {
 }
 
 /// Appointment entity - the core domain model for scheduling
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Maps directly to the appointments table in the database
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Appointment {
-    pub id: i64,
-    pub name: String,
+    pub id: Uuid,
+    pub title: String,
     pub description: Option<String>,
-    pub venue: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub status: AppointmentStatus,
-    pub minimal_attendees: Option<i32>,
-    pub last_update: DateTime<Utc>,
+    pub location: Option<String>,
+    pub creator_id: Uuid,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// Participation of a user in an appointment
@@ -111,16 +113,31 @@ pub struct CreateAppointmentRequest {
 /// Response with appointment details
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentResponse {
-    pub id: i64,
-    pub name: String,
+    pub id: Uuid,
+    pub title: String,
     pub description: Option<String>,
-    pub venue: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub status: AppointmentStatus,
-    pub minimal_attendees: Option<i32>,
-    pub last_update: DateTime<Utc>,
+    pub location: Option<String>,
+    pub creator_id: Uuid,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl From<Appointment> for AppointmentResponse {
+    fn from(appointment: Appointment) -> Self {
+        AppointmentResponse {
+            id: appointment.id,
+            title: appointment.title,
+            description: appointment.description,
+            start_time: appointment.start_time,
+            end_time: appointment.end_time,
+            location: appointment.location,
+            creator_id: appointment.creator_id,
+            created_at: appointment.created_at,
+            updated_at: appointment.updated_at,
+        }
+    }
 }
 
 /// Request to participate in an appointment
@@ -303,45 +320,47 @@ mod tests {
     #[test]
     fn test_appointment_serialization() {
         let now = Utc::now();
+        let creator_id = Uuid::new_v4();
+        let appt_id = Uuid::new_v4();
         let appointment = Appointment {
-            id: 1,
-            name: "Team Meeting".to_string(),
+            id: appt_id,
+            title: "Team Meeting".to_string(),
             description: Some("Quarterly planning".to_string()),
-            venue: Some("Conference Room A".to_string()),
+            location: Some("Conference Room A".to_string()),
             start_time: now,
-            end_time: now,
-            status: AppointmentStatus::Planned,
-            minimal_attendees: Some(5),
-            last_update: now,
+            end_time: now + chrono::Duration::hours(1),
+            creator_id,
             created_at: now,
+            updated_at: now,
         };
 
         let json = serde_json::to_string(&appointment).unwrap();
-        assert!(json.contains("\"name\":\"Team Meeting\""));
-        assert!(json.contains("\"status\":\"PLANNED\""));
-        assert!(json.contains("\"minimal_attendees\":5"));
+        assert!(json.contains("\"title\":\"Team Meeting\""));
+        assert!(json.contains("\"location\":\"Conference Room A\""));
+        assert!(json.contains("\"description\":\"Quarterly planning\""));
     }
 
     #[test]
-    fn test_appointment_deserialization() {
-        let json = r#"{
-            "id": 42,
-            "name": "Team Meeting",
-            "description": "Quarterly planning",
-            "venue": "Conference Room A",
-            "start_time": "2025-09-14T10:30:00Z",
-            "end_time": "2025-09-14T11:30:00Z",
-            "status": "PLANNED",
-            "minimal_attendees": 5,
-            "last_update": "2025-09-14T10:00:00Z",
-            "created_at": "2025-09-14T09:00:00Z"
-        }"#;
+    fn test_appointment_response_from_appointment() {
+        let now = Utc::now();
+        let creator_id = Uuid::new_v4();
+        let appt_id = Uuid::new_v4();
+        let appointment = Appointment {
+            id: appt_id,
+            title: "Team Meeting".to_string(),
+            description: Some("Quarterly planning".to_string()),
+            location: Some("Conference Room A".to_string()),
+            start_time: now,
+            end_time: now + chrono::Duration::hours(1),
+            creator_id,
+            created_at: now,
+            updated_at: now,
+        };
 
-        let appointment = serde_json::from_str::<Appointment>(json).unwrap();
-        assert_eq!(appointment.id, 42);
-        assert_eq!(appointment.name, "Team Meeting");
-        assert_eq!(appointment.status, AppointmentStatus::Planned);
-        assert_eq!(appointment.minimal_attendees, Some(5));
+        let response: AppointmentResponse = appointment.into();
+        assert_eq!(response.id, appt_id);
+        assert_eq!(response.title, "Team Meeting");
+        assert_eq!(response.creator_id, creator_id);
     }
 
     #[test]
@@ -455,6 +474,8 @@ mod tests {
             "minimal_attendees": 3
         }"#;
 
+        // Note: This test uses old field names but the CreateAppointmentRequest struct
+        // is still using them. It should be refactored to match the database schema.
         let request = serde_json::from_str::<CreateAppointmentRequest>(json).unwrap();
         assert_eq!(request.name, "New Meeting");
         assert_eq!(request.description, Some("Planning session".to_string()));
@@ -464,22 +485,23 @@ mod tests {
     #[test]
     fn test_appointment_response_serialization() {
         let now = Utc::now();
+        let creator_id = Uuid::new_v4();
+        let appt_id = Uuid::new_v4();
         let response = AppointmentResponse {
-            id: 1,
-            name: "Team Meeting".to_string(),
+            id: appt_id,
+            title: "Team Meeting".to_string(),
             description: Some("Quarterly planning".to_string()),
-            venue: Some("Conference Room A".to_string()),
+            location: Some("Conference Room A".to_string()),
             start_time: now,
-            end_time: now,
-            status: AppointmentStatus::Planned,
-            minimal_attendees: Some(5),
-            last_update: now,
+            end_time: now + chrono::Duration::hours(1),
+            creator_id,
             created_at: now,
+            updated_at: now,
         };
 
         let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"status\":\"PLANNED\""));
-        assert!(json.contains("\"minimal_attendees\":5"));
+        assert!(json.contains("\"title\":\"Team Meeting\""));
+        assert!(json.contains("\"location\":\"Conference Room A\""));
     }
 
     #[test]
