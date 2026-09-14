@@ -1,5 +1,8 @@
 // Feature-based module layout for Chronos Date API
 
+pub mod error;
+pub mod database;
+
 pub mod appointments;
 pub mod users;
 pub mod groups;
