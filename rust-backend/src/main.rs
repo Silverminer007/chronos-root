@@ -1,15 +1,10 @@
 use axum::{
-    extract::Path,
-    http::StatusCode,
-    middleware,
-    response::IntoResponse,
-    routing::get,
-    Router, Json,
+    extract::Path, http::StatusCode, middleware, response::IntoResponse, routing::get, Json, Router,
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use chronos_date_api::security::{TokenValidator, PrincipalContext};
+use chronos_date_api::security::{PrincipalContext, TokenValidator};
 
 #[tokio::main]
 async fn main() {
@@ -28,17 +23,15 @@ async fn main() {
         .route("/health", get(health_live));
 
     // Protected routes require authentication
-    let protected_routes = Router::new()
-        .route("/api/v2/me", get(get_user_info))
-        .layer(middleware::from_fn_with_state(
+    let protected_routes = Router::new().route("/api/v2/me", get(get_user_info)).layer(
+        middleware::from_fn_with_state(
             validator.clone(),
             chronos_date_api::security::middleware::auth_middleware,
-        ));
+        ),
+    );
 
     // Combine all routes
-    let app = Router::new()
-        .merge(public_routes)
-        .merge(protected_routes);
+    let app = Router::new().merge(public_routes).merge(protected_routes);
 
     // Listen on 0.0.0.0:8080
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
@@ -48,9 +41,7 @@ async fn main() {
         .await
         .expect("Failed to bind to port 8080");
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server error");
+    axum::serve(listener, app).await.expect("Server error");
 }
 
 /// Liveness probe - indicates the process is alive

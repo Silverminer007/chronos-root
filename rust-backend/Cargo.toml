@@ -40,3 +40,8 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+testcontainers = "0.16"
+testcontainers-modules = { version = "0.4", features = ["postgres"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["trace"] }
+hyper = "1"

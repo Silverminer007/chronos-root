@@ -73,7 +73,11 @@ impl Repository<Appointment> for AppointmentRepository {
     }
 
     /// Update an existing appointment
-    async fn update(&self, id: Uuid, entity: Appointment) -> Result<Option<Appointment>, RepositoryError> {
+    async fn update(
+        &self,
+        id: Uuid,
+        entity: Appointment,
+    ) -> Result<Option<Appointment>, RepositoryError> {
         let now = Utc::now();
         sqlx::query_as::<_, Appointment>(
             "UPDATE appointments

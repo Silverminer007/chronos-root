@@ -49,9 +49,7 @@ pub async fn init_pool(config: DatabaseConfig) -> Result<PgPool, sqlx::Error> {
 /// Run database migrations using sqlx::migrate
 pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
     info!("Running database migrations");
-    sqlx::migrate!("./migrations")
-        .run(pool)
-        .await?;
+    sqlx::migrate!("./migrations").run(pool).await?;
     info!("Migrations completed successfully");
     Ok(())
 }
@@ -70,6 +68,9 @@ mod tests {
     #[test]
     fn test_config_memory_efficient() {
         let config = DatabaseConfig::default();
-        assert!(config.max_connections <= 32, "Connection pool too large for memory target");
+        assert!(
+            config.max_connections <= 32,
+            "Connection pool too large for memory target"
+        );
     }
 }

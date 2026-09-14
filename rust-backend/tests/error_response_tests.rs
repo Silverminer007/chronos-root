@@ -1,16 +1,12 @@
 /// Integration tests for error handling and HTTP response mapping
 /// These tests verify that error responses match the Java backend format exactly
-
 use chronos_date_api::error::{AppError, ErrorResponse};
 use std::collections::HashMap;
 
 #[test]
 fn test_resource_not_found_error_format() {
     let error = AppError::not_found("Termin", "123");
-    assert_eq!(
-        error.to_string(),
-        "Termin mit ID 123 wurde nicht gefunden"
-    );
+    assert_eq!(error.to_string(), "Termin mit ID 123 wurde nicht gefunden");
 }
 
 #[test]
@@ -67,10 +63,7 @@ fn test_error_response_404_serialization() {
     assert_eq!(response.status, 404);
     assert_eq!(response.error, "Not Found");
     assert_eq!(response.error_code, "RESOURCE_NOT_FOUND");
-    assert_eq!(
-        response.message,
-        "Termin mit ID 123 wurde nicht gefunden"
-    );
+    assert_eq!(response.message, "Termin mit ID 123 wurde nicht gefunden");
     assert_eq!(response.path, "/appointments/123");
     assert_eq!(response.field_errors, None);
 }
@@ -240,9 +233,18 @@ fn test_appointment_not_found_error_code() {
 #[test]
 fn test_multiple_validation_errors() {
     let mut field_errors = HashMap::new();
-    field_errors.insert("startTime".to_string(), "Start-Zeit ist erforderlich".to_string());
-    field_errors.insert("endTime".to_string(), "End-Zeit muss nach Start-Zeit liegen".to_string());
-    field_errors.insert("title".to_string(), "Titel darf nicht leer sein".to_string());
+    field_errors.insert(
+        "startTime".to_string(),
+        "Start-Zeit ist erforderlich".to_string(),
+    );
+    field_errors.insert(
+        "endTime".to_string(),
+        "End-Zeit muss nach Start-Zeit liegen".to_string(),
+    );
+    field_errors.insert(
+        "title".to_string(),
+        "Titel darf nicht leer sein".to_string(),
+    );
 
     let response = ErrorResponse::new(
         400,

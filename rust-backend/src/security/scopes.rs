@@ -2,7 +2,6 @@
 /// This module provides utilities for validating scopes and roles in JWT tokens
 /// Currently, the main token validation focuses on JWT signature validation.
 /// Future work can extend this to enforce specific scopes and roles.
-
 use serde::{Deserialize, Serialize};
 
 /// Token scopes that may be included in a Keycloak JWT

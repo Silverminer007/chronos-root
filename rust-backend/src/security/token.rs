@@ -1,7 +1,7 @@
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
 /// Claims extracted from a JWT token
@@ -131,9 +131,7 @@ impl TokenValidator {
         // Decode the header to get the key ID
         let header = decode_header(token).map_err(|e| TokenError::InvalidToken(e.to_string()))?;
 
-        let kid = header
-            .kid
-            .ok_or(TokenError::MissingKey)?;
+        let kid = header.kid.ok_or(TokenError::MissingKey)?;
 
         // Fetch the key set
         let keyset = self.get_keyset().await?;
@@ -152,15 +150,14 @@ impl TokenValidator {
         // Validate the token
         let validation = Validation::new(jsonwebtoken::Algorithm::RS256);
 
-        let token_data = decode::<TokenClaims>(token, &decoding_key, &validation)
-            .map_err(|e| {
-                use jsonwebtoken::errors::ErrorKind;
-                match e.kind() {
-                    ErrorKind::ExpiredSignature => TokenError::TokenExpired,
-                    ErrorKind::InvalidSignature => TokenError::InvalidSignature,
-                    _ => TokenError::InvalidToken(e.to_string()),
-                }
-            })?;
+        let token_data = decode::<TokenClaims>(token, &decoding_key, &validation).map_err(|e| {
+            use jsonwebtoken::errors::ErrorKind;
+            match e.kind() {
+                ErrorKind::ExpiredSignature => TokenError::TokenExpired,
+                ErrorKind::InvalidSignature => TokenError::InvalidSignature,
+                _ => TokenError::InvalidToken(e.to_string()),
+            }
+        })?;
 
         Ok(token_data.claims)
     }
@@ -204,16 +201,16 @@ mod tests {
     #[tokio::test]
     async fn test_token_validator_creation() {
         let validator = TokenValidator::new("http://keycloak:8080/realms/chronos".to_string());
-        assert_eq!(validator.keycloak_url, "http://keycloak:8080/realms/chronos");
+        assert_eq!(
+            validator.keycloak_url,
+            "http://keycloak:8080/realms/chronos"
+        );
     }
 
     #[tokio::test]
     async fn test_token_validator_with_custom_ttl() {
         let ttl = Duration::from_secs(60);
-        let validator = TokenValidator::with_cache_ttl(
-            "http://localhost:8080".to_string(),
-            ttl,
-        );
+        let validator = TokenValidator::with_cache_ttl("http://localhost:8080".to_string(), ttl);
         assert_eq!(validator.cache_ttl, ttl);
     }
 }

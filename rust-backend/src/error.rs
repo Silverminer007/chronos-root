@@ -3,9 +3,9 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::Local;
 
 /// Standard error response for all API errors
 /// Matches the Java backend error response format exactly
@@ -143,10 +143,7 @@ impl Default for ErrorResponseBuilder {
 #[derive(Debug)]
 pub enum AppError {
     /// Resource not found - 404 Not Found
-    NotFound {
-        resource_type: String,
-        id: String,
-    },
+    NotFound { resource_type: String, id: String },
     /// Custom not found message
     NotFoundMessage(String),
     /// Unauthorized - 401 Unauthorized
@@ -213,10 +210,7 @@ impl AppError {
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AppError::NotFound {
-                resource_type,
-                id,
-            } => {
+            AppError::NotFound { resource_type, id } => {
                 write!(f, "{} mit ID {} wurde nicht gefunden", resource_type, id)
             }
             AppError::NotFoundMessage(msg) => write!(f, "{}", msg),
@@ -232,10 +226,7 @@ impl std::fmt::Display for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status_code, error_response) = match self {
-            AppError::NotFound {
-                resource_type,
-                id,
-            } => {
+            AppError::NotFound { resource_type, id } => {
                 let message = format!("{} mit ID {} wurde nicht gefunden", resource_type, id);
                 let response = ErrorResponse::new(
                     404,
@@ -323,10 +314,7 @@ mod tests {
     #[test]
     fn test_not_found_error_message_format() {
         let error = AppError::not_found("Termin", "123");
-        assert_eq!(
-            error.to_string(),
-            "Termin mit ID 123 wurde nicht gefunden"
-        );
+        assert_eq!(error.to_string(), "Termin mit ID 123 wurde nicht gefunden");
     }
 
     #[test]
