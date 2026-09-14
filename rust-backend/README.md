@@ -79,11 +79,32 @@ docker build -t chronos-rust-backend:latest .
 - `GET /q/health/ready` - Readiness probe (returns 200 if service is ready to handle traffic)
 - `GET /health` - Alternative health check endpoint
 
+## Authentication
+
+The backend uses **Keycloak OIDC** for authentication. JWT tokens are validated against Keycloak's public key set. Protected routes require a valid `Authorization: Bearer <token>` header.
+
+### Protected Routes
+
+Protected routes automatically extract the user's OIDC ID via the `PrincipalContext` extractor:
+
+```rust
+async fn get_user_info(principal: PrincipalContext) -> Json<UserInfo> {
+    // principal.user_id() contains the authenticated user's OIDC subject ID
+    Json(UserInfo { user_id: principal.user_id().to_string() })
+}
+```
+
+### Error Responses
+
+- `401 Unauthorized` — Missing, invalid, or expired token
+- Token validation is performed by the `auth_middleware` layer
+
 ## Environment Variables
 
 | Variable | Description | Default |
 |---|---|---|
 | `RUST_LOG` | Logging level | `info` |
+| `KEYCLOAK_URL` | Keycloak realm URL | `http://localhost:8080/realms/chronos` |
 
 ## Development Workflow
 
