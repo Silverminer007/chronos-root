@@ -10,10 +10,6 @@ edition = "2021"
 name = "chronos_date_api"
 path = "src/main.rs"
 
-[features]
-default = ["web"]
-web = ["axum", "tokio", "serde", "serde_json", "tracing", "tracing-subscriber"]
-
 [dependencies]
 # Web framework and async runtime
 axum = "0.7"
@@ -36,5 +32,19 @@ async-trait = "0.1"
 reqwest = { version = "0.11", features = ["json"] }
 http = "1"
 
+# Database
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono"] }
+
+# Event bus and async utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Web Push
+web-push = "0.11"
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+testcontainers = "0.16"
+testcontainers-modules = { version = "0.4", features = ["postgres"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["trace"] }
+hyper = "1"

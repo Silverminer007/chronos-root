@@ -1,8 +1,8 @@
 // Integration tests for database layer
 #[cfg(test)]
 mod database_tests {
-    use chronos_date_api::database::{init_pool, DatabaseConfig};
     use chronos_date_api::database::repository::{Repository, RepositoryError};
+    use chronos_date_api::database::{init_pool, DatabaseConfig};
 
     #[test]
     fn test_pool_memory_efficient() {

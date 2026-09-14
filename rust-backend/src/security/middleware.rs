@@ -8,7 +8,7 @@ use axum::{
 use std::sync::Arc;
 use tracing::{debug, warn};
 
-use super::{token::TokenValidator, principal::PrincipalContext};
+use super::{principal::PrincipalContext, token::TokenValidator};
 
 const BEARER_PREFIX: &str = "Bearer ";
 
