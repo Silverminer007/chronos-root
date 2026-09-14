@@ -2,9 +2,9 @@
 #[cfg(test)]
 mod appointment_mutation_tests {
     use chronos_date_api::appointments::models::{
-        Appointment, CreateAppointmentRequest, MoveAppointmentRequest, UpdateAppointmentRequest,
+        CreateAppointmentRequest, MoveAppointmentRequest, UpdateAppointmentRequest,
     };
-    use chronos_date_api::test_utils::{AppointmentFixture, TestAuthHelper, TestDb, TestFixtures};
+    use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
     use chrono::Utc;
     use uuid::Uuid;
 
@@ -24,14 +24,6 @@ mod appointment_mutation_tests {
             .expect("Failed to create test user");
 
         let now = Utc::now();
-        let request = CreateAppointmentRequest {
-            title: "New Meeting".to_string(),
-            description: Some("Test appointment".to_string()),
-            location: Some("Room A".to_string()),
-            start_time: now + chrono::Duration::hours(1),
-            end_time: now + chrono::Duration::hours(2),
-            minimal_attendees: Some(2),
-        };
 
         // Create the appointment
         let repo =
@@ -40,11 +32,11 @@ mod appointment_mutation_tests {
 
         let created = service
             .create_appointment(
-                request.title.clone(),
-                request.description.clone(),
-                request.location.clone(),
-                request.start_time,
-                request.end_time,
+                "New Meeting".to_string(),
+                Some("Test appointment".to_string()),
+                Some("Room A".to_string()),
+                now + chrono::Duration::hours(1),
+                now + chrono::Duration::hours(2),
                 creator_id,
             )
             .await
