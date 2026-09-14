@@ -56,4 +56,8 @@ public class AdminUserService {
                 u.getCreatedTimestamp() != null ? Instant.ofEpochMilli(u.getCreatedTimestamp()) : null
         );
     }
+
+    public void deleteUser(String oidcId) {
+        keycloak.realm(realm).users().delete(oidcId);
+    }
 }
