@@ -2,7 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
     use uuid::Uuid;
     use sqlx::postgres::PgPoolOptions;
     use testcontainers::clients;

@@ -3,7 +3,7 @@ use crate::push_notifications::models::{NotificationPayload, PushSubscription};
 use serde_json::json;
 use std::sync::Arc;
 use tracing::{error, info};
-use web_push::{WebPushBuilder, WebPushError};
+use web_push::WebPushBuilder;
 
 /// VAPID configuration for Web Push
 #[derive(Clone, Debug)]

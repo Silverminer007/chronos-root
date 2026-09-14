@@ -1,13 +1,10 @@
 // Handler functions for push_notifications
 pub mod event_listener;
 
-use crate::database::repository::Repository;
 use crate::event_bus::Event;
 use crate::push_notifications::models::NotificationPayload;
 use crate::push_notifications::repository::PushSubscriptionRepository;
 use crate::push_notifications::PushNotificationService;
-use serde_json::Value;
-use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 use uuid::Uuid;

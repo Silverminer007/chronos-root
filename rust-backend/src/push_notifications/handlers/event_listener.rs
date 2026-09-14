@@ -5,7 +5,6 @@ use crate::push_notifications::PushNotificationService;
 use crate::push_notifications::repository::PushSubscriptionRepository;
 use std::sync::Arc;
 use tracing::{error, info};
-use sqlx::PgPool;
 
 /// Event types that trigger push notifications
 pub mod event_types {

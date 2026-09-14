@@ -154,15 +154,6 @@ impl Repository<PushSubscription> for PushSubscriptionRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn test_push_subscription_repository_creation() {
-        // This test just verifies the repository can be instantiated
-        // Full integration tests would require a test database
-        let _repo = PushSubscriptionRepository::new({
-            // In real tests, we'd use a connection pool
-            panic!("This is just a placeholder test")
-        });
-    }
+    // Integration tests for repository are in tests/push_notification_integration.rs
+    // Unit tests would require a mocked PgPool which is not used here
 }
