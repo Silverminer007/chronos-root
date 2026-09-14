@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -294,7 +294,7 @@ impl IntoResponse for AppointmentError {
             AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
         };
 
-        let error_response = serde_json::json!({"error": error_message});
+        let error_response = json!({"error": error_message});
         (status, Json(error_response)).into_response()
     }
 }
