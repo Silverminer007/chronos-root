@@ -86,4 +86,55 @@ spec:
       annotations:
         summary: "SSL certificate expiring soon"
         description: "SSL certificate for {{`{{ $labels.instance }}`}} expires in less than {{ .Values.alerts.rules.sslExpiry.daysWarning }} days"
+
+    # Rust Backend specific alerts
+    - alert: RustBackendPodDown
+      expr: kube_pod_status_phase{namespace="{{ .Values.namespace }}", pod=~"chronos-rust-backend.*", phase!="Running"} == 1
+      for: 2m
+      labels:
+        severity: critical
+        service: chronos-rust-backend
+      annotations:
+        summary: "Rust backend pod is down"
+        description: "Rust backend pod {{`{{ $labels.pod }}`}} has been down for more than 2 minutes"
+
+    - alert: RustBackendHighMemory
+      expr: container_memory_usage_bytes{namespace="{{ .Values.namespace }}", container="chronos-rust"} > 50 * 1024 * 1024
+      for: 5m
+      labels:
+        severity: warning
+        service: chronos-rust-backend
+      annotations:
+        summary: "Rust backend memory usage high"
+        description: "Rust backend pod {{`{{ $labels.pod }}`}} memory usage is above 50 MiB (current: {{`{{ $value | humanize }}`}})"
+
+    - alert: RustBackendHighLatency
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="chronos-rust-backend"}[5m])) > 1
+      for: 5m
+      labels:
+        severity: warning
+        service: chronos-rust-backend
+      annotations:
+        summary: "Rust backend high latency"
+        description: "Rust backend p95 latency is above 1 second (current: {{`{{ $value | humanizeDuration }}`}})"
+
+    - alert: RustBackendHighErrorRate
+      expr: rate(http_request_total{job="chronos-rust-backend", status=~"5.."}[5m]) > 0.01
+      for: 5m
+      labels:
+        severity: warning
+        service: chronos-rust-backend
+      annotations:
+        summary: "Rust backend high error rate"
+        description: "Rust backend error rate is above 1% (current: {{`{{ $value | humanizePercentage }}`}})"
+
+    - alert: RustBackendHighRestartRate
+      expr: increase(kube_pod_container_status_restarts_total{namespace="{{ .Values.namespace }}", pod=~"chronos-rust-backend.*"}[1h]) > 3
+      for: 0m
+      labels:
+        severity: critical
+        service: chronos-rust-backend
+      annotations:
+        summary: "Rust backend pod restarting frequently"
+        description: "Rust backend pod {{`{{ $labels.pod }}`}} has restarted more than 3 times in the last hour"
 {{- end }}
