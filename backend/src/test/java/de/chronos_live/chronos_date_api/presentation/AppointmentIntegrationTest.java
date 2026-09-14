@@ -120,4 +120,170 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         // Assert
         assertThat(response.statusCode()).isEqualTo(400);
     }
+
+    @Test
+    void testUpdateAppointment_Success() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = new Appointment();
+        appointment.setName("Original Name");
+        appointment.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
+        appointment.setEndTime(appointment.getStartTime().plus(1, ChronoUnit.HOURS));
+        appointment.setStatus(AppointmentStatus.PLANNED);
+        appointment.setCreatorOidcId(TEST_USER_OIDC);
+        appointmentRepository.persist(appointment);
+
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("name", "Updated Name");
+
+        // Act
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body().jsonPath().getString("name")).isEqualTo("Updated Name");
+
+        // Verify in database
+        Appointment updated = appointmentRepository.findById(appointment.getId());
+        assertThat(updated.getName()).isEqualTo("Updated Name");
+    }
+
+    @Test
+    void testDeleteAppointment_Success() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = new Appointment();
+        appointment.setName("Test Appointment");
+        appointment.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
+        appointment.setEndTime(appointment.getStartTime().plus(1, ChronoUnit.HOURS));
+        appointment.setStatus(AppointmentStatus.PLANNED);
+        appointment.setCreatorOidcId(TEST_USER_OIDC);
+        appointmentRepository.persist(appointment);
+        Long appointmentId = appointment.getId();
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .delete("/api/v2/appointments/" + appointmentId)
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+
+        // Verify deleted from database
+        Appointment deleted = appointmentRepository.findById(appointmentId);
+        assertThat(deleted).isNull();
+    }
+
+    @Test
+    void testCancelAppointment_Success() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = new Appointment();
+        appointment.setName("Test Appointment");
+        appointment.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
+        appointment.setEndTime(appointment.getStartTime().plus(1, ChronoUnit.HOURS));
+        appointment.setStatus(AppointmentStatus.PLANNED);
+        appointment.setCreatorOidcId(TEST_USER_OIDC);
+        appointmentRepository.persist(appointment);
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .post("/api/v2/appointments/" + appointment.getId() + "/cancel")
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+
+        // Verify status changed in database
+        Appointment cancelled = appointmentRepository.findById(appointment.getId());
+        assertThat(cancelled.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
+    }
+
+    @Test
+    void testListAppointmentsWithPagination_Success() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        // Create multiple appointments
+        for (int i = 0; i < 15; i++) {
+            Appointment appointment = new Appointment();
+            appointment.setName("Appointment " + i);
+            appointment.setStartTime(Instant.now().plus(i, ChronoUnit.DAYS));
+            appointment.setEndTime(appointment.getStartTime().plus(1, ChronoUnit.HOURS));
+            appointment.setStatus(AppointmentStatus.PLANNED);
+            appointment.setCreatorOidcId(TEST_USER_OIDC);
+            appointmentRepository.persist(appointment);
+        }
+
+        // Act
+        var response = RestAssured
+                .given()
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/api/v2/appointments/")
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body().jsonPath().getList("items")).hasSize(10);
+        assertThat(response.body().jsonPath().getInt("meta.page")).isEqualTo(0);
+        assertThat(response.body().jsonPath().getInt("meta.size")).isEqualTo(10);
+        assertThat(response.body().jsonPath().getInt("meta.total")).isGreaterThanOrEqualTo(15);
+    }
+
+    @Test
+    void testListAppointmentsWithSearch_Success() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment1 = new Appointment();
+        appointment1.setName("Team Meeting");
+        appointment1.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
+        appointment1.setEndTime(appointment1.getStartTime().plus(1, ChronoUnit.HOURS));
+        appointment1.setStatus(AppointmentStatus.PLANNED);
+        appointment1.setCreatorOidcId(TEST_USER_OIDC);
+        appointmentRepository.persist(appointment1);
+
+        Appointment appointment2 = new Appointment();
+        appointment2.setName("Individual Review");
+        appointment2.setStartTime(Instant.now().plus(2, ChronoUnit.DAYS));
+        appointment2.setEndTime(appointment2.getStartTime().plus(1, ChronoUnit.HOURS));
+        appointment2.setStatus(AppointmentStatus.PLANNED);
+        appointment2.setCreatorOidcId(TEST_USER_OIDC);
+        appointmentRepository.persist(appointment2);
+
+        // Act
+        var response = RestAssured
+                .given()
+                .queryParam("search", "Team")
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/api/v2/appointments/")
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body().jsonPath().getList("items")).hasSize(1);
+        assertThat(response.body().jsonPath().getString("items[0].name")).isEqualTo("Team Meeting");
+    }
 }
