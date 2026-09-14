@@ -8,6 +8,8 @@ use chrono::{DateTime, Utc};
 pub struct ListAppointmentsQuery {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub sort_by: Option<String>,   // "date" or "title"
+    pub sort_dir: Option<String>,  // "asc" or "desc"
 }
 
 impl Default for ListAppointmentsQuery {
@@ -15,8 +17,24 @@ impl Default for ListAppointmentsQuery {
         Self {
             limit: Some(20),
             offset: Some(0),
+            sort_by: Some("date".to_string()),
+            sort_dir: Some("desc".to_string()),
         }
     }
+}
+
+/// Sort direction for appointments
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    Ascending,
+    Descending,
+}
+
+/// Sort field for appointments
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SortField {
+    Date,
+    Title,
 }
 
 /// Paginated response wrapper
@@ -39,51 +57,117 @@ impl AppointmentService {
         Self { repo }
     }
 
+    /// Parse sort field from string
+    fn parse_sort_field(field_str: &str) -> SortField {
+        match field_str.to_lowercase().as_str() {
+            "title" => SortField::Title,
+            _ => SortField::Date, // Default to date
+        }
+    }
+
+    /// Parse sort direction from string
+    fn parse_sort_direction(dir_str: &str) -> SortDirection {
+        match dir_str.to_lowercase().as_str() {
+            "asc" | "ascending" => SortDirection::Ascending,
+            _ => SortDirection::Descending, // Default to descending
+        }
+    }
+
+    /// Apply sorting to a list of appointments
+    fn apply_sorting(
+        mut appointments: Vec<Appointment>,
+        sort_field: SortField,
+        sort_direction: SortDirection,
+    ) -> Vec<Appointment> {
+        match sort_field {
+            SortField::Date => {
+                if sort_direction == SortDirection::Ascending {
+                    appointments.sort_by(|a, b| a.start_time.cmp(&b.start_time));
+                } else {
+                    appointments.sort_by(|a, b| b.start_time.cmp(&a.start_time));
+                }
+            }
+            SortField::Title => {
+                if sort_direction == SortDirection::Ascending {
+                    appointments.sort_by(|a, b| a.title.cmp(&b.title));
+                } else {
+                    appointments.sort_by(|a, b| b.title.cmp(&a.title));
+                }
+            }
+        }
+        appointments
+    }
+
     /// Get a single appointment by ID
     pub async fn get_appointment(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         self.repo.find_by_id(id).await
     }
 
-    /// List appointments visible to a user with pagination
+    /// List appointments visible to a user with pagination and sorting
     pub async fn list_user_appointments(
         &self,
         user_id: Uuid,
         query: ListAppointmentsQuery,
     ) -> Result<Vec<Appointment>, RepositoryError> {
-        let mut appointments = self.repo.find_visible_to_user(user_id).await?;
+        let appointments = self.repo.find_visible_to_user(user_id).await?;
+
+        // Parse sort parameters
+        let sort_field = query
+            .sort_by
+            .as_ref()
+            .map(|s| Self::parse_sort_field(s))
+            .unwrap_or(SortField::Date);
+
+        let sort_direction = query
+            .sort_dir
+            .as_ref()
+            .map(|d| Self::parse_sort_direction(d))
+            .unwrap_or(SortDirection::Descending);
+
+        // Apply sorting
+        let sorted_appointments = Self::apply_sorting(appointments, sort_field, sort_direction);
 
         // Apply pagination
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(20) as usize;
 
-        // Sort by start_time descending (most recent first)
-        appointments.sort_by(|a, b| b.start_time.cmp(&a.start_time));
-
-        // Apply pagination
-        let end = (offset + limit).min(appointments.len());
-        Ok(appointments
+        let end = (offset + limit).min(sorted_appointments.len());
+        Ok(sorted_appointments
             .into_iter()
             .skip(offset)
             .take(limit)
             .collect())
     }
 
-    /// List all appointments (admin only)
+    /// List all appointments (admin only) with sorting and pagination
     pub async fn list_all_appointments(
         &self,
         query: ListAppointmentsQuery,
     ) -> Result<Vec<Appointment>, RepositoryError> {
-        let mut appointments = self.repo.find_all().await?;
+        let appointments = self.repo.find_all().await?;
+
+        // Parse sort parameters
+        let sort_field = query
+            .sort_by
+            .as_ref()
+            .map(|s| Self::parse_sort_field(s))
+            .unwrap_or(SortField::Date);
+
+        let sort_direction = query
+            .sort_dir
+            .as_ref()
+            .map(|d| Self::parse_sort_direction(d))
+            .unwrap_or(SortDirection::Descending);
+
+        // Apply sorting
+        let sorted_appointments = Self::apply_sorting(appointments, sort_field, sort_direction);
 
         // Apply pagination
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(20) as usize;
 
-        // Sort by start_time descending (most recent first)
-        appointments.sort_by(|a, b| b.start_time.cmp(&a.start_time));
-
-        // Apply pagination
-        Ok(appointments
+        let end = (offset + limit).min(sorted_appointments.len());
+        Ok(sorted_appointments
             .into_iter()
             .skip(offset)
             .take(limit)

@@ -26,6 +26,10 @@ pub struct AppState {
 pub struct ListQuery {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    /// Sort by field: "date" (start_time, default) or "title"
+    pub sort_by: Option<String>,
+    /// Sort direction: "asc" or "desc" (default is "desc" for date, "asc" for title)
+    pub sort_dir: Option<String>,
 }
 
 /// GET /api/v2/appointments/:id - Fetch a single appointment by ID
@@ -82,6 +86,8 @@ pub async fn list_appointments(
             crate::appointments::services::ListAppointmentsQuery {
                 limit: query.limit.or(Some(20)),
                 offset: query.offset.or(Some(0)),
+                sort_by: query.sort_by.clone(),
+                sort_dir: query.sort_dir.clone(),
             },
         )
         .await
