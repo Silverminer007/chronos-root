@@ -100,4 +100,92 @@ impl AppointmentRepository {
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
+
+    /// Create a new appointment
+    pub async fn create(
+        &self,
+        title: String,
+        description: Option<String>,
+        location: Option<String>,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        creator_id: Uuid,
+    ) -> Result<Appointment, RepositoryError> {
+        let now = Utc::now();
+        let id = Uuid::new_v4();
+
+        sqlx::query_as::<_, Appointment>(
+            "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at"
+        )
+        .bind(id)
+        .bind(title)
+        .bind(description)
+        .bind(start_time)
+        .bind(end_time)
+        .bind(location)
+        .bind(creator_id)
+        .bind(now)
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Update an appointment
+    pub async fn update(
+        &self,
+        id: Uuid,
+        title: Option<String>,
+        description: Option<String>,
+        location: Option<String>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+    ) -> Result<Appointment, RepositoryError> {
+        // Fetch current appointment to get non-null fields
+        let current = self.find_by_id(id).await?
+            .ok_or(RepositoryError::NotFound)?;
+
+        let updated_title = title.unwrap_or(current.title);
+        let updated_description = description.or(current.description);
+        let updated_location = location.or(current.location);
+        let updated_start_time = start_time.unwrap_or(current.start_time);
+        let updated_end_time = end_time.unwrap_or(current.end_time);
+        let now = Utc::now();
+
+        sqlx::query_as::<_, Appointment>(
+            "UPDATE appointments
+             SET title = $2, description = $3, location = $4, start_time = $5, end_time = $6, updated_at = $7
+             WHERE id = $1
+             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at"
+        )
+        .bind(id)
+        .bind(updated_title)
+        .bind(updated_description)
+        .bind(updated_location)
+        .bind(updated_start_time)
+        .bind(updated_end_time)
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Delete an appointment
+    pub async fn delete(&self, id: Uuid) -> Result<(), RepositoryError> {
+        let result = sqlx::query(
+            "DELETE FROM appointments WHERE id = $1"
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(RepositoryError::NotFound);
+        }
+
+        Ok(())
+    }
 }

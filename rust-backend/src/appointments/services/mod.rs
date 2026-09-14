@@ -190,6 +190,59 @@ impl AppointmentService {
     ) -> Result<Vec<Appointment>, RepositoryError> {
         self.repo.find_by_date_range(start, end).await
     }
+
+    /// Create a new appointment
+    pub async fn create_appointment(
+        &self,
+        title: String,
+        description: Option<String>,
+        location: Option<String>,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        creator_id: Uuid,
+    ) -> Result<Appointment, RepositoryError> {
+        // Validation
+        if title.is_empty() {
+            return Err(RepositoryError::InvalidInput("Title cannot be empty".to_string()));
+        }
+
+        if start_time >= end_time {
+            return Err(RepositoryError::InvalidInput("Start time must be before end time".to_string()));
+        }
+
+        self.repo.create(title, description, location, start_time, end_time, creator_id).await
+    }
+
+    /// Update an appointment
+    pub async fn update_appointment(
+        &self,
+        id: Uuid,
+        title: Option<String>,
+        description: Option<String>,
+        location: Option<String>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+    ) -> Result<Appointment, RepositoryError> {
+        // Validation
+        if let Some(ref t) = title {
+            if t.is_empty() {
+                return Err(RepositoryError::InvalidInput("Title cannot be empty".to_string()));
+            }
+        }
+
+        if let (Some(start), Some(end)) = (start_time, end_time) {
+            if start >= end {
+                return Err(RepositoryError::InvalidInput("Start time must be before end time".to_string()));
+            }
+        }
+
+        self.repo.update(id, title, description, location, start_time, end_time).await
+    }
+
+    /// Delete an appointment
+    pub async fn delete_appointment(&self, id: Uuid) -> Result<(), RepositoryError> {
+        self.repo.delete(id).await
+    }
 }
 
 #[cfg(test)]
