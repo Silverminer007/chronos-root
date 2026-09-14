@@ -10,10 +10,12 @@ use tracing::{debug, warn};
 
 use super::{token::TokenValidator, principal::PrincipalContext};
 
+const BEARER_PREFIX: &str = "Bearer ";
+
 /// Extracts Bearer token from Authorization header
 fn extract_bearer_token(auth_header: &str) -> Option<&str> {
-    if auth_header.starts_with("Bearer ") {
-        Some(&auth_header[7..])
+    if auth_header.starts_with(BEARER_PREFIX) {
+        Some(&auth_header[BEARER_PREFIX.len()..])
     } else {
         None
     }
@@ -65,9 +67,6 @@ pub async fn auth_middleware(
         }
     }
 }
-
-#[derive(Clone)]
-pub struct AuthMiddleware;
 
 #[cfg(test)]
 mod tests {

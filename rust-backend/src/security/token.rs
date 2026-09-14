@@ -1,6 +1,7 @@
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::{SystemTime, Duration};
 use tokio::sync::RwLock;
 
 /// Claims extracted from a JWT token
@@ -53,20 +54,35 @@ impl std::fmt::Display for TokenError {
 
 impl std::error::Error for TokenError {}
 
+/// Cached key set with timestamp
+struct CachedKeySet {
+    keyset: KeySet,
+    cached_at: SystemTime,
+}
+
 /// Validates JWT tokens against a Keycloak instance
 pub struct TokenValidator {
     keycloak_url: String,
-    key_cache: Arc<RwLock<Option<KeySet>>>,
+    key_cache: Arc<RwLock<Option<CachedKeySet>>>,
     http_client: reqwest::Client,
+    /// Cache TTL in seconds (default 1 hour)
+    cache_ttl: Duration,
 }
 
 impl TokenValidator {
     /// Create a new token validator for a Keycloak instance
+    /// Cache TTL defaults to 1 hour
     pub fn new(keycloak_url: String) -> Self {
+        Self::with_cache_ttl(keycloak_url, Duration::from_secs(3600))
+    }
+
+    /// Create a token validator with custom cache TTL
+    pub fn with_cache_ttl(keycloak_url: String, cache_ttl: Duration) -> Self {
         Self {
             keycloak_url,
             key_cache: Arc::new(RwLock::new(None)),
             http_client: reqwest::Client::new(),
+            cache_ttl,
         }
     }
 
@@ -91,13 +107,22 @@ impl TokenValidator {
     async fn get_keyset(&self) -> Result<KeySet, TokenError> {
         {
             let cache = self.key_cache.read().await;
-            if let Some(keyset) = cache.as_ref() {
-                return Ok(keyset.clone());
+            if let Some(cached) = cache.as_ref() {
+                // Check if cache is still valid
+                if let Ok(elapsed) = cached.cached_at.elapsed() {
+                    if elapsed < self.cache_ttl {
+                        return Ok(cached.keyset.clone());
+                    }
+                }
             }
         }
 
         let keyset = self.fetch_keyset().await?;
-        *self.key_cache.write().await = Some(keyset.clone());
+        let cached = CachedKeySet {
+            keyset: keyset.clone(),
+            cached_at: SystemTime::now(),
+        };
+        *self.key_cache.write().await = Some(cached);
         Ok(keyset)
     }
 
@@ -129,12 +154,11 @@ impl TokenValidator {
 
         let token_data = decode::<TokenClaims>(token, &decoding_key, &validation)
             .map_err(|e| {
-                if e.to_string().contains("ExpiredSignature") {
-                    TokenError::TokenExpired
-                } else if e.to_string().contains("InvalidSignature") {
-                    TokenError::InvalidSignature
-                } else {
-                    TokenError::InvalidToken(e.to_string())
+                use jsonwebtoken::errors::ErrorKind;
+                match e.kind() {
+                    ErrorKind::ExpiredSignature => TokenError::TokenExpired,
+                    ErrorKind::InvalidSignature => TokenError::InvalidSignature,
+                    _ => TokenError::InvalidToken(e.to_string()),
                 }
             })?;
 
@@ -181,5 +205,15 @@ mod tests {
     async fn test_token_validator_creation() {
         let validator = TokenValidator::new("http://keycloak:8080/realms/chronos".to_string());
         assert_eq!(validator.keycloak_url, "http://keycloak:8080/realms/chronos");
+    }
+
+    #[tokio::test]
+    async fn test_token_validator_with_custom_ttl() {
+        let ttl = Duration::from_secs(60);
+        let validator = TokenValidator::with_cache_ttl(
+            "http://localhost:8080".to_string(),
+            ttl,
+        );
+        assert_eq!(validator.cache_ttl, ttl);
     }
 }

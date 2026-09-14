@@ -2,7 +2,8 @@
 pub mod token;
 pub mod principal;
 pub mod middleware;
+pub mod scopes;
 
 pub use token::TokenValidator;
 pub use principal::PrincipalContext;
-pub use middleware::AuthMiddleware;
+pub use scopes::{TokenScope, ScopeError};

@@ -46,8 +46,7 @@ where
         parts
             .extensions
             .get::<Arc<PrincipalContext>>()
-            .cloned()
-            .map(|arc| (*arc).clone())
+            .map(|arc| (**arc).clone())
             .ok_or(PrincipalError)
     }
 }
