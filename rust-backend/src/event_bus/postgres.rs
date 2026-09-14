@@ -31,8 +31,14 @@ impl EventBus for PostgresEventBus {
     /// Fire an event - insert it into events table and NOTIFY subscribers
     async fn fire(&self, event: Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Validate event_type is a valid PostgreSQL identifier for NOTIFY
-        if !event.event_type.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            return Err("Invalid event_type: must contain only alphanumeric chars and underscores".into());
+        if !event
+            .event_type
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_')
+        {
+            return Err(
+                "Invalid event_type: must contain only alphanumeric chars and underscores".into(),
+            );
         }
 
         // Insert event into events table for persistence
@@ -52,9 +58,7 @@ impl EventBus for PostgresEventBus {
         // NOTIFY all subscribers listening on this channel
         // Include the event ID in the payload so subscribers can fetch the full event
         let notify_query = format!("NOTIFY {}, '{}'", event.event_type, event.id);
-        sqlx::query(&notify_query)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(&notify_query).execute(&self.pool).await?;
 
         info!("Event fired: {} (id: {})", event.event_type, event.id);
         Ok(())
@@ -160,7 +164,7 @@ mod tests {
 
             // Query the events table to verify persistence
             let result = sqlx::query_as::<_, (String, String)>(
-                "SELECT id, event_type FROM events WHERE id = $1"
+                "SELECT id, event_type FROM events WHERE id = $1",
             )
             .bind(&event_id)
             .fetch_one(&pool)
