@@ -32,10 +32,15 @@ pub struct ListQuery {
 pub async fn get_appointment(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-    _principal: PrincipalContext,
+    principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
+
+    // Get user ID from the authenticated principal
+    let user_id_str = principal.user_id();
+    let user_id = Uuid::parse_str(&user_id_str)
+        .map_err(|_| AppointmentError::DatabaseError)?;
 
     // Fetch the appointment
     let appointment = service
@@ -44,8 +49,12 @@ pub async fn get_appointment(
         .map_err(|_| AppointmentError::DatabaseError)?
         .ok_or(AppointmentError::NotFound)?;
 
-    // TODO: Authorization check - user must be creator or invited participant
-    // For now, allow all authenticated users to see all appointments
+    // Authorization check - user must be creator or invited participant
+    // For now, only allow creators to view their appointments
+    // TODO: Also check if user is a participant in the appointment_participants table
+    if appointment.creator_id != user_id {
+        return Err(AppointmentError::Unauthorized);
+    }
 
     let response: AppointmentResponse = appointment.into();
     Ok(Json(response))
@@ -55,17 +64,26 @@ pub async fn get_appointment(
 pub async fn list_appointments(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListQuery>,
-    _principal: PrincipalContext,
+    principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
-    // TODO: Apply authorization filter to only show appointments user can see
+    // Get user ID from the authenticated principal
+    // Note: principal.user_id() returns String, we need to convert to UUID
+    let user_id_str = principal.user_id();
+    let user_id = uuid::Uuid::parse_str(&user_id_str)
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    // List only appointments visible to this user
     let appointments = service
-        .list_appointments(crate::appointments::services::ListAppointmentsQuery {
-            limit: query.limit.or(Some(20)),
-            offset: query.offset.or(Some(0)),
-        })
+        .list_user_appointments(
+            user_id,
+            crate::appointments::services::ListAppointmentsQuery {
+                limit: query.limit.or(Some(20)),
+                offset: query.offset.or(Some(0)),
+            },
+        )
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
 

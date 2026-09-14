@@ -1,6 +1,7 @@
 use crate::appointments::models::Appointment;
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 /// Query parameters for listing appointments
 #[derive(Debug, Clone)]
@@ -43,14 +44,50 @@ impl AppointmentService {
         self.repo.find_by_id(id).await
     }
 
-    /// List all appointments
-    pub async fn list_appointments(
+    /// List appointments visible to a user with pagination
+    pub async fn list_user_appointments(
+        &self,
+        user_id: Uuid,
+        query: ListAppointmentsQuery,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
+        let mut appointments = self.repo.find_visible_to_user(user_id).await?;
+
+        // Apply pagination
+        let offset = query.offset.unwrap_or(0) as usize;
+        let limit = query.limit.unwrap_or(20) as usize;
+
+        // Sort by start_time descending (most recent first)
+        appointments.sort_by(|a, b| b.start_time.cmp(&a.start_time));
+
+        // Apply pagination
+        let end = (offset + limit).min(appointments.len());
+        Ok(appointments
+            .into_iter()
+            .skip(offset)
+            .take(limit)
+            .collect())
+    }
+
+    /// List all appointments (admin only)
+    pub async fn list_all_appointments(
         &self,
         query: ListAppointmentsQuery,
     ) -> Result<Vec<Appointment>, RepositoryError> {
-        // For now, just return all appointments
-        // TODO: Implement filtering and pagination
-        self.repo.find_all().await
+        let mut appointments = self.repo.find_all().await?;
+
+        // Apply pagination
+        let offset = query.offset.unwrap_or(0) as usize;
+        let limit = query.limit.unwrap_or(20) as usize;
+
+        // Sort by start_time descending (most recent first)
+        appointments.sort_by(|a, b| b.start_time.cmp(&a.start_time));
+
+        // Apply pagination
+        Ok(appointments
+            .into_iter()
+            .skip(offset)
+            .take(limit)
+            .collect())
     }
 
     /// Get appointments for a specific creator
@@ -59,6 +96,15 @@ impl AppointmentService {
         creator_id: Uuid,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         self.repo.find_by_creator(creator_id).await
+    }
+
+    /// Get appointments within a date range
+    pub async fn get_appointments_by_date_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
+        self.repo.find_by_date_range(start, end).await
     }
 }
 
