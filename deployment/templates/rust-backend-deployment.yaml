@@ -1,0 +1,47 @@
+{{- if .Values.rustBackend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chronos-rust-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.rustBackend.autoscaling.enabled }}
+  replicas: {{ .Values.rustBackend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: chronos-rust-backend
+  template:
+    metadata:
+      labels:
+        app: chronos-rust-backend
+    spec:
+      imagePullSecrets:
+        - name: chronos-docker-secret
+      containers:
+        - name: chronos-rust
+          image: "{{ .Values.rustBackend.image.repository }}:{{ .Values.rustBackend.image.tag }}"
+          imagePullPolicy: {{ .Values.rustBackend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.rustBackend.containerPort }}
+          env:
+            {{- range $key, $value := .Values.rustBackend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.rustBackend.envFromSecrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.rustBackend.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.rustBackend.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.rustBackend.readinessProbe | nindent 12 }}
+{{- end }}

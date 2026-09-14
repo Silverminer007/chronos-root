@@ -128,6 +128,51 @@ backend:
     initialDelaySeconds: 5
     periodSeconds: 5
 
+rustBackend:
+  enabled: false
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  image:
+    repository: ghcr.io/silverminer007/chronos-rust-backend
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  env:
+    DB_URL: "postgresql://postgres:5432/chronos"
+    DB_USER: "postgres"
+    AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
+  envFromSecrets:
+    - name: DB_PASSWORD
+      secretName: chronos-secret
+      secretKey: database_password
+  livenessProbe:
+    httpGet:
+      path: /q/health/live
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /q/health/ready
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
 postgresql:
   enabled: true
   image:

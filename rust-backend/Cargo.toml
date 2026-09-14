@@ -1,0 +1,31 @@
+[package]
+name = "chronos_date_api"
+version = "0.1.0"
+edition = "2021"
+
+# Build with minimal dependencies for now
+# The full web stack dependencies will be added incrementally
+
+[[bin]]
+name = "chronos_date_api"
+path = "src/main.rs"
+
+[features]
+default = ["web"]
+web = ["axum", "tokio", "serde", "serde_json", "tracing", "tracing-subscriber"]
+
+[dependencies]
+# Web framework and async runtime
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
