@@ -51,7 +51,10 @@ impl TestAuthHelper {
     }
 
     /// Create a test JWT from a UUID
-    pub fn create_token_from_uuid(&self, user_id: Uuid) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn create_token_from_uuid(
+        &self,
+        user_id: Uuid,
+    ) -> Result<String, jsonwebtoken::errors::Error> {
         self.create_token(&user_id.to_string())
     }
 
@@ -75,7 +78,9 @@ mod tests {
     #[test]
     fn test_create_token() {
         let helper = TestAuthHelper::new();
-        let token = helper.create_token("test-user-123").expect("Failed to create token");
+        let token = helper
+            .create_token("test-user-123")
+            .expect("Failed to create token");
         assert!(!token.is_empty());
     }
 
@@ -95,7 +100,9 @@ mod tests {
     #[test]
     fn test_create_auth_header() {
         let helper = TestAuthHelper::new();
-        let header = helper.create_auth_header("test-user-789").expect("Failed to create header");
+        let header = helper
+            .create_auth_header("test-user-789")
+            .expect("Failed to create header");
         assert!(header.starts_with("Bearer "));
     }
 
@@ -112,7 +119,9 @@ mod tests {
     #[test]
     fn test_token_not_expired() {
         let helper = TestAuthHelper::new();
-        let token = helper.create_token("test-user-123").expect("Failed to create token");
+        let token = helper
+            .create_token("test-user-123")
+            .expect("Failed to create token");
 
         // Token should be valid (no way to verify without secret validation setup)
         // But we can at least verify it's a valid JWT format

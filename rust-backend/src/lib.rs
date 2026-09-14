@@ -10,3 +10,6 @@ pub mod push_notifications;
 pub mod reminders;
 pub mod security;
 pub mod users;
+
+#[cfg(test)]
+pub mod test_utils;

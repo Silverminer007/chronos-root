@@ -14,10 +14,7 @@ impl TestHttpClient {
     }
 
     /// Make a GET request
-    pub async fn get(
-        &self,
-        path: &str,
-    ) -> Result<reqwest::Response, reqwest::Error> {
+    pub async fn get(&self, path: &str) -> Result<reqwest::Response, reqwest::Error> {
         self.client
             .get(format!("{}{}", self.base_url, path))
             .send()

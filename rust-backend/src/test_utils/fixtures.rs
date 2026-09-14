@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Test fixture for creating reproducible test data
 #[derive(Clone, Debug)]
@@ -42,14 +42,12 @@ impl TestFixtures {
         name: &str,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
         let group_id = Uuid::new_v4();
-        sqlx::query(
-            "INSERT INTO groups (id, name, owner_id) VALUES ($1, $2, $3)"
-        )
-        .bind(group_id)
-        .bind(name)
-        .bind(owner_id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("INSERT INTO groups (id, name, owner_id) VALUES ($1, $2, $3)")
+            .bind(group_id)
+            .bind(name)
+            .bind(owner_id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(group_id)
     }
@@ -187,8 +185,7 @@ mod tests {
     #[test]
     fn test_appointment_fixture_times() {
         let now = Utc::now();
-        let fixture = AppointmentFixture::new()
-            .with_times(now, now + chrono::Duration::hours(2));
+        let fixture = AppointmentFixture::new().with_times(now, now + chrono::Duration::hours(2));
 
         assert_eq!(fixture.start_time, now);
         assert_eq!(fixture.end_time, now + chrono::Duration::hours(2));

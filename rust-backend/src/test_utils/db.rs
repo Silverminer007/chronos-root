@@ -117,9 +117,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_database_connection() {
-        let db = TestDb::new()
-            .await
-            .expect("Failed to create test database");
+        let db = TestDb::new().await.expect("Failed to create test database");
 
         // Verify we can query the database
         let result: (i32,) = sqlx::query_as("SELECT 1")
@@ -133,9 +131,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_rollback_all() {
-        let db = TestDb::new()
-            .await
-            .expect("Failed to create test database");
+        let db = TestDb::new().await.expect("Failed to create test database");
 
         // Insert a test user
         sqlx::query(
@@ -158,9 +154,7 @@ mod tests {
         assert_eq!(count.0, 1);
 
         // Rollback
-        db.rollback_all()
-            .await
-            .expect("Failed to rollback");
+        db.rollback_all().await.expect("Failed to rollback");
 
         // Verify user is gone
         let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
