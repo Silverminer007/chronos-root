@@ -1,5 +1,6 @@
 package de.chronos_live.admin.presentation;
 
+import de.chronos_live.admin.application.AdminAppointmentService;
 import de.chronos_live.admin.dto.AdminAddGroupParticipantDto;
 import de.chronos_live.admin.dto.AdminChangeParticipationStatusDto;
 import de.chronos_live.chronos_date_api.application.AppointmentParticipationService;
@@ -10,6 +11,7 @@ import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.dto.CreateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.MessageDto;
+import de.chronos_live.chronos_date_api.dto.PagedResponse;
 import de.chronos_live.chronos_date_api.mapper.AppointmentMapper;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.micrometer.core.annotation.Timed;
@@ -30,6 +32,8 @@ import java.time.Instant;
 @Path("/api/v2/admin/appointments")
 @Timed("api.admin.appointments")
 public class AdminAppointmentResource {
+    @Inject
+    AdminAppointmentService adminAppointmentService;
     @Inject
     PrincipalContext principalContext;
     @Inject
@@ -78,5 +82,13 @@ public class AdminAppointmentResource {
     public Response sendMessage(@RequestBody MessageDto dto) {
         this.messageService.sendMessage(dto.appointment_id(), dto.body(), dto.sender_id(), Instant.parse(dto.timestamp()));
         return Response.ok().build();
+    }
+
+    @GET
+    @Path("/")
+    public Response listAppointments(@QueryParam("page") @DefaultValue("0") int page,
+                                     @QueryParam("size") @DefaultValue("20") int size) {
+        PagedResponse<?> response = adminAppointmentService.listAppointments(page, size);
+        return Response.ok(response).build();
     }
 }

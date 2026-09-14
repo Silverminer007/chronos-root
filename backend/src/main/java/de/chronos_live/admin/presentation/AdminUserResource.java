@@ -15,7 +15,7 @@ import jakarta.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN_API")
-@Path("/api/v2/admin/user")
+@Path("/api/v2/admin/users")
 @Timed("api.admin.users")
 public class AdminUserResource {
 
@@ -31,11 +31,22 @@ public class AdminUserResource {
     }
 
     @GET
-    @Path("{id}")
+    @Path("/{id}")
     public Response getUserById(@PathParam("id") String oidcId) {
         try {
             AdminUserDto user = adminUserService.getUserByOidcId(oidcId);
             return Response.ok(user).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+    }
+
+    @DELETE
+    @Path("/{id}")
+    public Response deleteUser(@PathParam("id") String oidcId) {
+        try {
+            adminUserService.deleteUser(oidcId);
+            return Response.noContent().build();
         } catch (NotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
