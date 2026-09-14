@@ -1,12 +1,12 @@
 use axum::{
-    extract::Path, http::StatusCode, middleware, response::IntoResponse, routing::get, Json, Router,
+    extract::Path, http::StatusCode, middleware, response::IntoResponse, routing::{get, post, put, delete}, Json, Router,
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use chronos_date_api::database::init_pool;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
-use chronos_date_api::appointments::handlers::{AppState, get_appointment, list_appointments};
+use chronos_date_api::appointments::handlers::{AppState, get_appointment, list_appointments, create_appointment, update_appointment, move_appointment, delete_appointment};
 
 #[tokio::main]
 async fn main() {
@@ -37,8 +37,9 @@ async fn main() {
     // Protected routes require authentication
     let protected_routes = Router::new()
         .route("/api/v2/me", get(get_user_info))
-        .route("/api/v2/appointments", get(list_appointments))
-        .route("/api/v2/appointments/:id", get(get_appointment))
+        .route("/api/v2/appointments", get(list_appointments).post(create_appointment))
+        .route("/api/v2/appointments/:id", get(get_appointment).put(update_appointment).delete(delete_appointment))
+        .route("/api/v2/appointments/:id/move", put(move_appointment))
         .with_state(app_state)
         .layer(
             middleware::from_fn_with_state(

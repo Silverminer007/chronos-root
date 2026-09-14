@@ -102,12 +102,29 @@ pub struct Message {
 /// Request to create a new appointment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAppointmentRequest {
-    pub name: String,
+    pub title: String,
     pub description: Option<String>,
-    pub venue: Option<String>,
+    pub location: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub minimal_attendees: Option<i32>,
+}
+
+/// Request to update an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateAppointmentRequest {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+}
+
+/// Request to move/reschedule an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveAppointmentRequest {
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
 }
 
 /// Response with appointment details
