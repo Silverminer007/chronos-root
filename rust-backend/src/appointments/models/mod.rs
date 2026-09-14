@@ -1,6 +1,6 @@
 // Data models for appointments
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Participation status for an appointment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -255,22 +255,10 @@ mod tests {
 
     #[test]
     fn test_user_role_serialization() {
-        assert_eq!(
-            serde_json::to_string(&UserRole::None).unwrap(),
-            "\"NONE\""
-        );
-        assert_eq!(
-            serde_json::to_string(&UserRole::Guest).unwrap(),
-            "\"GUEST\""
-        );
-        assert_eq!(
-            serde_json::to_string(&UserRole::Attendant).unwrap(),
-            "\"ATTENDANT\""
-        );
-        assert_eq!(
-            serde_json::to_string(&UserRole::Helper).unwrap(),
-            "\"HELPER\""
-        );
+        assert_eq!(serde_json::to_string(&UserRole::None).unwrap(), "\"NONE\"");
+        assert_eq!(serde_json::to_string(&UserRole::Guest).unwrap(), "\"GUEST\"");
+        assert_eq!(serde_json::to_string(&UserRole::Attendant).unwrap(), "\"ATTENDANT\"");
+        assert_eq!(serde_json::to_string(&UserRole::Helper).unwrap(), "\"HELPER\"");
         assert_eq!(
             serde_json::to_string(&UserRole::Responsible).unwrap(),
             "\"RESPONSIBLE\""
