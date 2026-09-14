@@ -1,0 +1,20 @@
+{{- if .Values.rustBackend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: chronos-rust-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.namespace }}-rust-backend
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "chronos.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.rustBackend.service.type }}
+  selector:
+    app: chronos-rust-backend
+  ports:
+    - port: {{ .Values.rustBackend.service.port }}
+      targetPort: {{ .Values.rustBackend.containerPort }}
+      protocol: TCP
+      name: http
+{{- end }}
