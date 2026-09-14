@@ -2,6 +2,7 @@
 
 pub mod error;
 pub mod database;
+pub mod event_bus;
 
 pub mod appointments;
 pub mod users;
