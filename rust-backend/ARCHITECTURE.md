@@ -65,10 +65,23 @@ Each feature module (`appointments/`, `users/`, `groups/`, `push_notifications/`
 - Schema: Shared PostgreSQL with Quarkus backend (initially)
 - Location: `{feature}/services/mod.rs` (repository functions) or new `infrastructure/` module
 
-### Authentication (Security Layer)
-- Planned: Keycloak OIDC integration (via `actix-web-httpauth` or similar)
-- Token validation: Service middleware
-- Location: New `security/` module or `middleware/`
+### Authentication (Security Layer) — IMPLEMENTED (Issue #25)
+- **Status**: Keycloak OIDC token validation implemented and integrated
+- **Components**:
+  - `security/token.rs`: TokenValidator for JWT validation against Keycloak public keys
+    - Automatic key caching with 1-hour TTL (configurable)
+    - RS256 algorithm validation
+    - Proper error handling (ExpiredSignature, InvalidSignature, KeyFetchError)
+  - `security/principal.rs`: PrincipalContext for request-scoped user ID storage
+    - Axum FromRequestParts extractor implementation
+    - Equivalent to Java backend's PrincipalContext bean
+  - `security/middleware.rs`: auth_middleware function for Axum integration
+    - Validates Bearer tokens in Authorization header
+    - Returns 401 for missing or invalid tokens
+    - Injects PrincipalContext into request extensions
+  - `security/scopes.rs`: TokenScope enum for future scope/role validation
+- **Usage**: Apply `auth_middleware` via Axum middleware layer on protected routes
+- **Future Work**: Authorization layer (role/scope validation, similar to Java's AuthorizationService)
 
 ### Event Publishing (Application Events)
 - Planned: Tokio channels or async-broadcast crate
@@ -99,6 +112,14 @@ Each feature module (`appointments/`, `users/`, `groups/`, `push_notifications/`
 - **Kubernetes**: Helm chart templates (`deployment/templates/rust-backend-*.yaml`)
 - **Health Checks**: Liveness and readiness probes on `/q/health/live` and `/q/health/ready`
 
-## Current Scaffolding
+## Implementation Status
 
-This is the initial scaffolding phase (issue #23). The handlers, models, and services modules are placeholders. As features are implemented, they will be populated with actual business logic following this architecture.
+### Completed
+- **Issue #23**: Project scaffolding & Axum setup - Feature modules with handlers/models/services structure
+- **Issue #25**: Auth/security layer - Keycloak OIDC token validation and middleware integration
+
+### In Progress / Planned
+- **Issue #24**: Database layer - SQLx/PostgreSQL integration
+- Event publishing (async channels for side-effects)
+- Authorization layer (role/scope validation)
+- Additional feature implementations (appointments, users, groups, etc.)
