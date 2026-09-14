@@ -1,10 +1,12 @@
 /// Integration tests for appointment mutation endpoints (POST/PUT/DELETE)
 #[cfg(test)]
 mod appointment_mutation_tests {
-    use chronos_date_api::appointments::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, MoveAppointmentRequest};
-    use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures, TestAuthHelper};
-    use uuid::Uuid;
+    use chronos_date_api::appointments::models::{
+        Appointment, CreateAppointmentRequest, MoveAppointmentRequest, UpdateAppointmentRequest,
+    };
+    use chronos_date_api::test_utils::{AppointmentFixture, TestAuthHelper, TestDb, TestFixtures};
     use chrono::Utc;
+    use uuid::Uuid;
 
     #[tokio::test]
     #[ignore]
@@ -32,7 +34,8 @@ mod appointment_mutation_tests {
         };
 
         // Create the appointment
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo =
+            chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         let created = service
@@ -69,7 +72,9 @@ mod appointment_mutation_tests {
             .expect("Failed to create test user");
 
         let now = Utc::now();
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         // Try to create appointment with empty title
@@ -103,7 +108,9 @@ mod appointment_mutation_tests {
             .expect("Failed to create test user");
 
         let now = Utc::now();
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         // Try to create appointment with invalid time range (start >= end)
@@ -146,7 +153,9 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to create appointment");
 
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         // Update the appointment
@@ -165,7 +174,8 @@ mod appointment_mutation_tests {
         // Verify the update
         assert_eq!(updated.title, "Updated Title");
         assert_eq!(updated.description, Some("Updated description".to_string()));
-        assert_eq!(updated.location, Some("Room A".to_string())); // Location should remain unchanged
+        // Location should remain unchanged
+        assert_eq!(updated.location, Some("Room A".to_string()));
     }
 
     #[tokio::test]
@@ -190,7 +200,9 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to create appointment");
 
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         // Try to update with empty title
@@ -231,7 +243,9 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to create appointment");
 
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         let now = Utc::now();
@@ -254,7 +268,8 @@ mod appointment_mutation_tests {
         // Verify the move
         assert_eq!(moved.start_time, new_start);
         assert_eq!(moved.end_time, new_end);
-        assert_eq!(moved.title, "Meeting to Move"); // Title should remain unchanged
+        // Title should remain unchanged
+        assert_eq!(moved.title, "Meeting to Move");
     }
 
     #[tokio::test]
@@ -279,13 +294,13 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to create appointment");
 
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         // Delete the appointment
-        let result = service
-            .delete_appointment(appointment_id)
-            .await;
+        let result = service.delete_appointment(appointment_id).await;
 
         assert!(result.is_ok());
 
@@ -306,15 +321,15 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to initialize test database");
 
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         let fake_id = Uuid::new_v4();
 
         // Try to delete non-existent appointment
-        let result = service
-            .delete_appointment(fake_id)
-            .await;
+        let result = service.delete_appointment(fake_id).await;
 
         // Should fail with NotFound
         assert!(result.is_err());
@@ -328,7 +343,9 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to initialize test database");
 
-        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(db.pool().clone());
+        let repo = chronos_date_api::appointments::repository::AppointmentRepository::new(
+            db.pool().clone(),
+        );
         let service = chronos_date_api::appointments::services::AppointmentService::new(repo);
 
         let fake_id = Uuid::new_v4();

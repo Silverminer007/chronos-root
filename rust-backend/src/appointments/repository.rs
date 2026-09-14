@@ -115,8 +115,9 @@ impl AppointmentRepository {
         let id = Uuid::new_v4();
 
         sqlx::query_as::<_, Appointment>(
-            "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "INSERT INTO appointments \
+             (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
              RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at"
         )
         .bind(id)
@@ -155,9 +156,9 @@ impl AppointmentRepository {
         let now = Utc::now();
 
         sqlx::query_as::<_, Appointment>(
-            "UPDATE appointments
-             SET title = $2, description = $3, location = $4, start_time = $5, end_time = $6, updated_at = $7
-             WHERE id = $1
+            "UPDATE appointments \
+             SET title = $2, description = $3, location = $4, start_time = $5, end_time = $6, updated_at = $7 \
+             WHERE id = $1 \
              RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at"
         )
         .bind(id)

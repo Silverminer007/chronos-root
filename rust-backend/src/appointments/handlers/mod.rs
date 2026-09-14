@@ -127,7 +127,9 @@ pub async fn create_appointment(
         )
         .await
         .map_err(|e| match e {
-            crate::appointments::repository::RepositoryError::InvalidInput(_) => AppointmentError::ValidationError(e.to_string()),
+            crate::appointments::repository::RepositoryError::InvalidInput(_) => {
+                AppointmentError::ValidationError(e.to_string())
+            }
             _ => AppointmentError::DatabaseError,
         })?;
 
@@ -164,10 +166,19 @@ pub async fn update_appointment(
 
     // Update the appointment
     let updated_appointment = service
-        .update_appointment(id, request.title, request.description, request.location, request.start_time, request.end_time)
+        .update_appointment(
+            id,
+            request.title,
+            request.description,
+            request.location,
+            request.start_time,
+            request.end_time,
+        )
         .await
         .map_err(|e| match e {
-            crate::appointments::repository::RepositoryError::InvalidInput(_) => AppointmentError::ValidationError(e.to_string()),
+            crate::appointments::repository::RepositoryError::InvalidInput(_) => {
+                AppointmentError::ValidationError(e.to_string())
+            }
             _ => AppointmentError::DatabaseError,
         })?;
 
@@ -204,10 +215,19 @@ pub async fn move_appointment(
 
     // Update the appointment (move to new time)
     let updated_appointment = service
-        .update_appointment(id, None, None, None, Some(request.start_time), Some(request.end_time))
+        .update_appointment(
+            id,
+            None,
+            None,
+            None,
+            Some(request.start_time),
+            Some(request.end_time),
+        )
         .await
         .map_err(|e| match e {
-            crate::appointments::repository::RepositoryError::InvalidInput(_) => AppointmentError::ValidationError(e.to_string()),
+            crate::appointments::repository::RepositoryError::InvalidInput(_) => {
+                AppointmentError::ValidationError(e.to_string())
+            }
             _ => AppointmentError::DatabaseError,
         })?;
 
@@ -262,16 +282,19 @@ pub enum AppointmentError {
 impl IntoResponse for AppointmentError {
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
-            AppointmentError::NotFound => (StatusCode::NOT_FOUND, "Appointment not found".to_string()),
-            AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
+            AppointmentError::NotFound => {
+                (StatusCode::NOT_FOUND, "Appointment not found".to_string())
+            }
+            AppointmentError::Unauthorized => {
+                (StatusCode::FORBIDDEN, "Unauthorized".to_string())
+            }
             AppointmentError::DatabaseError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
             }
-            AppointmentError::ValidationError(msg) => {
-                (StatusCode::BAD_REQUEST, msg)
-            }
+            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
         };
 
-        (status, Json(serde_json::json!({"error": error_message}))).into_response()
+        let error_response = serde_json::json!({"error": error_message});
+        (status, Json(error_response)).into_response()
     }
 }
