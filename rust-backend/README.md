@@ -4,47 +4,35 @@ A modern Rust web service for the Chronos appointment management system, built w
 
 ## Project Structure
 
-This follows a feature-based, layered module layout for scalability and maintainability:
+This follows a feature-based module layout for scalability and maintainability:
 
 ```
 src/
-├── main.rs              # Application entrypoint with Axum router
+├── main.rs              # Application entrypoint
 ├── lib.rs               # Library root with module declarations
 ├── appointments/        # Appointment management feature
-│   ├── mod.rs           # Feature module declarations
-│   ├── handlers/        # HTTP request/response handlers (presentation layer)
-│   ├── models/          # Domain data structures (domain layer)
-│   └── services/        # Business logic and orchestration (application layer)
+│   ├── mod.rs
+│   └── model.rs
 ├── users/               # User management feature
 │   ├── mod.rs
-│   ├── handlers/
-│   ├── models/
-│   └── services/
+│   └── model.rs
 ├── groups/              # Group management feature
 │   ├── mod.rs
-│   ├── handlers/
-│   ├── models/
-│   └── services/
+│   └── model.rs
 ├── push_notifications/  # Push notification feature
 │   ├── mod.rs
-│   ├── handlers/
-│   ├── models/
-│   └── services/
+│   └── model.rs
 └── reminders/           # Reminder scheduling feature
     ├── mod.rs
-    ├── handlers/
-    ├── models/
-    └── services/
+    └── model.rs
 ```
-
-See `ARCHITECTURE.md` for detailed layer descriptions and how this mirrors the Quarkus backend architecture.
 
 ## Building
 
 ### Prerequisites
 
 - Rust 1.70+ (install via [rustup](https://rustup.rs/))
-- For Docker builds: Docker with `x86_64-unknown-linux-musl` target support (pre-configured in multi-stage Dockerfile)
+- A C compiler (for some dependencies)
 
 ### Local Development
 
@@ -87,19 +75,19 @@ docker build -t chronos-rust-backend:latest .
 
 ## Development Workflow
 
-1. **Feature modules** are created under `src/` with `handlers/`, `models/`, and `services/` subdirectories
-2. **Domain models** are defined in each feature's `models/` directory as Serde-serializable structs
-3. **Business logic** is implemented in the feature's `services/` directory as async functions
-4. **HTTP routes** are registered in the feature's `handlers/` and wired in `main.rs`
-5. **Database and authentication** integration points are described in `ARCHITECTURE.md`
+1. **Feature modules** are created under `src/` with their own `mod.rs` and `model.rs`
+2. **HTTP routes** are registered in `main.rs`
+3. **Domain models** live in each feature's `model.rs`
+4. **Services** follow the same feature structure
 
-### Future Work
+## Future Enhancements
 
-See `ARCHITECTURE.md` for planned integration points:
-- Database layer (SQLx/Sqlc for type-safe PostgreSQL queries)
-- Authentication layer (Keycloak OIDC integration)
-- Event publishing (async event channels for side-effects like push notifications)
-- Configuration management (environment variables and config files)
+- [ ] Database integration (PostgreSQL)
+- [ ] Authentication (OIDC/Keycloak)
+- [ ] RESTful endpoints for appointments, users, groups
+- [ ] Push notification service
+- [ ] Reminder scheduling engine
+- [ ] Metrics and observability (Prometheus)
 
 ## Deployment
 

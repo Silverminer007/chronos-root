@@ -28,16 +28,10 @@ async fn main() {
         .expect("Server error");
 }
 
-/// Liveness probe - indicates the process is alive
-/// Used by Kubernetes to determine if the pod should be restarted
 async fn health_live() -> &'static str {
     "OK"
 }
 
-/// Readiness probe - indicates the service is ready to handle traffic
-/// Checks that the service is ready to accept and process requests
 async fn health_ready() -> &'static str {
-    // In the future, this can check database connectivity, dependencies, etc.
-    // For now, we just verify the service is up and responsive
     "OK"
 }
