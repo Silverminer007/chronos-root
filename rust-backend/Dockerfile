@@ -1,34 +1,29 @@
-# Build stage
-FROM rust:latest as builder
+# Build stage with musl for static linking
+FROM rust:1.98.1 as builder
 
 WORKDIR /build
+
+# Add musl target for static linking
+RUN rustup target add x86_64-unknown-linux-musl
 
 # Copy the project files
 COPY Cargo.* ./
 COPY src ./src
 
-# Build the application
-RUN cargo build --release --features web
+# Build the application with static linking
+# Uses musl libc for truly static binary (lower memory footprint)
+RUN cargo build --release --target x86_64-unknown-linux-musl --features web
 
-# Runtime stage
-FROM debian:bookworm-slim
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Runtime stage - scratch image for minimal footprint
+FROM scratch
 
 WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /build/target/release/chronos_date_api /app/
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/q/health/live || exit 1
+# Copy binary from builder (fully static, no runtime dependencies needed)
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/chronos_date_api /app/chronos_date_api
 
 # Expose port
 EXPOSE 8080
 
 # Run the application
-CMD ["/app/chronos_date_api"]
+ENTRYPOINT ["/app/chronos_date_api"]

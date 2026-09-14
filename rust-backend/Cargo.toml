@@ -10,6 +10,10 @@ edition = "2021"
 name = "chronos_date_api"
 path = "src/main.rs"
 
+[features]
+default = ["web"]
+web = ["axum", "tokio", "serde", "serde_json", "tracing", "tracing-subscriber"]
+
 [dependencies]
 # Web framework and async runtime
 axum = "0.7"
