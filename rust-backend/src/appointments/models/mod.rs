@@ -483,19 +483,18 @@ mod tests {
     #[test]
     fn test_create_appointment_request_deserialization() {
         let json = r#"{
-            "name": "New Meeting",
+            "title": "New Meeting",
             "description": "Planning session",
-            "venue": "Room B",
+            "location": "Room B",
             "start_time": "2025-09-15T14:00:00Z",
             "end_time": "2025-09-15T15:00:00Z",
             "minimal_attendees": 3
         }"#;
 
-        // Note: This test uses old field names but the CreateAppointmentRequest struct
-        // is still using them. It should be refactored to match the database schema.
         let request = serde_json::from_str::<CreateAppointmentRequest>(json).unwrap();
-        assert_eq!(request.name, "New Meeting");
+        assert_eq!(request.title, "New Meeting");
         assert_eq!(request.description, Some("Planning session".to_string()));
+        assert_eq!(request.location, Some("Room B".to_string()));
         assert_eq!(request.minimal_attendees, Some(3));
     }
 
