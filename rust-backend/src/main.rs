@@ -1,19 +1,44 @@
 use axum::{
+    extract::Path,
+    http::StatusCode,
+    middleware,
+    response::IntoResponse,
     routing::get,
-    Router,
+    Router, Json,
 };
 use std::net::SocketAddr;
+use std::sync::Arc;
+
+use chronos_date_api::security::{TokenValidator, PrincipalContext};
 
 #[tokio::main]
 async fn main() {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    // Build router with health check endpoint
-    let app = Router::new()
+    // Initialize token validator with Keycloak URL from environment
+    let keycloak_url = std::env::var("KEYCLOAK_URL")
+        .unwrap_or_else(|_| "http://localhost:8080/realms/chronos".to_string());
+    let validator = Arc::new(TokenValidator::new(keycloak_url));
+
+    // Build router with health check endpoints (public)
+    let public_routes = Router::new()
         .route("/q/health/live", get(health_live))
         .route("/q/health/ready", get(health_ready))
         .route("/health", get(health_live));
+
+    // Protected routes require authentication
+    let protected_routes = Router::new()
+        .route("/api/v2/me", get(get_user_info))
+        .layer(middleware::from_fn_with_state(
+            validator.clone(),
+            chronos_date_api::security::middleware::auth_middleware,
+        ));
+
+    // Combine all routes
+    let app = Router::new()
+        .merge(public_routes)
+        .merge(protected_routes);
 
     // Listen on 0.0.0.0:8080
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
@@ -40,4 +65,11 @@ async fn health_ready() -> &'static str {
     // In the future, this can check database connectivity, dependencies, etc.
     // For now, we just verify the service is up and responsive
     "OK"
+}
+
+/// Get current user information - requires authentication
+async fn get_user_info(principal: PrincipalContext) -> impl IntoResponse {
+    Json(serde_json::json!({
+        "user_id": principal.user_id(),
+    }))
 }
