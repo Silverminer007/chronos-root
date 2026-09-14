@@ -294,7 +294,9 @@ impl IntoResponse for AppointmentError {
             AppointmentError::DatabaseError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
             }
-            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppointmentError::ValidationError(msg) => {
+                (StatusCode::BAD_REQUEST, msg)
+            }
         };
 
         let error_response = json!({"error": error_message});
