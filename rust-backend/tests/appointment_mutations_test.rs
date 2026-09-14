@@ -139,8 +139,8 @@ mod appointment_mutation_tests {
 
         let appointment_fixture = AppointmentFixture::new()
             .with_title("Original Title")
-            .with_description(Some("Original description".to_string()))
-            .with_location(Some("Room A".to_string()));
+            .with_description(Some("Original description"))
+            .with_location(Some("Room A"));
 
         let appointment_id = fixtures
             .create_appointment(creator_id, &appointment_fixture)
