@@ -86,10 +86,7 @@ pub async fn list_appointments(
     let user_id_str = principal.user_id();
     let user_id = match Uuid::parse_str(&user_id_str) {
         Ok(id) => id,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // List only appointments visible to this user
@@ -101,10 +98,7 @@ pub async fn list_appointments(
     };
     let appointments = match service.list_user_appointments(user_id, list_query).await {
         Ok(appts) => appts,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     let responses: Vec<AppointmentResponse> = appointments
@@ -128,10 +122,7 @@ pub async fn create_appointment(
     let user_id_str = principal.user_id();
     let user_id = match Uuid::parse_str(&user_id_str) {
         Ok(id) => id,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Create the appointment
@@ -148,14 +139,12 @@ pub async fn create_appointment(
     {
         Ok(appt) => appt,
         Err(e) => {
-            let (status, msg) = match e {
+            return match e {
                 crate::appointments::repository::RepositoryError::InvalidInput(_) => {
-                    (StatusCode::BAD_REQUEST, e.to_string())
+                    error_response(StatusCode::BAD_REQUEST, &e.to_string()).into_response()
                 }
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()),
+                _ => error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
             };
-            let err = (status, Json(json!({"error": msg})));
-            return err.into_response();
         }
     };
 
@@ -177,29 +166,19 @@ pub async fn update_appointment(
     let user_id_str = principal.user_id();
     let user_id = match Uuid::parse_str(&user_id_str) {
         Ok(id) => id,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Fetch the appointment to check authorization
     let appointment = match service.get_appointment(id).await {
         Ok(Some(appt)) => appt,
-        Ok(None) => {
-            let err = (StatusCode::NOT_FOUND, Json(json!({"error": "Appointment not found"})));
-            return err.into_response();
-        }
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "Appointment not found").into_response(),
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Authorization check - only creator can edit
     if appointment.creator_id != user_id {
-        let err = (StatusCode::FORBIDDEN, Json(json!({"error": "Unauthorized"})));
-        return err.into_response();
+        return error_response(StatusCode::FORBIDDEN, "Unauthorized").into_response();
     }
 
     // Update the appointment
@@ -216,14 +195,12 @@ pub async fn update_appointment(
     {
         Ok(appt) => appt,
         Err(e) => {
-            let (status, msg) = match e {
+            return match e {
                 crate::appointments::repository::RepositoryError::InvalidInput(_) => {
-                    (StatusCode::BAD_REQUEST, e.to_string())
+                    error_response(StatusCode::BAD_REQUEST, &e.to_string()).into_response()
                 }
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()),
+                _ => error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
             };
-            let err = (status, Json(json!({"error": msg})));
-            return err.into_response();
         }
     };
 
@@ -245,29 +222,19 @@ pub async fn move_appointment(
     let user_id_str = principal.user_id();
     let user_id = match Uuid::parse_str(&user_id_str) {
         Ok(id) => id,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Fetch the appointment to check authorization
     let appointment = match service.get_appointment(id).await {
         Ok(Some(appt)) => appt,
-        Ok(None) => {
-            let err = (StatusCode::NOT_FOUND, Json(json!({"error": "Appointment not found"})));
-            return err.into_response();
-        }
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "Appointment not found").into_response(),
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Authorization check - only creator can move
     if appointment.creator_id != user_id {
-        let err = (StatusCode::FORBIDDEN, Json(json!({"error": "Unauthorized"})));
-        return err.into_response();
+        return error_response(StatusCode::FORBIDDEN, "Unauthorized").into_response();
     }
 
     // Update the appointment (move to new time)
@@ -284,14 +251,12 @@ pub async fn move_appointment(
     {
         Ok(appt) => appt,
         Err(e) => {
-            let (status, msg) = match e {
+            return match e {
                 crate::appointments::repository::RepositoryError::InvalidInput(_) => {
-                    (StatusCode::BAD_REQUEST, e.to_string())
+                    error_response(StatusCode::BAD_REQUEST, &e.to_string()).into_response()
                 }
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()),
+                _ => error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
             };
-            let err = (status, Json(json!({"error": msg})));
-            return err.into_response();
         }
     };
 
@@ -312,38 +277,24 @@ pub async fn delete_appointment(
     let user_id_str = principal.user_id();
     let user_id = match Uuid::parse_str(&user_id_str) {
         Ok(id) => id,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Fetch the appointment to check authorization
     let appointment = match service.get_appointment(id).await {
         Ok(Some(appt)) => appt,
-        Ok(None) => {
-            let err = (StatusCode::NOT_FOUND, Json(json!({"error": "Appointment not found"})));
-            return err.into_response();
-        }
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "Appointment not found").into_response(),
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Authorization check - only creator can delete
     if appointment.creator_id != user_id {
-        let err = (StatusCode::FORBIDDEN, Json(json!({"error": "Unauthorized"})));
-        return err.into_response();
+        return error_response(StatusCode::FORBIDDEN, "Unauthorized").into_response();
     }
 
     // Delete the appointment
     match service.delete_appointment(id).await {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": "Database error"})),
-        )
-            .into_response(),
+        Err(_) => error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     }
 }
