@@ -345,9 +345,10 @@ pub async fn delete_appointment(
     // Delete the appointment
     match service.delete_appointment(id).await {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            err.into_response()
-        }
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Database error"})),
+        )
+            .into_response(),
     }
 }
