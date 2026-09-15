@@ -41,31 +41,32 @@ pub async fn get_appointment(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     principal: PrincipalContext,
-) -> Result<impl IntoResponse, AppointmentError> {
+) -> impl IntoResponse {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
     // Get user ID from the authenticated principal
     let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    let user_id = match Uuid::parse_str(&user_id_str) {
+        Ok(id) => id,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Fetch the appointment
-    let appointment = service
-        .get_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
+    let appointment = match service.get_appointment(id).await {
+        Ok(Some(appt)) => appt,
+        Ok(None) => return AppointmentError::NotFound.into_response(),
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Authorization check - user must be creator or invited participant
     // For now, only allow creators to view their appointments
-    // TODO: Also check if user is a participant in the appointment_participants table
     if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
+        return AppointmentError::Unauthorized.into_response();
     }
 
     let response: AppointmentResponse = appointment.into();
-    Ok(Json(response))
+    Json(response).into_response()
 }
 
 /// GET /api/v2/appointments - List appointments with pagination
@@ -73,18 +74,19 @@ pub async fn list_appointments(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListQuery>,
     principal: PrincipalContext,
-) -> Result<impl IntoResponse, AppointmentError> {
+) -> impl IntoResponse {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
     // Get user ID from the authenticated principal
-    // Note: principal.user_id() returns String, we need to convert to UUID
     let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    let user_id = match Uuid::parse_str(&user_id_str) {
+        Ok(id) => id,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // List only appointments visible to this user
-    let appointments = service
+    let appointments = match service
         .list_user_appointments(
             user_id,
             crate::appointments::services::ListAppointmentsQuery {
@@ -95,14 +97,17 @@ pub async fn list_appointments(
             },
         )
         .await
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    {
+        Ok(appts) => appts,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     let responses: Vec<AppointmentResponse> = appointments
         .into_iter()
         .map(|a| a.into())
         .collect();
 
-    Ok(Json(responses))
+    Json(responses).into_response()
 }
 
 /// POST /api/v2/appointments - Create a new appointment
@@ -110,17 +115,19 @@ pub async fn create_appointment(
     State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
     Json(request): Json<CreateAppointmentRequest>,
-) -> Result<impl IntoResponse, AppointmentError> {
+) -> impl IntoResponse {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
     // Get user ID from the authenticated principal
     let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    let user_id = match Uuid::parse_str(&user_id_str) {
+        Ok(id) => id,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Create the appointment
-    let appointment = service
+    let appointment = match service
         .create_appointment(
             request.title,
             request.description,
@@ -130,15 +137,21 @@ pub async fn create_appointment(
             user_id,
         )
         .await
-        .map_err(|e| match e {
-            crate::appointments::repository::RepositoryError::InvalidInput(_) => {
-                AppointmentError::ValidationError(e.to_string())
-            }
-            _ => AppointmentError::DatabaseError,
-        })?;
+    {
+        Ok(appt) => appt,
+        Err(e) => {
+            let error = match e {
+                crate::appointments::repository::RepositoryError::InvalidInput(_) => {
+                    AppointmentError::ValidationError(e.to_string())
+                }
+                _ => AppointmentError::DatabaseError,
+            };
+            return error.into_response();
+        }
+    };
 
     let response: AppointmentResponse = appointment.into();
-    Ok((StatusCode::CREATED, Json(response)))
+    (StatusCode::CREATED, Json(response)).into_response()
 }
 
 /// PUT /api/v2/appointments/:id - Update an appointment
@@ -147,29 +160,31 @@ pub async fn update_appointment(
     Path(id): Path<Uuid>,
     principal: PrincipalContext,
     Json(request): Json<UpdateAppointmentRequest>,
-) -> Result<impl IntoResponse, AppointmentError> {
+) -> impl IntoResponse {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
     // Get user ID from the authenticated principal
     let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    let user_id = match Uuid::parse_str(&user_id_str) {
+        Ok(id) => id,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Fetch the appointment to check authorization
-    let appointment = service
-        .get_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
+    let appointment = match service.get_appointment(id).await {
+        Ok(Some(appt)) => appt,
+        Ok(None) => return AppointmentError::NotFound.into_response(),
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Authorization check - only creator can edit
     if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
+        return AppointmentError::Unauthorized.into_response();
     }
 
     // Update the appointment
-    let updated_appointment = service
+    let updated_appointment = match service
         .update_appointment(
             id,
             request.title,
@@ -179,15 +194,21 @@ pub async fn update_appointment(
             request.end_time,
         )
         .await
-        .map_err(|e| match e {
-            crate::appointments::repository::RepositoryError::InvalidInput(_) => {
-                AppointmentError::ValidationError(e.to_string())
-            }
-            _ => AppointmentError::DatabaseError,
-        })?;
+    {
+        Ok(appt) => appt,
+        Err(e) => {
+            let error = match e {
+                crate::appointments::repository::RepositoryError::InvalidInput(_) => {
+                    AppointmentError::ValidationError(e.to_string())
+                }
+                _ => AppointmentError::DatabaseError,
+            };
+            return error.into_response();
+        }
+    };
 
     let response: AppointmentResponse = updated_appointment.into();
-    Ok(Json(response))
+    Json(response).into_response()
 }
 
 /// PUT /api/v2/appointments/:id/move - Reschedule an appointment
@@ -196,29 +217,31 @@ pub async fn move_appointment(
     Path(id): Path<Uuid>,
     principal: PrincipalContext,
     Json(request): Json<MoveAppointmentRequest>,
-) -> Result<impl IntoResponse, AppointmentError> {
+) -> impl IntoResponse {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
     // Get user ID from the authenticated principal
     let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    let user_id = match Uuid::parse_str(&user_id_str) {
+        Ok(id) => id,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Fetch the appointment to check authorization
-    let appointment = service
-        .get_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
+    let appointment = match service.get_appointment(id).await {
+        Ok(Some(appt)) => appt,
+        Ok(None) => return AppointmentError::NotFound.into_response(),
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Authorization check - only creator can move
     if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
+        return AppointmentError::Unauthorized.into_response();
     }
 
     // Update the appointment (move to new time)
-    let updated_appointment = service
+    let updated_appointment = match service
         .update_appointment(
             id,
             None,
@@ -228,15 +251,21 @@ pub async fn move_appointment(
             Some(request.end_time),
         )
         .await
-        .map_err(|e| match e {
-            crate::appointments::repository::RepositoryError::InvalidInput(_) => {
-                AppointmentError::ValidationError(e.to_string())
-            }
-            _ => AppointmentError::DatabaseError,
-        })?;
+    {
+        Ok(appt) => appt,
+        Err(e) => {
+            let error = match e {
+                crate::appointments::repository::RepositoryError::InvalidInput(_) => {
+                    AppointmentError::ValidationError(e.to_string())
+                }
+                _ => AppointmentError::DatabaseError,
+            };
+            return error.into_response();
+        }
+    };
 
     let response: AppointmentResponse = updated_appointment.into();
-    Ok(Json(response))
+    Json(response).into_response()
 }
 
 /// DELETE /api/v2/appointments/:id - Delete an appointment
@@ -244,34 +273,34 @@ pub async fn delete_appointment(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     principal: PrincipalContext,
-) -> Result<StatusCode, AppointmentError> {
+) -> impl IntoResponse {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
     // Get user ID from the authenticated principal
     let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    let user_id = match Uuid::parse_str(&user_id_str) {
+        Ok(id) => id,
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Fetch the appointment to check authorization
-    let appointment = service
-        .get_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
+    let appointment = match service.get_appointment(id).await {
+        Ok(Some(appt)) => appt,
+        Ok(None) => return AppointmentError::NotFound.into_response(),
+        Err(_) => return AppointmentError::DatabaseError.into_response(),
+    };
 
     // Authorization check - only creator can delete
     if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
+        return AppointmentError::Unauthorized.into_response();
     }
 
     // Delete the appointment
-    service
-        .delete_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?;
-
-    Ok(StatusCode::NO_CONTENT)
+    match service.delete_appointment(id).await {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(_) => AppointmentError::DatabaseError.into_response(),
+    }
 }
 
 /// Errors that can occur in appointment handlers
