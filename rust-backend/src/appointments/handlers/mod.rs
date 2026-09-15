@@ -36,6 +36,11 @@ pub struct ListQuery {
     pub sort_dir: Option<String>,
 }
 
+/// Helper function to create error responses
+fn error_response(status: StatusCode, message: &str) -> (StatusCode, Json<serde_json::Value>) {
+    (status, Json(json!({"error": message})))
+}
+
 /// GET /api/v2/appointments/:id - Fetch a single appointment by ID
 pub async fn get_appointment(
     State(state): State<Arc<AppState>>,
@@ -49,29 +54,19 @@ pub async fn get_appointment(
     let user_id_str = principal.user_id();
     let user_id = match Uuid::parse_str(&user_id_str) {
         Ok(id) => id,
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Fetch the appointment
     let appointment = match service.get_appointment(id).await {
         Ok(Some(appt)) => appt,
-        Ok(None) => {
-            let err = (StatusCode::NOT_FOUND, Json(json!({"error": "Appointment not found"})));
-            return err.into_response();
-        }
-        Err(_) => {
-            let err = (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})));
-            return err.into_response();
-        }
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "Appointment not found").into_response(),
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
     };
 
     // Authorization check - user must be creator or invited participant
     if appointment.creator_id != user_id {
-        let err = (StatusCode::FORBIDDEN, Json(json!({"error": "Unauthorized"})));
-        return err.into_response();
+        return error_response(StatusCode::FORBIDDEN, "Unauthorized").into_response();
     }
 
     let response: AppointmentResponse = appointment.into();
