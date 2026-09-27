@@ -41,15 +41,24 @@ class TestSpecValidatorBasics(unittest.TestCase):
         spec = {
             "title": "Add user authentication",
             "body": """
+## Scope
+Add OAuth2 authentication using Keycloak OIDC.
+
 ## Acceptance Criteria
 - [ ] User can log in with email and password
 - [ ] JWT token is returned and stored in httpOnly cookie
 - [ ] Expired tokens trigger refresh endpoint
+
+## Testing
+Unit tests will verify login flow and token handling.
+
+## Dependencies
+- Keycloak server running
 """
         }
         result = self.validator.validate(spec)
-        # Should not complain about missing/untestable criteria
-        self.assertTrue(result.is_valid or not any("acceptance criteria" in q.lower() for q in result.questions))
+        # Should be valid if all sections are present
+        self.assertTrue(result.is_valid)
 
     def test_detects_scope_ambiguity(self):
         """Should detect vague or unbounded scope."""
@@ -267,6 +276,9 @@ Bug description.
 
 ## Dependencies
 None
+
+## Testing
+Unit tests will verify the fix.
 """
         }
 

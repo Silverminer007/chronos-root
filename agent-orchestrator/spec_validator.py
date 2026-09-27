@@ -16,7 +16,6 @@ import sys
 import os
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from pathlib import Path
 
 
 @dataclass
@@ -67,8 +66,8 @@ class SpecValidator:
 
     VAGUE_WORDS = [
         'better', 'faster', 'improved', 'nice',
-        'thing', 'stuff', 'widget', 'feature',
-        'etc', 'and', 'or', 'easy',
+        'thing', 'stuff', 'widget',
+        'etc', 'easy',
         'robust', 'stable', 'performant',  # Without metrics
     ]
 
@@ -139,15 +138,15 @@ class SpecValidator:
                 "Please list them as checkboxes (- [ ] Criterion) or in a dedicated section."
             )
 
-        # Check for scope - lenient check
-        if not self._has_scope(spec) and len(body) < 100:
+        # Check for scope
+        if not self._has_scope(spec):
             questions.append(
                 "What is the scope of this work? Should include: what is IN scope, "
                 "what is explicitly OUT of scope, and any clear boundaries."
             )
 
-        # Check for dependencies - only for complex specs
-        if not self._has_dependencies_section(spec) and len(body) > 300:
+        # Check for dependencies
+        if not self._has_dependencies_section(spec):
             questions.append(
                 "Are there any dependencies (external services, PRs, infrastructure)? "
                 "Please list them explicitly."
@@ -161,14 +160,34 @@ class SpecValidator:
                 "Use specific, measurable language."
             )
 
+        # Check testability - if acceptance criteria exist but no test hints
+        if self._has_acceptance_criteria(spec) and not self._has_criteria_hints(spec):
+            questions.append(
+                "How will the acceptance criteria be tested/verified? "
+                "Should mention testing approach (unit tests, integration tests, manual verification)."
+            )
+
         return ValidationResult(
             is_valid=len(questions) == 0,
             questions=questions
         )
 
+    def _extract_text(self, spec: Dict[str, str], lowercase: bool = False) -> str:
+        """Extract concatenated title and body from spec.
+
+        Args:
+            spec: Dictionary with 'title' and 'body' keys
+            lowercase: If True, return lowercase text
+
+        Returns:
+            Concatenated text from title and body
+        """
+        text = f"{spec.get('title', '')} {spec.get('body', '')}"
+        return text.lower() if lowercase else text
+
     def _has_acceptance_criteria(self, spec: Dict[str, str]) -> bool:
         """Check if spec has acceptance criteria."""
-        text = f"{spec.get('title', '')} {spec.get('body', '')}"
+        text = self._extract_text(spec)
 
         # Check for explicit section with ## heading
         if re.search(r'##\s+(?:Acceptance\s+[Cc]riteria|Definition\s+of\s+Done|Requirements)', text, re.IGNORECASE):
@@ -182,7 +201,7 @@ class SpecValidator:
 
     def _has_scope(self, spec: Dict[str, str]) -> bool:
         """Check if spec has clear scope definition."""
-        text = f"{spec.get('title', '')} {spec.get('body', '')}".lower()
+        text = self._extract_text(spec, lowercase=True)
 
         # Check for scope section
         if re.search(r'##\s+scope', text, re.IGNORECASE):
@@ -208,7 +227,7 @@ class SpecValidator:
 
     def _has_dependencies_section(self, spec: Dict[str, str]) -> bool:
         """Check if spec mentions dependencies."""
-        text = f"{spec.get('title', '')} {spec.get('body', '')}".lower()
+        text = self._extract_text(spec, lowercase=True)
 
         # Check for explicit dependencies section
         for pattern in self.DEPENDENCY_PATTERNS:
@@ -253,6 +272,18 @@ class SpecValidator:
 
         return False
 
+    def _handle_gh_error(self, operation: str, issue_number: int, error: subprocess.CalledProcessError) -> None:
+        """Handle GitHub CLI errors uniformly.
+
+        Args:
+            operation: Description of the operation that failed
+            issue_number: GitHub issue number
+            error: The subprocess error
+        """
+        stderr = error.stderr.decode() if isinstance(error.stderr, bytes) else error.stderr
+        print(f"Error {operation} issue #{issue_number}: {stderr}", file=sys.stderr)
+        sys.exit(1)
+
     def fetch_issue(self, issue_number: int) -> Dict[str, Any]:
         """Fetch issue from GitHub using gh CLI.
 
@@ -271,8 +302,7 @@ class SpecValidator:
             )
             return json.loads(result.stdout)
         except subprocess.CalledProcessError as e:
-            print(f"Error fetching issue #{issue_number}: {e.stderr}", file=sys.stderr)
-            sys.exit(1)
+            self._handle_gh_error('fetching', issue_number, e)
 
     def post_comment(self, issue_number: int, result: ValidationResult) -> None:
         """Post validation comment to GitHub issue.
@@ -292,8 +322,7 @@ class SpecValidator:
                 capture_output=True
             )
         except subprocess.CalledProcessError as e:
-            print(f"Error posting comment to issue #{issue_number}: {e.stderr}", file=sys.stderr)
-            sys.exit(1)
+            self._handle_gh_error('posting comment to', issue_number, e)
 
     def add_label(self, issue_number: int, label: str) -> None:
         """Add label to GitHub issue.
@@ -309,8 +338,7 @@ class SpecValidator:
                 capture_output=True
             )
         except subprocess.CalledProcessError as e:
-            print(f"Error adding label to issue #{issue_number}: {e.stderr}", file=sys.stderr)
-            sys.exit(1)
+            self._handle_gh_error('adding label to', issue_number, e)
 
     def validate_and_respond(self, issue_number: int) -> int:
         """Fetch issue, validate, and post comment if needed.

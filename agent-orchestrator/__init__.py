@@ -10,7 +10,11 @@ Includes agents for:
 
 __version__ = "0.1.0"
 
-from .spec_validator import SpecValidator, ValidationResult
+try:
+    from .spec_validator import SpecValidator, ValidationResult
+except ImportError:
+    # Handle case where module is run directly for testing
+    from spec_validator import SpecValidator, ValidationResult
 
 __all__ = [
     "SpecValidator",
