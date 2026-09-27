@@ -135,16 +135,24 @@ class FixerOrchestrator:
         Returns:
             True if fix was successfully applied and tests pass
         """
-        # Placeholder: actual fix logic would be implemented here
-        # This would involve:
-        # 1. Understanding the finding
-        # 2. Determining the appropriate fix
-        # 3. Applying the fix using the applicator
-        # 4. Running tests
-        # 5. Committing or rolling back
+        # Generate a basic fix function based on the finding
+        # In a real implementation, this would use LLM or KB to determine the fix
+        def generate_fix(content: str, line_num: int) -> str:
+            # For now, return content unchanged
+            # A real implementation would generate a fix based on:
+            # 1. The finding summary and suggestion
+            # 2. Knowledge base patterns
+            # 3. LLM-based code understanding
+            return content
 
-        # For now, return True to allow orchestration tests to pass
-        return True
+        result = self.applicator.apply(
+            finding=finding,
+            fix_func=generate_fix,
+            test_callback=test_runner,
+            max_retries=3
+        )
+
+        return result == FixResult.SUCCESS
 
     def _build_commit_message(self, fixed_findings: List[Finding]) -> str:
         """Build a commit message for all fixed findings.
