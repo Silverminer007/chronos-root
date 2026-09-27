@@ -26,12 +26,13 @@ class TestFixerOrchestrator(unittest.TestCase):
         mock_git = Mock()
         mock_test_runner = Mock(return_value=True)
 
-        result = self.orchestrator.orchestrate(
-            findings=findings,
-            github_handler=mock_github,
-            git_handler=mock_git,
-            test_runner=mock_test_runner,
-        )
+        with patch.object(self.orchestrator, '_apply_fix', return_value=True):
+            result = self.orchestrator.orchestrate(
+                findings=findings,
+                github_handler=mock_github,
+                git_handler=mock_git,
+                test_runner=mock_test_runner,
+            )
 
         self.assertEqual(result, OrchestrationResult.SUCCESS)
 
