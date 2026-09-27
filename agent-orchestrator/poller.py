@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 class Poller:
     """Orchestrates agent-based ticket implementation."""
 
-    def __init__(self, repo: str, repo_path: str, state_file: str, log_file: str, worktree_base: str):
+    def __init__(self, repo: str, state_file: str, log_file: str, repo_path: str = None, worktree_base: str = None):
         self.repo = repo
         self.repo_path = repo_path
         self.state = State(state_file)
         self.github = GitHubAPI(repo)
-        self.worktree_mgr = WorktreeManager(base_path=worktree_base, repo_path=repo_path)
-        self.agent_spawner = AgentSpawner(repo_path=repo_path)
+        self.worktree_mgr = WorktreeManager(base_path=worktree_base or "/tmp/worktrees", repo_path=repo_path or repo)
+        self.agent_spawner = AgentSpawner(repo_path=repo_path or repo)
         self.log_file = log_file
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
 
