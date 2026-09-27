@@ -38,6 +38,90 @@ class Poller:
 
         return issues
 
+    def check_pr_status(self, pr_number: int) -> Dict[str, Any]:
+        """Check the CI status of a PR."""
+        return self.github.get_pr_checks(pr_number)
+
+    def poll_pr_ci(self, pr_number: int) -> None:
+        """Poll and handle PR CI status."""
+        state = self.state_mgr.load()
+
+        if "pr_monitoring" not in state:
+            state["pr_monitoring"] = {}
+
+        pr_key = str(pr_number)
+        if pr_key not in state["pr_monitoring"]:
+            state["pr_monitoring"][pr_key] = {
+                "pr_number": pr_number,
+                "ci_status": "pending",
+                "ci_polls": 0,
+                "last_ci_poll": None,
+                "retry_count": 0
+            }
+
+        pr_state = state["pr_monitoring"][pr_key]
+
+        # Check if polling should continue
+        if not self.should_continue_polling(pr_number):
+            self._log(f"CI polling timeout for PR #{pr_number}")
+            if pr_state["ci_status"] == "pending":
+                self.github.add_label(pr_state.get("ticket_id"), "agent-failed")
+                self.github.post_comment(
+                    pr_state.get("ticket_id"),
+                    f"CI pending for >2.5m on PR #{pr_number}, manual investigation needed"
+                )
+            return
+
+        # Get PR status
+        status_info = self.check_pr_status(pr_number)
+        ci_status = status_info.get("status", "unknown")
+
+        # Update state
+        pr_state["ci_status"] = ci_status
+        pr_state["ci_polls"] = pr_state.get("ci_polls", 0) + 1
+        pr_state["last_ci_poll"] = datetime.utcnow().isoformat() + "Z"
+
+        self._log(f"PR #{pr_number} CI status: {ci_status} (poll #{pr_state['ci_polls']})")
+
+        if ci_status == "success":
+            self.github.add_label(pr_state.get("ticket_id"), "ready-for-review")
+            self._log(f"PR #{pr_number} CI passed, labeled ready-for-review")
+        elif ci_status == "failure":
+            if self.should_retry_pr(pr_number):
+                pr_state["retry_count"] = pr_state.get("retry_count", 0) + 1
+                self._log(f"PR #{pr_number} CI failed, retry #{pr_state['retry_count']}")
+            else:
+                self.github.add_label(pr_state.get("ticket_id"), "agent-failed")
+                self.github.post_comment(
+                    pr_state.get("ticket_id"),
+                    f"CI failed after 3 retry cycles on PR #{pr_number}, manual review needed"
+                )
+                self._log(f"PR #{pr_number} CI failed, max retries exceeded")
+
+        self.state_mgr.save(state)
+
+    def should_retry_pr(self, pr_number: int) -> bool:
+        """Check if PR should be retried (max 3 retries)."""
+        state = self.state_mgr.load()
+        pr_key = str(pr_number)
+
+        if "pr_monitoring" not in state or pr_key not in state["pr_monitoring"]:
+            return True
+
+        retry_count = state["pr_monitoring"][pr_key].get("retry_count", 0)
+        return retry_count < 3
+
+    def should_continue_polling(self, pr_number: int) -> bool:
+        """Check if polling should continue (max 5 polls = 2.5 minutes)."""
+        state = self.state_mgr.load()
+        pr_key = str(pr_number)
+
+        if "pr_monitoring" not in state or pr_key not in state["pr_monitoring"]:
+            return True
+
+        polls = state["pr_monitoring"][pr_key].get("ci_polls", 0)
+        return polls < 5
+
     def run_once(self) -> None:
         """Run one poll cycle."""
         self._log("Poll cycle started")
