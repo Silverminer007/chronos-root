@@ -64,7 +64,6 @@ class AgentSpawner:
         )
 
         try:
-            # Spawn agent process in background
             process = subprocess.Popen(
                 command,
                 cwd=worktree_path,
@@ -121,7 +120,6 @@ class AgentSpawner:
             True if process is running, False otherwise
         """
         try:
-            # Sending signal 0 checks if process exists without sending signal
             os.kill(pid, 0)
             return True
         except ProcessLookupError:
@@ -147,17 +145,14 @@ class AgentSpawner:
         logger.info(f"Terminating agent process {pid}")
 
         try:
-            # Try SIGTERM first (graceful shutdown)
             os.kill(pid, signal.SIGTERM)
 
-            # Check if process terminated within 2.5 seconds
             for _ in range(5):
                 if not self.is_agent_running(pid):
                     logger.info(f"Process {pid} terminated successfully")
                     return True
                 time.sleep(0.5)
 
-            # Force kill if still running
             logger.warning(f"Process {pid} did not terminate, sending SIGKILL")
             os.kill(pid, signal.SIGKILL)
             return True
@@ -168,26 +163,3 @@ class AgentSpawner:
         except Exception as e:
             logger.error(f"Failed to terminate process {pid}: {str(e)}")
             return False
-
-    def get_agent_info(self, pid: int) -> Optional[dict]:
-        """
-        Get runtime information about an agent process (memory usage, etc).
-
-        Args:
-            pid: Process ID
-
-        Returns:
-            Dictionary with process info, or None if process not found
-        """
-        try:
-            with open(f"/proc/{pid}/status", 'r') as f:
-                status = {}
-                for line in f:
-                    if line.startswith("VmRSS:"):
-                        status["memory_kb"] = int(line.split()[1])
-                return status
-        except FileNotFoundError:
-            return None
-        except Exception as e:
-            logger.error(f"Failed to get process info for {pid}: {str(e)}")
-            return None

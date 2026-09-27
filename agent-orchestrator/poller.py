@@ -38,12 +38,10 @@ class Poller:
         issues = self.github.list_ready_for_agent()
 
         for issue in issues:
-            # Skip if already claimed
             if self.state.get_active_agent(issue["number"]):
                 self._log(f"Issue #{issue['number']} already has an active agent")
                 continue
 
-            # Apply in-progress label to claim it
             if self.github.add_label(issue["number"], "in-progress"):
                 self._log(f"Claimed issue #{issue['number']}")
             else:
@@ -54,14 +52,12 @@ class Poller:
     def _spawn_agent_for_ticket(self, ticket_id: int, branch_name: str) -> bool:
         """Create worktree and spawn TDD agent for ticket."""
         try:
-            # Create worktree
             worktree_path = self.worktree_mgr.create_worktree(
                 ticket_id=ticket_id,
                 branch_name=branch_name
             )
             self._log(f"Created worktree for ticket #{ticket_id}: {worktree_path}")
 
-            # Spawn TDD agent
             pid = self.agent_spawner.spawn_agent(
                 ticket_id=ticket_id,
                 agent_type=AgentType.TDD,
@@ -73,7 +69,6 @@ class Poller:
                 self._log(f"Failed to spawn agent for ticket #{ticket_id}")
                 return False
 
-            # Track agent in state
             agent = AgentState(
                 ticket_id=ticket_id,
                 agent_type=AgentType.TDD.value,
@@ -98,7 +93,6 @@ class Poller:
                     f"Agent for ticket #{agent.ticket_id} (PID {agent.pid}) has finished"
                 )
 
-                # Move to completed tickets (mark as ready for review)
                 completed = CompletedTicket(
                     ticket_id=agent.ticket_id,
                     pr_number=agent.pr_number,
@@ -108,7 +102,6 @@ class Poller:
                 self.state.add_completed_ticket(completed)
                 self.state.remove_active_agent(agent.ticket_id)
 
-                # Clean up worktree
                 try:
                     self.worktree_mgr.remove_worktree(agent.worktree_path)
                     self._log(f"Cleaned up worktree for ticket #{agent.ticket_id}")
@@ -119,23 +112,18 @@ class Poller:
         """Run one complete poll cycle."""
         self._log("Poll cycle started")
 
-        # Poll active agents and clean up completed ones
         self._poll_active_agents()
 
-        # Discover new tickets
         tickets = self._discover_ready_for_agent()
         self._log(f"Found {len(tickets)} ready-for-agent issues")
 
-        # Spawn agents for new tickets
         for ticket in tickets:
             ticket_id = ticket["number"]
             branch_name = f"feature/{ticket_id}-ticket"
 
-            # Check if we already have an agent for this ticket
             if not self.state.get_active_agent(ticket_id):
                 self._spawn_agent_for_ticket(ticket_id, branch_name)
 
-        # Update last poll time and save state
         self.state.last_poll = datetime.utcnow().isoformat() + "Z"
         self.state.save()
         self._log("Poll cycle completed")
