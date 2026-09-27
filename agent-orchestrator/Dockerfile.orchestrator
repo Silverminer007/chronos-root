@@ -1,0 +1,33 @@
+FROM ubuntu:22.04
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    jq \
+    git-lfs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install gh CLI
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+    gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+    https://cli.github.com/packages stable main" | \
+    tee /etc/apt/sources.list.d/github-cli.sources > /dev/null && \
+    apt-get update && apt-get install -y gh
+
+# Setup working directory
+WORKDIR /home/orchestrator
+RUN useradd -m orchestrator && chown -R orchestrator:orchestrator /home/orchestrator
+
+# Copy scripts
+COPY scripts/ /home/orchestrator/scripts/
+RUN chmod +x /home/orchestrator/scripts/*.sh
+
+# Copy entrypoint
+COPY entrypoint.sh /home/orchestrator/
+RUN chmod +x /home/orchestrator/entrypoint.sh
+
+USER orchestrator
+
+ENTRYPOINT ["/home/orchestrator/entrypoint.sh"]
