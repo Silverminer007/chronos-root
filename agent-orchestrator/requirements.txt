@@ -1,0 +1,4 @@
+# Agent Orchestrator dependencies
+# Minimal - primary dependency is gh CLI (must be installed separately)
+pytest>=7.0
+pytest-mock>=3.10
