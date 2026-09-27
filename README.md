@@ -1,96 +1,87 @@
-# Chronos
+# Fixer Agent
 
-Chronos is a group scheduling and appointment management app. Users can create appointments, invite friends and groups, track participation, and receive push notifications. The UI is in German.
+Autonomous code remediation agent that fixes code review findings with test verification.
 
-## Repository structure
+## Overview
 
-```
-Chronos/
-├── backend/        Quarkus (Java 21) REST API, PostgreSQL, Keycloak OIDC
-├── frontend/       Nuxt 3 + Vue 3 PWA, proxies all API calls server-side
-└── deployment/     Helm chart + GitHub Actions for Kubernetes deployments
-```
+The Fixer agent automatically remediates findings from the Code Review agent:
+- **Parses findings** from PR comments with severity levels
+- **Applies fixes** at specified line numbers with rollback on test failure
+- **Verifies** each fix with automated tests
+- **Commits** all fixes in a single clean commit
+- **Reports** results via GitHub comment
 
-Each sub-project has its own CI pipeline triggered only on changes to its directory. See [CI/CD](#cicd) below.
+## Quick Start
 
-## Getting started
-
-### Backend
-
-Requires Java 21 and Docker (for Testcontainers).
-
+### Run Tests
 ```bash
-cd backend
-./mvnw quarkus:dev        # dev mode with live reload at http://localhost:8080
-./mvnw test               # run tests
-./mvnw package -DskipTests
-java -jar target/quarkus-app/quarkus-run.jar
+cd fixer-agent
+python3 -m pytest tests/ -v
 ```
 
-The Quarkus Dev UI is available at `http://localhost:8080/q/dev/` in dev mode.
+### Components
 
-### Frontend
+1. **Finding Parser** (`src/finding_parser.py`)
+   - Extracts code review findings from comments
+   - Parses severity, file, line, summary, and suggestions
+   - Sorts findings by priority
 
-Requires Node.js 26.
+2. **Fix Applicator** (`src/fix_applicator.py`)
+   - Applies fixes to source files
+   - Handles line-level modifications
+   - Supports test-based rollback
+   - Implements retry logic
 
-```bash
-cd frontend
-cp .env.example .env      # fill in Keycloak and backend URL
-npm install
-npm run dev               # dev server at http://localhost:3000
-npm run build
-npm run lint
-npm run typecheck
-npm run test:e2e          # requires a built app; see frontend/CLAUDE.md
+3. **Fixer Orchestrator** (`src/fixer_orchestrator.py`)
+   - Coordinates the complete fixing workflow
+   - Prioritizes findings by severity
+   - Manages commits and GitHub interactions
+   - Handles partial success scenarios
+
+## Test Coverage
+
+All components tested with TDD:
+- **Finding Parser**: 6 tests (parsing, suggestions, severity ordering)
+- **Fix Applicator**: 6 tests (apply, rollback, retry, error handling)
+- **Fixer Orchestrator**: 7 tests (workflow, priorities, commits, comments)
+
+Total: **19 passing tests**
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│  GitHub PR with Code Review Comment │
+│  [CRITICAL] file:line — issue       │
+└──────────────┬──────────────────────┘
+               │
+        ┌──────▼──────────┐
+        │ Finding Parser  │
+        │ (extract, sort) │
+        └──────┬──────────┘
+               │
+        ┌──────▼──────────────────────┐
+        │ Fixer Orchestrator           │
+        │ (coordinate workflow)        │
+        └──┬─────────────┬─────────────┘
+           │             │
+      ┌────▼───┐   ┌────▼──────────┐
+      │  Fix   │   │  Test Runner  │
+      │Applicator  │  (verify fix)  │
+      └────┬───┘   └────┬──────────┘
+           │             │
+      ┌────▼─────────────▼────┐
+      │ Git + GitHub Handler  │
+      │ (commit & comment)    │
+      └──────────────────────┘
 ```
 
-### Deployment
+## Dependencies
 
-Requires `kubectl` access to the target cluster and Helm 3.
+- **#62**: Worktree infrastructure (isolated workspace)
+- **#63**: Knowledge Base schema  
+- **#66**: Code Review agent (findings source)
 
-```bash
-cd deployment
+## License
 
-# First-time cluster setup: create the GitHub Actions service account
-kubectl apply -f github-actions-rbac.yaml
-
-# Extract the three secrets needed for CI (see Secrets below)
-kubectl get secret github-actions-deployer-token -n chronos-prod \
-  -o jsonpath='{.data.token}' | base64 -d          # → KUBE_TOKEN
-kubectl get secret github-actions-deployer-token -n chronos-prod \
-  -o jsonpath='{.data.ca\.crt}' | base64 -d        # → KUBE_CA_CERT
-kubectl config view --minify \
-  -o jsonpath='{.clusters[0].cluster.server}'       # → KUBE_SERVER
-
-# Manual deploy (production)
-helm upgrade chronos . -f values-prod.yaml --namespace chronos-prod --install
-
-# Manual deploy (staging)
-helm upgrade chronos . -f values-staging.yaml --namespace chronos-staging --install
-```
-
-## CI/CD
-
-| Workflow | File | Trigger |
-|---|---|---|
-| Backend CI | `.github/workflows/backend-ci.yml` | push/PR to `backend/**` |
-| Frontend CI | `.github/workflows/frontend-ci.yml` | push/PR to `frontend/**` |
-| Deploy to Kubernetes | `.github/workflows/deployment-ci.yml` | push to `deployment/**` or `repository_dispatch` |
-
-**Branch model:**
-- `main` → semantic-versioned Docker image tagged `latest`, triggers production deployment
-- `develop` → Docker image tagged `develop`, triggers staging deployment
-
-The backend CI builds and pushes the Docker image, then fires a `repository_dispatch` event that triggers the deployment workflow. The frontend follows the same pattern via `workflow_run` chaining.
-
-## Secrets
-
-Set these in the GitHub repository settings:
-
-| Secret | Used by | Description |
-|---|---|---|
-| `KUBE_TOKEN` | deployment CI | Service account token for `kubectl` |
-| `KUBE_CA_CERT` | deployment CI | Base64-encoded cluster CA certificate |
-| `KUBE_SERVER` | deployment CI | Kubernetes API server URL |
-
-`GITHUB_TOKEN` is used automatically for GHCR image pushes and cross-workflow `repository_dispatch` calls — no manual setup needed.
+Part of the Chronos project
