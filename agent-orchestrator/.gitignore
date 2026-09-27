@@ -19,11 +19,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyc
+*.pyo
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
 
 # IDE
 .vscode/
@@ -31,7 +34,22 @@ htmlcov/
 *.swp
 *.swo
 *~
+.DS_Store
 
-# State files (runtime generated)
-state.json
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
 *.log
+logs/
+
+# State files
+state.json
+*.tmp
+
+# Environment
+.env
+.env.local
