@@ -148,9 +148,27 @@ class Poller:
         """Spawn Fixer agent to address code review findings."""
         self._log(f"Spawning Fixer agent for PR #{pr_number}, ticket #{ticket_id}")
 
+    def can_spawn_agent(self) -> bool:
+        """Check if we can spawn a new agent (max 3 concurrent agents)."""
+        self.state_mgr.prune_dead_agents()
+        return self.state_mgr.count_active_agents() < 3
+
+    def register_agent(self, ticket_id: int, agent_type: str, pid: int, worktree_path: str) -> None:
+        """Register a spawned agent."""
+        self.state_mgr.add_agent(ticket_id, agent_type, pid, worktree_path)
+        self._log(f"Registered agent for ticket #{ticket_id}: {agent_type} (PID {pid})")
+
+    def unregister_agent(self, ticket_id: int) -> None:
+        """Unregister a completed agent."""
+        self.state_mgr.remove_agent(ticket_id)
+        self._log(f"Unregistered agent for ticket #{ticket_id}")
+
     def run_once(self) -> None:
         """Run one poll cycle."""
         self._log("Poll cycle started")
+
+        # Prune dead agents first
+        self.state_mgr.prune_dead_agents()
 
         # Recover from state corruption if needed
         try:
