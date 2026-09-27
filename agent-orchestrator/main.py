@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""
-Agent Orchestrator Poller - Main Entry Point
+"""Agent Orchestrator - main entry point for one poll cycle.
 
-Runs a single poll cycle. Invoked by systemd timer every 5 minutes.
+Discovers ready-for-agent tickets on GitHub, spawns agents in isolated
+worktrees, and tracks their progress. Invoked by systemd timer every 5 minutes.
 
 Usage:
-    main.py --repo <owner/repo> --repo-path <path> --state-file <path> --log-file <path> --worktree-base <path>
+    main.py --repo owner/repo --repo-path /path/to/repo --state-file /path/state.json
 """
 
 import argparse

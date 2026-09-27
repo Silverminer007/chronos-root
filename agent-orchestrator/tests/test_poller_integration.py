@@ -113,19 +113,23 @@ class TestPollerIntegration:
             worktree_base=temp_dirs['worktree']
         )
 
-        # Pre-add an active agent
+        # Pre-add an active agent to simulate one already running
         from state import AgentState
         agent = AgentState(
             ticket_id=62,
             agent_type="tdd",
-            worktree_path="/some/path",
+            worktree_path=f"{temp_dirs['worktree']}/worktree-62",
             started_at="2026-09-27T12:00:00Z",
-            pid=1234
+            pid=1234,
+            status="running"
         )
         poller.state.add_active_agent(agent)
 
         with patch.object(poller.worktree_mgr, 'create_worktree') as mock_create_wt, \
-             patch.object(poller.agent_spawner, 'spawn_agent') as mock_spawn:
+             patch.object(poller.agent_spawner, 'spawn_agent') as mock_spawn, \
+             patch.object(poller.agent_spawner, 'is_agent_running') as mock_is_running:
+            mock_is_running.return_value = True
+
             poller.run_once()
 
             # Verify worktree was NOT created (agent already exists)

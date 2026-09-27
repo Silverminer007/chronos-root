@@ -2,13 +2,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 
-from state import State, AgentState
+from state import State, AgentState, CompletedTicket
 from github_api import GitHubAPI
 from worktree_manager import WorktreeManager
 from agent_spawner import AgentSpawner, AgentType
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class Poller:
+    """Orchestrates agent-based ticket implementation."""
+
     def __init__(self, repo: str, repo_path: str, state_file: str, log_file: str, worktree_base: str):
         self.repo = repo
         self.repo_path = repo_path
@@ -20,14 +26,14 @@ class Poller:
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
 
     def _log(self, message: str) -> None:
-        """Log a message with timestamp."""
+        """Log with ISO 8601 timestamp."""
         timestamp = datetime.utcnow().isoformat() + "Z"
         log_line = f"[{timestamp}] {message}\n"
         with open(self.log_file, "a") as f:
             f.write(log_line)
 
     def _discover_ready_for_agent(self) -> List[Dict[str, Any]]:
-        """Discover issues labeled ready-for-agent and apply in-progress label."""
+        """Discover issues labeled ready-for-agent and claim them."""
         self._log("Discovering ready-for-agent issues")
         issues = self.github.list_ready_for_agent()
 
@@ -46,7 +52,7 @@ class Poller:
         return issues
 
     def _spawn_agent_for_ticket(self, ticket_id: int, branch_name: str) -> bool:
-        """Spawn a TDD agent for a ticket in an isolated worktree."""
+        """Create worktree and spawn TDD agent for ticket."""
         try:
             # Create worktree
             worktree_path = self.worktree_mgr.create_worktree(
@@ -84,9 +90,37 @@ class Poller:
             self._log(f"Error spawning agent for ticket #{ticket_id}: {str(e)}")
             return False
 
+    def _poll_active_agents(self) -> None:
+        """Check status of active agents and update state."""
+        for agent in list(self.state.active_agents):
+            if not self.agent_spawner.is_agent_running(agent.pid):
+                self._log(
+                    f"Agent for ticket #{agent.ticket_id} (PID {agent.pid}) has finished"
+                )
+
+                # Move to completed tickets (mark as ready for review)
+                completed = CompletedTicket(
+                    ticket_id=agent.ticket_id,
+                    pr_number=agent.pr_number,
+                    status="completed",
+                    completed_at=datetime.utcnow().isoformat() + "Z"
+                )
+                self.state.add_completed_ticket(completed)
+                self.state.remove_active_agent(agent.ticket_id)
+
+                # Clean up worktree
+                try:
+                    self.worktree_mgr.remove_worktree(agent.worktree_path)
+                    self._log(f"Cleaned up worktree for ticket #{agent.ticket_id}")
+                except Exception as e:
+                    self._log(f"Failed to cleanup worktree for ticket #{agent.ticket_id}: {str(e)}")
+
     def run_once(self) -> None:
-        """Run one poll cycle."""
+        """Run one complete poll cycle."""
         self._log("Poll cycle started")
+
+        # Poll active agents and clean up completed ones
+        self._poll_active_agents()
 
         # Discover new tickets
         tickets = self._discover_ready_for_agent()
@@ -101,7 +135,7 @@ class Poller:
             if not self.state.get_active_agent(ticket_id):
                 self._spawn_agent_for_ticket(ticket_id, branch_name)
 
-        # Update last poll time
+        # Update last poll time and save state
         self.state.last_poll = datetime.utcnow().isoformat() + "Z"
         self.state.save()
         self._log("Poll cycle completed")

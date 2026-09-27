@@ -2,6 +2,7 @@ import subprocess
 import os
 import logging
 import signal
+import time
 from enum import Enum
 from typing import Optional
 
@@ -55,7 +56,6 @@ class AgentSpawner:
             f"in {worktree_path}"
         )
 
-        # Build the command based on agent type
         command = self._build_agent_command(
             ticket_id=ticket_id,
             agent_type=agent_type,
@@ -89,38 +89,26 @@ class AgentSpawner:
         worktree_path: str,
         branch_name: str
     ) -> list:
-        """Build the command to spawn an agent."""
+        """
+        Build agent invocation command.
 
-        if agent_type == AgentType.TDD:
-            return [
-                self.claude_code_path, "/tdd",
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}"
-            ]
+        NOTE: This is a placeholder for the actual agent invocation mechanism.
+        Future implementation will integrate with proper agent spawning via
+        Claude Code SDK or dedicated agent scripts.
+        """
 
-        elif agent_type == AgentType.CODE_REVIEW:
-            return [
-                self.claude_code_path, "/code-review",
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}"
-            ]
+        agent_cmd_map = {
+            AgentType.TDD: [self.claude_code_path, "agent:tdd"],
+            AgentType.CODE_REVIEW: [self.claude_code_path, "agent:code-review"],
+            AgentType.SPEC_VALIDATOR: [self.claude_code_path, "agent:spec-validator"],
+            AgentType.FIXER: [self.claude_code_path, "agent:fixer"],
+        }
 
-        elif agent_type == AgentType.SPEC_VALIDATOR:
-            return [
-                self.claude_code_path, "/spec-validate",
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}"
-            ]
-
-        elif agent_type == AgentType.FIXER:
-            return [
-                self.claude_code_path, "/fixer",
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}"
-            ]
-
-        else:
+        base_cmd = agent_cmd_map.get(agent_type)
+        if not base_cmd:
             raise ValueError(f"Unknown agent type: {agent_type}")
+
+        return base_cmd + [f"--ticket={ticket_id}", f"--branch={branch_name}"]
 
     def is_agent_running(self, pid: int) -> bool:
         """
@@ -133,7 +121,7 @@ class AgentSpawner:
             True if process is running, False otherwise
         """
         try:
-            # Sending signal 0 doesn't kill the process, just checks if it exists
+            # Sending signal 0 checks if process exists without sending signal
             os.kill(pid, 0)
             return True
         except ProcessLookupError:
@@ -144,7 +132,7 @@ class AgentSpawner:
 
     def terminate_agent(self, pid: int) -> bool:
         """
-        Terminate an agent process.
+        Terminate an agent process gracefully, then forcefully if needed.
 
         Args:
             pid: Process ID to terminate
@@ -159,11 +147,10 @@ class AgentSpawner:
         logger.info(f"Terminating agent process {pid}")
 
         try:
-            # Try SIGTERM first
+            # Try SIGTERM first (graceful shutdown)
             os.kill(pid, signal.SIGTERM)
 
-            # Check if process terminated
-            import time
+            # Check if process terminated within 2.5 seconds
             for _ in range(5):
                 if not self.is_agent_running(pid):
                     logger.info(f"Process {pid} terminated successfully")
@@ -184,7 +171,7 @@ class AgentSpawner:
 
     def get_agent_info(self, pid: int) -> Optional[dict]:
         """
-        Get information about a running agent process.
+        Get runtime information about an agent process (memory usage, etc).
 
         Args:
             pid: Process ID
@@ -197,7 +184,6 @@ class AgentSpawner:
                 status = {}
                 for line in f:
                     if line.startswith("VmRSS:"):
-                        # Memory usage in KB
                         status["memory_kb"] = int(line.split()[1])
                 return status
         except FileNotFoundError:

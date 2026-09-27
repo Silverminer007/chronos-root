@@ -8,7 +8,7 @@ class GitHubAPI:
         self.repo = repo
 
     def list_ready_for_agent(self) -> List[Dict[str, Any]]:
-        """List all issues labeled 'ready-for-agent'."""
+        """Query issues with ready-for-agent label via gh CLI."""
         cmd = [
             "gh", "issue", "list",
             "--repo", self.repo,
@@ -24,7 +24,7 @@ class GitHubAPI:
             return []
 
     def add_label(self, issue_number: int, label: str) -> bool:
-        """Add a label to an issue."""
+        """Apply label to issue via gh CLI."""
         cmd = [
             "gh", "issue", "edit",
             str(issue_number),
@@ -35,7 +35,7 @@ class GitHubAPI:
         return result.returncode == 0
 
     def remove_label(self, issue_number: int, label: str) -> bool:
-        """Remove a label from an issue."""
+        """Remove label from issue via gh CLI."""
         cmd = [
             "gh", "issue", "edit",
             str(issue_number),
@@ -46,7 +46,7 @@ class GitHubAPI:
         return result.returncode == 0
 
     def post_comment(self, issue_number: int, body: str) -> bool:
-        """Post a comment on an issue."""
+        """Add comment to issue via gh CLI."""
         cmd = [
             "gh", "issue", "comment",
             str(issue_number),

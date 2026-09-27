@@ -164,7 +164,12 @@ class State:
 
 
 class StateManager:
-    """Legacy state manager for backward compatibility."""
+    """
+    State manager for backward compatibility with initial poller scaffold.
+
+    Provides dict-based state interface (load/save) for code that may
+    inherit from the scaffold. New code should use State class instead.
+    """
 
     def __init__(self, state_file: str):
         self.state_file = state_file
