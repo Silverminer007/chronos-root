@@ -1,0 +1,23 @@
+[Unit]
+Description=Chronos Agent Orchestrator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=chronos
+WorkingDirectory=/home/chronos/agent-orchestrator
+ExecStart=/home/chronos/agent-orchestrator/scripts/poller.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agent-orchestrator
+
+# Timeout if poller hangs
+TimeoutStartSec=5m
+
+# Restart on failure (but don't spam)
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target
