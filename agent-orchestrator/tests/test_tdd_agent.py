@@ -135,6 +135,11 @@ class TestTDDAgent(unittest.TestCase):
     @patch('tdd_agent.logger')
     def test_run_tdd_cycles_success(self, mock_logger, mock_github_api, mock_subprocess):
         """Test successful TDD cycles."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "TDD cycles completed\n"
+        mock_subprocess.run.return_value = mock_result
+
         agent = TDDAgent(
             ticket_id=self.ticket_id,
             branch_name=self.branch_name
@@ -321,6 +326,10 @@ class TestTDDAgent(unittest.TestCase):
         branch_check.stdout = self.branch_name + "\n"
         branch_check.returncode = 0
 
+        tdd_cycles = Mock()
+        tdd_cycles.returncode = 0
+        tdd_cycles.stdout = "TDD cycles completed\n"
+
         diff_check = Mock()
         diff_check.stdout = "file.py | 10 ++++\n"
         diff_check.returncode = 0
@@ -344,14 +353,19 @@ class TestTDDAgent(unittest.TestCase):
         pr_result.returncode = 0
         pr_result.stdout = "https://github.com/owner/repo/pull/123\n"
 
+        comment_result = Mock()
+        comment_result.returncode = 0
+
         mock_subprocess.run.side_effect = [
-            branch_check,  # verify branch
-            diff_check,    # code review diff
-            status_check,  # commit status
-            add_result,    # add
-            commit_result, # commit
-            push_result,   # push
-            pr_result      # pr create
+            branch_check,    # verify branch
+            tdd_cycles,      # TDD cycles (claude /tdd)
+            diff_check,      # code review diff
+            status_check,    # commit status
+            add_result,      # add
+            commit_result,   # commit
+            push_result,     # push
+            pr_result,       # pr create
+            comment_result   # post completion comment
         ]
 
         agent = TDDAgent(

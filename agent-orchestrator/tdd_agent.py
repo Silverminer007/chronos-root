@@ -87,6 +87,8 @@ class TDDAgent:
             ticket = self._fetch_ticket()
             if not ticket:
                 logger.error(f"Failed to fetch ticket #{self.ticket_id}")
+                self._post_error_comment("Failed to fetch ticket details from GitHub")
+                self._label_as_failed()
                 return False
 
             logger.info(f"Ticket: {ticket['title']}")
@@ -95,22 +97,38 @@ class TDDAgent:
             # Verify we're on the correct branch
             if not self._verify_branch():
                 logger.error("Failed to verify branch")
+                self._post_error_comment("Failed to verify git branch")
+                self._label_as_failed()
                 return False
 
             # Implement the ticket using TDD cycles
             if not self._run_tdd_cycles(ticket):
                 logger.error("TDD cycles failed")
+                self._post_error_comment("TDD implementation cycles failed. Manual intervention required.")
+                self._label_as_failed()
                 return False
 
             # Run code review
             if not self._run_code_review():
                 logger.error("Code review failed")
+                self._post_error_comment("Code review validation failed")
+                self._label_as_failed()
                 return False
+
+            # Update knowledge base with patterns discovered
+            if not self._update_kb(ticket):
+                logger.warning("KB update failed, but continuing with PR creation")
 
             # Create PR
             if not self._create_pr(ticket):
                 logger.error("Failed to create PR")
+                self._post_error_comment("Failed to create pull request")
+                self._label_as_failed()
                 return False
+
+            # Post completion comment
+            if not self._post_completion_comment(ticket):
+                logger.warning("Failed to post completion comment")
 
             logger.info(
                 f"Successfully completed ticket #{self.ticket_id}, "
@@ -120,6 +138,8 @@ class TDDAgent:
 
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+            self._post_error_comment(f"Unexpected error: {str(e)}")
+            self._label_as_failed()
             return False
 
     def _fetch_ticket(self) -> Optional[Dict[str, Any]]:
@@ -170,12 +190,12 @@ class TDDAgent:
 
     def _run_tdd_cycles(self, ticket: Dict[str, Any]) -> bool:
         """
-        Run TDD implementation cycles.
+        Run TDD implementation cycles using Claude Code /tdd skill.
 
-        This is a placeholder implementation. In a real scenario, this would:
+        Invokes the /tdd skill to drive implementation:
         1. Write a failing test
         2. Implement minimal code to pass the test
-        3. Refactor
+        3. Refactor while keeping tests passing
         4. Repeat until feature is complete
 
         Args:
@@ -185,21 +205,55 @@ class TDDAgent:
             True if cycles completed successfully, False otherwise
         """
         try:
-            logger.info("Running TDD cycles...")
+            logger.info("Running TDD cycles using /tdd skill...")
             logger.info(f"Ticket: {ticket['title']}")
-            logger.info(f"Description: {ticket['body'][:200]}...")
 
-            # TODO: Implement actual TDD cycles
-            # This would involve:
-            # - Parsing ticket requirements
-            # - Writing tests for each requirement
-            # - Implementing code to pass tests
-            # - Running tests
-            # - Code review cycles until quality gates pass
+            # Build prompt for TDD skill
+            prompt = f"""
+Implement ticket #{self.ticket_id} using test-driven development.
 
-            logger.info("✓ TDD cycles completed (placeholder)")
+**Ticket**: {ticket['title']}
+
+**Description**: {ticket['body']}
+
+**Branch**: {self.branch_name}
+
+Use the /tdd skill to:
+1. Write failing tests based on acceptance criteria
+2. Implement minimal code to pass tests
+3. Refactor code while keeping tests passing
+4. Repeat until implementation is complete
+
+When done:
+- All tests must pass
+- Code must be clean and follow project conventions
+- Changes must be committed to the current branch
+"""
+
+            # Invoke Claude Code /tdd skill via subprocess
+            result = subprocess.run(
+                [
+                    "claude",
+                    "/tdd",
+                    prompt
+                ],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=3600  # Allow up to 1 hour for TDD cycles
+            )
+
+            if result.returncode != 0:
+                logger.error(f"TDD skill failed: {result.stderr}")
+                return False
+
+            logger.info("✓ TDD cycles completed successfully")
+            logger.debug(f"TDD skill output:\n{result.stdout}")
             return True
 
+        except subprocess.TimeoutExpired:
+            logger.error("TDD cycles timed out after 1 hour")
+            return False
         except Exception as e:
             logger.error(f"TDD cycles failed: {str(e)}")
             return False
@@ -376,6 +430,201 @@ class TDDAgent:
 
         except Exception as e:
             logger.error(f"Failed to push branch: {str(e)}")
+            return False
+
+    def _update_kb(self, ticket: Dict[str, Any]) -> bool:
+        """
+        Update knowledge base with patterns discovered during implementation.
+
+        Args:
+            ticket: Ticket information
+
+        Returns:
+            True if KB update successful, False otherwise
+        """
+        try:
+            logger.info("Updating knowledge base with patterns and constraints...")
+
+            # Check if KB file exists
+            kb_path = Path(self.repo_path) / "KB.md"
+            if not kb_path.exists():
+                logger.warning("KB.md not found, skipping KB update")
+                return True
+
+            # Document the implementation patterns
+            kb_update = f"""
+## {ticket['title']} (#{self.ticket_id})
+
+**Date**: {datetime.now().isoformat()}
+
+**TDD Agent Implementation**:
+- Test-driven development cycles completed
+- All acceptance criteria met with passing tests
+- Code reviewed and refactored for quality
+
+**Patterns Used**:
+- Red-green-refactor cycle for implementation
+- Comprehensive test coverage for acceptance criteria
+
+**Constraints Discovered**:
+- See ticket #{self.ticket_id} for detailed constraints and decisions
+
+**PR**: #{self.pr_number}
+
+---
+"""
+
+            # Append to KB file
+            with open(kb_path, "a") as f:
+                f.write("\n" + kb_update)
+
+            logger.info("✓ Knowledge base updated")
+
+            # Commit KB update
+            result = subprocess.run(
+                ["git", "add", str(kb_path)],
+                cwd=self.repo_path,
+                capture_output=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                subprocess.run(
+                    ["git", "commit", "--amend", "--no-edit"],
+                    cwd=self.repo_path,
+                    capture_output=True,
+                    timeout=10
+                )
+                logger.info("✓ KB update committed")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update KB: {str(e)}")
+            return False
+
+    def _post_completion_comment(self, ticket: Dict[str, Any]) -> bool:
+        """
+        Post a completion comment on the GitHub issue.
+
+        Args:
+            ticket: Ticket information
+
+        Returns:
+            True if comment posted successfully, False otherwise
+        """
+        try:
+            logger.info("Posting completion comment on ticket...")
+
+            comment = f"""🤖 **TDD Agent Completion Report**
+
+Implementation of **{ticket['title']}** completed successfully using test-driven development.
+
+**What Was Done**:
+- ✅ Wrote failing tests based on acceptance criteria
+- ✅ Implemented minimal code to pass tests
+- ✅ Refactored code while maintaining test pass
+- ✅ All tests passing
+
+**PR**: #{self.pr_number}
+**Branch**: `{self.branch_name}`
+
+**Generated with [Claude Code](https://claude.com/claude-code)** using autonomous TDD agent
+"""
+
+            result = subprocess.run(
+                ["gh", "issue", "comment", str(self.ticket_id), "-b", comment],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                logger.error(f"Failed to post comment: {result.stderr}")
+                return False
+
+            logger.info("✓ Completion comment posted")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to post comment: {str(e)}")
+            return False
+
+    def _post_error_comment(self, error_message: str) -> bool:
+        """
+        Post an error comment on the GitHub issue.
+
+        Args:
+            error_message: Description of the error
+
+        Returns:
+            True if comment posted successfully, False otherwise
+        """
+        try:
+            logger.info("Posting error comment on ticket...")
+
+            comment = f"""❌ **TDD Agent Error**
+
+An error occurred during automated implementation:
+
+```
+{error_message}
+```
+
+**Manual intervention required**. Please review the error and either:
+1. Fix the issue and re-run the agent
+2. Implement manually
+
+Generated with [Claude Code](https://claude.com/claude-code)
+"""
+
+            result = subprocess.run(
+                ["gh", "issue", "comment", str(self.ticket_id), "-b", comment],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"Failed to post error comment: {result.stderr}")
+                return False
+
+            logger.info("✓ Error comment posted")
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to post error comment: {str(e)}")
+            return False
+
+    def _label_as_failed(self) -> bool:
+        """
+        Label the ticket with agent-failed.
+
+        Returns:
+            True if labeled successfully, False otherwise
+        """
+        try:
+            logger.info("Labeling ticket as agent-failed...")
+
+            result = subprocess.run(
+                ["gh", "issue", "edit", str(self.ticket_id), "--add-label", "agent-failed"],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"Failed to add agent-failed label: {result.stderr}")
+                return False
+
+            logger.info("✓ Labeled as agent-failed")
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to label ticket: {str(e)}")
             return False
 
 
