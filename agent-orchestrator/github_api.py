@@ -8,7 +8,7 @@ class GitHubAPI:
         self.repo = repo
 
     def list_ready_for_agent(self) -> List[Dict[str, Any]]:
-        """Query issues with ready-for-agent label via gh CLI."""
+        """List all issues labeled 'ready-for-agent'."""
         cmd = [
             "gh", "issue", "list",
             "--repo", self.repo,
@@ -24,7 +24,7 @@ class GitHubAPI:
             return []
 
     def add_label(self, issue_number: int, label: str) -> bool:
-        """Apply label to issue via gh CLI."""
+        """Add a label to an issue."""
         cmd = [
             "gh", "issue", "edit",
             str(issue_number),
@@ -35,7 +35,7 @@ class GitHubAPI:
         return result.returncode == 0
 
     def remove_label(self, issue_number: int, label: str) -> bool:
-        """Remove label from issue via gh CLI."""
+        """Remove a label from an issue."""
         cmd = [
             "gh", "issue", "edit",
             str(issue_number),
@@ -46,7 +46,7 @@ class GitHubAPI:
         return result.returncode == 0
 
     def post_comment(self, issue_number: int, body: str) -> bool:
-        """Add comment to issue via gh CLI."""
+        """Post a comment on an issue."""
         cmd = [
             "gh", "issue", "comment",
             str(issue_number),
@@ -55,3 +55,30 @@ class GitHubAPI:
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
         return result.returncode == 0
+
+    def get_pr_checks(self, pr_number: int) -> Dict[str, Any]:
+        """Get PR CI status and check runs."""
+        cmd = [
+            "gh", "pr", "checks",
+            str(pr_number),
+            "--repo", self.repo,
+            "--json", "status,conclusion,name,state"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            return {"status": "unknown", "check_runs": []}
+
+        try:
+            check_runs = json.loads(result.stdout)
+            status = "success"
+            if any(run.get("state") == "FAILURE" for run in check_runs):
+                status = "failure"
+            elif any(run.get("state") in ("PENDING", "IN_PROGRESS") for run in check_runs):
+                status = "pending"
+
+            return {
+                "status": status,
+                "check_runs": check_runs
+            }
+        except (json.JSONDecodeError, KeyError):
+            return {"status": "unknown", "check_runs": []}
