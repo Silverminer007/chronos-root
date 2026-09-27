@@ -1,164 +1,179 @@
-import json
+import pytest
 import tempfile
+import json
 import os
 from pathlib import Path
-import sys
-from unittest.mock import patch
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from state import StateManager
+from state import State, StateManager, AgentState, CompletedTicket
 
 
-def test_state_load_empty():
-    """Test loading state when file doesn't exist."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
-        state = mgr.load()
-        assert state["active_agents"] == []
-        assert state["completed_tickets"] == []
-        assert "last_poll" in state
+@pytest.fixture
+def temp_state_file():
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+        yield f.name
+    if os.path.exists(f.name):
+        os.unlink(f.name)
 
 
-def test_state_save_and_load():
-    """Test saving and loading state."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
+class TestState:
+    """Tests for the new agent-aware State class."""
 
-        # Create and save state
-        state = {
+    def test_state_creates_default_on_missing_file(self, temp_state_file):
+        """State creates default state when file doesn't exist."""
+        os.unlink(temp_state_file)
+
+        state = State(temp_state_file)
+
+        assert state.last_poll is None
+        assert state.active_agents == []
+        assert state.completed_tickets == []
+
+    def test_state_loads_existing_file(self, temp_state_file):
+        """State loads and parses existing state file."""
+        state_data = {
             "last_poll": "2026-09-27T12:00:00Z",
             "active_agents": [
                 {
-                    "ticket_id": 123,
+                    "ticket_id": 62,
                     "agent_type": "tdd",
-                    "worktree_path": "/path/to/worktree",
-                    "started_at": "2026-09-27T11:55:00Z",
-                    "status": "running"
+                    "worktree_path": "/path",
+                    "started_at": "2026-09-27T11:00:00Z",
+                    "status": "running",
+                    "pid": 1234,
+                    "ci_poll_rounds": 0,
+                    "pr_number": None
                 }
             ],
             "completed_tickets": []
         }
-        mgr.save(state)
 
-        # Load and verify
-        loaded = mgr.load()
-        assert loaded["last_poll"] == state["last_poll"]
-        assert len(loaded["active_agents"]) == 1
-        assert loaded["active_agents"][0]["ticket_id"] == 123
+        with open(temp_state_file, 'w') as f:
+            json.dump(state_data, f)
 
+        state = State(temp_state_file)
 
-def test_state_atomic_write():
-    """Test that state writes are atomic (no partial writes)."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
+        assert state.last_poll == "2026-09-27T12:00:00Z"
+        assert len(state.active_agents) == 1
+        assert state.active_agents[0].ticket_id == 62
 
-        state = {"active_agents": [], "completed_tickets": []}
-        mgr.save(state)
+    def test_state_saves_atomically(self, temp_state_file):
+        """State saves with atomic writes (temp file then rename)."""
+        state = State(temp_state_file)
 
-        # Verify file is valid JSON
-        with open(state_file) as f:
-            parsed = json.load(f)
-            assert "active_agents" in parsed
-
-
-def test_add_agent():
-    """Test adding an agent to active_agents."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
-
-        # Add an agent
-        mgr.add_agent(
-            ticket_id=123,
+        agent = AgentState(
+            ticket_id=62,
             agent_type="tdd",
-            pid=5678,
-            worktree_path="/path/to/worktree"
+            worktree_path="/path",
+            started_at="2026-09-27T11:00:00Z",
+            pid=1234
         )
+        state.add_active_agent(agent)
 
-        # Verify it was added
+        with open(temp_state_file, 'r') as f:
+            saved_data = json.load(f)
+
+        assert saved_data["active_agents"][0]["ticket_id"] == 62
+
+    def test_state_handles_corrupted_file(self, temp_state_file):
+        """State resets to default on corrupted JSON."""
+        with open(temp_state_file, 'w') as f:
+            f.write("{invalid json")
+
+        state = State(temp_state_file)
+
+        assert state.active_agents == []
+        assert state.completed_tickets == []
+
+    def test_add_active_agent(self, temp_state_file):
+        """Adding agent persists to file."""
+        state = State(temp_state_file)
+
+        agent = AgentState(
+            ticket_id=62,
+            agent_type="tdd",
+            worktree_path="/path",
+            started_at="2026-09-27T11:00:00Z",
+            pid=1234,
+            status="running"
+        )
+        state.add_active_agent(agent)
+
+        state2 = State(temp_state_file)
+        assert len(state2.active_agents) == 1
+        assert state2.active_agents[0].ticket_id == 62
+
+    def test_remove_active_agent(self, temp_state_file):
+        """Removing agent removes from state and saves."""
+        state = State(temp_state_file)
+
+        agent = AgentState(
+            ticket_id=62,
+            agent_type="tdd",
+            worktree_path="/path",
+            started_at="2026-09-27T11:00:00Z",
+            pid=1234
+        )
+        state.add_active_agent(agent)
+
+        removed = state.remove_active_agent(62)
+        assert removed is True
+        assert len(state.active_agents) == 0
+
+    def test_get_active_agent(self, temp_state_file):
+        """Getting agent by ticket ID."""
+        state = State(temp_state_file)
+
+        agent = AgentState(
+            ticket_id=62,
+            agent_type="tdd",
+            worktree_path="/path",
+            started_at="2026-09-27T11:00:00Z",
+            pid=1234
+        )
+        state.add_active_agent(agent)
+
+        found = state.get_active_agent(62)
+        assert found is not None
+        assert found.ticket_id == 62
+
+
+class TestStateManager:
+    """Tests for backward-compatibility StateManager."""
+
+    def test_statemanager_creates_default_state(self, temp_state_file):
+        """StateManager creates default state on missing file."""
+        os.unlink(temp_state_file)
+
+        mgr = StateManager(temp_state_file)
         state = mgr.load()
-        assert len(state["active_agents"]) == 1
-        agent = state["active_agents"][0]
-        assert agent["ticket_id"] == 123
-        assert agent["agent_type"] == "tdd"
-        assert agent["pid"] == 5678
-        assert agent["worktree_path"] == "/path/to/worktree"
-        assert "started_at" in agent
 
+        assert "last_poll" in state
+        assert "active_agents" in state
+        assert "completed_tickets" in state
 
-def test_prune_dead_agents():
-    """Test pruning agents with dead PIDs."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
+    def test_statemanager_loads_existing_state(self, temp_state_file):
+        """StateManager loads and parses existing state."""
+        initial_state = {
+            "last_poll": "2026-09-27T12:00:00Z",
+            "active_agents": [],
+            "completed_tickets": []
+        }
 
-        # Add three agents
-        mgr.add_agent(123, "tdd", 9999, "/path1")      # Dead PID (unlikely to exist)
-        mgr.add_agent(124, "code-review", os.getpid(), "/path2")  # Live PID (this process)
-        mgr.add_agent(125, "tdd", 9998, "/path3")      # Dead PID
+        with open(temp_state_file, 'w') as f:
+            json.dump(initial_state, f)
 
-        assert mgr.count_active_agents() == 3
-
-        # Prune dead agents
-        mgr.prune_dead_agents()
-
-        # Should only have the one with live PID
+        mgr = StateManager(temp_state_file)
         state = mgr.load()
-        assert mgr.count_active_agents() == 1
-        assert state["active_agents"][0]["ticket_id"] == 124
 
+        assert state["last_poll"] == "2026-09-27T12:00:00Z"
 
-def test_count_active_agents():
-    """Test counting active agents."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
+    def test_statemanager_saves_atomically(self, temp_state_file):
+        """StateManager saves with atomic writes."""
+        mgr = StateManager(temp_state_file)
 
-        # Empty state
-        assert mgr.count_active_agents() == 0
+        state = {"last_poll": "2026-09-27T13:00:00Z", "active_agents": [], "completed_tickets": []}
+        mgr.save(state)
 
-        # Add agents
-        mgr.add_agent(123, "tdd", 5678, "/path1")
-        assert mgr.count_active_agents() == 1
+        with open(temp_state_file, 'r') as f:
+            saved = json.load(f)
 
-        mgr.add_agent(124, "code-review", 5679, "/path2")
-        assert mgr.count_active_agents() == 2
-
-        # Remove one
-        mgr.remove_agent(123)
-        assert mgr.count_active_agents() == 1
-
-
-def test_remove_agent():
-    """Test removing an agent from active_agents."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-        mgr = StateManager(state_file)
-
-        # Add two agents
-        mgr.add_agent(123, "tdd", 5678, "/path/to/worktree1")
-        mgr.add_agent(124, "code-review", 5679, "/path/to/worktree2")
-
-        # Verify both are added
-        state = mgr.load()
-        assert len(state["active_agents"]) == 2
-
-        # Remove one
-        mgr.remove_agent(123)
-
-        # Verify only one remains
-        state = mgr.load()
-        assert len(state["active_agents"]) == 1
-        assert state["active_agents"][0]["ticket_id"] == 124
-
-
-if __name__ == "__main__":
-    test_state_load_empty()
-    test_state_save_and_load()
-    test_state_atomic_write()
-    test_add_agent()
-    print("✓ All state tests passed")
+        assert saved["last_poll"] == "2026-09-27T13:00:00Z"

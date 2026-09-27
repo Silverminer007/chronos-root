@@ -139,7 +139,7 @@ class WorktreeManager:
                 logger.error(f"Failed to list worktrees: {result.stderr}")
                 return []
 
-            # Parse output: each line is "<path> <sha> [branch]"
+            # Parse worktree paths from output (format: "<path> <sha> [branch]")
             worktrees = []
             for line in result.stdout.strip().split('\n'):
                 if line:

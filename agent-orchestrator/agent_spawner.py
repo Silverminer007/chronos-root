@@ -2,6 +2,7 @@ import subprocess
 import os
 import logging
 import signal
+import time
 from enum import Enum
 from typing import Optional
 
@@ -55,7 +56,6 @@ class AgentSpawner:
             f"in {worktree_path}"
         )
 
-        # Build the command based on agent type
         command = self._build_agent_command(
             ticket_id=ticket_id,
             agent_type=agent_type,
@@ -64,7 +64,6 @@ class AgentSpawner:
         )
 
         try:
-            # Spawn agent process in background
             process = subprocess.Popen(
                 command,
                 cwd=worktree_path,
@@ -89,47 +88,26 @@ class AgentSpawner:
         worktree_path: str,
         branch_name: str
     ) -> list:
-        """Build the command to spawn an agent."""
-        orchestrator_path = os.path.dirname(os.path.abspath(__file__))
+        """
+        Build agent invocation command.
 
-        if agent_type == AgentType.TDD:
-            return [
-                "python3",
-                os.path.join(orchestrator_path, "tdd_agent.py"),
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}",
-                f"--repo-path={self.repo_path}"
-            ]
+        NOTE: This is a placeholder for the actual agent invocation mechanism.
+        Future implementation will integrate with proper agent spawning via
+        Claude Code SDK or dedicated agent scripts.
+        """
 
-        elif agent_type == AgentType.CODE_REVIEW:
-            return [
-                "python3",
-                os.path.join(orchestrator_path, "code_review_agent.py"),
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}",
-                f"--repo-path={self.repo_path}"
-            ]
+        agent_cmd_map = {
+            AgentType.TDD: [self.claude_code_path, "agent:tdd"],
+            AgentType.CODE_REVIEW: [self.claude_code_path, "agent:code-review"],
+            AgentType.SPEC_VALIDATOR: [self.claude_code_path, "agent:spec-validator"],
+            AgentType.FIXER: [self.claude_code_path, "agent:fixer"],
+        }
 
-        elif agent_type == AgentType.SPEC_VALIDATOR:
-            return [
-                "python3",
-                os.path.join(orchestrator_path, "spec_validator_agent.py"),
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}",
-                f"--repo-path={self.repo_path}"
-            ]
-
-        elif agent_type == AgentType.FIXER:
-            return [
-                "python3",
-                os.path.join(orchestrator_path, "fixer_agent.py"),
-                f"--ticket={ticket_id}",
-                f"--branch={branch_name}",
-                f"--repo-path={self.repo_path}"
-            ]
-
-        else:
+        base_cmd = agent_cmd_map.get(agent_type)
+        if not base_cmd:
             raise ValueError(f"Unknown agent type: {agent_type}")
+
+        return base_cmd + [f"--ticket={ticket_id}", f"--branch={branch_name}"]
 
     def is_agent_running(self, pid: int) -> bool:
         """
@@ -142,7 +120,6 @@ class AgentSpawner:
             True if process is running, False otherwise
         """
         try:
-            # Sending signal 0 doesn't kill the process, just checks if it exists
             os.kill(pid, 0)
             return True
         except ProcessLookupError:
@@ -153,7 +130,7 @@ class AgentSpawner:
 
     def terminate_agent(self, pid: int) -> bool:
         """
-        Terminate an agent process.
+        Terminate an agent process gracefully, then forcefully if needed.
 
         Args:
             pid: Process ID to terminate
@@ -168,18 +145,14 @@ class AgentSpawner:
         logger.info(f"Terminating agent process {pid}")
 
         try:
-            # Try SIGTERM first
             os.kill(pid, signal.SIGTERM)
 
-            # Check if process terminated
-            import time
             for _ in range(5):
                 if not self.is_agent_running(pid):
                     logger.info(f"Process {pid} terminated successfully")
                     return True
                 time.sleep(0.5)
 
-            # Force kill if still running
             logger.warning(f"Process {pid} did not terminate, sending SIGKILL")
             os.kill(pid, signal.SIGKILL)
             return True
@@ -190,27 +163,3 @@ class AgentSpawner:
         except Exception as e:
             logger.error(f"Failed to terminate process {pid}: {str(e)}")
             return False
-
-    def get_agent_info(self, pid: int) -> Optional[dict]:
-        """
-        Get information about a running agent process.
-
-        Args:
-            pid: Process ID
-
-        Returns:
-            Dictionary with process info, or None if process not found
-        """
-        try:
-            with open(f"/proc/{pid}/status", 'r') as f:
-                status = {}
-                for line in f:
-                    if line.startswith("VmRSS:"):
-                        # Memory usage in KB
-                        status["memory_kb"] = int(line.split()[1])
-                return status
-        except FileNotFoundError:
-            return None
-        except Exception as e:
-            logger.error(f"Failed to get process info for {pid}: {str(e)}")
-            return None

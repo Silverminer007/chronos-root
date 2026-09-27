@@ -1,26 +1,179 @@
-import fcntl
 import json
 import os
-import signal
+import logging
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import List, Dict, Any, Optional
+
+
+logger = logging.getLogger(__name__)
+
+
+class AgentState:
+    """Represents the state of a single running agent."""
+
+    def __init__(
+        self,
+        ticket_id: int,
+        agent_type: str,
+        worktree_path: str,
+        started_at: str,
+        status: str = "running",
+        pid: Optional[int] = None,
+        ci_poll_rounds: int = 0,
+        pr_number: Optional[int] = None
+    ):
+        self.ticket_id = ticket_id
+        self.agent_type = agent_type
+        self.worktree_path = worktree_path
+        self.started_at = started_at
+        self.status = status
+        self.pid = pid
+        self.ci_poll_rounds = ci_poll_rounds
+        self.pr_number = pr_number
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ticket_id": self.ticket_id,
+            "agent_type": self.agent_type,
+            "worktree_path": self.worktree_path,
+            "started_at": self.started_at,
+            "status": self.status,
+            "pid": self.pid,
+            "ci_poll_rounds": self.ci_poll_rounds,
+            "pr_number": self.pr_number
+        }
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "AgentState":
+        return AgentState(**data)
+
+
+class CompletedTicket:
+    """Represents a completed ticket."""
+
+    def __init__(
+        self,
+        ticket_id: int,
+        pr_number: int,
+        status: str,
+        completed_at: str
+    ):
+        self.ticket_id = ticket_id
+        self.pr_number = pr_number
+        self.status = status
+        self.completed_at = completed_at
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ticket_id": self.ticket_id,
+            "pr_number": self.pr_number,
+            "status": self.status,
+            "completed_at": self.completed_at
+        }
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "CompletedTicket":
+        return CompletedTicket(**data)
+
+
+class State:
+    """Manages orchestrator state with atomic writes."""
+
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.last_poll: Optional[str] = None
+        self.active_agents: List[AgentState] = []
+        self.completed_tickets: List[CompletedTicket] = []
+        self.load()
+
+    def load(self):
+        """Load state from file. Creates default state if file doesn't exist."""
+        if not os.path.exists(self.file_path):
+            logger.info(f"State file {self.file_path} does not exist. Creating default state.")
+            self.last_poll = None
+            self.active_agents = []
+            self.completed_tickets = []
+            return
+
+        try:
+            with open(self.file_path, 'r') as f:
+                data = json.load(f)
+
+            self.last_poll = data.get("last_poll")
+            self.active_agents = [
+                AgentState.from_dict(agent) for agent in data.get("active_agents", [])
+            ]
+            self.completed_tickets = [
+                CompletedTicket.from_dict(ticket) for ticket in data.get("completed_tickets", [])
+            ]
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse state file {self.file_path}. Resetting to default.")
+            self.last_poll = None
+            self.active_agents = []
+            self.completed_tickets = []
+
+    def save(self):
+        """Save state to file with atomic writes."""
+        state_data = {
+            "last_poll": self.last_poll or datetime.now(timezone.utc).isoformat(),
+            "active_agents": [agent.to_dict() for agent in self.active_agents],
+            "completed_tickets": [ticket.to_dict() for ticket in self.completed_tickets]
+        }
+
+        # Atomic write using temporary file
+        Path(self.file_path).parent.mkdir(parents=True, exist_ok=True)
+        temp_path = f"{self.file_path}.tmp"
+        try:
+            with open(temp_path, 'w') as f:
+                json.dump(state_data, f, indent=2)
+            os.replace(temp_path, self.file_path)
+            logger.debug(f"State saved to {self.file_path}")
+        except Exception as e:
+            logger.error(f"Failed to save state: {e}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise
+
+    def add_active_agent(self, agent: AgentState):
+        """Add an active agent to state."""
+        self.active_agents.append(agent)
+        self.save()
+
+    def remove_active_agent(self, ticket_id: int) -> bool:
+        """Remove an active agent by ticket ID. Returns True if found."""
+        original_count = len(self.active_agents)
+        self.active_agents = [a for a in self.active_agents if a.ticket_id != ticket_id]
+        if len(self.active_agents) < original_count:
+            self.save()
+            return True
+        return False
+
+    def get_active_agent(self, ticket_id: int) -> Optional[AgentState]:
+        """Get an active agent by ticket ID."""
+        for agent in self.active_agents:
+            if agent.ticket_id == ticket_id:
+                return agent
+        return None
+
+    def add_completed_ticket(self, ticket: CompletedTicket):
+        """Add a completed ticket to state."""
+        self.completed_tickets.append(ticket)
+        self.save()
 
 
 class StateManager:
+    """
+    State manager for backward compatibility with initial poller scaffold.
+
+    Provides dict-based state interface (load/save) for code that may
+    inherit from the scaffold. New code should use State class instead.
+    """
+
     def __init__(self, state_file: str):
         self.state_file = state_file
-        self.lock_file = state_file + ".lock"
         Path(state_file).parent.mkdir(parents=True, exist_ok=True)
-
-    def _with_lock(self, operation):
-        """Execute operation with file locking."""
-        with open(self.lock_file, 'w') as lock_f:
-            fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
-            try:
-                return operation()
-            finally:
-                fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
 
     def load(self) -> dict:
         if not Path(self.state_file).exists():
@@ -31,8 +184,8 @@ class StateManager:
         except (json.JSONDecodeError, IOError):
             return self._default_state()
 
-    def _save_unlocked(self, state: dict) -> None:
-        """Internal save without locking (call within _with_lock)."""
+    def save(self, state: dict) -> None:
+        # Write to temp file first, then atomic rename (prevents partial writes)
         temp_fd, temp_path = tempfile.mkstemp(dir=Path(self.state_file).parent)
         try:
             with open(temp_fd, 'w') as f:
@@ -41,58 +194,6 @@ class StateManager:
         except Exception:
             Path(temp_path).unlink(missing_ok=True)
             raise
-
-    def save(self, state: dict) -> None:
-        """Save state with file locking."""
-        self._with_lock(lambda: self._save_unlocked(state))
-
-    def add_agent(self, ticket_id: int, agent_type: str, pid: int, worktree_path: str) -> None:
-        """Register an active agent."""
-        def _do_add():
-            state = self.load()
-            state["active_agents"].append({
-                "ticket_id": ticket_id,
-                "agent_type": agent_type,
-                "pid": pid,
-                "started_at": datetime.utcnow().isoformat() + "Z",
-                "worktree_path": worktree_path
-            })
-            self._save_unlocked(state)
-        self._with_lock(_do_add)
-
-    def remove_agent(self, ticket_id: int) -> None:
-        """Unregister an active agent by ticket_id."""
-        def _do_remove():
-            state = self.load()
-            state["active_agents"] = [
-                agent for agent in state["active_agents"]
-                if agent["ticket_id"] != ticket_id
-            ]
-            self._save_unlocked(state)
-        self._with_lock(_do_remove)
-
-    def count_active_agents(self) -> int:
-        """Count the number of active agents."""
-        state = self.load()
-        return len(state["active_agents"])
-
-    def prune_dead_agents(self) -> None:
-        """Remove agents whose PIDs no longer exist."""
-        def is_process_alive(pid: int) -> bool:
-            try:
-                os.kill(pid, 0)
-                return True
-            except (OSError, ProcessLookupError):
-                return False
-
-        def _do_prune():
-            state = self.load()
-            state["active_agents"] = [
-                agent for agent in state["active_agents"]
-                if is_process_alive(agent["pid"])
-            ]
-            self._save_unlocked(state)
-        self._with_lock(_do_prune)
 
     @staticmethod
     def _default_state() -> dict:

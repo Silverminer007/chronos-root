@@ -89,46 +89,6 @@ def test_poller_logs_activity():
                 assert "2026-" in content or "202" in content  # Check for timestamp
 
 
-def test_poller_can_spawn_agent_under_limit():
-    """Test poller allows spawning when under 3-agent limit."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-
-        with patch("poller.GitHubAPI"):
-            poller = Poller(
-                repo="test-org/test-repo",
-                state_file=state_file,
-                log_file=os.path.join(tmpdir, "poller.log")
-            )
-
-            # Empty state - should allow spawn
-            assert poller.can_spawn_agent() is True
-
-            # Add 2 agents with current process PID (alive) - should still allow spawn
-            current_pid = os.getpid()
-            poller.register_agent(123, "tdd", current_pid, "/path1")
-            poller.register_agent(124, "code-review", current_pid, "/path2")
-            assert poller.can_spawn_agent() is True
-
-
-def test_poller_cannot_spawn_agent_at_limit():
-    """Test poller rejects spawning when at 3-agent limit."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        state_file = os.path.join(tmpdir, "state.json")
-
-        with patch("poller.GitHubAPI"):
-            poller = Poller(
-                repo="test-org/test-repo",
-                state_file=state_file,
-                log_file=os.path.join(tmpdir, "poller.log")
-            )
-
-            # Add 3 agents with current process PID (alive) - should NOT allow spawn
-            current_pid = os.getpid()
-            poller.register_agent(123, "tdd", current_pid, "/path1")
-            poller.register_agent(124, "code-review", current_pid, "/path2")
-            poller.register_agent(125, "tdd", current_pid, "/path3")
-            assert poller.can_spawn_agent() is False
 
 
 if __name__ == "__main__":

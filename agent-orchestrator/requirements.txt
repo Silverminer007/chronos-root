@@ -1,3 +1,10 @@
 # Agent Orchestrator dependencies
-# Minimal - primary dependency is gh CLI (must be installed separately)
-# No external Python packages required for basic scaffold
+# Core runtime: gh CLI (GitHub CLI - install via: brew install gh or apt-get install gh)
+# Testing: pytest with mock support
+pytest>=7.0
+pytest-mock>=3.10
+
+# NOTE: gh CLI (https://cli.github.com) must be installed separately
+# Ubuntu/Debian: sudo apt-get install gh
+# macOS: brew install gh
+# See: https://cli.github.com/manual/installation
