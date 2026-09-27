@@ -1,0 +1,3 @@
+# Agent Orchestrator dependencies
+# Minimal - primary dependency is gh CLI (must be installed separately)
+# No external Python packages required for basic scaffold

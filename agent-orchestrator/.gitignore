@@ -19,11 +19,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyc
+*.pyo
 
 # Virtual environments
 venv/
 ENV/
 env/
+.venv/
 
 # IDE
 .vscode/
