@@ -1,0 +1,88 @@
+# Prometheus Helm Chart Values for Chronos Backend
+# This is a reference configuration for deploying Prometheus + Grafana
+# Actual deployment deferred to later ticket per issue #38 notes
+#
+# To enable: add kube-prometheus-stack as Helm dependency and merge these values
+
+prometheus:
+  prometheusSpec:
+    # Scrape interval for metrics collection
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+
+    # Storage for time-series data
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+    # Service monitor for Chronos backend
+    serviceMonitorSelector:
+      matchLabels:
+        app: chronos-backend
+
+    # Additional scrape configs for backend metrics
+    additionalScrapeConfigs:
+      - job_name: 'chronos-backend'
+        static_configs:
+          - targets: ['chronos-backend:8080']
+        metrics_path: '/q/metrics'
+        scrape_interval: 5s
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminPassword: admin
+
+  # Datasources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-operated:9090
+          access: proxy
+          isDefault: true
+
+  # Pre-provision dashboard
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'chronos-dashboards'
+          orgId: 1
+          folder: 'Chronos'
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 10
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards/chronos
+
+  dashboards:
+    chronos-dashboards:
+      java-backend-performance: {}  # Reference deployment/grafana-dashboards/java-backend-performance.json
+
+# Prometheus Operator ServiceMonitor
+# Deploy this CRD to enable Prometheus scraping of Chronos backend
+serviceMonitor:
+  enabled: true
+  name: chronos-backend
+  namespace: chronos-prod
+  labels:
+    app: chronos-backend
+  endpoints:
+    - port: 8080
+      path: /q/metrics
+      interval: 5s
+
+# Notes for deployment:
+# 1. Verify backend pod has label: app=chronos-backend
+# 2. Ensure backend service exposes port 8080
+# 3. Deploy with: helm install prometheus kube-prometheus-stack -f deployment/prometheus-values.yaml
+# 4. Access Grafana at http://prometheus-grafana:3000 (admin/admin)
+# 5. Import dashboard at Dashboards → Import → deployment/grafana-dashboards/java-backend-performance.json
