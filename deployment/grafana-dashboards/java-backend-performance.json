@@ -95,24 +95,24 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{job=\"chronos-backend\"}[5m]))",
+          "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{job=\"chronos-backend\"}[5m])) by (uri)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "p50",
+          "legendFormat": "{{uri}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"chronos-backend\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"chronos-backend\"}[5m])) by (uri)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "p95",
+          "legendFormat": "{{uri}} p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"chronos-backend\"}[5m]))",
+          "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"chronos-backend\"}[5m])) by (uri)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "p99",
+          "legendFormat": "{{uri}} p99",
           "refId": "C"
         }
       ],
@@ -124,7 +124,35 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Requests/sec",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -133,14 +161,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 200
               }
             ]
           },
@@ -156,29 +176,30 @@
       },
       "id": 2,
       "options": {
-        "displayMode": "gradient",
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "fields": "",
+        "legend": {
           "calcs": [
-            "lastNotNull"
-          ]
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "text": {}
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(http_server_requests_seconds_count{job=\"chronos-backend\"}[5m])",
+          "expr": "rate(http_server_requests_seconds_count{job=\"chronos-backend\"}[5m]) by (uri)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{handler}}",
+          "legendFormat": "{{uri}}",
           "refId": "A"
         }
       ],
       "title": "Request Rate per Endpoint",
-      "type": "heatmap"
+      "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
