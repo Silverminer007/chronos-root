@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'local-development'
+
+scrape_configs:
+  - job_name: 'chronos-backend'
+    static_configs:
+      - targets: ['localhost:9000']  # Quarkus metrics on port 9000
+    metrics_path: '/q/metrics'
+    scrape_interval: 5s  # More frequent scraping for performance testing
+
+  - job_name: 'chronos-backend-k8s'
+    # For Kubernetes deployments
+    # kubernetes_sd_configs:
+    #   - role: pod
+    #     namespaces:
+    #       names:
+    #         - 'chronos-prod'
+    #         - 'chronos-staging'
+    #
+    # relabel_configs:
+    #   - source_labels: [__meta_kubernetes_pod_label_app]
+    #     action: keep
+    #     regex: 'chronos-backend'
+    #   - source_labels: [__meta_kubernetes_pod_ip]
+    #     action: replace
+    #     target_label: __address__
+    #     replacement: $1:8080
+    #   - source_labels: [__meta_kubernetes_pod_name]
+    #     action: replace
+    #     target_label: pod
+
+    # Comment out for now; enable when deploying to k8s
+    static_configs:
+      - targets: []  # No targets until k8s deployment
+
+# AlertManager would go here (deferred for later ticket)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - localhost:9093
+#
+# rule_files:
+#   - 'alerts.yml'
