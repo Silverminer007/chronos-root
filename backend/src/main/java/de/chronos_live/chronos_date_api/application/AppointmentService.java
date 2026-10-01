@@ -80,6 +80,7 @@ public class AppointmentService {
         }
         appointment.setMinimalAttendees(dto.getMinimal_attendees());
         appointment.setStatus(AppointmentStatus.PLANNED);
+        appointment.setCreatorOidcId(creatorOidcId);
         appointment.setCreatedAt(Instant.now());
         appointment.setLastUpdate(Instant.now());
         appointmentRepository.persist(appointment);

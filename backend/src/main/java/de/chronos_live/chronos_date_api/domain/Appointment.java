@@ -21,6 +21,9 @@ public class Appointment extends PanacheEntity {
     private AppointmentStatus status;
     private Integer minimalAttendees;
 
+    @Column(name = "creator_oidc_id")
+    private String creatorOidcId;
+
     private Instant lastUpdate, createdAt;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "appointment")
