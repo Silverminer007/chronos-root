@@ -12,7 +12,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -28,9 +27,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Database persistence
  * - CDI event firing (mocked separately in service tests)
  * - Authorization checks
+ *
+ * <p>Note: Test class does NOT use @Transactional so that data created in test methods
+ * is immediately committed to the database and visible to REST request handlers running
+ * in separate threads. Panache repositories auto-commit by default.
  */
 @QuarkusTest
-@Transactional
 class AppointmentIntegrationTest extends BaseIntegrationTest {
 
     @Inject
