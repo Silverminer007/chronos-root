@@ -1014,7 +1014,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     // ────────────────────────────────────────────────────────────────────────────
 
     @Transactional
-    private Appointment createTestAppointment(String creatorOidcId) {
+    Appointment createTestAppointment(String creatorOidcId) {
         Appointment appointment = new Appointment();
         appointment.setName("Test Termin");
         appointment.setDescription("Test Description");
@@ -1029,8 +1029,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     }
 
     @Transactional
-    private void addParticipantToAppointment(Appointment appointment, String userOidcId,
-                                             UserRole role, ParticipationStatus status) {
+    void addParticipantToAppointment(Appointment appointment, String userOidcId,
+                                     UserRole role, ParticipationStatus status) {
         AppointmentParticipation participation = new AppointmentParticipation();
         participation.setAppointment(appointment);
         participation.setUserOidcId(userOidcId);
