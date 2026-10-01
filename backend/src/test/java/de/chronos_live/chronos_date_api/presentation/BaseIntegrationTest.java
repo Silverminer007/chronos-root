@@ -1,9 +1,9 @@
 package de.chronos_live.chronos_date_api.presentation;
 
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import jakarta.inject.Inject;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
@@ -25,7 +25,7 @@ public abstract class BaseIntegrationTest {
     protected static final String TEST_USER_OIDC_2 = "test-user-oidc-456";
     protected static final String ADMIN_USER_OIDC = "admin-oidc-789";
 
-    @Inject
+    @InjectMock
     JsonWebToken jwt;
 
     @BeforeEach
