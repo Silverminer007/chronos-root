@@ -51,7 +51,7 @@ class MessageIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(messageDto)
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/messages")
+                .post("/api/v2/appointments/" + appointment.id + "/messages")
                 .then()
                 .extract()
                 .response();
@@ -62,7 +62,7 @@ class MessageIntegrationTest extends BaseIntegrationTest {
         assertThat(response.body().jsonPath().getString("text")).isEqualTo("This is a test message");
 
         // Verify in database
-        long messageCount = messageRepository.count("appointmentId = ?1", appointment.getId());
+        long messageCount = messageRepository.count("appointmentId = ?1", appointment.id);
         assertThat(messageCount).isGreaterThanOrEqualTo(1);
     }
 
@@ -73,7 +73,7 @@ class MessageIntegrationTest extends BaseIntegrationTest {
         Appointment appointment = createTestAppointment();
 
         Message message = new Message();
-        message.setAppointmentId(appointment.getId());
+        message.setAppointmentId(appointment.id);
         message.setUserOidcId(TEST_USER_OIDC);
         message.setText("Test message");
         message.setCreatedAt(Instant.now());
@@ -83,7 +83,7 @@ class MessageIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .get("/api/v2/appointments/" + appointment.getId() + "/messages")
+                .get("/api/v2/appointments/" + appointment.id + "/messages")
                 .then()
                 .extract()
                 .response();
@@ -100,18 +100,18 @@ class MessageIntegrationTest extends BaseIntegrationTest {
         Appointment appointment = createTestAppointment();
 
         Message message = new Message();
-        message.setAppointmentId(appointment.getId());
+        message.setAppointmentId(appointment.id);
         message.setUserOidcId(TEST_USER_OIDC);
         message.setText("Test message to delete");
         message.setCreatedAt(Instant.now());
         messageRepository.persist(message);
-        Long messageId = message.getId();
+        Long messageId = message.id;
 
         // Act
         var response = RestAssured
                 .given()
                 .when()
-                .delete("/api/v2/appointments/" + appointment.getId() + "/messages/" + messageId)
+                .delete("/api/v2/appointments/" + appointment.id + "/messages/" + messageId)
                 .then()
                 .extract()
                 .response();
@@ -140,7 +140,7 @@ class MessageIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(messageDto)
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/messages")
+                .post("/api/v2/appointments/" + appointment.id + "/messages")
                 .then()
                 .extract()
                 .response();

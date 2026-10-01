@@ -118,7 +118,7 @@ class ErrorHandlingIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .delete("/api/v2/appointments/" + appointment.getId())
+                .delete("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -172,7 +172,7 @@ class ErrorHandlingIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(addDto)
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/participants/users")
+                .post("/api/v2/appointments/" + appointment.id + "/participants/users")
                 .then()
                 .extract()
                 .response();

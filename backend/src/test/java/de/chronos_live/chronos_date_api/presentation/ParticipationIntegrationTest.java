@@ -56,7 +56,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(addDto)
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/participants/users")
+                .post("/api/v2/appointments/" + appointment.id + "/participants/users")
                 .then()
                 .extract()
                 .response();
@@ -67,7 +67,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         // Verify in database
         Optional<AppointmentParticipation> participation = participationRepository
                 .find("appointmentId = ?1 AND userOidcId = ?2",
-                        appointment.getId(),
+                        appointment.id,
                         TEST_USER_OIDC_2)
                 .firstResultOptional();
         assertThat(participation).isPresent();
@@ -85,7 +85,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/participants/approve")
+                .post("/api/v2/appointments/" + appointment.id + "/participants/approve")
                 .then()
                 .extract()
                 .response();
@@ -96,7 +96,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         // Verify status changed in database
         Optional<AppointmentParticipation> participation = participationRepository
                 .find("appointmentId = ?1 AND userOidcId = ?2",
-                        appointment.getId(),
+                        appointment.id,
                         TEST_USER_OIDC_2)
                 .firstResultOptional();
         assertThat(participation).isPresent();
@@ -114,7 +114,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/participants/reject")
+                .post("/api/v2/appointments/" + appointment.id + "/participants/reject")
                 .then()
                 .extract()
                 .response();
@@ -125,7 +125,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         // Verify status changed in database
         Optional<AppointmentParticipation> participation = participationRepository
                 .find("appointmentId = ?1 AND userOidcId = ?2",
-                        appointment.getId(),
+                        appointment.id,
                         TEST_USER_OIDC_2)
                 .firstResultOptional();
         assertThat(participation).isPresent();
@@ -148,7 +148,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(roleDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId() + "/participants/users/" + TEST_USER_OIDC_2)
+                .patch("/api/v2/appointments/" + appointment.id + "/participants/users/" + TEST_USER_OIDC_2)
                 .then()
                 .extract()
                 .response();
@@ -159,7 +159,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         // Verify role changed in database
         Optional<AppointmentParticipation> participation = participationRepository
                 .find("appointmentId = ?1 AND userOidcId = ?2",
-                        appointment.getId(),
+                        appointment.id,
                         TEST_USER_OIDC_2)
                 .firstResultOptional();
         assertThat(participation).isPresent();
@@ -177,7 +177,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .delete("/api/v2/appointments/" + appointment.getId() + "/participants/users/" + TEST_USER_OIDC_2)
+                .delete("/api/v2/appointments/" + appointment.id + "/participants/users/" + TEST_USER_OIDC_2)
                 .then()
                 .extract()
                 .response();
@@ -188,7 +188,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         // Verify removed from database
         long count = participationRepository
                 .count("appointmentId = ?1 AND userOidcId = ?2",
-                        appointment.getId(),
+                        appointment.id,
                         TEST_USER_OIDC_2);
         assertThat(count).isZero();
     }
@@ -204,7 +204,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .get("/api/v2/appointments/" + appointment.getId() + "/participants/")
+                .get("/api/v2/appointments/" + appointment.id + "/participants/")
                 .then()
                 .extract()
                 .response();
@@ -229,7 +229,7 @@ class ParticipationIntegrationTest extends BaseIntegrationTest {
     private void addParticipantToAppointment(Appointment appointment, String userOidcId,
                                              UserRole role, ParticipationStatus status) {
         AppointmentParticipation participation = new AppointmentParticipation();
-        participation.setAppointmentId(appointment.getId());
+        participation.setAppointmentId(appointment.id);
         participation.setUserOidcId(userOidcId);
         participation.setUserRole(role);
         participation.setParticipationStatus(status);

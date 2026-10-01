@@ -113,7 +113,7 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
                     var response = RestAssured
                             .given()
                             .when()
-                            .post("/api/v2/appointments/" + appointment.getId() + "/participants/approve")
+                            .post("/api/v2/appointments/" + appointment.id + "/participants/approve")
                             .then()
                             .extract()
                             .response();
@@ -132,7 +132,7 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
         }
 
         // Assert - No data corruption occurred
-        Appointment updated = appointmentRepository.findById(appointment.getId());
+        Appointment updated = appointmentRepository.findById(appointment.id);
         assertThat(updated).isNotNull();
         assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.PLANNED);
     }
@@ -167,7 +167,7 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
                             .contentType(ContentType.JSON)
                             .body(addDto)
                             .when()
-                            .post("/api/v2/appointments/" + appointment.getId() + "/participants/users")
+                            .post("/api/v2/appointments/" + appointment.id + "/participants/users")
                             .then()
                             .extract()
                             .response();
@@ -186,7 +186,7 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
         }
 
         // Assert - No data corruption occurred
-        Appointment updated = appointmentRepository.findById(appointment.getId());
+        Appointment updated = appointmentRepository.findById(appointment.id);
         assertThat(updated).isNotNull();
         assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.PLANNED);
     }
@@ -217,7 +217,7 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
                         var response = RestAssured
                                 .given()
                                 .when()
-                                .get("/api/v2/appointments/" + appointment.getId())
+                                .get("/api/v2/appointments/" + appointment.id)
                                 .then()
                                 .extract()
                                 .response();
@@ -239,7 +239,7 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
                                 .contentType(ContentType.JSON)
                                 .body(updateDto)
                                 .when()
-                                .patch("/api/v2/appointments/" + appointment.getId())
+                                .patch("/api/v2/appointments/" + appointment.id)
                                 .then()
                                 .extract()
                                 .response();

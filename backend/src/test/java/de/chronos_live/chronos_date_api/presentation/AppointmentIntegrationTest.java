@@ -93,7 +93,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .get("/api/v2/appointments/" + appointment.getId())
+                .get("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -101,7 +101,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         // Assert
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body().jsonPath().getString("name")).isEqualTo("Test Termin");
-        assertThat(response.body().jsonPath().getLong("id")).isEqualTo(appointment.getId());
+        assertThat(response.body().jsonPath().getLong("id")).isEqualTo(appointment.id);
     }
 
     @Test
@@ -149,7 +149,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -159,7 +159,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         assertThat(response.body().jsonPath().getString("name")).isEqualTo("Updated Name");
 
         // Verify in database
-        Appointment updated = appointmentRepository.findById(appointment.getId());
+        Appointment updated = appointmentRepository.findById(appointment.id);
         assertThat(updated.getName()).isEqualTo("Updated Name");
     }
 
@@ -174,7 +174,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatorOidcId(TEST_USER_OIDC);
         appointmentRepository.persist(appointment);
-        Long appointmentId = appointment.getId();
+        Long appointmentId = appointment.id;
 
         // Act
         var response = RestAssured
@@ -205,7 +205,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatorOidcId(TEST_USER_OIDC);
         appointmentRepository.persist(appointment);
-        Long appointmentId = appointment.getId();
+        Long appointmentId = appointment.id;
 
         // Act
         var response = RestAssured
@@ -317,7 +317,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -344,7 +344,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -370,7 +370,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -394,7 +394,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -409,7 +409,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         mockJwtForUser(TEST_USER_OIDC);
         Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
-        Long appointmentId = appointment.getId();
+        Long appointmentId = appointment.id;
 
         // Act
         var response = RestAssured
@@ -439,7 +439,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .delete("/api/v2/appointments/" + appointment.getId())
+                .delete("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -459,7 +459,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .delete("/api/v2/appointments/" + appointment.getId())
+                .delete("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -474,7 +474,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         mockJwtForUser(TEST_USER_OIDC);
         Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
-        Long appointmentId = appointment.getId();
+        Long appointmentId = appointment.id;
 
         // Act
         var response = RestAssured
@@ -504,7 +504,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         var response = RestAssured
                 .given()
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/cancel")
+                .post("/api/v2/appointments/" + appointment.id + "/cancel")
                 .then()
                 .extract()
                 .response();
@@ -532,7 +532,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -559,7 +559,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -696,7 +696,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         mockJwtForUser(TEST_USER_OIDC);
         Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
-        Long appointmentId = appointment.getId();
+        Long appointmentId = appointment.id;
 
         // Act
         var response = RestAssured
@@ -722,7 +722,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         mockJwtForUser(TEST_USER_OIDC);
         Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
-        Long appointmentId = appointment.getId();
+        Long appointmentId = appointment.id;
 
         // Act
         var response = RestAssured
@@ -771,7 +771,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -807,7 +807,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -842,7 +842,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -875,7 +875,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -919,7 +919,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(updateDto)
                 .when()
-                .patch("/api/v2/appointments/" + appointment.getId())
+                .patch("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
@@ -990,14 +990,14 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .queryParam("participants", "true")
                 .queryParam("messages", "true")
                 .when()
-                .get("/api/v2/appointments/" + appointment.getId())
+                .get("/api/v2/appointments/" + appointment.id)
                 .then()
                 .extract()
                 .response();
 
         // Assert - Verify response structure
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body().jsonPath().getLong("id")).isEqualTo(appointment.getId());
+        assertThat(response.body().jsonPath().getLong("id")).isEqualTo(appointment.id);
         assertThat(response.body().jsonPath().getString("name")).isEqualTo("Test Termin");
         assertThat(response.body().jsonPath().getString("status")).isEqualTo("PLANNED");
         assertThat(response.body().jsonPath().getList("participants")).isNotNull();
@@ -1025,7 +1025,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     private void addParticipantToAppointment(Appointment appointment, String userOidcId,
                                              UserRole role, ParticipationStatus status) {
         AppointmentParticipation participation = new AppointmentParticipation();
-        participation.setAppointmentId(appointment.getId());
+        participation.setAppointmentId(appointment.id);
         participation.setUserOidcId(userOidcId);
         participation.setUserRole(role);
         participation.setParticipationStatus(status);
