@@ -12,6 +12,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -29,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Authorization checks
  */
 @QuarkusTest
+@Transactional
 class AppointmentIntegrationTest extends BaseIntegrationTest {
 
     @Inject
