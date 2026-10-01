@@ -164,34 +164,27 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void testDeleteAppointment_Success() {
+    void testUpdateAppointment_NegativeMinimalAttendees_Returns400() {
         // Arrange
         mockJwtForUser(TEST_USER_OIDC);
-        Appointment appointment = new Appointment();
-        appointment.setName("Test Appointment");
-        appointment.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
-        appointment.setEndTime(appointment.getStartTime().plus(1, ChronoUnit.HOURS));
-        appointment.setStatus(AppointmentStatus.PLANNED);
-        appointment.setCreatorOidcId(TEST_USER_OIDC);
-        appointmentRepository.persist(appointment);
-        Long appointmentId = appointment.getId();
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
 
         // Act
+        var updateDto = new java.util.LinkedHashMap<String, Integer>();
+        updateDto.put("minimal_attendees", -5);
         var response = RestAssured
                 .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
                 .when()
-                .delete("/api/v2/appointments/" + appointmentId)
+                .patch("/api/v2/appointments/" + appointment.getId())
                 .then()
                 .extract()
                 .response();
 
         // Assert
-        assertThat(response.statusCode()).isEqualTo(200);
-
-        // Verify soft-deleted (status set to DELETED)
-        Appointment deleted = appointmentRepository.findById(appointmentId);
-        assertThat(deleted).isNotNull();
-        assertThat(deleted.getStatus()).isEqualTo(AppointmentStatus.DELETED);
+        assertThat(response.statusCode()).isEqualTo(400);
     }
 
     @Test
@@ -686,6 +679,24 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         assertThat(response.statusCode()).isEqualTo(200);
     }
 
+    @Test
+    void testCancelAppointment_NotFound_Returns200() {
+        // Arrange - Note: cancel returns 200 even if not found (idempotent)
+        mockJwtForUser(TEST_USER_OIDC);
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .post("/api/v2/appointments/999999/cancel")
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+    }
+
     // ────────────────────────────────────────────────────────────────────────────
     // Delete vs Cancel Tests (Soft Delete Distinction)
     // ────────────────────────────────────────────────────────────────────────────
@@ -798,8 +809,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         appointmentRepository.persist(appointment);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
 
-        // Act
-        Instant newStart = originalStart.plus(1, ChronoUnit.DAYS);
+        // Act - Move start time earlier (within 2h before original end)
+        Instant newStart = originalStart.plus(30, ChronoUnit.MINUTES);
         var updateDto = new java.util.LinkedHashMap<String, String>();
         updateDto.put("start", newStart.toString());
         var response = RestAssured
@@ -816,6 +827,32 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body().jsonPath().getString("start")).isEqualTo(newStart.toString());
         assertThat(response.body().jsonPath().getString("end")).isEqualTo(originalEnd.toString());
+    }
+
+    @Test
+    void testUpdateAppointment_OnlyStartTimeUpdated_InvalidRange_Returns400() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Instant originalEnd = appointment.getEndTime();
+
+        // Act - Try to move start time after existing end time
+        Instant invalidStart = originalEnd.plus(1, ChronoUnit.HOURS);
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("start", invalidStart.toString());
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(400);
     }
 
     @Test
@@ -851,6 +888,32 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body().jsonPath().getString("start")).isEqualTo(originalStart.toString());
         assertThat(response.body().jsonPath().getString("end")).isEqualTo(newEnd.toString());
+    }
+
+    @Test
+    void testUpdateAppointment_OnlyEndTimeUpdated_InvalidRange_Returns400() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Instant originalStart = appointment.getStartTime();
+
+        // Act - Try to move end time before existing start time
+        Instant invalidEnd = originalStart.minus(1, ChronoUnit.HOURS);
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("end", invalidEnd.toString());
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(400);
     }
 
     @Test

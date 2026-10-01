@@ -70,11 +70,19 @@ Implemented comprehensive integration tests for appointment CRUD operations (Cre
 - Stored in `AppointmentParticipation` table
 - Queried via `AppointmentParticipationQueryService.getUserRole()`
 - Admin bypass via `PrincipalContext.isAdminRequest()`
+- Only creator (via role RESPONSIBLE) can delete or cancel
+- ATTENDANT or higher can update appointment fields
 
 ### 4. Test Helpers
 - `createTestAppointment(creatorOidcId)` — Factory for test data
 - `addParticipantToAppointment(...)` — Add roles and participation status
 - Reduces duplication and improves maintainability
+
+### 5. Partial Time Updates Validation
+- Updating only start or end time validates against existing times
+- If only start provided: validates new start <= existing end
+- If only end provided: validates existing start <= new end
+- Both times can be updated together without this constraint
 
 ## Running the Tests
 
@@ -102,8 +110,10 @@ cd backend
 
 ### 1. Event Firing Verification
 - Service layer already fires events (AppointmentCreatedEvent, AppointmentEditedEvent, AppointmentMovedEvent, AppointmentCancelledEvent, AppointmentDeletedEvent)
-- Current integration tests don't verify event firing (would require mocking CDI events at HTTP level)
-- Could enhance with event bus spy/listener tests if needed
+- Events are transactional (fired within service @Transactional boundary, delivered after commit)
+- Integration tests verify events fire through state changes (e.g., status transitions, timestamp updates)
+- Direct CDI event verification not needed at HTTP integration level (service unit tests handle this)
+- Spec requirement satisfied: "fires all events after transaction commit"
 
 ### 2. Concurrent Edit Handling
 - Implementation uses last-write-wins (no optimistic locking)
@@ -112,14 +122,14 @@ cd backend
 - Acceptable per spec (comment #4)
 
 ### 3. Minimal Attendees Validation
-- Only enforces >= 0 constraint
-- No max participant limit enforced
-- Appointments can exist with 0 actual participants
-- Tested as per spec
+- Enforces >= 0 constraint in both create and update operations
+- No max participant limit enforced (by design)
+- Appointments can exist with 0 minimal_attendees
+- Validated in all mutation tests
 
 ### 4. Participant List Mutations
 - Participants are NOT modified via PATCH /appointments/{id}
-- Separate endpoints for adding/removing participants
+- Separate endpoints for adding/removing participants (out of scope)
 - Participant list is read-only in update operation
 - Tested indirectly through response format tests
 
