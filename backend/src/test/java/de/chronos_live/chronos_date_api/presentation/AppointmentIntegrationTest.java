@@ -577,8 +577,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
 
         CreateAppointmentDto createDto = new CreateAppointmentDto();
         createDto.setName("Invalid Meeting");
-        createDto.setStartTime(start.toString());
-        createDto.setEndTime(end.toString());
+        createDto.setStart(start.toString());
+        createDto.setEnd(end.toString());
 
         // Act
         var response = RestAssured
@@ -604,8 +604,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
 
         CreateAppointmentDto createDto = new CreateAppointmentDto();
         createDto.setName("Meeting");
-        createDto.setStartTime(start.toString());
-        createDto.setEndTime(end.toString());
+        createDto.setStart(start.toString());
+        createDto.setEnd(end.toString());
         createDto.setMinimal_attendees(-5);
 
         // Act
@@ -949,8 +949,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         createDto.setName("Team Meeting");
         createDto.setDescription("Weekly sync");
         createDto.setVenue("Conference Room A");
-        createDto.setStartTime(startTime.toString());
-        createDto.setEndTime(endTime.toString());
+        createDto.setStart(startTime.toString());
+        createDto.setEnd(endTime.toString());
         createDto.setMinimal_attendees(3);
 
         // Act

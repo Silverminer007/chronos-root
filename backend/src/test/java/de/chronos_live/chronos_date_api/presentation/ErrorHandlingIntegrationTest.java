@@ -37,8 +37,8 @@ class ErrorHandlingIntegrationTest extends BaseIntegrationTest {
         mockJwtForUser(TEST_USER_OIDC);
         CreateAppointmentDto createDto = new CreateAppointmentDto();
         createDto.setName(null);
-        createDto.setStartTime(Instant.now().toString());
-        createDto.setEndTime(Instant.now().plus(1, ChronoUnit.HOURS).toString());
+        createDto.setStart(Instant.now().toString());
+        createDto.setEnd(Instant.now().plus(1, ChronoUnit.HOURS).toString());
 
         // Act
         var response = RestAssured
@@ -64,8 +64,8 @@ class ErrorHandlingIntegrationTest extends BaseIntegrationTest {
 
         CreateAppointmentDto createDto = new CreateAppointmentDto();
         createDto.setName("Invalid Time Range");
-        createDto.setStartTime(startTime.toString());
-        createDto.setEndTime(endTime.toString());
+        createDto.setStart(startTime.toString());
+        createDto.setEnd(endTime.toString());
 
         // Act
         var response = RestAssured

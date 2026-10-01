@@ -51,8 +51,8 @@ class ConcurrencyIntegrationTest extends BaseIntegrationTest {
                     Instant startTime = Instant.now().plus(index, ChronoUnit.DAYS);
                     CreateAppointmentDto createDto = new CreateAppointmentDto();
                     createDto.setName("Concurrent Appointment " + index);
-                    createDto.setStartTime(startTime.toString());
-                    createDto.setEndTime(startTime.plus(1, ChronoUnit.HOURS).toString());
+                    createDto.setStart(startTime.toString());
+                    createDto.setEnd(startTime.plus(1, ChronoUnit.HOURS).toString());
 
                     var response = RestAssured
                             .given()
