@@ -12,7 +12,6 @@ import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
-import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
