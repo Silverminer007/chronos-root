@@ -46,6 +46,7 @@ public class Appointment extends PanacheEntity {
         this.endTime = appointment.endTime;
         this.status = appointment.status;
         this.minimalAttendees = appointment.minimalAttendees;
+        this.creatorOidcId = appointment.creatorOidcId;
         this.messages = appointment.messages;
         this.participants = appointment.participants;
         this.groupParticipants = appointment.groupParticipants;
