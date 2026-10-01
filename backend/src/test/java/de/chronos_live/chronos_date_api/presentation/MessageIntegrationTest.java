@@ -3,7 +3,6 @@ package de.chronos_live.chronos_date_api.presentation;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
 import de.chronos_live.chronos_date_api.domain.Message;
-import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import de.chronos_live.chronos_date_api.infrastructure.MessageRepository;
 import io.quarkus.test.junit.QuarkusTest;

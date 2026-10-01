@@ -1,6 +1,5 @@
 package de.chronos_live.admin.application;
 
-import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.dto.AppointmentDto;
 import de.chronos_live.chronos_date_api.dto.PagedResponse;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
