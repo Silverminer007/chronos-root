@@ -12,6 +12,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -1012,6 +1013,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     // Helper Methods
     // ────────────────────────────────────────────────────────────────────────────
 
+    @Transactional
     private Appointment createTestAppointment(String creatorOidcId) {
         Appointment appointment = new Appointment();
         appointment.setName("Test Termin");
@@ -1026,6 +1028,7 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         return appointment;
     }
 
+    @Transactional
     private void addParticipantToAppointment(Appointment appointment, String userOidcId,
                                              UserRole role, ParticipationStatus status) {
         AppointmentParticipation participation = new AppointmentParticipation();

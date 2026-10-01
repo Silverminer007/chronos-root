@@ -12,6 +12,7 @@ import de.chronos_live.chronos_date_api.dto.MessageDto;
 import de.chronos_live.chronos_date_api.dto.UpdateAppointmentDto;
 import de.chronos_live.chronos_date_api.dto.UserDto;
 import de.chronos_live.chronos_date_api.dto.UserParticipantDto;
+import de.chronos_live.chronos_date_api.exception.ResourceNotFoundException;
 import de.chronos_live.chronos_date_api.exception.ValidationException;
 import de.chronos_live.chronos_date_api.infrastructure.AppointmentRepository;
 import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
@@ -93,8 +94,8 @@ public class AppointmentService {
     public Appointment updateAppointment(Long appointmentId, String actingUserOidcId, UpdateAppointmentDto dto) {
         LOGGER.debugf("[Principal %s][Appointment %s] Update Appointment", actingUserOidcId, appointmentId);
 
+        Appointment appointment = appointmentRepository.getAppointment(appointmentId, true, true, true);
         authorizationService.requireUpdateAppointment(appointmentId, actingUserOidcId);
-        Appointment appointment = getAppointment(appointmentId, actingUserOidcId, true, true, true);
 
         if (dto.getName() != null) {
             if (dto.getName().isBlank()) throw new ValidationException("name", "Name cannot be blank");
@@ -136,18 +137,18 @@ public class AppointmentService {
 
     public void deleteAppointment(Long appointmentId, String actingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Delete Appointment", actingUserOidcId, appointmentId);
-        authorizationService.requireDeleteAppointment(appointmentId, actingUserOidcId);
         Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) return;
+        authorizationService.requireDeleteAppointment(appointmentId, actingUserOidcId);
         appointment.setStatus(AppointmentStatus.DELETED);
         appointmentDeletedEvent.fire(new AppointmentDeletedEvent(appointment.id, actingUserOidcId));
     }
 
     public void cancelAppointment(Long appointmentId, String actingUserOidcId) {
         LOGGER.debugf("[Principal %s][Appointment %s] Cancel Appointment", actingUserOidcId, appointmentId);
-        authorizationService.requireCancelAppointment(appointmentId, actingUserOidcId);
         Appointment appointment = appointmentRepository.findById(appointmentId);
         if (appointment == null) return;
+        authorizationService.requireCancelAppointment(appointmentId, actingUserOidcId);
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointmentCancelledEvent.fire(new AppointmentCancelledEvent(appointment.id, actingUserOidcId));
     }
@@ -155,8 +156,8 @@ public class AppointmentService {
     public Appointment getAppointment(Long appointmentId, String requestingUserOidcId,
                                       boolean messages, boolean participants, boolean groupParticipants) {
         LOGGER.debugf("[Principal %s][Appointment %s] Read Appointment", requestingUserOidcId, appointmentId);
-        authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
         Appointment appointment = appointmentRepository.getAppointment(appointmentId, messages, participants, groupParticipants);
+        authorizationService.requireReadAppointment(appointmentId, requestingUserOidcId);
         if (!messages) appointment.setMessages(null);
         if (!participants) appointment.setParticipants(null);
         if (!groupParticipants) appointment.setGroupParticipants(null);
