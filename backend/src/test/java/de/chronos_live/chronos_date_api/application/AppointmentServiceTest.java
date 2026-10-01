@@ -219,9 +219,9 @@ class AppointmentServiceTest {
      *   B7  both null                            → keep originals
      *   B8  newEndTime.isBefore(newStartTime)    → true (throw) / false (continue)
      *   B9  times changed                        → true (fire moved) / false (no moved)
-     *   B10 minAttendees != null                 → set / null (skip)
+     *   B10 minAttendees != null {@code &&} < 0       → true (throw) / false (set) / null (skip)
      *
-     * Total testable branches: 22  |  Tests: 7
+     * Total testable branches: 22  |  Tests: 8
      */
     @Nested
     class UpdateAppointment {
@@ -253,6 +253,17 @@ class AppointmentServiceTest {
             assertThatThrownBy(() -> service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("end");
+        }
+
+        // B10=true with negative minimal_attendees
+        @Test
+        void should_throwValidationException_when_minimalAttendeesIsNegativeOnUpdate() {
+            UpdateAppointmentDto dto = new UpdateAppointmentDto(
+                    null, null, null, null, null, -1);
+
+            assertThatThrownBy(() -> service.updateAppointment(APPOINTMENT_ID, USER_OIDC, dto))
+                    .isInstanceOf(ValidationException.class)
+                    .hasMessageContaining("minimal_attendees");
         }
 
         // B1=false (name set), B2=true, B3=true, B4=true (both times), B9=true, B10=true

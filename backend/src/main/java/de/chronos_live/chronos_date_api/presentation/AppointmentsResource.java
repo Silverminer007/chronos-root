@@ -22,7 +22,6 @@ import java.util.List;
 @Path("/api/v2/appointments")
 @PermitAll
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 @Timed("api.appointments")
 public class AppointmentsResource {
     @Inject
@@ -78,6 +77,7 @@ public class AppointmentsResource {
 
     @POST
     @Path("/")
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response postEvent(@RequestBody CreateAppointmentDto dto) {
         String oidcId = principalContext.getPrincipal().oidcId();
         Appointment created = appointmentService.createAppointment(dto, oidcId);
@@ -86,6 +86,7 @@ public class AppointmentsResource {
 
     @PATCH
     @Path("/{id}")
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response patchEvent(@RequestBody UpdateAppointmentDto dto, @PathParam("id") Long appointmentId) {
         String oidcId = principalContext.getPrincipal().oidcId();
         Appointment updated = appointmentService.updateAppointment(appointmentId, oidcId, dto);

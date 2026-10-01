@@ -88,6 +88,7 @@ Domain terminology and acronyms.
 
 **Backend**:
 - ADR-2025-09-28-002: Use Quarkus
+- ADR-2025-10-01-011: Soft-delete pattern for appointments
 - Architecture: Layered backend structure
 - Patterns: CDI events, DTO mapping, authorization
 - Constraints: Forward-only migrations
@@ -260,6 +261,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2025-09-28-008: PostgreSQL with Flyway for persistence](adr/ADR-2025-09-28-008-postgres-flyway.md)
 - [ADR-2025-09-28-009: Panache for ORM](adr/ADR-2025-09-28-009-panache.md)
 - [ADR-2025-09-28-010: Server routes as auth proxy](adr/ADR-2025-09-28-010-server-routes-proxy.md)
+- [ADR-2025-10-01-011: Soft-delete pattern for appointment lifecycle](adr/ADR-2025-10-01-011-soft-delete.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)
@@ -290,4 +292,4 @@ grep -r "relates_to.*backend" kb/constraints/
 
 ---
 
-**Last updated**: 2025-09-28
+**Last updated**: 2025-10-01
