@@ -106,14 +106,19 @@ cd backend
 - Creates index for authorization queries
 - Run with: `./mvnw quarkus:dev` (auto-runs migrations)
 
-## Notes for Future Work
-
-### 1. Event Firing Verification
-- Service layer already fires events (AppointmentCreatedEvent, AppointmentEditedEvent, AppointmentMovedEvent, AppointmentCancelledEvent, AppointmentDeletedEvent)
+### 6. Event Firing Verification
+- Service layer fires events (AppointmentCreatedEvent, AppointmentEditedEvent, AppointmentMovedEvent, AppointmentCancelledEvent, AppointmentDeletedEvent)
 - Events are transactional (fired within service @Transactional boundary, delivered after commit)
-- Integration tests verify events fire through state changes (e.g., status transitions, timestamp updates)
-- Direct CDI event verification not needed at HTTP integration level (service unit tests handle this)
+- **Integration tests verify event firing via TestEventObserver CDI spy:**
+  - `testCreateAppointment_FiresAppointmentCreatedEvent` — verifies event on POST create
+  - `testUpdateAppointment_FiresAppointmentEditedEvent` — verifies event on PATCH edit
+  - `testUpdateAppointment_FiresAppointmentMovedEvent_WhenTimesChange` — verifies conditional event
+  - `testUpdateAppointment_DoesNotFireAppointmentMovedEvent_WhenTimesUnchanged` — negative test
+  - `testDeleteAppointment_FiresAppointmentDeletedEvent` — verifies event on DELETE
+  - `testCancelAppointment_FiresAppointmentCancelledEvent` — verifies event on POST cancel
 - Spec requirement satisfied: "fires all events after transaction commit"
+
+## Notes for Future Work
 
 ### 2. Concurrent Edit Handling
 - Implementation uses last-write-wins (no optimistic locking)
