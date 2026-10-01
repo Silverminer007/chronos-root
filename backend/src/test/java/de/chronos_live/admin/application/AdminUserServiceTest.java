@@ -8,6 +8,7 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UsersResource;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -19,7 +20,6 @@ import static org.mockito.Mockito.*;
 @QuarkusTest
 class AdminUserServiceTest {
 
-    private static final String REALM = "test-realm";
     private static final String USER_ID = "user-123";
 
     @Inject
@@ -34,7 +34,8 @@ class AdminUserServiceTest {
         RealmResource realmResource = mock(RealmResource.class);
         UsersResource usersResource = mock(UsersResource.class);
 
-        when(keycloak.realm(REALM)).thenReturn(realmResource);
+        // Accept any realm name (from configuration) since it's injected via ConfigProperty
+        when(keycloak.realm(any())).thenReturn(realmResource);
         when(realmResource.users()).thenReturn(usersResource);
 
         // Act
