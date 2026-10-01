@@ -1,5 +1,10 @@
 package de.chronos_live.chronos_date_api.presentation;
 
+import de.chronos_live.chronos_date_api.application.events.AppointmentCancelledEvent;
+import de.chronos_live.chronos_date_api.application.events.AppointmentCreatedEvent;
+import de.chronos_live.chronos_date_api.application.events.AppointmentDeletedEvent;
+import de.chronos_live.chronos_date_api.application.events.AppointmentEditedEvent;
+import de.chronos_live.chronos_date_api.application.events.AppointmentMovedEvent;
 import de.chronos_live.chronos_date_api.domain.Appointment;
 import de.chronos_live.chronos_date_api.domain.AppointmentParticipation;
 import de.chronos_live.chronos_date_api.domain.AppointmentStatus;
@@ -11,11 +16,16 @@ import de.chronos_live.chronos_date_api.infrastructure.AppointmentParticipationR
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Tests verify:
  * - REST endpoint contract (status codes, response format)
  * - Database persistence
- * - CDI event firing (mocked separately in service tests)
+ * - CDI event firing (verified via TestEventObserver)
  * - Authorization checks
  */
 @QuarkusTest
@@ -36,6 +46,14 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
 
     @Inject
     AppointmentParticipationRepository participationRepository;
+
+    @Inject
+    TestEventObserver eventObserver;
+
+    @BeforeEach
+    void resetEventObserver() {
+        eventObserver.reset();
+    }
 
     @Test
     void testCreateAppointment_Success() {
@@ -1063,5 +1081,172 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         participation.setUserRole(role);
         participation.setParticipationStatus(status);
         participationRepository.persist(participation);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Event Verification Tests
+    // ────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    void testCreateAppointment_FiresAppointmentCreatedEvent() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Instant startTime = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant endTime = startTime.plus(2, ChronoUnit.HOURS);
+
+        CreateAppointmentDto createDto = new CreateAppointmentDto();
+        createDto.setName("Event Fired Meeting");
+        createDto.setStart(startTime.toString());
+        createDto.setEnd(endTime.toString());
+
+        // Act
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(createDto)
+                .when()
+                .post("/api/v2/appointments/")
+                .then()
+                .extract()
+                .response();
+
+        // Assert - Verify event was fired
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(eventObserver.getCreatedEvents()).hasSize(1);
+        AppointmentCreatedEvent event = eventObserver.getCreatedEvents().get(0);
+        assertThat(event.appointmentId()).isNotNull();
+        assertThat(event.creatorOidcId()).isEqualTo(TEST_USER_OIDC);
+    }
+
+    @Test
+    void testUpdateAppointment_FiresAppointmentEditedEvent() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+
+        // Act
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("name", "Updated for Event Test");
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert - Verify AppointmentEditedEvent was fired
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(eventObserver.getEditedEvents()).hasSize(1);
+        AppointmentEditedEvent event = eventObserver.getEditedEvents().get(0);
+        assertThat(event.appointmentId()).isEqualTo(appointment.getId());
+    }
+
+    @Test
+    void testUpdateAppointment_FiresAppointmentMovedEvent_WhenTimesChange() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Instant oldStartTime = appointment.getStartTime();
+
+        // Act - Update only start time
+        Instant newStart = oldStartTime.plus(7, ChronoUnit.DAYS);
+        var updateDto = new java.util.LinkedHashMap<>();
+        updateDto.put("start", newStart.toString());
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert - Verify AppointmentMovedEvent was fired
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(eventObserver.getMovedEvents()).hasSize(1);
+        AppointmentMovedEvent event = eventObserver.getMovedEvents().get(0);
+        assertThat(event.appointmentId()).isEqualTo(appointment.getId());
+        assertThat(event.actingUserOidcId()).isEqualTo(TEST_USER_OIDC);
+    }
+
+    @Test
+    void testUpdateAppointment_DoesNotFireAppointmentMovedEvent_WhenTimesUnchanged() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+
+        // Act - Update only name (no time change)
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("name", "Updated Name Only");
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert - Verify NO AppointmentMovedEvent was fired
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(eventObserver.getMovedEvents()).isEmpty();
+    }
+
+    @Test
+    void testDeleteAppointment_FiresAppointmentDeletedEvent() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Long appointmentId = appointment.getId();
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .delete("/api/v2/appointments/" + appointmentId)
+                .then()
+                .extract()
+                .response();
+
+        // Assert - Verify AppointmentDeletedEvent was fired
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(eventObserver.getDeletedEvents()).hasSize(1);
+        AppointmentDeletedEvent event = eventObserver.getDeletedEvents().get(0);
+        assertThat(event.appointmentId()).isEqualTo(appointmentId);
+        assertThat(event.actingUserOidcId()).isEqualTo(TEST_USER_OIDC);
+    }
+
+    @Test
+    void testCancelAppointment_FiresAppointmentCancelledEvent() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Long appointmentId = appointment.getId();
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .post("/api/v2/appointments/" + appointmentId + "/cancel")
+                .then()
+                .extract()
+                .response();
+
+        // Assert - Verify AppointmentCancelledEvent was fired
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(eventObserver.getCancelledEvents()).hasSize(1);
+        AppointmentCancelledEvent event = eventObserver.getCancelledEvents().get(0);
+        assertThat(event.appointmentId()).isEqualTo(appointmentId);
+        assertThat(event.actingUserOidcId()).isEqualTo(TEST_USER_OIDC);
     }
 }
