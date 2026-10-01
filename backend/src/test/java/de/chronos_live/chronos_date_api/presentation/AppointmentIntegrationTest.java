@@ -48,8 +48,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         createDto.setName("Team Meeting");
         createDto.setDescription("Weekly sync");
         createDto.setVenue("Conference Room A");
-        createDto.setStartTime(startTime.toString());
-        createDto.setEndTime(endTime.toString());
+        createDto.setStart(startTime.toString());
+        createDto.setEnd(endTime.toString());
 
         // Act
         var response = RestAssured
@@ -110,8 +110,8 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         mockJwtForUser(TEST_USER_OIDC);
         CreateAppointmentDto createDto = new CreateAppointmentDto();
         createDto.setName("");
-        createDto.setStartTime(Instant.now().toString());
-        createDto.setEndTime(Instant.now().plus(1, ChronoUnit.HOURS).toString());
+        createDto.setStart(Instant.now().toString());
+        createDto.setEnd(Instant.now().plus(1, ChronoUnit.HOURS).toString());
 
         // Act
         var response = RestAssured
@@ -188,9 +188,10 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         // Assert
         assertThat(response.statusCode()).isEqualTo(200);
 
-        // Verify deleted from database
+        // Verify soft-deleted (status set to DELETED)
         Appointment deleted = appointmentRepository.findById(appointmentId);
-        assertThat(deleted).isNull();
+        assertThat(deleted).isNotNull();
+        assertThat(deleted.getStatus()).isEqualTo(AppointmentStatus.DELETED);
     }
 
     @Test
@@ -204,12 +205,13 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         appointment.setStatus(AppointmentStatus.PLANNED);
         appointment.setCreatorOidcId(TEST_USER_OIDC);
         appointmentRepository.persist(appointment);
+        Long appointmentId = appointment.getId();
 
         // Act
         var response = RestAssured
                 .given()
                 .when()
-                .post("/api/v2/appointments/" + appointment.getId() + "/cancel")
+                .post("/api/v2/appointments/" + appointmentId + "/cancel")
                 .then()
                 .extract()
                 .response();
@@ -217,8 +219,9 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         // Assert
         assertThat(response.statusCode()).isEqualTo(200);
 
-        // Verify status changed in database
-        Appointment cancelled = appointmentRepository.findById(appointment.getId());
+        // Verify soft-cancelled (status set to CANCELLED)
+        Appointment cancelled = appointmentRepository.findById(appointmentId);
+        assertThat(cancelled).isNotNull();
         assertThat(cancelled.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
     }
 
