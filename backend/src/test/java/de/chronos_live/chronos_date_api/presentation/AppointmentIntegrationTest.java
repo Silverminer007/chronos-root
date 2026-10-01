@@ -299,10 +299,88 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     // ────────────────────────────────────────────────────────────────────────────
 
     @Test
+    void testUpdateAppointment_AuthorizedUser_CanUpdate() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        // Add TEST_USER_OIDC as participant with RESPONSIBLE role
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+
+        // Act
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("name", "Updated by Creator");
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body().jsonPath().getString("name")).isEqualTo("Updated by Creator");
+    }
+
+    @Test
+    void testUpdateAppointment_AttendantCanUpdate() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        // Add TEST_USER_OIDC_2 as ATTENDANT (can update)
+        addParticipantToAppointment(appointment, TEST_USER_OIDC_2, UserRole.ATTENDANT, ParticipationStatus.APPROVED);
+
+        // Act - TEST_USER_OIDC_2 updates (should succeed with ATTENDANT role)
+        mockJwtForUser(TEST_USER_OIDC_2);
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("description", "Updated by Attendant");
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void testUpdateAppointment_GuestCannotUpdate() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        // Add TEST_USER_OIDC_2 as GUEST (cannot update)
+        addParticipantToAppointment(appointment, TEST_USER_OIDC_2, UserRole.GUEST, ParticipationStatus.APPROVED);
+
+        // Act - TEST_USER_OIDC_2 tries to update (should fail with GUEST role)
+        mockJwtForUser(TEST_USER_OIDC_2);
+        var updateDto = new java.util.LinkedHashMap<String, String>();
+        updateDto.put("description", "Hacked");
+        var response = RestAssured
+                .given()
+                .contentType(ContentType.JSON)
+                .body(updateDto)
+                .when()
+                .patch("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert - GUEST cannot update (needs ATTENDANT or higher)
+        assertThat(response.statusCode()).isEqualTo(403);
+    }
+
+    @Test
     void testUpdateAppointment_UnauthorizedUser_Returns403() {
         // Arrange
         Appointment appointment = createTestAppointment(TEST_USER_OIDC);
-        // TEST_USER_OIDC created the appointment but TEST_USER_OIDC_2 has no participation
+        // TEST_USER_OIDC_2 has no participation at all
 
         // Act - Switch to unauthorized user
         mockJwtForUser(TEST_USER_OIDC_2);
@@ -323,10 +401,35 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void testDeleteAppointment_UnauthorizedUser_Returns403() {
+    void testDeleteAppointment_CreatorCanDelete() {
         // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
         Appointment appointment = createTestAppointment(TEST_USER_OIDC);
-        // Only TEST_USER_OIDC can delete (creator)
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Long appointmentId = appointment.getId();
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .delete("/api/v2/appointments/" + appointmentId)
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+        Appointment deleted = appointmentRepository.findById(appointmentId);
+        assertThat(deleted.getStatus()).isEqualTo(AppointmentStatus.DELETED);
+    }
+
+    @Test
+    void testDeleteAppointment_AttendantCannotDelete() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        // Add TEST_USER_OIDC_2 as ATTENDANT (cannot delete, needs RESPONSIBLE)
+        addParticipantToAppointment(appointment, TEST_USER_OIDC_2, UserRole.ATTENDANT, ParticipationStatus.APPROVED);
 
         // Act
         mockJwtForUser(TEST_USER_OIDC_2);
@@ -334,6 +437,71 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
                 .given()
                 .when()
                 .delete("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void testDeleteAppointment_UnauthorizedUser_Returns403() {
+        // Arrange
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        // Only TEST_USER_OIDC can delete (creator/RESPONSIBLE)
+
+        // Act
+        mockJwtForUser(TEST_USER_OIDC_2);
+        var response = RestAssured
+                .given()
+                .when()
+                .delete("/api/v2/appointments/" + appointment.getId())
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void testCancelAppointment_OnlyResponsibleCanCancel() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Long appointmentId = appointment.getId();
+
+        // Act
+        var response = RestAssured
+                .given()
+                .when()
+                .post("/api/v2/appointments/" + appointmentId + "/cancel")
+                .then()
+                .extract()
+                .response();
+
+        // Assert
+        assertThat(response.statusCode()).isEqualTo(200);
+        Appointment cancelled = appointmentRepository.findById(appointmentId);
+        assertThat(cancelled.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
+    }
+
+    @Test
+    void testCancelAppointment_AttendantCannotCancel() {
+        // Arrange
+        mockJwtForUser(TEST_USER_OIDC);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
+        // Add TEST_USER_OIDC_2 as ATTENDANT (cannot cancel, needs RESPONSIBLE)
+        addParticipantToAppointment(appointment, TEST_USER_OIDC_2, UserRole.ATTENDANT, ParticipationStatus.APPROVED);
+
+        // Act
+        mockJwtForUser(TEST_USER_OIDC_2);
+        var response = RestAssured
+                .given()
+                .when()
+                .post("/api/v2/appointments/" + appointment.getId() + "/cancel")
                 .then()
                 .extract()
                 .response();
