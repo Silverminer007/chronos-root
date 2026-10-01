@@ -1025,10 +1025,10 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     private void addParticipantToAppointment(Appointment appointment, String userOidcId,
                                              UserRole role, ParticipationStatus status) {
         AppointmentParticipation participation = new AppointmentParticipation();
-        participation.setAppointmentId(appointment.id);
+        participation.setAppointment(appointment);
         participation.setUserOidcId(userOidcId);
-        participation.setUserRole(role);
-        participation.setParticipationStatus(status);
+        participation.setRole(role);
+        participation.setStatus(status);
         participationRepository.persist(participation);
     }
 }
