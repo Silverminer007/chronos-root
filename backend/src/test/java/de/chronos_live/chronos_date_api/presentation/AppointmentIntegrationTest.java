@@ -761,18 +761,10 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     void testUpdateAppointment_OnlyNameUpdated() {
         // Arrange
         mockJwtForUser(TEST_USER_OIDC);
-        Appointment appointment = new Appointment();
-        appointment.setName("Original Name");
-        appointment.setDescription("Original Desc");
-        Instant originalStart = Instant.now().plus(1, ChronoUnit.DAYS);
-        Instant originalEnd = originalStart.plus(2, ChronoUnit.HOURS);
-        appointment.setStartTime(originalStart);
-        appointment.setEndTime(originalEnd);
-        appointment.setVenue("Hall A");
-        appointment.setStatus(AppointmentStatus.PLANNED);
-        appointment.setCreatorOidcId(TEST_USER_OIDC);
-        appointmentRepository.persist(appointment);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        String originalDescription = appointment.getDescription();
+        String originalVenue = appointment.getVenue();
 
         // Act
         var updateDto = new java.util.LinkedHashMap<String, String>();
@@ -790,26 +782,20 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
         // Assert
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body().jsonPath().getString("name")).isEqualTo("Updated Name");
-        assertThat(response.body().jsonPath().getString("description")).isEqualTo("Original Desc");
-        assertThat(response.body().jsonPath().getString("venue")).isEqualTo("Hall A");
+        assertThat(response.body().jsonPath().getString("description")).isEqualTo(originalDescription);
+        assertThat(response.body().jsonPath().getString("venue")).isEqualTo(originalVenue);
     }
 
     @Test
     void testUpdateAppointment_OnlyStartTimeUpdated() {
         // Arrange
         mockJwtForUser(TEST_USER_OIDC);
-        Appointment appointment = new Appointment();
-        appointment.setName("Meeting");
-        Instant originalStart = Instant.now().plus(1, ChronoUnit.DAYS);
-        Instant originalEnd = originalStart.plus(2, ChronoUnit.HOURS);
-        appointment.setStartTime(originalStart);
-        appointment.setEndTime(originalEnd);
-        appointment.setStatus(AppointmentStatus.PLANNED);
-        appointment.setCreatorOidcId(TEST_USER_OIDC);
-        appointmentRepository.persist(appointment);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Instant originalStart = appointment.getStartTime();
+        Instant originalEnd = appointment.getEndTime();
 
-        // Act - Move start time earlier (within 2h before original end)
+        // Act - Move start time earlier (within duration before original end)
         Instant newStart = originalStart.plus(30, ChronoUnit.MINUTES);
         var updateDto = new java.util.LinkedHashMap<String, String>();
         updateDto.put("start", newStart.toString());
@@ -859,18 +845,12 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     void testUpdateAppointment_OnlyEndTimeUpdated() {
         // Arrange
         mockJwtForUser(TEST_USER_OIDC);
-        Appointment appointment = new Appointment();
-        appointment.setName("Meeting");
-        Instant originalStart = Instant.now().plus(1, ChronoUnit.DAYS);
-        Instant originalEnd = originalStart.plus(2, ChronoUnit.HOURS);
-        appointment.setStartTime(originalStart);
-        appointment.setEndTime(originalEnd);
-        appointment.setStatus(AppointmentStatus.PLANNED);
-        appointment.setCreatorOidcId(TEST_USER_OIDC);
-        appointmentRepository.persist(appointment);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Instant originalStart = appointment.getStartTime();
+        Instant originalEnd = appointment.getEndTime();
 
-        // Act
+        // Act - Extend end time
         Instant newEnd = originalEnd.plus(1, ChronoUnit.HOURS);
         var updateDto = new java.util.LinkedHashMap<String, String>();
         updateDto.put("end", newEnd.toString());
@@ -952,21 +932,11 @@ class AppointmentIntegrationTest extends BaseIntegrationTest {
     void testUpdateAppointment_AllFieldsUpdated() {
         // Arrange
         mockJwtForUser(TEST_USER_OIDC);
-        Appointment appointment = new Appointment();
-        appointment.setName("Original");
-        appointment.setDescription("Original Desc");
-        appointment.setVenue("Hall A");
-        Instant originalStart = Instant.now().plus(1, ChronoUnit.DAYS);
-        Instant originalEnd = originalStart.plus(2, ChronoUnit.HOURS);
-        appointment.setStartTime(originalStart);
-        appointment.setEndTime(originalEnd);
-        appointment.setMinimalAttendees(5);
-        appointment.setStatus(AppointmentStatus.PLANNED);
-        appointment.setCreatorOidcId(TEST_USER_OIDC);
-        appointmentRepository.persist(appointment);
+        Appointment appointment = createTestAppointment(TEST_USER_OIDC);
         addParticipantToAppointment(appointment, TEST_USER_OIDC, UserRole.RESPONSIBLE, ParticipationStatus.APPROVED);
+        Instant originalStart = appointment.getStartTime();
 
-        // Act
+        // Act - Update all fields
         Instant newStart = originalStart.plus(7, ChronoUnit.DAYS);
         Instant newEnd = newStart.plus(3, ChronoUnit.HOURS);
         var updateDto = new java.util.LinkedHashMap<>();
