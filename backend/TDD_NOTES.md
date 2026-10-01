@@ -37,7 +37,7 @@ Implemented comprehensive integration tests for appointment CRUD operations (Cre
 | Criterion | Tests | Status |
 |-----------|-------|--------|
 | POST /create | `testCreateAppointment_Success`, `testCreateAppointment_BlankName_Returns400`, `testCreateAppointment_InvalidDateRange_Returns400`, `testCreateAppointment_NegativeMinimalAttendees_Returns400` | ✅ |
-| PATCH /update | `testUpdateAppointment_Success`, `testUpdateAppointment_BlankName_Returns400`, `testUpdateAppointment_EndBeforeStart_Returns400`, `testUpdateAppointment_OnlyNameUpdated`, `testUpdateAppointment_OnlyStartTimeUpdated`, `testUpdateAppointment_OnlyEndTimeUpdated`, `testUpdateAppointment_OnlyMinimalAttendeesUpdated`, `testUpdateAppointment_AllFieldsUpdated` | ✅ |
+| PATCH /update | `testUpdateAppointment_Success`, `testUpdateAppointment_BlankName_Returns400`, `testUpdateAppointment_EndBeforeStart_Returns400`, `testUpdateAppointment_NegativeMinimalAttendees_Returns400`, `testUpdateAppointment_OnlyNameUpdated`, `testUpdateAppointment_OnlyStartTimeUpdated`, `testUpdateAppointment_OnlyEndTimeUpdated`, `testUpdateAppointment_OnlyMinimalAttendeesUpdated`, `testUpdateAppointment_AllFieldsUpdated` | ✅ |
 | DELETE /soft-delete | `testDeleteAppointment_Success`, `testDeleteAppointment_SetsStatusDeleted`, `testDeleteAppointment_UnauthorizedUser_Returns403` | ✅ |
 | POST /cancel | `testCancelAppointment_Success`, `testCancelAppointment_SetsStatusCancelled` | ✅ |
 | Authorization | `testUpdateAppointment_UnauthorizedUser_Returns403`, `testDeleteAppointment_UnauthorizedUser_Returns403` | ✅ |
@@ -46,8 +46,8 @@ Implemented comprehensive integration tests for appointment CRUD operations (Cre
 | Error Handling | 3 tests for 404 Not Found scenarios | ✅ |
 
 ### Test Statistics
-- **Total tests added**: 25+
-- **Test methods**: ~30 (includes read and search tests)
+- **Total tests added**: 26+
+- **Test methods**: ~31 (includes read and search tests)
 - **Code coverage**: Covers happy path, validation errors, authorization, and edge cases
 
 ## Design Decisions
@@ -57,6 +57,7 @@ Implemented comprehensive integration tests for appointment CRUD operations (Cre
 - Rows persist in database with status = DELETED or CANCELLED
 - Allows historical tracking and recovery
 - Separate endpoints for each workflow
+- See [ADR-2025-10-01-011: Soft-delete pattern](../kb/adr/ADR-2025-10-01-011-soft-delete.md) for detailed design rationale
 
 ### 2. Creator Tracking
 - Added `creatorOidcId` field to Appointment entity

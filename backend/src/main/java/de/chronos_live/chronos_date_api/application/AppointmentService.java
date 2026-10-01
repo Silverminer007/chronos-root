@@ -124,6 +124,9 @@ public class AppointmentService {
         appointment.setStartTime(newStartTime);
         appointment.setEndTime(newEndTime);
         if (dto.getMinimal_attendees() != null) {
+            if (dto.getMinimal_attendees() < 0) {
+                throw new ValidationException("minimal_attendees", "Minimal attendees must be positive");
+            }
             appointment.setMinimalAttendees(dto.getMinimal_attendees());
         }
         appointment.setLastUpdate(Instant.now());
