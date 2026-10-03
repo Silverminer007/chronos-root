@@ -63,10 +63,16 @@ impl DatabaseConfig {
     /// Log database connection info without exposing the password
     pub fn log_connection_info(&self) {
         if let Ok(parsed_url) = Url::parse(&self.url) {
-            let host = parsed_url.host().map(|h| h.to_string()).unwrap_or_else(|| "unknown".to_string());
+            let host = parsed_url
+                .host()
+                .map(|h| h.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
             let port = parsed_url.port().unwrap_or(5432);
             let database = parsed_url.path().trim_start_matches('/');
-            info!("Database configuration: host={}, port={}, database={}", host, port, database);
+            info!(
+                "Database configuration: host={}, port={}, database={}",
+                host, port, database
+            );
         }
     }
 }

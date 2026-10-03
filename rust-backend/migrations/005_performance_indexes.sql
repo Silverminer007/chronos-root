@@ -27,10 +27,6 @@ CREATE INDEX idx_appointments_created_at ON appointments(created_at DESC);
 -- Index for updated_at filtering (recently modified)
 CREATE INDEX idx_appointments_updated_at ON appointments(updated_at DESC);
 
--- Partial index: only future appointments (common filter)
-CREATE INDEX idx_active_appointments ON appointments(start_time)
-WHERE start_time > NOW();
-
 -- Add ANALYZE to update table statistics
 ANALYZE users;
 ANALYZE groups;

@@ -49,7 +49,10 @@ async fn test_readiness_returns_200_when_database_available() -> Result<(), AnyE
     let host_port = container.get_host_port_ipv4(5432).await;
 
     // Create a pool pointing to the test database
-    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+    let database_url = format!(
+        "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+        host_port
+    );
 
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(5)

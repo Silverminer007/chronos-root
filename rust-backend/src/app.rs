@@ -4,13 +4,13 @@ use std::sync::Arc;
 use crate::appointments::handlers::{get_appointment, list_appointments, AppState};
 use crate::security::TokenValidator;
 
-pub fn build_router(
-    app_state: Arc<AppState>,
-    validator: Arc<TokenValidator>,
-) -> Router {
+pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) -> Router {
     let public_routes = Router::new()
         .route("/q/health/live", get(health_live))
-        .route("/q/health/ready", get(health_ready).with_state(app_state.db_pool.clone()))
+        .route(
+            "/q/health/ready",
+            get(health_ready).with_state(app_state.db_pool.clone()),
+        )
         .route("/health", get(health_live));
 
     let protected_routes = Router::new()
@@ -33,7 +33,10 @@ async fn health_live() -> &'static str {
 async fn health_ready(
     axum::extract::State(pool): axum::extract::State<sqlx::PgPool>,
 ) -> impl IntoResponse {
-    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&pool).await {
+    match sqlx::query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(&pool)
+        .await
+    {
         Ok(_) => (axum::http::StatusCode::OK, "OK"),
         Err(_) => (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,

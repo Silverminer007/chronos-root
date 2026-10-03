@@ -34,9 +34,7 @@ fn test_password_not_in_log_format() -> Result<(), AnyError> {
             MockWriter { logs }
         });
 
-    let _guard = tracing_subscriber::registry()
-        .with(layer)
-        .set_default();
+    let _guard = tracing_subscriber::registry().with(layer).set_default();
 
     let config = chronos_date_api::database::DatabaseConfig {
         url: "postgres://user:secret_password@localhost:5432/mydb".to_string(),
@@ -52,15 +50,33 @@ fn test_password_not_in_log_format() -> Result<(), AnyError> {
     let captured_logs = logs.lock().unwrap();
 
     // Password should NOT be in the logs
-    assert!(!captured_logs.contains("secret_password"),
-        "Password should not appear in logs. Log output: {}", captured_logs);
+    assert!(
+        !captured_logs.contains("secret_password"),
+        "Password should not appear in logs. Log output: {}",
+        captured_logs
+    );
 
     // Expected connection info SHOULD be in the logs
-    assert!(captured_logs.contains("host="), "Host info should be in logs");
-    assert!(captured_logs.contains("port="), "Port info should be in logs");
-    assert!(captured_logs.contains("database="), "Database info should be in logs");
-    assert!(captured_logs.contains("mydb"), "Database name should be in logs");
-    assert!(captured_logs.contains("localhost"), "Host should be in logs");
+    assert!(
+        captured_logs.contains("host="),
+        "Host info should be in logs"
+    );
+    assert!(
+        captured_logs.contains("port="),
+        "Port info should be in logs"
+    );
+    assert!(
+        captured_logs.contains("database="),
+        "Database info should be in logs"
+    );
+    assert!(
+        captured_logs.contains("mydb"),
+        "Database name should be in logs"
+    );
+    assert!(
+        captured_logs.contains("localhost"),
+        "Host should be in logs"
+    );
 
     Ok(())
 }
@@ -162,7 +178,10 @@ fn test_run_migrations_false_parses() -> Result<(), AnyError> {
 async fn test_run_migrations_false_skips_migrations() -> Result<(), AnyError> {
     let container = Postgres::default().start().await;
     let host_port = container.get_host_port_ipv4(5432).await;
-    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+    let database_url = format!(
+        "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+        host_port
+    );
 
     let config = chronos_date_api::database::DatabaseConfig {
         url: database_url,
@@ -185,13 +204,16 @@ async fn test_run_migrations_false_skips_migrations() -> Result<(), AnyError> {
     assert_eq!(result.0, 1);
 
     let tables: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'",
     )
     .fetch_one(&pool)
     .await
     .map_err(|e| format!("Failed to count tables: {}", e))?;
 
-    assert_eq!(tables.0, 0, "No tables should exist when migrations are skipped");
+    assert_eq!(
+        tables.0, 0,
+        "No tables should exist when migrations are skipped"
+    );
 
     Ok(())
 }
@@ -254,7 +276,10 @@ async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
     let host_port = container.get_host_port_ipv4(5432).await;
 
     // Build the connection string from the container
-    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+    let database_url = format!(
+        "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+        host_port
+    );
 
     // Create config with migrations enabled
     let config = chronos_date_api::database::DatabaseConfig {
@@ -281,13 +306,16 @@ async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
 
     // Verify migrations created tables
     let tables: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'",
     )
     .fetch_one(&pool)
     .await
     .map_err(|e| format!("Failed to count tables: {}", e))?;
 
-    assert!(tables.0 > 0, "Migrations should have created tables in the schema");
+    assert!(
+        tables.0 > 0,
+        "Migrations should have created tables in the schema"
+    );
 
     Ok(())
 }
@@ -299,7 +327,10 @@ async fn test_concurrent_migrators_on_same_database() -> Result<(), AnyError> {
     let host_port = container.get_host_port_ipv4(5432).await;
 
     // Build the connection string from the container
-    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+    let database_url = format!(
+        "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+        host_port
+    );
 
     // Create two concurrent tasks that both initialize the pool with migrations enabled.
     // sqlx's advisory locks should ensure both succeed without conflicts.
@@ -337,8 +368,12 @@ async fn test_concurrent_migrators_on_same_database() -> Result<(), AnyError> {
     });
 
     // Wait for both tasks to complete
-    let result1 = handle1.await.map_err(|e| format!("Task 1 panicked: {}", e))??;
-    let result2 = handle2.await.map_err(|e| format!("Task 2 panicked: {}", e))??;
+    let result1 = handle1
+        .await
+        .map_err(|e| format!("Task 1 panicked: {}", e))??;
+    let result2 = handle2
+        .await
+        .map_err(|e| format!("Task 2 panicked: {}", e))??;
 
     // Verify both pools can query the database
     let r1: (i32,) = sqlx::query_as("SELECT 1")

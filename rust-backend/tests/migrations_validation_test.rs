@@ -15,8 +15,14 @@ fn test_migration_005_no_invalid_columns() {
     let has_deleted_at_predicate = migration_005.contains("WHERE deleted_at IS NULL");
     let has_wrong_friendship_columns = migration_005.contains("user_id, friend_id");
 
-    assert!(!has_deleted_at_predicate, "Migration 005 should not use deleted_at predicate (column doesn't exist)");
-    assert!(!has_wrong_friendship_columns, "Migration 005 should not reference user_id/friend_id on friendships table");
+    assert!(
+        !has_deleted_at_predicate,
+        "Migration 005 should not use deleted_at predicate (column doesn't exist)"
+    );
+    assert!(
+        !has_wrong_friendship_columns,
+        "Migration 005 should not reference user_id/friend_id on friendships table"
+    );
 }
 
 #[test]
@@ -24,8 +30,14 @@ fn test_migration_005_uses_correct_friendship_columns() {
     let migration_005 = include_str!("../migrations/005_performance_indexes.sql");
 
     // Migration should use requester_id and recipient_id (the actual columns)
-    assert!(migration_005.contains("requester_id"), "Migration should reference requester_id");
-    assert!(migration_005.contains("recipient_id"), "Migration should reference recipient_id");
+    assert!(
+        migration_005.contains("requester_id"),
+        "Migration should reference requester_id"
+    );
+    assert!(
+        migration_005.contains("recipient_id"),
+        "Migration should reference recipient_id"
+    );
 }
 
 #[test]
@@ -53,7 +65,10 @@ fn test_migrations_are_ordered() {
     migration_files.sort();
 
     // Verify we have at least 5 migrations
-    assert!(migration_files.len() >= 5, "Should have at least 5 migration files");
+    assert!(
+        migration_files.len() >= 5,
+        "Should have at least 5 migration files"
+    );
 
     // Verify they're numbered sequentially
     for (i, file) in migration_files.iter().enumerate() {
@@ -75,10 +90,16 @@ fn test_migration_005_syntax_valid() {
     let create_index_count = migration_005.matches("CREATE INDEX").count();
 
     // Should have multiple indexes
-    assert!(create_index_count >= 5, "Migration 005 should create at least 5 indexes");
+    assert!(
+        create_index_count >= 5,
+        "Migration 005 should create at least 5 indexes"
+    );
 
     // Should have ANALYZE statements
-    assert!(migration_005.contains("ANALYZE"), "Migration 005 should include ANALYZE statements");
+    assert!(
+        migration_005.contains("ANALYZE"),
+        "Migration 005 should include ANALYZE statements"
+    );
 }
 
 #[test]
