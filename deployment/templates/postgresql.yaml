@@ -46,7 +46,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.postgresql.passwordSecret.name }}
+                  name: {{ include "chronos.secretName" . }}
                   key: {{ .Values.postgresql.passwordSecret.key }}
           volumeMounts:
             - name: postgres-storage
