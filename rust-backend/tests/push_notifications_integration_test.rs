@@ -62,7 +62,6 @@ mod tests {
     fn test_push_notification_no_subscriptions() {
         // User with no subscriptions should not cause an error
         // The service should log a warning and return gracefully
-        assert!(true, "Service should handle users with no subscriptions");
     }
 
     /// Test that push notification handles service errors gracefully
@@ -71,7 +70,6 @@ mod tests {
     fn test_push_notification_service_error() {
         // If the push service is down, the error should be logged
         // and the system should continue processing other notifications
-        assert!(true, "Service should handle push service failures");
     }
 
     /// Test VAPID configuration loading from environment
@@ -86,8 +84,6 @@ mod tests {
         // In a real implementation, would call:
         // let config = VapidConfig::from_env();
         // assert!(config.is_ok());
-
-        assert!(true, "VAPID configuration should load from environment");
     }
 
     /// Test that notifications are sent asynchronously
@@ -97,7 +93,6 @@ mod tests {
         // The notification delivery should not block the request
         // This would be verified by measuring that the notification
         // is sent in the background after the request completes
-        assert!(true, "Notifications should be sent asynchronously");
     }
 
     /// Test German language in notification payloads
@@ -116,6 +111,5 @@ mod tests {
     async fn test_transactional_safety() {
         // Events should only be published after the database transaction commits
         // This prevents issues where notifications are sent for uncommitted data
-        assert!(true, "Events should fire after database commit");
     }
 }

@@ -94,7 +94,7 @@ mod appointment_auth_tests {
                     &AppointmentFixture::new().with_title(&format!("User1 Meeting {}", i)),
                 )
                 .await
-                .expect(&format!("Failed to create appointment {}", i));
+                .unwrap_or_else(|_| panic!("Failed to create appointment {}", i));
         }
 
         // User 2 creates 2 appointments
@@ -105,7 +105,7 @@ mod appointment_auth_tests {
                     &AppointmentFixture::new().with_title(&format!("User2 Meeting {}", i)),
                 )
                 .await
-                .expect(&format!("Failed to create user2 appointment {}", i));
+                .unwrap_or_else(|_| panic!("Failed to create user2 appointment {}", i));
         }
 
         // Verify User 1 has exactly 3 appointments
