@@ -138,14 +138,27 @@ pub async fn update_appointment(
         .map_err(|_| AppointmentError::DatabaseError)?
         .ok_or(AppointmentError::NotFound)?;
 
-    // User must be creator or a participant (ATTENDANT role or above)
-    let is_participant = repo
-        .is_participant(id, user_id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    // User must be creator or a participant with ATTENDANT role or above
+    if appointment.creator_id != user_id {
+        let participant_role = repo
+            .get_participant_role(id, user_id)
+            .await
+            .map_err(|_| AppointmentError::DatabaseError)?;
 
-    if appointment.creator_id != user_id && !is_participant {
-        return Err(AppointmentError::Unauthorized);
+        match participant_role {
+            Some(role) => {
+                let is_attendant_or_above = matches!(
+                    role.as_str(),
+                    "ATTENDANT" | "HELPER" | "RESPONSIBLE"
+                );
+                if !is_attendant_or_above {
+                    return Err(AppointmentError::Unauthorized);
+                }
+            }
+            None => {
+                return Err(AppointmentError::Unauthorized);
+            }
+        }
     }
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());

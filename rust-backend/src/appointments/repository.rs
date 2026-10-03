@@ -255,6 +255,20 @@ impl AppointmentRepository {
         Ok(result)
     }
 
+    /// Get the role of a participant in an appointment
+    pub async fn get_participant_role(&self, appointment_id: Uuid, user_id: Uuid) -> Result<Option<String>, RepositoryError> {
+        let result = sqlx::query_scalar::<_, String>(
+            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(result)
+    }
+
     /// Add a participant to an appointment
     pub async fn add_participant(
         &self,
