@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::postgres::Postgres;
@@ -7,8 +7,14 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync>;
 
+fn env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
 #[test]
 fn test_database_url_from_environment() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     let test_url = "postgres://user:pass@localhost:5432/testdb";
     std::env::set_var("DATABASE_URL", test_url);
     std::env::set_var("APP_ENV", "production");
@@ -18,6 +24,7 @@ fn test_database_url_from_environment() -> Result<(), AnyError> {
     assert_eq!(config.url, test_url);
 
     std::env::remove_var("DATABASE_URL");
+    std::env::remove_var("APP_ENV");
 
     Ok(())
 }
@@ -100,6 +107,7 @@ impl std::io::Write for MockWriter {
 
 #[test]
 fn test_configuration_environment_variables() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
     std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
     std::env::set_var("DATABASE_MIN_CONNECTIONS", "4");
@@ -119,12 +127,14 @@ fn test_configuration_environment_variables() -> Result<(), AnyError> {
     std::env::remove_var("DATABASE_MIN_CONNECTIONS");
     std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
     std::env::remove_var("DATABASE_RUN_MIGRATIONS");
+    std::env::remove_var("APP_ENV");
 
     Ok(())
 }
 
 #[test]
 fn test_development_mode_default_url() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     std::env::set_var("APP_ENV", "development");
     std::env::remove_var("DATABASE_URL");
 
@@ -132,11 +142,14 @@ fn test_development_mode_default_url() -> Result<(), AnyError> {
 
     assert!(config.url.contains("localhost"));
 
+    std::env::remove_var("APP_ENV");
+
     Ok(())
 }
 
 #[test]
 fn test_production_mode_requires_url() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     std::env::set_var("APP_ENV", "production");
     std::env::remove_var("DATABASE_URL");
 
@@ -144,11 +157,14 @@ fn test_production_mode_requires_url() -> Result<(), AnyError> {
 
     assert!(result.is_err());
 
+    std::env::remove_var("APP_ENV");
+
     Ok(())
 }
 
 #[test]
 fn test_run_migrations_default_true() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     std::env::remove_var("DATABASE_RUN_MIGRATIONS");
     std::env::set_var("APP_ENV", "development");
 
@@ -156,11 +172,14 @@ fn test_run_migrations_default_true() -> Result<(), AnyError> {
 
     assert!(config.run_migrations);
 
+    std::env::remove_var("APP_ENV");
+
     Ok(())
 }
 
 #[test]
 fn test_run_migrations_false_parses() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     std::env::set_var("DATABASE_RUN_MIGRATIONS", "false");
     std::env::set_var("DATABASE_URL", "postgres://localhost");
     std::env::set_var("APP_ENV", "production");
@@ -170,6 +189,8 @@ fn test_run_migrations_false_parses() -> Result<(), AnyError> {
     assert!(!config.run_migrations);
 
     std::env::remove_var("DATABASE_URL");
+    std::env::remove_var("DATABASE_RUN_MIGRATIONS");
+    std::env::remove_var("APP_ENV");
 
     Ok(())
 }
@@ -220,6 +241,7 @@ async fn test_run_migrations_false_skips_migrations() -> Result<(), AnyError> {
 
 #[test]
 fn test_port_environment_variable_reading() {
+    let _guard = env_lock().lock().unwrap();
     std::env::set_var("PORT", "9000");
 
     let port = std::env::var("PORT")
@@ -234,6 +256,7 @@ fn test_port_environment_variable_reading() {
 
 #[test]
 fn test_port_environment_variable_default() {
+    let _guard = env_lock().lock().unwrap();
     std::env::remove_var("PORT");
 
     let port = std::env::var("PORT")
@@ -246,12 +269,15 @@ fn test_port_environment_variable_default() {
 
 #[test]
 fn test_config_acquire_timeout_default() -> Result<(), AnyError> {
+    let _guard = env_lock().lock().unwrap();
     std::env::set_var("APP_ENV", "development");
     std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
 
     let config = chronos_date_api::database::DatabaseConfig::from_env()?;
 
     assert_eq!(config.acquire_timeout, Duration::from_secs(5));
+
+    std::env::remove_var("APP_ENV");
 
     Ok(())
 }
