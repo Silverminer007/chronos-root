@@ -3,6 +3,7 @@
 mod database_tests {
     use chronos_date_api::database::repository::RepositoryError;
     use chronos_date_api::database::DatabaseConfig;
+    use std::time::Duration;
 
     #[test]
     fn test_pool_memory_efficient() {
@@ -15,13 +16,14 @@ mod database_tests {
         let config = DatabaseConfig {
             url: "postgres://user:pass@host:5432/db".to_string(),
             max_connections: 8,
-            min_idle: Some(1),
-            connection_timeout: std::time::Duration::from_secs(10),
-            max_lifetime: std::time::Duration::from_secs(3600),
+            min_connections: 1,
+            acquire_timeout: Duration::from_secs(10),
+            max_lifetime: Duration::from_secs(3600),
+            run_migrations: true,
         };
 
         assert_eq!(config.max_connections, 8);
-        assert_eq!(config.min_idle, Some(1));
+        assert_eq!(config.min_connections, 1);
     }
 
     #[test]
@@ -37,9 +39,9 @@ mod database_tests {
     }
 
     #[test]
-    fn test_connection_timeout_config() {
+    fn test_acquire_timeout_config() {
         let config = DatabaseConfig::default();
-        assert_eq!(config.connection_timeout.as_secs(), 5);
+        assert_eq!(config.acquire_timeout.as_secs(), 5);
     }
 
     #[test]

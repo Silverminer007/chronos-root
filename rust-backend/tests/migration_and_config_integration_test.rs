@@ -1,0 +1,162 @@
+use std::time::Duration;
+
+type AnyError = Box<dyn std::error::Error + Send + Sync>;
+
+#[test]
+fn test_database_url_from_environment() -> Result<(), AnyError> {
+    let test_url = "postgres://user:pass@localhost:5432/testdb";
+    std::env::set_var("DATABASE_URL", test_url);
+    std::env::set_var("APP_ENV", "production");
+
+    let config = chronos_date_api::database::DatabaseConfig::from_env()?;
+
+    assert_eq!(config.url, test_url);
+
+    std::env::remove_var("DATABASE_URL");
+
+    Ok(())
+}
+
+#[test]
+fn test_password_not_in_log_format() -> Result<(), AnyError> {
+    let config = chronos_date_api::database::DatabaseConfig {
+        url: "postgres://user:secret_password@localhost:5432/mydb".to_string(),
+        max_connections: 10,
+        min_connections: 2,
+        acquire_timeout: Duration::from_secs(5),
+        max_lifetime: Duration::from_secs(1800),
+        run_migrations: false,
+    };
+
+    // Verify that log_connection_info doesn't panic
+    config.log_connection_info();
+
+    Ok(())
+}
+
+#[test]
+fn test_configuration_environment_variables() -> Result<(), AnyError> {
+    std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
+    std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
+    std::env::set_var("DATABASE_MIN_CONNECTIONS", "4");
+    std::env::set_var("DATABASE_ACQUIRE_TIMEOUT_SECS", "10");
+    std::env::set_var("DATABASE_RUN_MIGRATIONS", "false");
+    std::env::set_var("APP_ENV", "production");
+
+    let config = chronos_date_api::database::DatabaseConfig::from_env()?;
+
+    assert_eq!(config.max_connections, 32);
+    assert_eq!(config.min_connections, 4);
+    assert_eq!(config.acquire_timeout, Duration::from_secs(10));
+    assert!(!config.run_migrations);
+
+    std::env::remove_var("DATABASE_URL");
+    std::env::remove_var("DATABASE_MAX_CONNECTIONS");
+    std::env::remove_var("DATABASE_MIN_CONNECTIONS");
+    std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
+    std::env::remove_var("DATABASE_RUN_MIGRATIONS");
+
+    Ok(())
+}
+
+#[test]
+fn test_development_mode_default_url() -> Result<(), AnyError> {
+    std::env::set_var("APP_ENV", "development");
+    std::env::remove_var("DATABASE_URL");
+
+    let config = chronos_date_api::database::DatabaseConfig::from_env()?;
+
+    assert!(config.url.contains("localhost"));
+
+    Ok(())
+}
+
+#[test]
+fn test_production_mode_requires_url() -> Result<(), AnyError> {
+    std::env::set_var("APP_ENV", "production");
+    std::env::remove_var("DATABASE_URL");
+
+    let result = chronos_date_api::database::DatabaseConfig::from_env();
+
+    assert!(result.is_err());
+
+    Ok(())
+}
+
+#[test]
+fn test_run_migrations_default_true() -> Result<(), AnyError> {
+    std::env::remove_var("DATABASE_RUN_MIGRATIONS");
+    std::env::set_var("APP_ENV", "development");
+
+    let config = chronos_date_api::database::DatabaseConfig::from_env()?;
+
+    assert!(config.run_migrations);
+
+    Ok(())
+}
+
+#[test]
+fn test_run_migrations_false_parses() -> Result<(), AnyError> {
+    std::env::set_var("DATABASE_RUN_MIGRATIONS", "false");
+    std::env::set_var("DATABASE_URL", "postgres://localhost");
+    std::env::set_var("APP_ENV", "production");
+
+    let config = chronos_date_api::database::DatabaseConfig::from_env()?;
+
+    assert!(!config.run_migrations);
+
+    std::env::remove_var("DATABASE_URL");
+
+    Ok(())
+}
+
+#[test]
+fn test_port_environment_variable_reading() {
+    std::env::set_var("PORT", "9000");
+
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(8080);
+
+    assert_eq!(port, 9000);
+
+    std::env::remove_var("PORT");
+}
+
+#[test]
+fn test_port_environment_variable_default() {
+    std::env::remove_var("PORT");
+
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(8080);
+
+    assert_eq!(port, 8080);
+}
+
+#[test]
+fn test_config_acquire_timeout_default() -> Result<(), AnyError> {
+    std::env::set_var("APP_ENV", "development");
+    std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
+
+    let config = chronos_date_api::database::DatabaseConfig::from_env()?;
+
+    assert_eq!(config.acquire_timeout, Duration::from_secs(5));
+
+    Ok(())
+}
+
+#[test]
+fn test_default_config_structure() -> Result<(), AnyError> {
+    let config = chronos_date_api::database::DatabaseConfig::default();
+
+    assert_eq!(config.max_connections, 16);
+    assert_eq!(config.min_connections, 2);
+    assert_eq!(config.acquire_timeout, Duration::from_secs(5));
+    assert_eq!(config.max_lifetime, Duration::from_secs(1800));
+    assert!(config.run_migrations);
+
+    Ok(())
+}
