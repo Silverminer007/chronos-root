@@ -1,8 +1,8 @@
-use axum::{middleware, response::IntoResponse, routing::get, Json, Router};
+use axum::{middleware, response::IntoResponse, routing::{get, post, patch, delete}, Json, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, AppState};
+use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, create_appointment, update_appointment, delete_appointment, cancel_appointment, AppState};
 use chronos_date_api::database::init_pool;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
 
@@ -35,8 +35,9 @@ async fn main() {
     // Protected routes require authentication
     let protected_routes = Router::new()
         .route("/api/v2/me", get(get_user_info))
-        .route("/api/v2/appointments", get(list_appointments))
-        .route("/api/v2/appointments/:id", get(get_appointment))
+        .route("/api/v2/appointments", get(list_appointments).post(create_appointment))
+        .route("/api/v2/appointments/:id", get(get_appointment).patch(update_appointment).delete(delete_appointment))
+        .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(
             validator.clone(),
