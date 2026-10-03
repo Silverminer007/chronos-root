@@ -30,7 +30,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # JWT and security
 jsonwebtoken = "9"
 async-trait = "0.1"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
 http = "1"
 
 # Database

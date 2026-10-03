@@ -33,19 +33,24 @@ impl TestDb {
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
         info!("Connecting to PostgreSQL test database");
 
-        // Use DATABASE_URL env var or default to local postgres
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://chronos:chronos@localhost:5432/chronos_test".to_string()
+        // Use DATABASE_URL env var or default to testcontainers postgres
+        let base_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://postgres:postgres@localhost:5432".to_string()
         });
 
-        info!("Connecting to test database: {}", database_url);
+        // Create a unique database name for this test
+        let test_db_name = format!("test_db_{}", uuid::Uuid::new_v4().to_string().replace('-', ""));
+        let database_url = format!("{}/{}", base_url, test_db_name);
 
-        // Wait for database to be ready
+        info!("Creating test database: {}", test_db_name);
+
+        // Connect to postgres to create the test database
+        let postgres_url = base_url.clone();
         let mut retries = 0;
-        let pool = loop {
+        let postgres_pool = loop {
             match sqlx::postgres::PgPoolOptions::new()
-                .max_connections(config.max_connections)
-                .connect(&database_url)
+                .max_connections(1)
+                .connect(&postgres_url)
                 .await
             {
                 Ok(pool) => break pool,
@@ -56,6 +61,19 @@ impl TestDb {
                 Err(e) => return Err(Box::new(e)),
             }
         };
+
+        // Create the test database
+        sqlx::query(&format!("CREATE DATABASE {}", test_db_name))
+            .execute(&postgres_pool)
+            .await?;
+
+        drop(postgres_pool);
+
+        // Connect to the test database
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(config.max_connections)
+            .connect(&database_url)
+            .await?;
 
         info!("Running migrations on test database");
         sqlx::migrate!("./migrations").run(&pool).await?;
