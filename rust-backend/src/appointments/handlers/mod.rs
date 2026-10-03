@@ -13,12 +13,14 @@ use crate::appointments::{
     repository::AppointmentRepository,
     services::AppointmentService,
 };
+use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
 
 /// Shared application state
 #[derive(Clone)]
 pub struct AppState {
     pub db_pool: sqlx::PgPool,
+    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 /// Query parameters for listing appointments
@@ -39,7 +41,7 @@ pub async fn get_appointment(
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
     let user_id = principal.user_id();
@@ -69,7 +71,7 @@ pub async fn list_appointments(
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
     let user_id = principal.user_id();
@@ -100,7 +102,7 @@ pub async fn create_appointment(
     Json(request): Json<CreateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Get creator ID from principal context
     let creator_id = principal.user_id().to_string();
@@ -129,7 +131,7 @@ pub async fn update_appointment(
     let _user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Validate and update appointment
     let response = service
@@ -157,7 +159,7 @@ pub async fn delete_appointment(
     let _user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
         .delete_appointment(id)
@@ -184,7 +186,7 @@ pub async fn cancel_appointment(
     let _user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
         .cancel_appointment(id)

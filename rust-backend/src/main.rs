@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, create_appointment, update_appointment, delete_appointment, cancel_appointment, AppState};
 use chronos_date_api::database::init_pool;
+use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
 
 #[tokio::main]
@@ -21,9 +22,13 @@ async fn main() {
         .unwrap_or_else(|_| "http://localhost:8080/realms/chronos".to_string());
     let validator = Arc::new(TokenValidator::new(keycloak_url));
 
+    // Initialize event bus
+    let event_bus = Arc::new(PostgresEventBus::new(pool.clone()));
+
     // Create application state
     let app_state = Arc::new(AppState {
         db_pool: pool.clone(),
+        event_publisher: event_bus,
     });
 
     // Build router with health check endpoints (public)
