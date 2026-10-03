@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use chrono::{Duration, Utc};
 use crate::appointments::models::Appointment;
 use crate::reminders::models::ReminderTriggerTimes;
+use async_trait::async_trait;
+use chrono::{Datelike, Duration, Utc};
 
 #[async_trait]
 pub trait ReminderRule: Send + Sync {
@@ -20,7 +20,9 @@ impl ReminderRule for AppointmentReminderRule {
             trigger_times: vec![trigger_time],
         }
     }
-    fn name(&self) -> &str { "AppointmentReminderRule" }
+    fn name(&self) -> &str {
+        "AppointmentReminderRule"
+    }
 }
 
 pub struct LongAppointmentRSVPRule;
@@ -30,7 +32,10 @@ impl ReminderRule for LongAppointmentRSVPRule {
     async fn evaluate(&self, appointment: &Appointment) -> ReminderTriggerTimes {
         let duration = appointment.end_time - appointment.start_time;
         if duration < Duration::hours(24) {
-            return ReminderTriggerTimes { appointment_id: appointment.id, trigger_times: vec![] };
+            return ReminderTriggerTimes {
+                appointment_id: appointment.id,
+                trigger_times: vec![],
+            };
         }
 
         let mut trigger_times = Vec::new();
@@ -39,16 +44,21 @@ impl ReminderRule for LongAppointmentRSVPRule {
         trigger_times.push(start - Duration::weeks(8));
         trigger_times.push(start - Duration::weeks(4));
         trigger_times.push(start - Duration::weeks(2));
-        
+
         let mut current = start - Duration::days(7);
         while current < start {
             trigger_times.push(current);
-            current = current + Duration::days(1);
+            current += Duration::days(1);
         }
 
-        ReminderTriggerTimes { appointment_id: appointment.id, trigger_times }
+        ReminderTriggerTimes {
+            appointment_id: appointment.id,
+            trigger_times,
+        }
     }
-    fn name(&self) -> &str { "LongAppointmentRSVPRule" }
+    fn name(&self) -> &str {
+        "LongAppointmentRSVPRule"
+    }
 }
 
 pub struct ShortWeekdayRSVPRule;
@@ -57,8 +67,13 @@ pub struct ShortWeekdayRSVPRule;
 impl ReminderRule for ShortWeekdayRSVPRule {
     async fn evaluate(&self, appointment: &Appointment) -> ReminderTriggerTimes {
         let duration = appointment.end_time - appointment.start_time;
-        if duration >= Duration::hours(24) || appointment.start_time.weekday().number_from_monday() > 5 {
-            return ReminderTriggerTimes { appointment_id: appointment.id, trigger_times: vec![] };
+        if duration >= Duration::hours(24)
+            || appointment.start_time.weekday().number_from_monday() > 5
+        {
+            return ReminderTriggerTimes {
+                appointment_id: appointment.id,
+                trigger_times: vec![],
+            };
         }
 
         let mut trigger_times = Vec::new();
@@ -68,9 +83,14 @@ impl ReminderRule for ShortWeekdayRSVPRule {
         trigger_times.push(start - Duration::days(2));
         trigger_times.push(start - Duration::days(1));
 
-        ReminderTriggerTimes { appointment_id: appointment.id, trigger_times }
+        ReminderTriggerTimes {
+            appointment_id: appointment.id,
+            trigger_times,
+        }
     }
-    fn name(&self) -> &str { "ShortWeekdayRSVPRule" }
+    fn name(&self) -> &str {
+        "ShortWeekdayRSVPRule"
+    }
 }
 
 pub struct ShortWeekendRSVPRule;
@@ -79,8 +99,13 @@ pub struct ShortWeekendRSVPRule;
 impl ReminderRule for ShortWeekendRSVPRule {
     async fn evaluate(&self, appointment: &Appointment) -> ReminderTriggerTimes {
         let duration = appointment.end_time - appointment.start_time;
-        if duration >= Duration::hours(24) || appointment.start_time.weekday().number_from_monday() <= 5 {
-            return ReminderTriggerTimes { appointment_id: appointment.id, trigger_times: vec![] };
+        if duration >= Duration::hours(24)
+            || appointment.start_time.weekday().number_from_monday() <= 5
+        {
+            return ReminderTriggerTimes {
+                appointment_id: appointment.id,
+                trigger_times: vec![],
+            };
         }
 
         let mut trigger_times = Vec::new();
@@ -92,10 +117,15 @@ impl ReminderRule for ShortWeekendRSVPRule {
         let mut current = Utc::now();
         while current < start {
             trigger_times.push(current);
-            current = current + Duration::days(1);
+            current += Duration::days(1);
         }
 
-        ReminderTriggerTimes { appointment_id: appointment.id, trigger_times }
+        ReminderTriggerTimes {
+            appointment_id: appointment.id,
+            trigger_times,
+        }
     }
-    fn name(&self) -> &str { "ShortWeekendRSVPRule" }
+    fn name(&self) -> &str {
+        "ShortWeekendRSVPRule"
+    }
 }

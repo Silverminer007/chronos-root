@@ -23,12 +23,19 @@ pub struct AppointmentParticipationStatusPendingReminderEvent {
 
 impl AppointmentReminderEvent {
     pub fn new(appointment_id: Uuid, scheduled_time: DateTime<Utc>) -> Self {
-        Self { appointment_id, scheduled_time }
+        Self {
+            appointment_id,
+            scheduled_time,
+        }
     }
 }
 
 impl AppointmentParticipationStatusPendingReminderEvent {
     pub fn new(appointment_id: Uuid, user_id: Uuid, scheduled_time: DateTime<Utc>) -> Self {
-        Self { appointment_id, user_id, scheduled_time }
+        Self {
+            appointment_id,
+            user_id,
+            scheduled_time,
+        }
     }
 }

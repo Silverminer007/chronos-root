@@ -1,7 +1,7 @@
 use crate::appointments::models::Appointment;
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Errors that can occur in the repository layer
 #[derive(Debug)]
@@ -58,7 +58,10 @@ impl AppointmentRepository {
     }
 
     /// Find appointments by creator_id
-    pub async fn find_by_creator(&self, creator_id: Uuid) -> Result<Vec<Appointment>, RepositoryError> {
+    pub async fn find_by_creator(
+        &self,
+        creator_id: Uuid,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
              FROM appointments WHERE creator_id = $1 ORDER BY start_time DESC"
@@ -70,7 +73,10 @@ impl AppointmentRepository {
     }
 
     /// Find appointments visible to a user (created by user or user is a participant)
-    pub async fn find_visible_to_user(&self, user_id: Uuid) -> Result<Vec<Appointment>, RepositoryError> {
+    pub async fn find_visible_to_user(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT DISTINCT a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at
              FROM appointments a

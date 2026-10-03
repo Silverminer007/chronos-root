@@ -9,9 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::AppointmentResponse,
-    repository::AppointmentRepository,
-    services::AppointmentService,
+    models::AppointmentResponse, repository::AppointmentRepository, services::AppointmentService,
 };
 use crate::security::PrincipalContext;
 
@@ -41,10 +39,8 @@ pub async fn get_appointment(
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
-    // Get user ID from the authenticated principal
-    let user_id_str = principal.user_id();
-    let user_id = Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
+    let user_id = principal.user_id();
 
     // Fetch the appointment
     let appointment = service
@@ -73,11 +69,8 @@ pub async fn list_appointments(
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
-    // Get user ID from the authenticated principal
-    // Note: principal.user_id() returns String, we need to convert to UUID
-    let user_id_str = principal.user_id();
-    let user_id = uuid::Uuid::parse_str(&user_id_str)
-        .map_err(|_| AppointmentError::DatabaseError)?;
+    // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
+    let user_id = principal.user_id();
 
     // List only appointments visible to this user
     let appointments = service
@@ -93,10 +86,7 @@ pub async fn list_appointments(
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
 
-    let responses: Vec<AppointmentResponse> = appointments
-        .into_iter()
-        .map(|a| a.into())
-        .collect();
+    let responses: Vec<AppointmentResponse> = appointments.into_iter().map(|a| a.into()).collect();
 
     Ok(Json(responses))
 }

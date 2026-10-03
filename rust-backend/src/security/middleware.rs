@@ -1,5 +1,4 @@
 use axum::{
-    body::Body,
     extract::{Request, State},
     http::StatusCode,
     middleware::Next,
@@ -7,6 +6,7 @@ use axum::{
 };
 use std::sync::Arc;
 use tracing::{debug, warn};
+use uuid::Uuid;
 
 use super::{principal::PrincipalContext, token::TokenValidator};
 
@@ -14,11 +14,7 @@ const BEARER_PREFIX: &str = "Bearer ";
 
 /// Extracts Bearer token from Authorization header
 fn extract_bearer_token(auth_header: &str) -> Option<&str> {
-    if auth_header.starts_with(BEARER_PREFIX) {
-        Some(&auth_header[BEARER_PREFIX.len()..])
-    } else {
-        None
-    }
+    auth_header.strip_prefix(BEARER_PREFIX)
 }
 
 /// Authentication middleware that validates JWT tokens
@@ -55,11 +51,23 @@ pub async fn auth_middleware(
     match validator.validate_token(token).await {
         Ok(claims) => {
             debug!("Token validated for user: {}", claims.sub);
-            // Store the principal context in request extensions
-            let principal = PrincipalContext::new(claims.sub);
-            request.extensions_mut().insert(Arc::new(principal));
+            // Parse the subject as a UUID (OIDC subject should be a UUID)
+            match Uuid::parse_str(&claims.sub) {
+                Ok(user_id) => {
+                    // Store the principal context in request extensions
+                    let principal = PrincipalContext::new(user_id);
+                    request.extensions_mut().insert(Arc::new(principal));
 
-            Ok(next.run(request).await)
+                    Ok(next.run(request).await)
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to parse user ID as UUID: {} (error: {})",
+                        claims.sub, e
+                    );
+                    Err(StatusCode::UNAUTHORIZED)
+                }
+            }
         }
         Err(e) => {
             warn!("Token validation failed: {}", e);

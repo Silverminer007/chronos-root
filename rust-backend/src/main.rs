@@ -1,12 +1,10 @@
-use axum::{
-    extract::Path, http::StatusCode, middleware, response::IntoResponse, routing::get, Json, Router,
-};
+use axum::{middleware, response::IntoResponse, routing::get, Json, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, AppState};
 use chronos_date_api::database::init_pool;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
-use chronos_date_api::appointments::handlers::{AppState, get_appointment, list_appointments};
 
 #[tokio::main]
 async fn main() {
@@ -40,12 +38,10 @@ async fn main() {
         .route("/api/v2/appointments", get(list_appointments))
         .route("/api/v2/appointments/:id", get(get_appointment))
         .with_state(app_state)
-        .layer(
-            middleware::from_fn_with_state(
-                validator.clone(),
-                chronos_date_api::security::middleware::auth_middleware,
-            ),
-        );
+        .layer(middleware::from_fn_with_state(
+            validator.clone(),
+            chronos_date_api::security::middleware::auth_middleware,
+        ));
 
     // Combine all routes
     let app = Router::new().merge(public_routes).merge(protected_routes);

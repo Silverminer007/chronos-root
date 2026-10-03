@@ -1,4 +1,4 @@
-use crate::event_bus::{Event, EventBus};
+use crate::event_bus::{Event, EventBus, EventPublisher, EventSubscriber};
 use async_trait::async_trait;
 use sqlx::PgPool;
 use tracing::{error, info};
@@ -20,14 +20,14 @@ impl PostgresEventBus {
         &self,
         event_type: &str,
     ) -> Result<sqlx::postgres::PgListener, sqlx::Error> {
-        let mut listener = sqlx::postgres::PgListener::connect_with(self.pool.as_ref()).await?;
+        let mut listener = sqlx::postgres::PgListener::connect_with(&self.pool).await?;
         listener.listen(event_type).await?;
         Ok(listener)
     }
 }
 
 #[async_trait]
-impl EventBus for PostgresEventBus {
+impl EventPublisher for PostgresEventBus {
     /// Fire an event - insert it into events table and NOTIFY subscribers
     async fn fire(&self, event: Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Validate event_type is a valid PostgreSQL identifier for NOTIFY
@@ -63,7 +63,10 @@ impl EventBus for PostgresEventBus {
         info!("Event fired: {} (id: {})", event.event_type, event.id);
         Ok(())
     }
+}
 
+#[async_trait]
+impl EventSubscriber for PostgresEventBus {
     /// Subscribe to events of a specific type using PostgreSQL LISTEN
     /// Note: This spawns a background task that will listen indefinitely
     async fn subscribe<F>(
@@ -80,7 +83,7 @@ impl EventBus for PostgresEventBus {
         // Spawn a listener task that runs indefinitely
         tokio::spawn(async move {
             loop {
-                match sqlx::postgres::PgListener::connect_with(pool.as_ref()).await {
+                match sqlx::postgres::PgListener::connect_with(&pool).await {
                     Ok(mut listener) => {
                         info!("Listener started for event type: {}", event_type_clone);
 
@@ -118,16 +121,17 @@ impl EventBus for PostgresEventBus {
     }
 }
 
+impl EventBus for PostgresEventBus {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::postgres::PgPoolOptions;
 
     async fn create_test_pool() -> Result<PgPool, sqlx::Error> {
         let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://chronos:chronos@localhost:5432/chronos".to_string());
 
-        PgPoolOptions::new()
+        sqlx::postgres::PgPoolOptions::new()
             .max_connections(5)
             .connect(&database_url)
             .await
@@ -139,7 +143,7 @@ mod tests {
         if let Ok(pool) = create_test_pool().await {
             let bus = PostgresEventBus::new(pool);
             // Event bus created successfully with valid pool
-            assert!(bus.pool.max_size() > 0);
+            assert!(!bus.pool.is_closed());
         }
     }
 
@@ -158,7 +162,7 @@ mod tests {
     #[ignore]
     async fn test_event_persistence() {
         if let Ok(pool) = create_test_pool().await {
-            let bus = PostgresEventBus::new(pool);
+            let bus = PostgresEventBus::new(pool.clone());
             let event = Event::new("persistence_test", serde_json::json!({"id": 123}));
             let event_id = event.id.clone();
 

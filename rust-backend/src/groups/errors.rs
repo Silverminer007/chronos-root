@@ -30,13 +30,15 @@ impl IntoResponse for GroupServiceError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             GroupServiceError::NotFound(ref msg) => (StatusCode::NOT_FOUND, msg.clone()),
-            GroupServiceError::NotAuthorized(_) => {
-                (StatusCode::FORBIDDEN, "Not authorized to perform this action".to_string())
-            }
+            GroupServiceError::NotAuthorized(_) => (
+                StatusCode::FORBIDDEN,
+                "Not authorized to perform this action".to_string(),
+            ),
             GroupServiceError::InvalidOperation(ref msg) => (StatusCode::BAD_REQUEST, msg.clone()),
-            GroupServiceError::DatabaseError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-            }
+            GroupServiceError::DatabaseError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            ),
         };
 
         (status, Json(json!({"error": message}))).into_response()

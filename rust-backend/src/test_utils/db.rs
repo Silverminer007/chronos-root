@@ -1,9 +1,5 @@
 use sqlx::{PgPool, Postgres, Transaction};
-use std::sync::Arc;
 use std::time::Duration;
-use testcontainers::clients::Cli;
-use testcontainers::core::ContainerAsync;
-use testcontainers_modules::postgres::Postgres as PostgresImage;
 use tracing::info;
 
 /// Configuration for test database
@@ -25,9 +21,6 @@ impl Default for TestDbConfig {
 /// Test database container and connection pool
 pub struct TestDb {
     pool: PgPool,
-    // Keeps the container alive for the duration of the test
-    #[allow(dead_code)]
-    container: Arc<ContainerAsync<PostgresImage>>,
 }
 
 impl TestDb {
@@ -38,30 +31,20 @@ impl TestDb {
 
     /// Create a new test database with custom configuration
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        info!("Starting PostgreSQL test container");
+        info!("Connecting to PostgreSQL test database");
 
-        let docker = Cli::default();
-        let postgres_image = PostgresImage::default()
-            .with_db_name("chronos_test")
-            .with_username("chronos")
-            .with_password("chronos");
-
-        let container = docker.run(postgres_image);
-        let container = Arc::new(container);
-
-        let database_url = format!(
-            "postgres://chronos:chronos@127.0.0.1:{}/chronos_test",
-            container.get_host_port_ipv4(5432)
-        );
+        // Use DATABASE_URL env var or default to local postgres
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://chronos:chronos@localhost:5432/chronos_test".to_string()
+        });
 
         info!("Connecting to test database: {}", database_url);
 
         // Wait for database to be ready
         let mut retries = 0;
         let pool = loop {
-            match sqlx::PgPoolOptions::new()
+            match sqlx::postgres::PgPoolOptions::new()
                 .max_connections(config.max_connections)
-                .connect_timeout(config.connection_timeout)
                 .connect(&database_url)
                 .await
             {
@@ -77,7 +60,7 @@ impl TestDb {
         info!("Running migrations on test database");
         sqlx::migrate!("./migrations").run(&pool).await?;
 
-        Ok(TestDb { pool, container })
+        Ok(TestDb { pool })
     }
 
     /// Get the connection pool

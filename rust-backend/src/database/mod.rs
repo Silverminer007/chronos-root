@@ -33,9 +33,6 @@ pub async fn init_pool(config: DatabaseConfig) -> Result<PgPool, sqlx::Error> {
 
     let pool = PgPoolOptions::new()
         .max_connections(config.max_connections)
-        .min_idle(config.min_idle)
-        .connect_timeout(config.connection_timeout)
-        .max_lifetime(config.max_lifetime)
         .connect(&config.url)
         .await?;
 

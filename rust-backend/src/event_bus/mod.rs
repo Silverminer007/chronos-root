@@ -25,13 +25,18 @@ impl Event {
     }
 }
 
-/// Abstract event bus trait for async side-effects
-/// Implementations can be swapped (PostgreSQL, Kafka, RabbitMQ, etc.)
+/// Dyn-compatible trait for publishing events
+/// Used by services and handlers that only need to fire events
 #[async_trait]
-pub trait EventBus: Send + Sync {
+pub trait EventPublisher: Send + Sync {
     /// Fire an event - publish it for subscribers to handle
     async fn fire(&self, event: Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+}
 
+/// Trait for subscribing to events with a generic callback
+/// Not dyn-compatible; must be used with concrete types only
+#[async_trait]
+pub trait EventSubscriber: Send + Sync {
     /// Subscribe to events of a specific type
     async fn subscribe<F>(
         &self,
@@ -41,3 +46,6 @@ pub trait EventBus: Send + Sync {
     where
         F: Fn(Event) + Send + Sync + 'static;
 }
+
+/// Combined trait for convenience in code that has access to the concrete type
+pub trait EventBus: EventPublisher + EventSubscriber {}

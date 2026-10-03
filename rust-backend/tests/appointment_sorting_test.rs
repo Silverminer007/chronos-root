@@ -1,8 +1,8 @@
 /// Integration tests for appointment sorting
 #[cfg(test)]
 mod appointment_sorting_tests {
-    use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
     use chrono::Utc;
+    use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
 
     #[tokio::test]
     #[ignore]
@@ -117,7 +117,7 @@ mod appointment_sorting_tests {
 
         // Fetch appointments ordered by title
         let appointments: Vec<(String,)> = sqlx::query_as(
-            "SELECT title FROM appointments WHERE creator_id = $1 ORDER BY title ASC"
+            "SELECT title FROM appointments WHERE creator_id = $1 ORDER BY title ASC",
         )
         .bind(creator_id)
         .fetch_all(db.pool())

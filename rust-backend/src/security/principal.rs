@@ -1,24 +1,27 @@
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use std::sync::Arc;
+use uuid::Uuid;
 
 /// Request-scoped principal context holding the current user's OIDC ID
 /// Equivalent to the Java backend's PrincipalContext
 #[derive(Debug, Clone)]
 pub struct PrincipalContext {
-    /// The user's OIDC subject ID
-    pub user_id: String,
+    /// The user's OIDC subject ID as a UUID
+    pub user_id: Uuid,
 }
 
 impl PrincipalContext {
     /// Create a new principal context with the given user ID
-    pub fn new(user_id: String) -> Self {
+    pub fn new(user_id: Uuid) -> Self {
         Self { user_id }
     }
 
     /// Get the current user's ID
-    pub fn user_id(&self) -> &str {
-        &self.user_id
+    pub fn user_id(&self) -> Uuid {
+        self.user_id
     }
 }
 
@@ -33,6 +36,12 @@ impl std::fmt::Display for PrincipalError {
 }
 
 impl std::error::Error for PrincipalError {}
+
+impl IntoResponse for PrincipalError {
+    fn into_response(self) -> Response {
+        StatusCode::UNAUTHORIZED.into_response()
+    }
+}
 
 /// Extractor for PrincipalContext from request
 #[async_trait::async_trait]
@@ -57,16 +66,17 @@ mod tests {
 
     #[test]
     fn test_principal_context_creation() {
-        let user_id = "user-123".to_string();
-        let principal = PrincipalContext::new(user_id.clone());
+        let user_id = Uuid::parse_str("12345678-1234-1234-1234-123456789012").unwrap();
+        let principal = PrincipalContext::new(user_id);
 
-        assert_eq!(principal.user_id(), "user-123");
+        assert_eq!(principal.user_id(), user_id);
         assert_eq!(principal.user_id, user_id);
     }
 
     #[test]
     fn test_principal_context_clone() {
-        let principal = PrincipalContext::new("user-456".to_string());
+        let user_id = Uuid::parse_str("87654321-4321-4321-4321-210987654321").unwrap();
+        let principal = PrincipalContext::new(user_id);
         let cloned = principal.clone();
 
         assert_eq!(cloned.user_id(), principal.user_id());

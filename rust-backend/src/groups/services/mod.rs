@@ -1,4 +1,4 @@
-use crate::event_bus::{Event, EventBus};
+use crate::event_bus::{Event, EventPublisher};
 use crate::groups::events::*;
 use crate::groups::models::{Friendship, Group, GroupMember};
 use crate::groups::repository::{FriendshipRepository, GroupMemberRepository, GroupRepository};
@@ -10,11 +10,11 @@ use uuid::Uuid;
 /// Service for managing groups
 pub struct GroupService {
     pool: Arc<PgPool>,
-    event_bus: Arc<dyn EventBus>,
+    event_bus: Arc<dyn EventPublisher>,
 }
 
 impl GroupService {
-    pub fn new(pool: Arc<PgPool>, event_bus: Arc<dyn EventBus>) -> Self {
+    pub fn new(pool: Arc<PgPool>, event_bus: Arc<dyn EventPublisher>) -> Self {
         Self { pool, event_bus }
     }
 
@@ -28,7 +28,8 @@ impl GroupService {
         let id = Uuid::new_v4();
 
         // Create the group in the database
-        let group = GroupRepository::create(&self.pool, id, name.clone(), description, owner_id).await?;
+        let group =
+            GroupRepository::create(&self.pool, id, name.clone(), description, owner_id).await?;
 
         // Fire the GroupCreatedEvent
         let event = Event::new(
@@ -45,12 +46,18 @@ impl GroupService {
     }
 
     /// Get a group by ID
-    pub async fn get_group(&self, id: Uuid) -> Result<Option<Group>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_group(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<Group>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(GroupRepository::get_by_id(&self.pool, id).await?)
     }
 
     /// List all groups for a user (both owned and member of)
-    pub async fn list_groups(&self, user_id: Uuid) -> Result<Vec<Group>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn list_groups(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<Group>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(GroupRepository::list_for_user(&self.pool, user_id).await?)
     }
 
@@ -90,7 +97,9 @@ impl GroupService {
         }
 
         // Update the group
-        let updated = GroupRepository::update(&self.pool, group_id, name.clone(), description).await?;
+        let updated =
+            GroupRepository::update(&self.pool, group_id, name.clone(), description.clone())
+                .await?;
 
         if let Some(ref updated_group) = updated {
             // Fire the GroupNameChangedEvent if any field was updated
@@ -193,10 +202,7 @@ impl GroupService {
             // Fire the GroupMemberRemovedEvent
             let event = Event::new(
                 "GroupMemberRemovedEvent",
-                json!(GroupMemberRemovedEvent {
-                    group_id,
-                    user_id,
-                }),
+                json!(GroupMemberRemovedEvent { group_id, user_id }),
             );
             self.event_bus.fire(event).await?;
         }
@@ -208,11 +214,11 @@ impl GroupService {
 /// Service for managing friendships
 pub struct FriendshipService {
     pool: Arc<PgPool>,
-    event_bus: Arc<dyn EventBus>,
+    event_bus: Arc<dyn EventPublisher>,
 }
 
 impl FriendshipService {
-    pub fn new(pool: Arc<PgPool>, event_bus: Arc<dyn EventBus>) -> Self {
+    pub fn new(pool: Arc<PgPool>, event_bus: Arc<dyn EventPublisher>) -> Self {
         Self { pool, event_bus }
     }
 
@@ -228,7 +234,8 @@ impl FriendshipService {
 
         let id = Uuid::new_v4();
         let friendship =
-            FriendshipRepository::create_request(&self.pool, id, requester_id, recipient_id).await?;
+            FriendshipRepository::create_request(&self.pool, id, requester_id, recipient_id)
+                .await?;
 
         // Fire the FriendshipRequestSentEvent
         let event = Event::new(
@@ -353,7 +360,10 @@ impl FriendshipService {
     }
 
     /// List all friendships for a user
-    pub async fn list_friendships(&self, user_id: Uuid) -> Result<Vec<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn list_friendships(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(FriendshipRepository::list_for_user(&self.pool, user_id).await?)
     }
 

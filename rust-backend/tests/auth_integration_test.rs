@@ -1,10 +1,7 @@
 /// Integration tests for authentication middleware
 /// These tests verify the auth layer behavior with mock Keycloak responses
-
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     #[test]
     fn test_token_validator_cache_behavior() {
         // This test verifies that the token validator caches keys

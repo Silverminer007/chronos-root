@@ -94,7 +94,7 @@ mod appointment_auth_tests {
                     &AppointmentFixture::new().with_title(&format!("User1 Meeting {}", i)),
                 )
                 .await
-                .expect(&format!("Failed to create appointment {}", i));
+                .unwrap_or_else(|_| panic!("Failed to create appointment {}", i));
         }
 
         // User 2 creates 2 appointments
@@ -105,29 +105,27 @@ mod appointment_auth_tests {
                     &AppointmentFixture::new().with_title(&format!("User2 Meeting {}", i)),
                 )
                 .await
-                .expect(&format!("Failed to create user2 appointment {}", i));
+                .unwrap_or_else(|_| panic!("Failed to create user2 appointment {}", i));
         }
 
         // Verify User 1 has exactly 3 appointments
-        let user1_appointments: Vec<(i64,)> = sqlx::query_as(
-            "SELECT COUNT(*) FROM appointments WHERE creator_id = $1"
-        )
-        .bind(user1_id)
-        .fetch_all(db.pool())
-        .await
-        .expect("Failed to fetch user1 appointments count");
+        let user1_appointments: Vec<(i64,)> =
+            sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE creator_id = $1")
+                .bind(user1_id)
+                .fetch_all(db.pool())
+                .await
+                .expect("Failed to fetch user1 appointments count");
 
         assert_eq!(user1_appointments.len(), 1);
         assert_eq!(user1_appointments[0].0, 3);
 
         // Verify User 2 has exactly 2 appointments
-        let user2_appointments: Vec<(i64,)> = sqlx::query_as(
-            "SELECT COUNT(*) FROM appointments WHERE creator_id = $1"
-        )
-        .bind(user2_id)
-        .fetch_all(db.pool())
-        .await
-        .expect("Failed to fetch user2 appointments count");
+        let user2_appointments: Vec<(i64,)> =
+            sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE creator_id = $1")
+                .bind(user2_id)
+                .fetch_all(db.pool())
+                .await
+                .expect("Failed to fetch user2 appointments count");
 
         assert_eq!(user2_appointments.len(), 1);
         assert_eq!(user2_appointments[0].0, 2);

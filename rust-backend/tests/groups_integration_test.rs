@@ -3,8 +3,6 @@
 
 #[cfg(test)]
 mod tests {
-    use uuid::Uuid;
-
     // Note: Full integration tests require testcontainers setup
     // This file serves as a placeholder for the comprehensive integration test suite
 
