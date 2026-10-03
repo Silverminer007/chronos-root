@@ -291,3 +291,68 @@ async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_concurrent_migrators_on_same_database() -> Result<(), AnyError> {
+    // Start a fresh PostgreSQL container
+    let container = Postgres::default().start().await;
+    let host_port = container.get_host_port_ipv4(5432).await;
+
+    // Build the connection string from the container
+    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+
+    // Create two concurrent tasks that both initialize the pool with migrations enabled.
+    // sqlx's advisory locks should ensure both succeed without conflicts.
+    let url1 = database_url.clone();
+    let url2 = database_url.clone();
+
+    let handle1 = tokio::spawn(async move {
+        let config = chronos_date_api::database::DatabaseConfig {
+            url: url1,
+            max_connections: 5,
+            min_connections: 1,
+            acquire_timeout: Duration::from_secs(10),
+            max_lifetime: Duration::from_secs(1800),
+            run_migrations: true,
+        };
+
+        chronos_date_api::database::init_pool(config)
+            .await
+            .map_err(|e| format!("Task 1 failed: {}", e))
+    });
+
+    let handle2 = tokio::spawn(async move {
+        let config = chronos_date_api::database::DatabaseConfig {
+            url: url2,
+            max_connections: 5,
+            min_connections: 1,
+            acquire_timeout: Duration::from_secs(10),
+            max_lifetime: Duration::from_secs(1800),
+            run_migrations: true,
+        };
+
+        chronos_date_api::database::init_pool(config)
+            .await
+            .map_err(|e| format!("Task 2 failed: {}", e))
+    });
+
+    // Wait for both tasks to complete
+    let result1 = handle1.await.map_err(|e| format!("Task 1 panicked: {}", e))??;
+    let result2 = handle2.await.map_err(|e| format!("Task 2 panicked: {}", e))??;
+
+    // Verify both pools can query the database
+    let r1: (i32,) = sqlx::query_as("SELECT 1")
+        .fetch_one(&result1)
+        .await
+        .map_err(|e| format!("Pool 1 query failed: {}", e))?;
+
+    let r2: (i32,) = sqlx::query_as("SELECT 1")
+        .fetch_one(&result2)
+        .await
+        .map_err(|e| format!("Pool 2 query failed: {}", e))?;
+
+    assert_eq!(r1.0, 1);
+    assert_eq!(r2.0, 1);
+
+    Ok(())
+}
