@@ -103,7 +103,7 @@ Replace hardcoded `chronos-secret` and `chronos-docker-secret` with helper calls
 - `imagePullSecrets: [{ name: {{ include "chronos.imagePullSecretName" . }} }]` (when not empty)
 
 ### Configuration
-- Add `secrets.provider` to `values.yaml` (no default value yet to support auto-detection)
+- Add `secrets.provider` to `values.yaml` (default: `bitwarden` for backward compatibility)
 - Add `secrets.existingSecretName` (default: `chronos-secret`)
 - Add `imagePullSecret.name` (default: `chronos-docker-secret`)
 - Add `imagePullSecret.create` (default: `false`)
