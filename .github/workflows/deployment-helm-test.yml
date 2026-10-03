@@ -1,0 +1,142 @@
+name: 📋 Helm Chart Tests
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths: [ 'deployment/**' ]
+  push:
+    branches: [ main, develop ]
+    paths: [ 'deployment/**' ]
+
+defaults:
+  run:
+    working-directory: deployment
+
+jobs:
+  helm-test:
+    name: Test Helm Chart
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: ✅ Test helm lint with all providers
+        run: |
+          echo "## Helm Chart Tests" >> $GITHUB_STEP_SUMMARY
+
+          providers=("bitwarden" "values" "existing")
+
+          for provider in "${providers[@]}"; do
+            echo ""
+            echo "### Testing provider: $provider"
+            echo "Testing provider: **$provider**" >> $GITHUB_STEP_SUMMARY
+
+            # Determine which values file to use as base
+            if [ "$provider" = "bitwarden" ]; then
+              values_file="values-prod.yaml"
+            else
+              values_file="values-${provider}.yaml"
+            fi
+
+            if [ ! -f "$values_file" ]; then
+              echo "❌ Values file not found: $values_file"
+              exit 1
+            fi
+
+            # Run helm lint
+            echo "Running helm lint..."
+            if helm lint . -f "$values_file" > /tmp/lint-${provider}.log 2>&1; then
+              echo "✅ helm lint passed"
+              echo "- ✅ helm lint passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ helm lint failed:"
+              cat /tmp/lint-${provider}.log
+              exit 1
+            fi
+
+            # Run helm template
+            echo "Running helm template..."
+            if helm template chronos . -f "$values_file" > /tmp/template-${provider}.yaml 2>&1; then
+              echo "✅ helm template succeeded"
+              echo "- ✅ helm template succeeded" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ helm template failed:"
+              cat /tmp/template-${provider}.yaml
+              exit 1
+            fi
+
+            # Check for expected resources
+            echo "Checking resource types..."
+            case "$provider" in
+              bitwarden)
+                if grep -q "^kind: BitwardenSecret" /tmp/template-${provider}.yaml; then
+                  echo "✅ BitwardenSecret found"
+                  echo "- ✅ BitwardenSecret created" >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "❌ BitwardenSecret not found"
+                  exit 1
+                fi
+                ;;
+              values)
+                if grep -q "^kind: Secret" /tmp/template-${provider}.yaml; then
+                  echo "✅ Secret found"
+                  echo "- ✅ Plain Secret created" >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "❌ Secret not found"
+                  exit 1
+                fi
+                if grep -q "^kind: BitwardenSecret" /tmp/template-${provider}.yaml; then
+                  echo "❌ BitwardenSecret should not be present"
+                  exit 1
+                fi
+                echo "✅ No BitwardenSecret (as expected)"
+                ;;
+              existing)
+                if grep -q "^kind: BitwardenSecret" /tmp/template-${provider}.yaml; then
+                  echo "❌ BitwardenSecret should not be present"
+                  exit 1
+                fi
+                if grep -A5 "^kind: Secret" /tmp/template-${provider}.yaml | grep -q "name: chronos-secret"; then
+                  echo "❌ chronos-secret Secret should not be created"
+                  exit 1
+                fi
+                echo "✅ No secrets created (as expected)"
+                echo "- ✅ No secrets created" >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+          done
+
+      - name: ✅ Test helper functions
+        run: |
+          echo ""
+          echo "### Testing helper functions"
+          echo "Testing helper functions" >> $GITHUB_STEP_SUMMARY
+
+          # Test that all templates use the helper for secret names
+          echo "Checking that deployments use chronos.secretName helper..."
+
+          deployments=$(find templates -name "*-deployment.yaml")
+          for deployment in $deployments; do
+            if grep -q "chronos.secretName" "$deployment"; then
+              echo "✅ $deployment uses chronos.secretName helper"
+            else
+              # Check if it hardcodes the secret name
+              if grep -q 'secretName: chronos-secret' "$deployment"; then
+                echo "❌ $deployment hardcodes secret name instead of using helper"
+                exit 1
+              fi
+            fi
+          done
+
+          echo "- ✅ All templates use helper functions" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 Show test summary
+        run: |
+          echo ""
+          echo "✅ All Helm chart tests passed!"

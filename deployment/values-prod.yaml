@@ -1,6 +1,7 @@
 namespace: chronos-prod
 
 secrets:
+  provider: bitwarden
   organisationId: 3e4b7901-bc75-4688-9a82-b3f600a40fa8
   db:
     password: fd4e1b82-e0eb-42d7-9472-b3f600ae128a

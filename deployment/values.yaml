@@ -1,6 +1,12 @@
 namespace: chronos
 
 secrets:
+  # Secret provider: bitwarden (default), values, or existing
+  provider: bitwarden
+  # Existing secret name (used by all providers)
+  existingSecretName: chronos-secret
+
+  # Bitwarden configuration (provider: bitwarden)
   organisationId:
   db:
     password:
@@ -15,7 +21,44 @@ secrets:
     publicKey:
     privateKey:
     mailto:
-  imagePullSecret:
+  backup:
+    s3:
+      bucket:
+      access_key_id:
+      secret_access_key:
+      region:
+      endpoint_url:
+
+  # Values-based secrets (provider: values)
+  values:
+    database_password:
+    backend_client_id:
+    backend_client_secret:
+    frontend_client_id:
+    frontend_sentry_auth_token:
+    frontend_sentry_dsn:
+    vapid_public_key:
+    vapid_private_key:
+    vapid_mailto:
+    backup_bucket:
+    backup_access_key_id:
+    backup_secret_access_key:
+    backup_region:
+    backup_endpoint_url:
+    container_registry_secret:
+    imagePullSecret:
+      registry:
+      username:
+      password:
+
+# Image pull secret configuration
+imagePullSecret:
+  name: chronos-docker-secret
+  create: false
+  # Used when create: true and provider: values
+  registry:
+  username:
+  password:
 
 ingress:
   enabled: true
@@ -184,6 +227,9 @@ postgresql:
   passwordSecret:
     name: chronos-secret
     key: database_password
+  backup:
+    s3_path: ""
+    host: ""
   resources:
     requests:
       cpu: "100m"
