@@ -147,10 +147,8 @@ pub async fn update_appointment(
 
         match participant_role {
             Some(role) => {
-                let is_attendant_or_above = matches!(
-                    role.as_str(),
-                    "ATTENDANT" | "HELPER" | "RESPONSIBLE"
-                );
+                let is_attendant_or_above =
+                    matches!(role.as_str(), "ATTENDANT" | "HELPER" | "RESPONSIBLE");
                 if !is_attendant_or_above {
                     return Err(AppointmentError::Unauthorized);
                 }
@@ -262,14 +260,15 @@ impl From<ServiceError> for AppointmentError {
 impl IntoResponse for AppointmentError {
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
-            AppointmentError::NotFound => (StatusCode::NOT_FOUND, "Appointment not found".to_string()),
+            AppointmentError::NotFound => {
+                (StatusCode::NOT_FOUND, "Appointment not found".to_string())
+            }
             AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
-            AppointmentError::DatabaseError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-            }
-            AppointmentError::ValidationError(msg) => {
-                (StatusCode::BAD_REQUEST, msg)
-            }
+            AppointmentError::DatabaseError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            ),
+            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
         };
 
         (status, error_message).into_response()

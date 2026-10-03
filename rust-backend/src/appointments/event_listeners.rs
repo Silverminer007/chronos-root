@@ -13,17 +13,22 @@ impl AppointmentParticipationListener {
         Self { pool }
     }
 
-    pub async fn handle_appointment_created(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn handle_appointment_created(
+        &self,
+        event: &Event,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Handling AppointmentCreatedEvent");
 
         // Extract appointment_id and creator_id from event payload
-        let appointment_id = event.payload
+        let appointment_id = event
+            .payload
             .get("appointment_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or("Missing or invalid appointment_id")?;
 
-        let creator_id = event.payload
+        let creator_id = event
+            .payload
             .get("creator_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
@@ -35,7 +40,10 @@ impl AppointmentParticipationListener {
             .await
             .map_err(|e| format!("Failed to add creator as participant: {}", e))?;
 
-        info!("Successfully added creator as RESPONSIBLE participant for appointment {}", appointment_id);
+        info!(
+            "Successfully added creator as RESPONSIBLE participant for appointment {}",
+            appointment_id
+        );
         Ok(())
     }
 
@@ -47,15 +55,18 @@ impl AppointmentParticipationListener {
 
         let pool = self.pool.clone();
         event_bus
-            .subscribe("AppointmentCreatedEvent".to_string(), move |event: Event| {
-                let pool = pool.clone();
-                tokio::spawn(async move {
-                    let listener = AppointmentParticipationListener::new(pool);
-                    if let Err(e) = listener.handle_appointment_created(&event).await {
-                        error!("Error handling AppointmentCreatedEvent: {}", e);
-                    }
-                });
-            })
+            .subscribe(
+                "AppointmentCreatedEvent".to_string(),
+                move |event: Event| {
+                    let pool = pool.clone();
+                    tokio::spawn(async move {
+                        let listener = AppointmentParticipationListener::new(pool);
+                        if let Err(e) = listener.handle_appointment_created(&event).await {
+                            error!("Error handling AppointmentCreatedEvent: {}", e);
+                        }
+                    });
+                },
+            )
             .await?;
 
         info!("Subscribed to AppointmentCreatedEvent");

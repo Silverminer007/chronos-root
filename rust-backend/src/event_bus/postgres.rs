@@ -100,13 +100,16 @@ impl EventSubscriber for PostgresEventBus {
                                     info!("Received notification on channel: {}", event_type_clone);
                                     let event_id = notification.payload();
                                     match sqlx::query_as::<_, (String, String, String)>(
-                                        "SELECT id, event_type, payload FROM events WHERE id = $1"
+                                        "SELECT id, event_type, payload FROM events WHERE id = $1",
                                     )
                                     .bind(event_id)
                                     .fetch_optional(&pool)
-                                    .await {
+                                    .await
+                                    {
                                         Ok(Some((id, event_type, payload_str))) => {
-                                            match serde_json::from_str::<serde_json::Value>(&payload_str) {
+                                            match serde_json::from_str::<serde_json::Value>(
+                                                &payload_str,
+                                            ) {
                                                 Ok(payload) => {
                                                     let timestamp = chrono::Utc::now().timestamp();
                                                     let event = Event {

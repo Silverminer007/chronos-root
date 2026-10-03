@@ -2,23 +2,23 @@
 /// Tests verify both positive cases (events fire) and negative cases (events don't fire on auth failure)
 #[cfg(test)]
 mod appointment_mutation_tests {
-    use chronos_date_api::appointments::models::{CreateAppointmentRequest, UpdateAppointmentRequest};
-    use chronos_date_api::appointments::services::{AppointmentService, ListAppointmentsQuery};
+    use chronos_date_api::appointments::models::{
+        CreateAppointmentRequest, UpdateAppointmentRequest,
+    };
     use chronos_date_api::appointments::repository::AppointmentRepository;
+    use chronos_date_api::appointments::services::{AppointmentService, ListAppointmentsQuery};
     use chronos_date_api::event_bus::postgres::PostgresEventBus;
     use chronos_date_api::test_utils::{TestDb, TestFixtures};
-    use uuid::Uuid;
     use std::sync::Arc;
+    use uuid::Uuid;
 
     /// Helper to count events of a specific type in the events table
     async fn count_events(pool: &sqlx::PgPool, event_type: &str) -> i64 {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM events WHERE event_type = $1"
-        )
-        .bind(event_type)
-        .fetch_one(pool)
-        .await
-        .unwrap_or(0)
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM events WHERE event_type = $1")
+            .bind(event_type)
+            .fetch_one(pool)
+            .await
+            .unwrap_or(0)
     }
 
     /// POSITIVE: AppointmentCreatedEvent is fired after successful appointment creation
@@ -53,7 +53,9 @@ mod appointment_mutation_tests {
             minimal_attendees: Some(3),
         };
 
-        let result = service.create_appointment(request, creator_id.to_string()).await;
+        let result = service
+            .create_appointment(request, creator_id.to_string())
+            .await;
         assert!(result.is_ok(), "Failed to create appointment");
 
         // Verify: AppointmentCreatedEvent was fired and persisted
@@ -155,8 +157,8 @@ mod appointment_mutation_tests {
         let repo = AppointmentRepository::new(db.pool().clone());
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
 
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("Meeting");
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("Meeting");
 
         let appt_id = fixtures
             .create_appointment(creator_id, &appointment_fixture)
@@ -212,8 +214,8 @@ mod appointment_mutation_tests {
         let repo = AppointmentRepository::new(db.pool().clone());
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
 
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("To Delete");
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Delete");
 
         let appt_id = fixtures
             .create_appointment(creator_id, &appointment_fixture)
@@ -260,8 +262,8 @@ mod appointment_mutation_tests {
         let repo = AppointmentRepository::new(db.pool().clone());
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
 
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("To Cancel");
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Cancel");
 
         let appt_id = fixtures
             .create_appointment(creator_id, &appointment_fixture)
@@ -314,11 +316,17 @@ mod appointment_mutation_tests {
         };
 
         let result = service.update_appointment(fake_id, request).await;
-        assert!(result.is_err(), "Update should fail for non-existent appointment");
+        assert!(
+            result.is_err(),
+            "Update should fail for non-existent appointment"
+        );
 
         // Verify: No event was fired
         let count = count_events(db.pool(), "AppointmentEditedEvent").await;
-        assert_eq!(count, 0, "AppointmentEditedEvent should NOT fire on failed update");
+        assert_eq!(
+            count, 0,
+            "AppointmentEditedEvent should NOT fire on failed update"
+        );
     }
 
     /// NEGATIVE: Event is NOT fired when delete fails (non-existent appointment)
@@ -335,7 +343,10 @@ mod appointment_mutation_tests {
         // Attempt to delete non-existent appointment
         let fake_id = Uuid::new_v4();
         let result = service.delete_appointment(fake_id).await;
-        assert!(result.is_err(), "Delete should fail for non-existent appointment");
+        assert!(
+            result.is_err(),
+            "Delete should fail for non-existent appointment"
+        );
 
         // Verify: No event was fired
         let count = count_events(db.pool(), "AppointmentDeletedEvent").await;
@@ -359,7 +370,10 @@ mod appointment_mutation_tests {
         // Attempt to cancel non-existent appointment
         let fake_id = Uuid::new_v4();
         let result = service.cancel_appointment(fake_id).await;
-        assert!(result.is_err(), "Cancel should fail for non-existent appointment");
+        assert!(
+            result.is_err(),
+            "Cancel should fail for non-existent appointment"
+        );
 
         // Verify: No event was fired
         let count = count_events(db.pool(), "AppointmentCancelledEvent").await;
@@ -396,7 +410,9 @@ mod appointment_mutation_tests {
             minimal_attendees: None,
         };
 
-        let result = service.create_appointment(request, creator_id.to_string()).await;
+        let result = service
+            .create_appointment(request, creator_id.to_string())
+            .await;
         assert!(result.is_err(), "Creation should fail with blank name");
 
         // Verify: No event was fired
@@ -434,8 +450,13 @@ mod appointment_mutation_tests {
             minimal_attendees: None,
         };
 
-        let result = service.create_appointment(request, creator_id.to_string()).await;
-        assert!(result.is_err(), "Creation should fail with invalid timestamp");
+        let result = service
+            .create_appointment(request, creator_id.to_string())
+            .await;
+        assert!(
+            result.is_err(),
+            "Creation should fail with invalid timestamp"
+        );
 
         // Verify: No event was fired
         let count = count_events(db.pool(), "AppointmentCreatedEvent").await;
@@ -480,10 +501,9 @@ mod appointment_mutation_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Creator can view their own appointment
-        let visible_to_creator = service.list_user_appointments(
-            creator_id,
-            ListAppointmentsQuery::default()
-        ).await
+        let visible_to_creator = service
+            .list_user_appointments(creator_id, ListAppointmentsQuery::default())
+            .await
             .expect("Failed to list creator appointments");
         assert!(
             visible_to_creator.iter().any(|a| a.id == appt_id),
@@ -491,10 +511,9 @@ mod appointment_mutation_tests {
         );
 
         // Other user cannot view creator's appointment (not a participant)
-        let visible_to_other = service.list_user_appointments(
-            other_user_id,
-            ListAppointmentsQuery::default()
-        ).await
+        let visible_to_other = service
+            .list_user_appointments(other_user_id, ListAppointmentsQuery::default())
+            .await
             .expect("Failed to list other user appointments");
         assert!(
             !visible_to_other.iter().any(|a| a.id == appt_id),
@@ -519,8 +538,8 @@ mod appointment_mutation_tests {
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
 
         // Create an appointment
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("To Delete");
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Delete");
 
         let appt_id = fixtures
             .create_appointment(user_id, &appointment_fixture)
@@ -529,7 +548,9 @@ mod appointment_mutation_tests {
 
         // Verify appointment appears in list before deletion
         let service = AppointmentService::with_events(repo, event_bus.clone());
-        let list_before = service.list_user_appointments(user_id, ListAppointmentsQuery::default()).await
+        let list_before = service
+            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .await
             .expect("Failed to list appointments");
         assert!(
             list_before.iter().any(|a| a.id == appt_id),
@@ -537,13 +558,17 @@ mod appointment_mutation_tests {
         );
 
         // Delete the appointment
-        service.delete_appointment(appt_id).await
+        service
+            .delete_appointment(appt_id)
+            .await
             .expect("Failed to delete appointment");
 
         // Verify deleted appointment does NOT appear in list after deletion
         let repo2 = AppointmentRepository::new(db.pool().clone());
         let service2 = AppointmentService::with_events(repo2, event_bus);
-        let list_after = service2.list_user_appointments(user_id, ListAppointmentsQuery::default()).await
+        let list_after = service2
+            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .await
             .expect("Failed to list appointments");
         assert!(
             !list_after.iter().any(|a| a.id == appt_id),
@@ -551,13 +576,11 @@ mod appointment_mutation_tests {
         );
 
         // Verify status is DELETED in database
-        let status: String = sqlx::query_scalar(
-            "SELECT status FROM appointments WHERE id = $1"
-        )
-        .bind(appt_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch appointment status");
+        let status: String = sqlx::query_scalar("SELECT status FROM appointments WHERE id = $1")
+            .bind(appt_id)
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to fetch appointment status");
         assert_eq!(status, "DELETED", "Appointment status should be DELETED");
     }
 
@@ -578,8 +601,8 @@ mod appointment_mutation_tests {
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
 
         // Create an appointment
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("To Cancel");
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Cancel");
 
         let appt_id = fixtures
             .create_appointment(user_id, &appointment_fixture)
@@ -588,7 +611,9 @@ mod appointment_mutation_tests {
 
         // Verify appointment appears in list before cancellation
         let service = AppointmentService::with_events(repo, event_bus.clone());
-        let list_before = service.list_user_appointments(user_id, ListAppointmentsQuery::default()).await
+        let list_before = service
+            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .await
             .expect("Failed to list appointments");
         assert!(
             list_before.iter().any(|a| a.id == appt_id),
@@ -596,13 +621,17 @@ mod appointment_mutation_tests {
         );
 
         // Cancel the appointment
-        service.cancel_appointment(appt_id).await
+        service
+            .cancel_appointment(appt_id)
+            .await
             .expect("Failed to cancel appointment");
 
         // Verify cancelled appointment does NOT appear in list after cancellation
         let repo2 = AppointmentRepository::new(db.pool().clone());
         let service2 = AppointmentService::with_events(repo2, event_bus);
-        let list_after = service2.list_user_appointments(user_id, ListAppointmentsQuery::default()).await
+        let list_after = service2
+            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .await
             .expect("Failed to list appointments");
         assert!(
             !list_after.iter().any(|a| a.id == appt_id),
@@ -610,14 +639,15 @@ mod appointment_mutation_tests {
         );
 
         // Verify status is CANCELLED in database
-        let status: String = sqlx::query_scalar(
-            "SELECT status FROM appointments WHERE id = $1"
-        )
-        .bind(appt_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch appointment status");
-        assert_eq!(status, "CANCELLED", "Appointment status should be CANCELLED");
+        let status: String = sqlx::query_scalar("SELECT status FROM appointments WHERE id = $1")
+            .bind(appt_id)
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to fetch appointment status");
+        assert_eq!(
+            status, "CANCELLED",
+            "Appointment status should be CANCELLED"
+        );
     }
 
     /// SOFT-DELETE FILTERING: Detailed get by ID returns 404 for deleted appointments
@@ -637,8 +667,8 @@ mod appointment_mutation_tests {
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
 
         // Create and then delete an appointment
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("To Get Deleted");
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Get Deleted");
 
         let appt_id = fixtures
             .create_appointment(user_id, &appointment_fixture)
@@ -646,7 +676,9 @@ mod appointment_mutation_tests {
             .expect("Failed to create appointment");
 
         let service = AppointmentService::with_events(repo, event_bus);
-        service.delete_appointment(appt_id).await
+        service
+            .delete_appointment(appt_id)
+            .await
             .expect("Failed to delete appointment");
 
         // Attempt to get the deleted appointment by ID (should return not found)

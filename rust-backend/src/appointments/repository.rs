@@ -108,7 +108,8 @@ impl AppointmentRepository {
     }
 
     /// Create a new appointment
-    pub async fn create(&self,
+    pub async fn create(
+        &self,
         title: String,
         description: Option<String>,
         location: Option<String>,
@@ -143,7 +144,8 @@ impl AppointmentRepository {
     }
 
     /// Update an appointment
-    pub async fn update(&self,
+    pub async fn update(
+        &self,
         id: Uuid,
         title: Option<String>,
         description: Option<String>,
@@ -187,8 +189,7 @@ impl AppointmentRepository {
         query_str.push_str(&format!(" WHERE id = ${}", param_count));
         query_str.push_str(" RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees");
 
-        let mut query = sqlx::query_as::<_, Appointment>(&query_str)
-            .bind(now);
+        let mut query = sqlx::query_as::<_, Appointment>(&query_str).bind(now);
 
         if let Some(t) = title {
             query = query.bind(t);
@@ -242,7 +243,11 @@ impl AppointmentRepository {
     }
 
     /// Check if a user is a participant in an appointment
-    pub async fn is_participant(&self, appointment_id: Uuid, user_id: Uuid) -> Result<bool, RepositoryError> {
+    pub async fn is_participant(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, RepositoryError> {
         let result = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2)"
         )
@@ -256,9 +261,13 @@ impl AppointmentRepository {
     }
 
     /// Get the role of a participant in an appointment
-    pub async fn get_participant_role(&self, appointment_id: Uuid, user_id: Uuid) -> Result<Option<String>, RepositoryError> {
+    pub async fn get_participant_role(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<String>, RepositoryError> {
         let result = sqlx::query_scalar::<_, String>(
-            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
         )
         .bind(appointment_id)
         .bind(user_id)
