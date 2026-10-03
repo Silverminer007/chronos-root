@@ -143,8 +143,12 @@ impl AppointmentService {
     }
 
     /// Get a single appointment by ID
-    pub async fn get_appointment(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
-        self.repo.find_by_id(id).await
+    pub async fn get_appointment(&self, id: Uuid) -> Result<Appointment, ServiceError> {
+        self.repo
+            .find_by_id(id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)
     }
 
     /// List appointments visible to a user with pagination and sorting

@@ -47,11 +47,10 @@ pub async fn get_appointment(
     let user_id = principal.user_id();
 
     // Fetch the appointment
-    let appointment = service
-        .get_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
+    let appointment = service.get_appointment(id).await.map_err(|e| match e {
+        crate::appointments::services::ServiceError::NotFound => AppointmentError::NotFound,
+        _ => AppointmentError::DatabaseError,
+    })?;
 
     // Authorization check - user must be creator or invited participant
     // For now, only allow creators to view their appointments

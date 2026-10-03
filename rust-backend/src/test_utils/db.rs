@@ -46,10 +46,7 @@ impl TestDb {
                 if let Ok(admin_pool) = try_connect(admin_url, &config).await {
                     let create_db_query =
                         format!("CREATE DATABASE {} WITH TEMPLATE chronos_test;", db_name);
-                    if let Ok(_) = sqlx::query(&create_db_query)
-                        .execute(&admin_pool)
-                        .await
-                    {
+                    if let Ok(_) = sqlx::query(&create_db_query).execute(&admin_pool).await {
                         info!("Created test database: {}", db_name);
                     }
                 }
