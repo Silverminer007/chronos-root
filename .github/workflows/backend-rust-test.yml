@@ -137,6 +137,7 @@ jobs:
           RUSTDOCFLAGS: "-D warnings"
 
   docker-build:
+    needs: [fmt, clippy, test-unit, test-integration, coverage, deny, docs]
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
