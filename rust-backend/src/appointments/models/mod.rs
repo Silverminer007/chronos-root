@@ -2,6 +2,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::str::FromStr;
 use uuid::Uuid;
 
 /// Participation status for an appointment
@@ -14,8 +15,10 @@ pub enum ParticipationStatus {
 }
 
 /// Status of an appointment
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(type_name = "TEXT")]
+#[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AppointmentStatus {
     Planned,
     Cancelled,
@@ -23,15 +26,69 @@ pub enum AppointmentStatus {
     NotEnoughAttendees,
 }
 
+impl FromStr for AppointmentStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "PLANNED" => Ok(AppointmentStatus::Planned),
+            "CANCELLED" => Ok(AppointmentStatus::Cancelled),
+            "DELETED" => Ok(AppointmentStatus::Deleted),
+            "NOT_ENOUGH_ATTENDEES" => Ok(AppointmentStatus::NotEnoughAttendees),
+            _ => Err(format!("Unknown appointment status: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for AppointmentStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AppointmentStatus::Planned => write!(f, "PLANNED"),
+            AppointmentStatus::Cancelled => write!(f, "CANCELLED"),
+            AppointmentStatus::Deleted => write!(f, "DELETED"),
+            AppointmentStatus::NotEnoughAttendees => write!(f, "NOT_ENOUGH_ATTENDEES"),
+        }
+    }
+}
+
 /// Role of a user in an appointment
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "TEXT")]
+#[sqlx(rename_all = "UPPERCASE")]
 pub enum UserRole {
     None,
     Guest,
     Attendant,
     Helper,
     Responsible,
+}
+
+impl FromStr for UserRole {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NONE" => Ok(UserRole::None),
+            "GUEST" => Ok(UserRole::Guest),
+            "ATTENDANT" => Ok(UserRole::Attendant),
+            "HELPER" => Ok(UserRole::Helper),
+            "RESPONSIBLE" => Ok(UserRole::Responsible),
+            _ => Err(format!("Unknown user role: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for UserRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UserRole::None => write!(f, "NONE"),
+            UserRole::Guest => write!(f, "GUEST"),
+            UserRole::Attendant => write!(f, "ATTENDANT"),
+            UserRole::Helper => write!(f, "HELPER"),
+            UserRole::Responsible => write!(f, "RESPONSIBLE"),
+        }
+    }
 }
 
 /// Appointment entity - the core domain model for scheduling
@@ -47,7 +104,7 @@ pub struct Appointment {
     pub creator_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub status: String,
+    pub status: AppointmentStatus,
     pub minimal_attendees: Option<i32>,
 }
 
@@ -132,7 +189,7 @@ pub struct AppointmentResponse {
     pub start: String,
     pub end: String,
     pub venue: Option<String>,
-    pub status: String,
+    pub status: AppointmentStatus,
     pub minimal_attendees: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub participants: Option<Vec<UserParticipantDto>>,
@@ -392,7 +449,7 @@ mod tests {
             creator_id,
             created_at: now,
             updated_at: now,
-            status: "PLANNED".to_string(),
+            status: AppointmentStatus::Planned,
             minimal_attendees: Some(5),
         };
 
@@ -418,14 +475,14 @@ mod tests {
             creator_id,
             created_at: now,
             updated_at: now,
-            status: "PLANNED".to_string(),
+            status: AppointmentStatus::Planned,
             minimal_attendees: Some(5),
         };
 
         let response: AppointmentResponse = appointment.into();
         assert_eq!(response.id, appt_id);
         assert_eq!(response.name, "Team Meeting");
-        assert_eq!(response.status, "PLANNED");
+        assert_eq!(response.status, AppointmentStatus::Planned);
     }
 
     #[test]
@@ -557,7 +614,7 @@ mod tests {
             venue: Some("Conference Room A".to_string()),
             start: "2025-09-15T14:00:00Z".to_string(),
             end: "2025-09-15T15:00:00Z".to_string(),
-            status: "PLANNED".to_string(),
+            status: AppointmentStatus::Planned,
             minimal_attendees: Some(5),
             participants: None,
             messages: None,

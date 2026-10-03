@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest},
+    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -146,8 +146,10 @@ pub async fn update_appointment(
 
         match participant_role {
             Some(role) => {
-                let is_attendant_or_above =
-                    matches!(role.as_str(), "ATTENDANT" | "HELPER" | "RESPONSIBLE");
+                let is_attendant_or_above = matches!(
+                    role,
+                    UserRole::Attendant | UserRole::Helper | UserRole::Responsible
+                );
                 if !is_attendant_or_above {
                     return Err(AppointmentError::Unauthorized);
                 }

@@ -1,4 +1,4 @@
-use crate::appointments::models::Appointment;
+use crate::appointments::models::{Appointment, AppointmentStatus, UserRole};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -120,7 +120,7 @@ impl AppointmentRepository {
     ) -> Result<Appointment, RepositoryError> {
         let id = Uuid::new_v4();
         let now = chrono::Utc::now();
-        let status = "PLANNED";
+        let status = AppointmentStatus::Planned;
 
         sqlx::query_as::<_, Appointment>(
             "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees)
@@ -220,10 +220,12 @@ impl AppointmentRepository {
 
     /// Soft delete an appointment (set status to DELETED)
     pub async fn delete_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+        let status = AppointmentStatus::Deleted;
         sqlx::query_as::<_, Appointment>(
-            "UPDATE appointments SET status = 'DELETED', updated_at = NOW() WHERE id = $1
+            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2
              RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
         )
+        .bind(status)
         .bind(id)
         .fetch_optional(&self.pool)
         .await
@@ -232,10 +234,12 @@ impl AppointmentRepository {
 
     /// Soft cancel an appointment (set status to CANCELLED)
     pub async fn cancel_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+        let status = AppointmentStatus::Cancelled;
         sqlx::query_as::<_, Appointment>(
-            "UPDATE appointments SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1
+            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2
              RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
         )
+        .bind(status)
         .bind(id)
         .fetch_optional(&self.pool)
         .await
@@ -265,8 +269,8 @@ impl AppointmentRepository {
         &self,
         appointment_id: Uuid,
         user_id: Uuid,
-    ) -> Result<Option<String>, RepositoryError> {
-        let result = sqlx::query_scalar::<_, String>(
+    ) -> Result<Option<UserRole>, RepositoryError> {
+        let result = sqlx::query_scalar::<_, UserRole>(
             "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
         )
         .bind(appointment_id)
