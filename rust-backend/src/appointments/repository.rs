@@ -3,6 +3,9 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+const APPOINTMENT_COLUMNS: &str = "id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees";
+const APPOINTMENT_COLUMNS_ALIASED: &str = "a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at, a.status, a.minimal_attendees";
+
 /// Errors that can occur in the repository layer
 #[derive(Debug)]
 pub enum RepositoryError {
@@ -37,8 +40,7 @@ impl AppointmentRepository {
     /// Find an appointment by its ID
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE id = $1 AND status NOT IN ('DELETED', 'CANCELLED')"
+            &format!("SELECT {} FROM appointments WHERE id = $1 AND status NOT IN ('DELETED', 'CANCELLED')", APPOINTMENT_COLUMNS)
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -49,8 +51,7 @@ impl AppointmentRepository {
     /// Find all appointments
     pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC"
+            &format!("SELECT {} FROM appointments WHERE status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC", APPOINTMENT_COLUMNS)
         )
         .fetch_all(&self.pool)
         .await
@@ -63,8 +64,7 @@ impl AppointmentRepository {
         creator_id: Uuid,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE creator_id = $1 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC"
+            &format!("SELECT {} FROM appointments WHERE creator_id = $1 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC", APPOINTMENT_COLUMNS)
         )
         .bind(creator_id)
         .fetch_all(&self.pool)
@@ -78,11 +78,10 @@ impl AppointmentRepository {
         user_id: Uuid,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT DISTINCT a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at, a.status, a.minimal_attendees
-             FROM appointments a
+            &format!("SELECT DISTINCT {} FROM appointments a
              LEFT JOIN appointment_participants ap ON a.id = ap.appointment_id
              WHERE (a.creator_id = $1 OR ap.user_id = $1) AND a.status NOT IN ('DELETED', 'CANCELLED')
-             ORDER BY a.start_time DESC"
+             ORDER BY a.start_time DESC", APPOINTMENT_COLUMNS_ALIASED)
         )
         .bind(user_id)
         .fetch_all(&self.pool)
@@ -97,8 +96,7 @@ impl AppointmentRepository {
         end: DateTime<Utc>,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE start_time >= $1 AND end_time <= $2 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time ASC"
+            &format!("SELECT {} FROM appointments WHERE start_time >= $1 AND end_time <= $2 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time ASC", APPOINTMENT_COLUMNS)
         )
         .bind(start)
         .bind(end)
@@ -123,9 +121,9 @@ impl AppointmentRepository {
         let status = AppointmentStatus::Planned;
 
         sqlx::query_as::<_, Appointment>(
-            "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees)
+            &format!("INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
+             RETURNING {}", APPOINTMENT_COLUMNS)
         )
         .bind(id)
         .bind(title)
@@ -187,7 +185,7 @@ impl AppointmentRepository {
 
         param_count += 1;
         query_str.push_str(&format!(" WHERE id = ${}", param_count));
-        query_str.push_str(" RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees");
+        query_str.push_str(&format!(" RETURNING {}", APPOINTMENT_COLUMNS));
 
         let mut query = sqlx::query_as::<_, Appointment>(&query_str).bind(now);
 
@@ -222,8 +220,7 @@ impl AppointmentRepository {
     pub async fn delete_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         let status = AppointmentStatus::Deleted;
         sqlx::query_as::<_, Appointment>(
-            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2
-             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
+            &format!("UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}", APPOINTMENT_COLUMNS)
         )
         .bind(status)
         .bind(id)
@@ -236,8 +233,7 @@ impl AppointmentRepository {
     pub async fn cancel_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         let status = AppointmentStatus::Cancelled;
         sqlx::query_as::<_, Appointment>(
-            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2
-             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
+            &format!("UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}", APPOINTMENT_COLUMNS)
         )
         .bind(status)
         .bind(id)
