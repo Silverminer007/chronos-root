@@ -38,7 +38,7 @@ impl AppointmentRepository {
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE id = $1"
+             FROM appointments WHERE id = $1 AND status NOT IN ('DELETED', 'CANCELLED')"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -50,7 +50,7 @@ impl AppointmentRepository {
     pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments ORDER BY start_time DESC"
+             FROM appointments WHERE status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC"
         )
         .fetch_all(&self.pool)
         .await
@@ -64,7 +64,7 @@ impl AppointmentRepository {
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE creator_id = $1 ORDER BY start_time DESC"
+             FROM appointments WHERE creator_id = $1 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC"
         )
         .bind(creator_id)
         .fetch_all(&self.pool)
@@ -81,7 +81,7 @@ impl AppointmentRepository {
             "SELECT DISTINCT a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at, a.status, a.minimal_attendees
              FROM appointments a
              LEFT JOIN appointment_participants ap ON a.id = ap.appointment_id
-             WHERE a.creator_id = $1 OR ap.user_id = $1
+             WHERE (a.creator_id = $1 OR ap.user_id = $1) AND a.status NOT IN ('DELETED', 'CANCELLED')
              ORDER BY a.start_time DESC"
         )
         .bind(user_id)
@@ -98,7 +98,7 @@ impl AppointmentRepository {
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
             "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
-             FROM appointments WHERE start_time >= $1 AND end_time <= $2 ORDER BY start_time ASC"
+             FROM appointments WHERE start_time >= $1 AND end_time <= $2 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time ASC"
         )
         .bind(start)
         .bind(end)
