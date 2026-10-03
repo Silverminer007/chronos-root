@@ -126,11 +126,8 @@ jobs:
             if grep -q "chronos.secretName" "$deployment"; then
               echo "✅ $deployment uses chronos.secretName helper"
             else
-              # Check if it hardcodes the secret name
-              if grep -q 'secretName: chronos-secret' "$deployment"; then
-                echo "❌ $deployment hardcodes secret name instead of using helper"
-                exit 1
-              fi
+              echo "❌ $deployment does not use chronos.secretName helper"
+              exit 1
             fi
           done
 
