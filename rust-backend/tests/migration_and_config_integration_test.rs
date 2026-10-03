@@ -1,4 +1,6 @@
 use std::time::Duration;
+use testcontainers::runners::AsyncRunner;
+use testcontainers_modules::postgres::Postgres;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -157,6 +159,51 @@ fn test_default_config_structure() -> Result<(), AnyError> {
     assert_eq!(config.acquire_timeout, Duration::from_secs(5));
     assert_eq!(config.max_lifetime, Duration::from_secs(1800));
     assert!(config.run_migrations);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
+    // Start a fresh PostgreSQL container
+    let container = Postgres::default().start().await;
+    let host_port = container.get_host_port_ipv4(5432).await;
+
+    // Build the connection string from the container
+    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+
+    // Create config with migrations enabled
+    let config = chronos_date_api::database::DatabaseConfig {
+        url: database_url,
+        max_connections: 5,
+        min_connections: 1,
+        acquire_timeout: Duration::from_secs(10),
+        max_lifetime: Duration::from_secs(1800),
+        run_migrations: true,
+    };
+
+    // This should succeed — all migrations should apply to empty database
+    let pool = chronos_date_api::database::init_pool(config)
+        .await
+        .map_err(|e| format!("Failed to initialize pool with migrations: {}", e))?;
+
+    // Verify we can query the database (basic sanity check)
+    let result: (i32,) = sqlx::query_as("SELECT 1")
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| format!("Failed to query database: {}", e))?;
+
+    assert_eq!(result.0, 1);
+
+    // Verify migrations created tables
+    let tables: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| format!("Failed to count tables: {}", e))?;
+
+    assert!(tables.0 > 0, "Migrations should have created tables in the schema");
 
     Ok(())
 }

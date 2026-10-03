@@ -49,7 +49,9 @@ Log connection info without exposing the password (show host, port, database nam
 - **`src/main.rs`**: Use `DatabaseConfig::from_env()`, exit non-zero on error, implement `/q/health/ready` with database check
 - **`migrations/005_performance_indexes.sql`**: Drop `WHERE deleted_at IS NULL` predicates, fix friendships column names
 - **`Cargo.toml`**: Add `url` crate for parsing database URLs
-- **Tests**: Configuration tests verify environment variable reading, migration flag, and password redaction
+- **Tests**: 
+  - `tests/migration_and_config_integration_test.rs`: Testcontainers-based integration test verifying all migrations apply successfully to an empty PostgreSQL database; configuration tests verify environment variable reading, migration flag, and password redaction
+  - `tests/migrations_validation_test.rs`: Static validation tests verify migration syntax and column references
 
 ## Consequences
 
