@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::appointments::{
     models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest},
     repository::AppointmentRepository,
-    services::AppointmentService,
+    services::{AppointmentService, ServiceError},
 };
 use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
@@ -113,7 +113,7 @@ pub async fn create_appointment(
         .await
         .map_err(|e| {
             eprintln!("Appointment creation error: {}", e);
-            AppointmentError::ValidationError(e)
+            AppointmentError::from(e)
         })?;
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -154,13 +154,7 @@ pub async fn update_appointment(
     let response = service
         .update_appointment(id, request)
         .await
-        .map_err(|e| {
-            if e.contains("not found") {
-                AppointmentError::NotFound
-            } else {
-                AppointmentError::ValidationError(e)
-            }
-        })?;
+        .map_err(AppointmentError::from)?;
 
     Ok(Json(response))
 }
@@ -192,13 +186,7 @@ pub async fn delete_appointment(
     service
         .delete_appointment(id)
         .await
-        .map_err(|e| {
-            if e.contains("not found") {
-                AppointmentError::NotFound
-            } else {
-                AppointmentError::DatabaseError
-            }
-        })?;
+        .map_err(AppointmentError::from)?;
 
     Ok(StatusCode::OK)
 }
@@ -230,13 +218,7 @@ pub async fn cancel_appointment(
     service
         .cancel_appointment(id)
         .await
-        .map_err(|e| {
-            if e.contains("not found") {
-                AppointmentError::NotFound
-            } else {
-                AppointmentError::DatabaseError
-            }
-        })?;
+        .map_err(AppointmentError::from)?;
 
     Ok(StatusCode::OK)
 }
@@ -248,6 +230,20 @@ pub enum AppointmentError {
     Unauthorized,
     DatabaseError,
     ValidationError(String),
+}
+
+impl From<ServiceError> for AppointmentError {
+    fn from(error: ServiceError) -> Self {
+        match error {
+            ServiceError::NotFound => AppointmentError::NotFound,
+            ServiceError::ValidationError(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::DatabaseError(msg) => {
+                eprintln!("Database error: {}", msg);
+                AppointmentError::DatabaseError
+            }
+            ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+        }
+    }
 }
 
 impl IntoResponse for AppointmentError {

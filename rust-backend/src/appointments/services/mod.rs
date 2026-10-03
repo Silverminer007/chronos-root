@@ -5,6 +5,28 @@ use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+/// Custom error type for appointment service operations
+#[derive(Debug, Clone)]
+pub enum ServiceError {
+    ValidationError(String),
+    NotFound,
+    DatabaseError(String),
+    InvalidFormat(String),
+}
+
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ServiceError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+            ServiceError::NotFound => write!(f, "Appointment not found"),
+            ServiceError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+            ServiceError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ServiceError {}
+
 /// Query parameters for listing appointments
 #[derive(Debug, Clone)]
 pub struct ListAppointmentsQuery {
@@ -210,34 +232,34 @@ impl AppointmentService {
         &self,
         request: CreateAppointmentRequest,
         creator_id: String,
-    ) -> Result<AppointmentResponse, String> {
+    ) -> Result<AppointmentResponse, ServiceError> {
         // Parse creator_id as UUID
         let creator_uuid = Uuid::parse_str(&creator_id)
-            .map_err(|_| "Invalid creator_id format".to_string())?;
+            .map_err(|_| ServiceError::InvalidFormat("creator_id must be a valid UUID".to_string()))?;
 
         // Validation: name cannot be blank
         if request.name.trim().is_empty() {
-            return Err("name cannot be blank".to_string());
+            return Err(ServiceError::ValidationError("name cannot be blank".to_string()));
         }
 
         // Validation: start and end times must be valid ISO-8601 strings
         let start_time = DateTime::parse_from_rfc3339(&request.start)
-            .map_err(|_| "start must be a valid ISO-8601 timestamp".to_string())?
+            .map_err(|_| ServiceError::InvalidFormat("start must be a valid ISO-8601 timestamp".to_string()))?
             .with_timezone(&Utc);
 
         let end_time = DateTime::parse_from_rfc3339(&request.end)
-            .map_err(|_| "end must be a valid ISO-8601 timestamp".to_string())?
+            .map_err(|_| ServiceError::InvalidFormat("end must be a valid ISO-8601 timestamp".to_string()))?
             .with_timezone(&Utc);
 
         // Validation: end time must be >= start time
         if end_time < start_time {
-            return Err("end time cannot be before start time".to_string());
+            return Err(ServiceError::ValidationError("end time cannot be before start time".to_string()));
         }
 
         // Validation: minimal_attendees must be non-negative if provided
         if let Some(ma) = request.minimal_attendees {
             if ma < 0 {
-                return Err("minimal_attendees must be non-negative".to_string());
+                return Err(ServiceError::ValidationError("minimal_attendees must be non-negative".to_string()));
             }
         }
 
@@ -251,7 +273,7 @@ impl AppointmentService {
             creator_uuid,
             request.minimal_attendees,
         ).await
-        .map_err(|e| format!("Failed to create appointment: {}", e))?;
+        .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
@@ -276,23 +298,23 @@ impl AppointmentService {
         &self,
         id: Uuid,
         request: UpdateAppointmentRequest,
-    ) -> Result<AppointmentResponse, String> {
+    ) -> Result<AppointmentResponse, ServiceError> {
         // Get the existing appointment first to check if time changed
         let existing = self.repo.find_by_id(id).await
-            .map_err(|e| format!("Failed to fetch appointment: {}", e))?
-            .ok_or_else(|| "Appointment not found".to_string())?;
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
 
         // Validation: if name is provided, it cannot be blank
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
-                return Err("name cannot be blank".to_string());
+                return Err(ServiceError::ValidationError("name cannot be blank".to_string()));
             }
         }
 
         // Parse timestamps if provided
         let start_time = if let Some(ref start) = request.start {
             Some(DateTime::parse_from_rfc3339(start)
-                .map_err(|_| "start must be a valid ISO-8601 timestamp".to_string())?
+                .map_err(|_| ServiceError::InvalidFormat("start must be a valid ISO-8601 timestamp".to_string()))?
                 .with_timezone(&Utc))
         } else {
             None
@@ -300,7 +322,7 @@ impl AppointmentService {
 
         let end_time = if let Some(ref end) = request.end {
             Some(DateTime::parse_from_rfc3339(end)
-                .map_err(|_| "end must be a valid ISO-8601 timestamp".to_string())?
+                .map_err(|_| ServiceError::InvalidFormat("end must be a valid ISO-8601 timestamp".to_string()))?
                 .with_timezone(&Utc))
         } else {
             None
@@ -309,14 +331,14 @@ impl AppointmentService {
         // Validation: if both start and end are provided, end must be >= start
         if let (Some(st), Some(et)) = (start_time, end_time) {
             if et < st {
-                return Err("end time cannot be before start time".to_string());
+                return Err(ServiceError::ValidationError("end time cannot be before start time".to_string()));
             }
         }
 
         // Validation: minimal_attendees must be non-negative if provided
         if let Some(ma) = request.minimal_attendees {
             if ma < 0 {
-                return Err("minimal_attendees must be non-negative".to_string());
+                return Err(ServiceError::ValidationError("minimal_attendees must be non-negative".to_string()));
             }
         }
 
@@ -334,8 +356,8 @@ impl AppointmentService {
             end_time,
             request.minimal_attendees,
         ).await
-        .map_err(|e| format!("Failed to update appointment: {}", e))?
-        .ok_or_else(|| "Appointment not found".to_string())?;
+        .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+        .ok_or(ServiceError::NotFound)?;
 
         // Fire events after successful database commit
         if let Some(ref publisher) = self.event_publisher {
@@ -370,10 +392,10 @@ impl AppointmentService {
     }
 
     /// Soft delete an appointment
-    pub async fn delete_appointment(&self, id: Uuid) -> Result<(), String> {
+    pub async fn delete_appointment(&self, id: Uuid) -> Result<(), ServiceError> {
         self.repo.delete_soft(id).await
-            .map_err(|e| format!("Failed to delete appointment: {}", e))?
-            .ok_or_else(|| "Appointment not found".to_string())?;
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
 
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
@@ -392,10 +414,10 @@ impl AppointmentService {
     }
 
     /// Soft cancel an appointment
-    pub async fn cancel_appointment(&self, id: Uuid) -> Result<(), String> {
+    pub async fn cancel_appointment(&self, id: Uuid) -> Result<(), ServiceError> {
         self.repo.cancel_soft(id).await
-            .map_err(|e| format!("Failed to cancel appointment: {}", e))?
-            .ok_or_else(|| "Appointment not found".to_string())?;
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
 
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
