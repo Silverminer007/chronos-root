@@ -96,15 +96,18 @@ pub async fn list_appointments(
 /// POST /api/v2/appointments - Create a new appointment
 pub async fn create_appointment(
     State(state): State<Arc<AppState>>,
-    _principal: PrincipalContext,
+    principal: PrincipalContext,
     Json(request): Json<CreateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
+    // Get creator ID from principal context
+    let creator_id = principal.user_id().to_string();
+
     // Validate and create appointment
     let response = service
-        .create_appointment(request)
+        .create_appointment(request, creator_id)
         .await
         .map_err(|e| {
             eprintln!("Appointment creation error: {}", e);

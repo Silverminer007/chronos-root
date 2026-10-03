@@ -1,5 +1,7 @@
 use crate::appointments::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse};
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
+use crate::appointments::events::{AppointmentCreatedEvent, AppointmentEditedEvent, AppointmentMovedEvent, AppointmentDeletedEvent, AppointmentCancelledEvent};
+use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -49,12 +51,24 @@ pub struct PagedResponse<T> {
 /// AppointmentService handles business logic for appointments
 pub struct AppointmentService {
     repo: AppointmentRepository,
+    event_publisher: Option<std::sync::Arc<dyn EventPublisher>>,
 }
 
 impl AppointmentService {
     /// Create a new AppointmentService
     pub fn new(repo: AppointmentRepository) -> Self {
-        Self { repo }
+        Self {
+            repo,
+            event_publisher: None,
+        }
+    }
+
+    /// Create a new AppointmentService with event publishing
+    pub fn with_events(repo: AppointmentRepository, event_publisher: std::sync::Arc<dyn EventPublisher>) -> Self {
+        Self {
+            repo,
+            event_publisher: Some(event_publisher),
+        }
     }
 
     /// Parse sort field from string
@@ -195,6 +209,7 @@ impl AppointmentService {
     pub async fn create_appointment(
         &self,
         request: CreateAppointmentRequest,
+        creator_id: String,
     ) -> Result<AppointmentResponse, String> {
         // Validation: name cannot be blank
         if request.name.trim().is_empty() {
@@ -229,10 +244,25 @@ impl AppointmentService {
             request.venue,
             start_time,
             end_time,
-            Uuid::new_v4(), // TODO: use creator_id from principal context
+            Uuid::new_v4(),
             request.minimal_attendees,
         ).await
         .map_err(|e| format!("Failed to create appointment: {}", e))?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentCreatedEvent::new(appointment.id, creator_id);
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "creator_id": event.creator_id,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new("AppointmentCreatedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentCreatedEvent: {:?}", e);
+                // Don't fail the request if event firing fails - this is a side effect
+            }
+        }
 
         Ok(appointment.into())
     }
@@ -243,6 +273,11 @@ impl AppointmentService {
         id: Uuid,
         request: UpdateAppointmentRequest,
     ) -> Result<AppointmentResponse, String> {
+        // Get the existing appointment first to check if time changed
+        let existing = self.repo.find_by_id(id).await
+            .map_err(|e| format!("Failed to fetch appointment: {}", e))?
+            .ok_or_else(|| "Appointment not found".to_string())?;
+
         // Validation: if name is provided, it cannot be blank
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
@@ -281,6 +316,10 @@ impl AppointmentService {
             }
         }
 
+        // Check if times changed for AppointmentMovedEvent
+        let times_changed = (start_time.is_some() && start_time != Some(existing.start_time)) ||
+                           (end_time.is_some() && end_time != Some(existing.end_time));
+
         // Update appointment in database
         let updated = self.repo.update(
             id,
@@ -294,6 +333,35 @@ impl AppointmentService {
         .map_err(|e| format!("Failed to update appointment: {}", e))?
         .ok_or_else(|| "Appointment not found".to_string())?;
 
+        // Fire events after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            // Always fire AppointmentEditedEvent
+            let edited_event = AppointmentEditedEvent::new(id);
+            let edited_json = serde_json::json!({
+                "appointment_id": edited_event.appointment_id.to_string(),
+                "timestamp": edited_event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new("AppointmentEditedEvent", edited_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentEditedEvent: {:?}", e);
+            }
+
+            // Fire AppointmentMovedEvent if time changed
+            if times_changed {
+                let moved_event = AppointmentMovedEvent::new(id, existing.start_time, existing.end_time);
+                let moved_json = serde_json::json!({
+                    "appointment_id": moved_event.appointment_id.to_string(),
+                    "old_start": moved_event.old_start,
+                    "old_end": moved_event.old_end,
+                    "timestamp": moved_event.timestamp,
+                });
+                let event_bus_event = crate::event_bus::Event::new("AppointmentMovedEvent", moved_json);
+                if let Err(e) = publisher.fire(event_bus_event).await {
+                    eprintln!("Failed to fire AppointmentMovedEvent: {:?}", e);
+                }
+            }
+        }
+
         Ok(updated.into())
     }
 
@@ -302,6 +370,20 @@ impl AppointmentService {
         self.repo.delete_soft(id).await
             .map_err(|e| format!("Failed to delete appointment: {}", e))?
             .ok_or_else(|| "Appointment not found".to_string())?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentDeletedEvent::new(id);
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new("AppointmentDeletedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentDeletedEvent: {:?}", e);
+            }
+        }
+
         Ok(())
     }
 
@@ -310,6 +392,20 @@ impl AppointmentService {
         self.repo.cancel_soft(id).await
             .map_err(|e| format!("Failed to cancel appointment: {}", e))?
             .ok_or_else(|| "Appointment not found".to_string())?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentCancelledEvent::new(id);
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
         Ok(())
     }
 }
