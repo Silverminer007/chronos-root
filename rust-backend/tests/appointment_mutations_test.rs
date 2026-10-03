@@ -688,4 +688,74 @@ mod appointment_mutation_tests {
             "Getting a deleted appointment should return an error (404 not found)"
         );
     }
+
+    /// SPEC #10: Creator auto-joins as RESPONSIBLE participant after appointment creation
+    #[tokio::test]
+    async fn test_creator_auto_joins_as_responsible_participant() {
+        let db = TestDb::new()
+            .await
+            .expect("Failed to initialize test database");
+        let fixtures = TestFixtures::new(db.pool().clone());
+
+        // Create creator user
+        let creator_id = fixtures
+            .create_user("creator_participant_test", "creator@example.com")
+            .await
+            .expect("Failed to create creator");
+
+        // Create appointment with event publisher
+        let repo = AppointmentRepository::new(db.pool().clone());
+        let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
+        let service = AppointmentService::with_events(repo, event_bus);
+
+        let request = CreateAppointmentRequest {
+            name: "Meeting with Auto-Join".to_string(),
+            description: Some("Testing creator participation".to_string()),
+            venue: Some("Room B".to_string()),
+            start: "2025-09-22T10:00:00Z".to_string(),
+            end: "2025-09-22T11:00:00Z".to_string(),
+            minimal_attendees: Some(2),
+        };
+
+        let response = service
+            .create_appointment(request, creator_id.to_string())
+            .await
+            .expect("Failed to create appointment");
+
+        // Verify: Creator appears in appointment_participants with role=RESPONSIBLE
+        let participant_role: Option<String> = sqlx::query_scalar(
+            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+        )
+        .bind(response.id)
+        .bind(creator_id)
+        .fetch_optional(db.pool())
+        .await
+        .expect("Failed to query participant role");
+
+        assert!(
+            participant_role.is_some(),
+            "Creator should be added as a participant after appointment creation"
+        );
+
+        let role_str = participant_role.expect("Role should be Some");
+        assert_eq!(
+            role_str, "RESPONSIBLE",
+            "Creator should have RESPONSIBLE role"
+        );
+
+        // Verify: Creator participation status is APPROVED
+        let participation_status: String = sqlx::query_scalar(
+            "SELECT status FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+        )
+        .bind(response.id)
+        .bind(creator_id)
+        .fetch_one(db.pool())
+        .await
+        .expect("Failed to fetch participation status");
+
+        assert_eq!(
+            participation_status, "APPROVED",
+            "Creator's participation status should be APPROVED"
+        );
+    }
 }
