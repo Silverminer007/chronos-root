@@ -301,7 +301,14 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        // Fire event after successful database commit
+        // Add creator as RESPONSIBLE participant synchronously before firing event
+        // This ensures the creator is added before the HTTP response is sent
+        self.repo
+            .add_participant(appointment.id, creator_uuid, "RESPONSIBLE", "APPROVED")
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Fire event after successful database commit and participant addition
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentCreatedEvent::new(appointment.id, creator_id);
             let event_json = serde_json::json!({
