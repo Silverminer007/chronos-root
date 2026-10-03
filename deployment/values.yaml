@@ -46,10 +46,6 @@ secrets:
     backup_region:
     backup_endpoint_url:
     container_registry_secret:
-    imagePullSecret:
-      registry:
-      username:
-      password:
 
 # Image pull secret configuration
 imagePullSecret:
