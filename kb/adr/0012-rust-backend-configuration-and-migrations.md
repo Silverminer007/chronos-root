@@ -45,15 +45,17 @@ Log connection info without exposing the password (show host, port, database nam
 
 ## Implementation
 
+- **`src/app.rs`**: New public module containing `build_router(app_state, validator) -> Router`, which constructs the full application router with both public health routes and protected API routes. This enables testing the real application routes without spawning a server.
 - **`src/database/mod.rs`**: `DatabaseConfig::from_env()` replaces `Default::default()` in main; `log_connection_info()` redacts passwords
-- **`src/main.rs`**: Use `DatabaseConfig::from_env()`, exit non-zero on error, implement `/q/health/ready` with database check
+- **`src/main.rs`**: Use `DatabaseConfig::from_env()`, exit non-zero on error; delegate router building to `build_router()`
+- **`src/lib.rs`**: Export the new `app` module
 - **`migrations/005_performance_indexes.sql`**: Drop `WHERE deleted_at IS NULL` predicates, fix friendships column names
 - **`Cargo.toml`**: Add `url` crate for parsing database URLs
 - **Tests**: 
   - (1) **Non-ignored full-migration integration test** (`test_migrations_apply_to_empty_database`): Testcontainers-based test verifying all migrations apply successfully to an empty PostgreSQL database
   - (2) **Concurrent migration safety test** (`test_concurrent_migrators_on_same_database`): Two concurrent migrators on the same database succeed using PostgreSQL advisory locks
   - (3) **Password redaction verification** (`test_password_not_in_log_format`): Log output contains host, port, and database name but never exposes the password
-  - (4) **Readiness probe behavior test** (`test_run_migrations_false_skips_migrations` + `test_migrations_apply_to_empty_database`): `/q/health/ready` returns 503 SERVICE_UNAVAILABLE if database pool cannot execute `SELECT 1`, and 200 OK if successful
+  - (4) **Readiness probe behavior test** (`test_readiness_returns_503_when_database_unreachable` and `test_readiness_returns_200_when_database_available`): Uses `tower::ServiceExt::oneshot` to test the real application router. Verifies that `/q/health/ready` returns 503 SERVICE_UNAVAILABLE when database pool cannot execute `SELECT 1`, and 200 OK when database is available
 
 ## Consequences
 

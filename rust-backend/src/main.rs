@@ -1,11 +1,11 @@
-use axum::{middleware, response::IntoResponse, routing::get, Json, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::{error, info};
 
-use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, AppState};
+use chronos_date_api::app::build_router;
+use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::database::{init_pool, DatabaseConfig};
-use chronos_date_api::security::{PrincipalContext, TokenValidator};
+use chronos_date_api::security::TokenValidator;
 
 #[tokio::main]
 async fn main() {
@@ -35,22 +35,7 @@ async fn main() {
         db_pool: pool.clone(),
     });
 
-    let public_routes = Router::new()
-        .route("/q/health/live", get(health_live))
-        .route("/q/health/ready", get(health_ready).with_state(pool.clone()))
-        .route("/health", get(health_live));
-
-    let protected_routes = Router::new()
-        .route("/api/v2/me", get(get_user_info))
-        .route("/api/v2/appointments", get(list_appointments))
-        .route("/api/v2/appointments/:id", get(get_appointment))
-        .with_state(app_state)
-        .layer(middleware::from_fn_with_state(
-            validator.clone(),
-            chronos_date_api::security::middleware::auth_middleware,
-        ));
-
-    let app = Router::new().merge(public_routes).merge(protected_routes);
+    let app = build_router(app_state, validator);
 
     let port = std::env::var("PORT")
         .ok()
@@ -65,26 +50,4 @@ async fn main() {
         .expect("Failed to bind to port");
 
     axum::serve(listener, app).await.expect("Server error");
-}
-
-async fn health_live() -> &'static str {
-    "OK"
-}
-
-async fn health_ready(
-    axum::extract::State(pool): axum::extract::State<sqlx::PgPool>,
-) -> impl IntoResponse {
-    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&pool).await {
-        Ok(_) => (axum::http::StatusCode::OK, "OK"),
-        Err(_) => (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            "Database unavailable",
-        ),
-    }
-}
-
-async fn get_user_info(principal: PrincipalContext) -> impl IntoResponse {
-    Json(serde_json::json!({
-        "user_id": principal.user_id(),
-    }))
 }
