@@ -1,9 +1,19 @@
-use axum::{middleware, response::IntoResponse, routing::get, Json, Router};
+use axum::{
+    middleware,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, AppState};
+use chronos_date_api::appointments::event_listeners::AppointmentParticipationListener;
+use chronos_date_api::appointments::handlers::{
+    cancel_appointment, create_appointment, delete_appointment, get_appointment, list_appointments,
+    update_appointment, AppState,
+};
 use chronos_date_api::database::init_pool;
+use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
 
 #[tokio::main]
@@ -21,9 +31,19 @@ async fn main() {
         .unwrap_or_else(|_| "http://localhost:8080/realms/chronos".to_string());
     let validator = Arc::new(TokenValidator::new(keycloak_url));
 
+    // Initialize event bus
+    let event_bus = Arc::new(PostgresEventBus::new(pool.clone()));
+
+    // Subscribe to appointment events
+    let listener = AppointmentParticipationListener::new(pool.clone());
+    if let Err(e) = listener.subscribe_to_events(event_bus.as_ref()).await {
+        tracing::error!("Failed to subscribe to appointment events: {:?}", e);
+    }
+
     // Create application state
     let app_state = Arc::new(AppState {
         db_pool: pool.clone(),
+        event_publisher: event_bus,
     });
 
     // Build router with health check endpoints (public)
@@ -35,8 +55,17 @@ async fn main() {
     // Protected routes require authentication
     let protected_routes = Router::new()
         .route("/api/v2/me", get(get_user_info))
-        .route("/api/v2/appointments", get(list_appointments))
-        .route("/api/v2/appointments/:id", get(get_appointment))
+        .route(
+            "/api/v2/appointments",
+            get(list_appointments).post(create_appointment),
+        )
+        .route(
+            "/api/v2/appointments/:id",
+            get(get_appointment)
+                .patch(update_appointment)
+                .delete(delete_appointment),
+        )
+        .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(
             validator.clone(),

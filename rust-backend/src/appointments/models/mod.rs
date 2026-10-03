@@ -47,6 +47,8 @@ pub struct Appointment {
     pub creator_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub status: String,
+    pub minimal_attendees: Option<i32>,
 }
 
 /// Participation of a user in an appointment
@@ -105,39 +107,97 @@ pub struct CreateAppointmentRequest {
     pub name: String,
     pub description: Option<String>,
     pub venue: Option<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start: String,
+    pub end: String,
     pub minimal_attendees: Option<i32>,
 }
 
-/// Response with appointment details
+/// Request to update an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateAppointmentRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub venue: Option<String>,
+    pub start: Option<String>,
+    pub end: Option<String>,
+    pub minimal_attendees: Option<i32>,
+}
+
+/// Response with appointment details (Java-compatible format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentResponse {
     pub id: Uuid,
-    pub title: String,
+    pub name: String,
     pub description: Option<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub location: Option<String>,
-    pub creator_id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub start: String,
+    pub end: String,
+    pub venue: Option<String>,
+    pub status: String,
+    pub minimal_attendees: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub participants: Option<Vec<UserParticipantDto>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub messages: Option<Vec<MessageDto>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_participants: Option<Vec<GroupDto>>,
 }
 
 impl From<Appointment> for AppointmentResponse {
     fn from(appointment: Appointment) -> Self {
         AppointmentResponse {
             id: appointment.id,
-            title: appointment.title,
+            name: appointment.title,
             description: appointment.description,
-            start_time: appointment.start_time,
-            end_time: appointment.end_time,
-            location: appointment.location,
-            creator_id: appointment.creator_id,
-            created_at: appointment.created_at,
-            updated_at: appointment.updated_at,
+            start: appointment.start_time.to_rfc3339(),
+            end: appointment.end_time.to_rfc3339(),
+            venue: appointment.location,
+            status: appointment.status,
+            minimal_attendees: appointment.minimal_attendees,
+            participants: None,
+            messages: None,
+            group_participants: None,
         }
     }
+}
+
+/// User participant in an appointment response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserParticipantDto {
+    pub user_id: String,
+    pub name: Option<String>,
+    pub profile_picture_url: Option<String>,
+    pub role: UserRole,
+    pub status: ParticipationStatus,
+    pub via_group_id: Option<i64>,
+    pub via_group_name: Option<String>,
+}
+
+/// Message in an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDto {
+    pub id: i64,
+    pub sender_id: String,
+    pub sender_name: Option<String>,
+    pub appointment_id: i64,
+    pub body: String,
+    pub timestamp: String,
+}
+
+/// Group with members
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroupDto {
+    pub id: i64,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub members: Option<Vec<UserDto>>,
+}
+
+/// User DTO for group members
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserDto {
+    pub id: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
 }
 
 /// Request to participate in an appointment
@@ -332,12 +392,15 @@ mod tests {
             creator_id,
             created_at: now,
             updated_at: now,
+            status: "PLANNED".to_string(),
+            minimal_attendees: Some(5),
         };
 
         let json = serde_json::to_string(&appointment).unwrap();
         assert!(json.contains("\"title\":\"Team Meeting\""));
         assert!(json.contains("\"location\":\"Conference Room A\""));
         assert!(json.contains("\"description\":\"Quarterly planning\""));
+        assert!(json.contains("\"status\":\"PLANNED\""));
     }
 
     #[test]
@@ -355,12 +418,14 @@ mod tests {
             creator_id,
             created_at: now,
             updated_at: now,
+            status: "PLANNED".to_string(),
+            minimal_attendees: Some(5),
         };
 
         let response: AppointmentResponse = appointment.into();
         assert_eq!(response.id, appt_id);
-        assert_eq!(response.title, "Team Meeting");
-        assert_eq!(response.creator_id, creator_id);
+        assert_eq!(response.name, "Team Meeting");
+        assert_eq!(response.status, "PLANNED");
     }
 
     #[test]
@@ -469,39 +534,55 @@ mod tests {
             "name": "New Meeting",
             "description": "Planning session",
             "venue": "Room B",
-            "start_time": "2025-09-15T14:00:00Z",
-            "end_time": "2025-09-15T15:00:00Z",
+            "start": "2025-09-15T14:00:00Z",
+            "end": "2025-09-15T15:00:00Z",
             "minimal_attendees": 3
         }"#;
 
-        // Note: This test uses old field names but the CreateAppointmentRequest struct
-        // is still using them. It should be refactored to match the database schema.
         let request = serde_json::from_str::<CreateAppointmentRequest>(json).unwrap();
         assert_eq!(request.name, "New Meeting");
         assert_eq!(request.description, Some("Planning session".to_string()));
+        assert_eq!(request.start, "2025-09-15T14:00:00Z");
+        assert_eq!(request.end, "2025-09-15T15:00:00Z");
         assert_eq!(request.minimal_attendees, Some(3));
     }
 
     #[test]
     fn test_appointment_response_serialization() {
-        let now = Utc::now();
-        let creator_id = Uuid::new_v4();
         let appt_id = Uuid::new_v4();
         let response = AppointmentResponse {
             id: appt_id,
-            title: "Team Meeting".to_string(),
+            name: "Team Meeting".to_string(),
             description: Some("Quarterly planning".to_string()),
-            location: Some("Conference Room A".to_string()),
-            start_time: now,
-            end_time: now + chrono::Duration::hours(1),
-            creator_id,
-            created_at: now,
-            updated_at: now,
+            venue: Some("Conference Room A".to_string()),
+            start: "2025-09-15T14:00:00Z".to_string(),
+            end: "2025-09-15T15:00:00Z".to_string(),
+            status: "PLANNED".to_string(),
+            minimal_attendees: Some(5),
+            participants: None,
+            messages: None,
+            group_participants: None,
         };
 
         let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"title\":\"Team Meeting\""));
-        assert!(json.contains("\"location\":\"Conference Room A\""));
+        assert!(json.contains("\"name\":\"Team Meeting\""));
+        assert!(json.contains("\"venue\":\"Conference Room A\""));
+        assert!(json.contains("\"status\":\"PLANNED\""));
+    }
+
+    #[test]
+    fn test_update_appointment_request_deserialization() {
+        let json = r#"{
+            "name": "Updated Meeting",
+            "start": "2025-09-16T14:00:00Z",
+            "end": "2025-09-16T15:00:00Z"
+        }"#;
+
+        let request = serde_json::from_str::<UpdateAppointmentRequest>(json).unwrap();
+        assert_eq!(request.name, Some("Updated Meeting".to_string()));
+        assert_eq!(request.start, Some("2025-09-16T14:00:00Z".to_string()));
+        assert_eq!(request.end, Some("2025-09-16T15:00:00Z".to_string()));
+        assert_eq!(request.description, None);
     }
 
     #[test]
