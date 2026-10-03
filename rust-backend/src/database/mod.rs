@@ -20,7 +20,7 @@ pub struct DatabaseConfig {
 impl DatabaseConfig {
     /// Load configuration from environment variables
     pub fn from_env() -> Result<Self, String> {
-        let app_env = std::env::var("APP_ENV").unwrap_or_else(|_| "production".to_string());
+        let app_env = std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
 
         let url = if app_env == "development" {
             std::env::var("DATABASE_URL")
