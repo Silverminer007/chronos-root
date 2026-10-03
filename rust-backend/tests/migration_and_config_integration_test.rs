@@ -158,6 +158,44 @@ fn test_run_migrations_false_parses() -> Result<(), AnyError> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_run_migrations_false_skips_migrations() -> Result<(), AnyError> {
+    let container = Postgres::default().start().await;
+    let host_port = container.get_host_port_ipv4(5432).await;
+    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{}/postgres", host_port);
+
+    let config = chronos_date_api::database::DatabaseConfig {
+        url: database_url,
+        max_connections: 5,
+        min_connections: 1,
+        acquire_timeout: Duration::from_secs(10),
+        max_lifetime: Duration::from_secs(1800),
+        run_migrations: false,
+    };
+
+    let pool = chronos_date_api::database::init_pool(config)
+        .await
+        .map_err(|e| format!("Failed to initialize pool without migrations: {}", e))?;
+
+    let result: (i32,) = sqlx::query_as("SELECT 1")
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| format!("Failed to query database: {}", e))?;
+
+    assert_eq!(result.0, 1);
+
+    let tables: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| format!("Failed to count tables: {}", e))?;
+
+    assert_eq!(tables.0, 0, "No tables should exist when migrations are skipped");
+
+    Ok(())
+}
+
 #[test]
 fn test_port_environment_variable_reading() {
     std::env::set_var("PORT", "9000");
