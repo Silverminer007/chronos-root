@@ -109,25 +109,23 @@ mod appointment_auth_tests {
         }
 
         // Verify User 1 has exactly 3 appointments
-        let user1_appointments: Vec<(i64,)> = sqlx::query_as(
-            "SELECT COUNT(*) FROM appointments WHERE creator_id = $1"
-        )
-        .bind(user1_id)
-        .fetch_all(db.pool())
-        .await
-        .expect("Failed to fetch user1 appointments count");
+        let user1_appointments: Vec<(i64,)> =
+            sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE creator_id = $1")
+                .bind(user1_id)
+                .fetch_all(db.pool())
+                .await
+                .expect("Failed to fetch user1 appointments count");
 
         assert_eq!(user1_appointments.len(), 1);
         assert_eq!(user1_appointments[0].0, 3);
 
         // Verify User 2 has exactly 2 appointments
-        let user2_appointments: Vec<(i64,)> = sqlx::query_as(
-            "SELECT COUNT(*) FROM appointments WHERE creator_id = $1"
-        )
-        .bind(user2_id)
-        .fetch_all(db.pool())
-        .await
-        .expect("Failed to fetch user2 appointments count");
+        let user2_appointments: Vec<(i64,)> =
+            sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE creator_id = $1")
+                .bind(user2_id)
+                .fetch_all(db.pool())
+                .await
+                .expect("Failed to fetch user2 appointments count");
 
         assert_eq!(user2_appointments.len(), 1);
         assert_eq!(user2_appointments[0].0, 2);

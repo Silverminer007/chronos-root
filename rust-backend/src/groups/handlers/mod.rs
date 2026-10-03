@@ -8,7 +8,10 @@ use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::groups::models::{CreateGroupRequest, FriendshipResponse, GroupMember, GroupResponse, SendFriendshipRequestRequest, UpdateGroupRequest};
+use crate::groups::models::{
+    CreateGroupRequest, FriendshipResponse, GroupResponse, SendFriendshipRequestRequest,
+    UpdateGroupRequest,
+};
 use crate::groups::services::{FriendshipService, GroupService};
 use crate::security::PrincipalContext;
 
@@ -23,13 +26,22 @@ pub struct GroupHandlerState {
 /// Convert service error messages to HTTP responses
 fn error_to_response(error_msg: &str) -> (StatusCode, Json<serde_json::Value>) {
     if error_msg.contains("Not authorized") {
-        (StatusCode::FORBIDDEN, Json(json!({"error": "Not authorized to perform this action"})))
+        (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Not authorized to perform this action"})),
+        )
     } else if error_msg.contains("not found") || error_msg.contains("Not found") {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "Resource not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Resource not found"})),
+        )
     } else if error_msg.contains("yourself") {
         (StatusCode::BAD_REQUEST, Json(json!({"error": error_msg})))
     } else {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Internal server error"})))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Internal server error"})),
+        )
     }
 }
 
@@ -41,11 +53,19 @@ pub async fn create_group(
     principal: PrincipalContext,
     Json(req): Json<CreateGroupRequest>,
 ) -> impl IntoResponse {
-    match state.group_service.create_group(principal.user_id(), req.name, req.description).await {
+    match state
+        .group_service
+        .create_group(principal.user_id(), req.name, req.description)
+        .await
+    {
         Ok(group) => (StatusCode::CREATED, Json(GroupResponse::from(group))).into_response(),
         Err(e) => {
             tracing::error!("Failed to create group: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to create group"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to create group"})),
+            )
+                .into_response()
         }
     }
 }
@@ -62,7 +82,11 @@ pub async fn list_groups(
         }
         Err(e) => {
             tracing::error!("Failed to list groups: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to list groups"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to list groups"})),
+            )
+                .into_response()
         }
     }
 }
@@ -74,9 +98,17 @@ pub async fn update_group(
     principal: PrincipalContext,
     Json(req): Json<UpdateGroupRequest>,
 ) -> impl IntoResponse {
-    match state.group_service.update_group(group_id, principal.user_id(), req.name, req.description).await {
+    match state
+        .group_service
+        .update_group(group_id, principal.user_id(), req.name, req.description)
+        .await
+    {
         Ok(Some(group)) => (StatusCode::OK, Json(GroupResponse::from(group))).into_response(),
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "Group not found"}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Group not found"})),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to update group: {}", e);
             let (status, response) = error_to_response(&e.to_string());
@@ -91,9 +123,17 @@ pub async fn delete_group(
     Path(group_id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.group_service.delete_group(group_id, principal.user_id()).await {
+    match state
+        .group_service
+        .delete_group(group_id, principal.user_id())
+        .await
+    {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "Group not found"}))).into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Group not found"})),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to delete group: {}", e);
             let (status, response) = error_to_response(&e.to_string());
@@ -108,7 +148,11 @@ pub async fn add_group_member(
     Path((group_id, user_id)): Path<(Uuid, Uuid)>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.group_service.add_member(group_id, principal.user_id(), user_id).await {
+    match state
+        .group_service
+        .add_member(group_id, principal.user_id(), user_id)
+        .await
+    {
         Ok(_) => (StatusCode::CREATED, Json(json!({"success": true}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to add group member: {}", e);
@@ -124,9 +168,17 @@ pub async fn remove_group_member(
     Path((group_id, user_id)): Path<(Uuid, Uuid)>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.group_service.remove_member(group_id, principal.user_id(), user_id).await {
+    match state
+        .group_service
+        .remove_member(group_id, principal.user_id(), user_id)
+        .await
+    {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "Member not found"}))).into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Member not found"})),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to remove group member: {}", e);
             let (status, response) = error_to_response(&e.to_string());
@@ -143,11 +195,23 @@ pub async fn send_friendship_request(
     principal: PrincipalContext,
     Json(req): Json<SendFriendshipRequestRequest>,
 ) -> impl IntoResponse {
-    match state.friendship_service.send_request(principal.user_id(), req.recipient_id).await {
-        Ok(friendship) => (StatusCode::CREATED, Json(FriendshipResponse::from(friendship))).into_response(),
+    match state
+        .friendship_service
+        .send_request(principal.user_id(), req.recipient_id)
+        .await
+    {
+        Ok(friendship) => (
+            StatusCode::CREATED,
+            Json(FriendshipResponse::from(friendship)),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to send friendship request: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
     }
 }
@@ -158,8 +222,14 @@ pub async fn accept_friendship(
     Path(friendship_id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.friendship_service.accept_request(friendship_id, principal.user_id()).await {
-        Ok(friendship) => (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response(),
+    match state
+        .friendship_service
+        .accept_request(friendship_id, principal.user_id())
+        .await
+    {
+        Ok(friendship) => {
+            (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to accept friendship: {}", e);
             let (status, response) = error_to_response(&e.to_string());
@@ -174,8 +244,14 @@ pub async fn decline_friendship(
     Path(friendship_id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.friendship_service.decline_request(friendship_id, principal.user_id()).await {
-        Ok(friendship) => (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response(),
+    match state
+        .friendship_service
+        .decline_request(friendship_id, principal.user_id())
+        .await
+    {
+        Ok(friendship) => {
+            (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to decline friendship: {}", e);
             let (status, response) = error_to_response(&e.to_string());
@@ -190,9 +266,17 @@ pub async fn delete_friendship(
     Path(friendship_id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.friendship_service.remove_friendship(friendship_id, principal.user_id()).await {
+    match state
+        .friendship_service
+        .remove_friendship(friendship_id, principal.user_id())
+        .await
+    {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "Friendship not found"}))).into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Friendship not found"})),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to delete friendship: {}", e);
             let (status, response) = error_to_response(&e.to_string());
@@ -209,7 +293,11 @@ pub async fn list_group_members(
     Path(group_id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.group_service.list_members(group_id, principal.user_id()).await {
+    match state
+        .group_service
+        .list_members(group_id, principal.user_id())
+        .await
+    {
         Ok(members) => {
             let member_ids: Vec<Uuid> = members.iter().map(|m| m.user_id).collect();
             (StatusCode::OK, Json(json!({"members": member_ids}))).into_response()
@@ -227,9 +315,14 @@ pub async fn list_pending_friendships(
     State(state): State<GroupHandlerState>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
-    match state.friendship_service.list_pending_requests(principal.user_id()).await {
+    match state
+        .friendship_service
+        .list_pending_requests(principal.user_id())
+        .await
+    {
         Ok(requests) => {
-            let responses: Vec<FriendshipResponse> = requests.into_iter().map(|f| f.into()).collect();
+            let responses: Vec<FriendshipResponse> =
+                requests.into_iter().map(|f| f.into()).collect();
             (StatusCode::OK, Json(responses)).into_response()
         }
         Err(e) => {

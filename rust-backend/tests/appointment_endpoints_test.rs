@@ -1,10 +1,10 @@
 /// Integration tests for appointment GET endpoints
 #[cfg(test)]
 mod appointment_endpoint_tests {
-    use chronos_date_api::appointments::models::Appointment;
-    use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures, TestAuthHelper};
-    use uuid::Uuid;
     use chrono::Utc;
+    use chronos_date_api::appointments::models::Appointment;
+    use chronos_date_api::test_utils::{AppointmentFixture, TestAuthHelper, TestDb, TestFixtures};
+    use uuid::Uuid;
 
     #[tokio::test]
     #[ignore]
@@ -110,20 +110,12 @@ mod appointment_endpoint_tests {
 
         // Create appointments by different users
         let appt1_id = fixtures
-            .create_appointment(
-                user1_id,
-                &AppointmentFixture::new()
-                    .with_title("Meeting 1"),
-            )
+            .create_appointment(user1_id, &AppointmentFixture::new().with_title("Meeting 1"))
             .await
             .expect("Failed to create appointment 1");
 
         let appt2_id = fixtures
-            .create_appointment(
-                user2_id,
-                &AppointmentFixture::new()
-                    .with_title("Meeting 2"),
-            )
+            .create_appointment(user2_id, &AppointmentFixture::new().with_title("Meeting 2"))
             .await
             .expect("Failed to create appointment 2");
 

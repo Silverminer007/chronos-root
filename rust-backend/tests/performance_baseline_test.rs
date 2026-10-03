@@ -1,9 +1,9 @@
 // Performance baseline test for ticket #38
 // Measures memory usage, latency, and throughput under load
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::Semaphore;
 
 #[tokio::test]
@@ -25,10 +25,11 @@ async fn test_appointment_endpoint_latency_p95() {
     let semaphore = Arc::new(Semaphore::new(CONCURRENT_LIMIT));
 
     for _ in 0..NUM_REQUESTS {
-        let permit = semaphore.acquire().await.unwrap();
         let count = request_count.clone();
+        let sem = semaphore.clone();
 
         tokio::spawn(async move {
+            let _permit = sem.acquire().await.unwrap();
             let start = Instant::now();
 
             // Simulate a request (in real test, this would be an actual HTTP call)
@@ -37,8 +38,6 @@ async fn test_appointment_endpoint_latency_p95() {
 
             let duration = start.elapsed();
             count.fetch_add(duration.as_millis() as usize, Ordering::Relaxed);
-
-            drop(permit);
         });
 
         // In a real test, collect the actual duration
@@ -87,16 +86,16 @@ async fn test_other_endpoints_latency_p95() {
     let semaphore = Arc::new(Semaphore::new(CONCURRENT_LIMIT));
 
     for _ in 0..NUM_REQUESTS {
-        let permit = semaphore.acquire().await.unwrap();
+        let sem = semaphore.clone();
 
         tokio::spawn(async move {
+            let _permit = sem.acquire().await.unwrap();
             let start = Instant::now();
 
             // Simulate health check or other endpoint
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
             let _ = start.elapsed();
-            drop(permit);
         });
 
         // In a real test, collect the actual duration
@@ -116,7 +115,11 @@ async fn test_other_endpoints_latency_p95() {
     println!("Target P95: < 1000 ms");
     println!("Status: {}", if p95 < 1000 { "✓ PASS" } else { "✗ FAIL" });
 
-    assert!(p95 < 1000, "P95 latency {} ms exceeds target of 1000 ms", p95);
+    assert!(
+        p95 < 1000,
+        "P95 latency {} ms exceeds target of 1000 ms",
+        p95
+    );
 }
 
 #[test]
@@ -138,7 +141,14 @@ fn test_connection_pool_memory_efficient() {
     println!("Min idle: {:?}", config.min_idle);
     println!("Estimated memory: ~{:.1} MiB", estimated_memory_mb);
     println!("Target heap: < 50 MiB");
-    println!("Status: {}", if estimated_memory_mb < 40.0 { "✓ PASS" } else { "⚠ WARNING" });
+    println!(
+        "Status: {}",
+        if estimated_memory_mb < 40.0 {
+            "✓ PASS"
+        } else {
+            "⚠ WARNING"
+        }
+    );
 
     assert!(
         config.max_connections <= 32,
@@ -204,8 +214,5 @@ async fn test_concurrent_request_throughput() {
     println!("Total requests: {}", total_requests);
     println!("Requests/sec: {:.1}", rps);
 
-    assert!(
-        rps > 0.0,
-        "No requests completed; throughput is 0"
-    );
+    assert!(rps > 0.0, "No requests completed; throughput is 0");
 }

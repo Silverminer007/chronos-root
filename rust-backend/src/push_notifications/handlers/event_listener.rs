@@ -1,11 +1,10 @@
 // Event listener for push notifications
-use crate::event_bus::{Event, EventBus};
+use crate::event_bus::{Event, EventSubscriber};
 use crate::push_notifications::handlers::AppointmentEventHandler;
-use crate::push_notifications::PushNotificationService;
 use crate::push_notifications::repository::PushSubscriptionRepository;
+use crate::push_notifications::PushNotificationService;
 use std::sync::Arc;
 use tracing::{error, info};
-use sqlx::PgPool;
 
 /// Event types that trigger push notifications
 pub mod event_types {
@@ -29,8 +28,9 @@ pub mod event_types {
 
 /// Push notification event listener
 pub struct PushNotificationEventListener {
-    event_bus: Arc<dyn EventBus>,
+    #[allow(dead_code)]
     notification_service: Arc<PushNotificationService>,
+    #[allow(dead_code)]
     subscription_repo: Arc<PushSubscriptionRepository>,
     appointment_handler: Arc<AppointmentEventHandler>,
 }
@@ -38,7 +38,6 @@ pub struct PushNotificationEventListener {
 impl PushNotificationEventListener {
     /// Create a new push notification event listener
     pub fn new(
-        event_bus: Arc<dyn EventBus>,
         notification_service: Arc<PushNotificationService>,
         subscription_repo: Arc<PushSubscriptionRepository>,
     ) -> Self {
@@ -48,7 +47,6 @@ impl PushNotificationEventListener {
         ));
 
         Self {
-            event_bus,
             notification_service,
             subscription_repo,
             appointment_handler,
@@ -56,7 +54,11 @@ impl PushNotificationEventListener {
     }
 
     /// Subscribe to all push notification events
-    pub async fn subscribe_all(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    /// Must be called with the concrete event bus type that implements EventSubscriber
+    pub async fn subscribe_all<T: EventSubscriber + ?Sized>(
+        &self,
+        event_bus: &T,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Subscribing to push notification events");
 
         // Subscribe to appointment events
@@ -84,7 +86,7 @@ impl PushNotificationEventListener {
             let event_type_clone = event_type.to_string();
             let handler_clone = handler.clone();
 
-            self.event_bus
+            event_bus
                 .subscribe(event_type_clone.clone(), move |event: Event| {
                     let handler = handler_clone.clone();
                     let event_type = event_type_clone.clone();
@@ -104,8 +106,13 @@ impl PushNotificationEventListener {
                             let handler = handler.clone();
                             let event = event.clone();
                             tokio::spawn(async move {
-                                if let Err(e) = handler.handle_participation_status_changed(&event).await {
-                                    error!("Error handling participation status changed event: {}", e);
+                                if let Err(e) =
+                                    handler.handle_participation_status_changed(&event).await
+                                {
+                                    error!(
+                                        "Error handling participation status changed event: {}",
+                                        e
+                                    );
                                 }
                             });
                         }
@@ -131,7 +138,10 @@ mod tests {
     fn test_event_types_defined() {
         assert_eq!(event_types::APPOINTMENT_CREATED, "appointment_created");
         assert_eq!(event_types::APPOINTMENT_UPDATED, "appointment_updated");
-        assert_eq!(event_types::PARTICIPATION_STATUS_CHANGED, "participation_status_changed");
+        assert_eq!(
+            event_types::PARTICIPATION_STATUS_CHANGED,
+            "participation_status_changed"
+        );
     }
 
     #[test]
@@ -155,12 +165,20 @@ mod tests {
             event_types::MESSAGE_RECEIVED,
         ];
 
-        assert_eq!(event_types_vec.len(), 16, "Should have 16 event types for push notifications");
+        assert_eq!(
+            event_types_vec.len(),
+            16,
+            "Should have 16 event types for push notifications"
+        );
 
         // Verify all are unique
         let mut unique = std::collections::HashSet::new();
         for event_type in event_types_vec {
-            assert!(unique.insert(event_type), "Event type {} is not unique", event_type);
+            assert!(
+                unique.insert(event_type),
+                "Event type {} is not unique",
+                event_type
+            );
         }
     }
 }

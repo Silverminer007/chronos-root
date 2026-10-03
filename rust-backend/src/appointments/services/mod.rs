@@ -1,15 +1,15 @@
 use crate::appointments::models::Appointment;
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 /// Query parameters for listing appointments
 #[derive(Debug, Clone)]
 pub struct ListAppointmentsQuery {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
-    pub sort_by: Option<String>,   // "date" or "title"
-    pub sort_dir: Option<String>,  // "asc" or "desc"
+    pub sort_by: Option<String>,  // "date" or "title"
+    pub sort_dir: Option<String>, // "asc" or "desc"
 }
 
 impl Default for ListAppointmentsQuery {
@@ -82,16 +82,16 @@ impl AppointmentService {
         match sort_field {
             SortField::Date => {
                 if sort_direction == SortDirection::Ascending {
-                    appointments.sort_by(|a, b| a.start_time.cmp(&b.start_time));
+                    appointments.sort_by_key(|a| a.start_time);
                 } else {
-                    appointments.sort_by(|a, b| b.start_time.cmp(&a.start_time));
+                    appointments.sort_by_key(|a| std::cmp::Reverse(a.start_time));
                 }
             }
             SortField::Title => {
                 if sort_direction == SortDirection::Ascending {
-                    appointments.sort_by(|a, b| a.title.cmp(&b.title));
+                    appointments.sort_by_key(|a| a.title.clone());
                 } else {
-                    appointments.sort_by(|a, b| b.title.cmp(&a.title));
+                    appointments.sort_by_key(|a| std::cmp::Reverse(a.title.clone()));
                 }
             }
         }
@@ -131,7 +131,7 @@ impl AppointmentService {
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(20) as usize;
 
-        let end = (offset + limit).min(sorted_appointments.len());
+        let _end = (offset + limit).min(sorted_appointments.len());
         Ok(sorted_appointments
             .into_iter()
             .skip(offset)
@@ -166,7 +166,7 @@ impl AppointmentService {
         let offset = query.offset.unwrap_or(0) as usize;
         let limit = query.limit.unwrap_or(20) as usize;
 
-        let end = (offset + limit).min(sorted_appointments.len());
+        let _end = (offset + limit).min(sorted_appointments.len());
         Ok(sorted_appointments
             .into_iter()
             .skip(offset)

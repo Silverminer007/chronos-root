@@ -1,15 +1,17 @@
+use crate::appointments::repository::AppointmentRepository;
+use crate::event_bus::EventPublisher;
+use crate::reminders::rules::{
+    AppointmentReminderRule, LongAppointmentRSVPRule, ShortWeekdayRSVPRule, ShortWeekendRSVPRule,
+};
+use crate::reminders::services::ReminderRuleEngine;
 use chrono::Utc;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use crate::appointments::repository::AppointmentRepository;
-use crate::database::repository::Repository;
-use crate::event_bus::EventBus;
-use crate::reminders::rules::{AppointmentReminderRule, LongAppointmentRSVPRule, ShortWeekdayRSVPRule, ShortWeekendRSVPRule};
-use crate::reminders::services::ReminderRuleEngine;
 
 pub struct ReminderScheduler {
-    event_bus: Arc<dyn EventBus>,
+    #[allow(dead_code)]
+    event_bus: Arc<dyn EventPublisher>,
     appointment_repo: Arc<AppointmentRepository>,
     engine: Arc<ReminderRuleEngine>,
     is_leader: Arc<Mutex<bool>>,
@@ -17,7 +19,10 @@ pub struct ReminderScheduler {
 }
 
 impl ReminderScheduler {
-    pub fn new(event_bus: Arc<dyn EventBus>, appointment_repo: Arc<AppointmentRepository>) -> Self {
+    pub fn new(
+        event_bus: Arc<dyn EventPublisher>,
+        appointment_repo: Arc<AppointmentRepository>,
+    ) -> Self {
         let rules = vec![
             Box::new(AppointmentReminderRule) as Box<dyn crate::reminders::rules::ReminderRule>,
             Box::new(LongAppointmentRSVPRule),
@@ -43,7 +48,10 @@ impl ReminderScheduler {
             return Ok(());
         }
 
-        let appointments = self.appointment_repo.find_all().await
+        let appointments = self
+            .appointment_repo
+            .find_all()
+            .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         for appointment in appointments {
@@ -59,7 +67,9 @@ impl ReminderScheduler {
         Ok(())
     }
 
-    async fn attempt_leader_election(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn attempt_leader_election(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut is_leader = self.is_leader.lock().await;
         if !*is_leader {
             *is_leader = true;

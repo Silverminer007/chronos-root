@@ -84,7 +84,10 @@ impl GroupRepository {
             param_count += 1;
         }
 
-        query.push_str(&format!(" WHERE id = ${} RETURNING id, name, description, owner_id, created_at, updated_at", param_count));
+        query.push_str(&format!(
+            " WHERE id = ${} RETURNING id, name, description, owner_id, created_at, updated_at",
+            param_count
+        ));
 
         let mut q = sqlx::query_as::<_, Group>(&query);
 
@@ -136,7 +139,11 @@ impl GroupMemberRepository {
     }
 
     /// Remove a member from a group
-    pub async fn remove_member(pool: &PgPool, group_id: Uuid, user_id: Uuid) -> Result<bool, sqlx::Error> {
+    pub async fn remove_member(
+        pool: &PgPool,
+        group_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("DELETE FROM group_members WHERE group_id = $1 AND user_id = $2")
             .bind(group_id)
             .bind(user_id)
@@ -147,7 +154,10 @@ impl GroupMemberRepository {
     }
 
     /// Get all members of a group
-    pub async fn get_members(pool: &PgPool, group_id: Uuid) -> Result<Vec<GroupMember>, sqlx::Error> {
+    pub async fn get_members(
+        pool: &PgPool,
+        group_id: Uuid,
+    ) -> Result<Vec<GroupMember>, sqlx::Error> {
         sqlx::query_as::<_, GroupMember>(
             "SELECT id, group_id, user_id, created_at FROM group_members WHERE group_id = $1 ORDER BY created_at",
         )
@@ -157,12 +167,17 @@ impl GroupMemberRepository {
     }
 
     /// Check if a user is a member of a group
-    pub async fn is_member(pool: &PgPool, group_id: Uuid, user_id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2")
-            .bind(group_id)
-            .bind(user_id)
-            .fetch_optional(pool)
-            .await?;
+    pub async fn is_member(
+        pool: &PgPool,
+        group_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let result =
+            sqlx::query("SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2")
+                .bind(group_id)
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await?;
 
         Ok(result.is_some())
     }
@@ -254,7 +269,10 @@ impl FriendshipRepository {
     }
 
     /// List all friendships for a user (pending and accepted)
-    pub async fn list_for_user(pool: &PgPool, user_id: Uuid) -> Result<Vec<Friendship>, sqlx::Error> {
+    pub async fn list_for_user(
+        pool: &PgPool,
+        user_id: Uuid,
+    ) -> Result<Vec<Friendship>, sqlx::Error> {
         sqlx::query_as::<_, Friendship>(
             r#"
             SELECT id, requester_id, recipient_id, status, created_at, updated_at
