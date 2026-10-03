@@ -16,19 +16,16 @@ CREATE INDEX idx_participants_user_status ON appointment_participants(user_id, s
 -- Index for group member queries
 CREATE INDEX idx_group_members_group_user ON group_members(group_id, user_id);
 
--- Index for friendship queries (bidirectional lookup)
-CREATE INDEX idx_friendships_user_friend ON friendships(requester_id, recipient_id);
+-- Index for friendship queries (bidirectional lookup using actual column names)
+CREATE INDEX idx_friendships_requester_recipient ON friendships(requester_id, recipient_id);
 
-CREATE INDEX idx_friendships_friend_user ON friendships(recipient_id, requester_id);
+CREATE INDEX idx_friendships_recipient_requester ON friendships(recipient_id, requester_id);
 
 -- Index for created_at filtering (recent appointments)
 CREATE INDEX idx_appointments_created_at ON appointments(created_at DESC);
 
 -- Index for updated_at filtering (recently modified)
 CREATE INDEX idx_appointments_updated_at ON appointments(updated_at DESC);
-
--- Index for upcoming appointments (application code filters by NOW())
-CREATE INDEX idx_active_appointments ON appointments(start_time);
 
 -- Add ANALYZE to update table statistics
 ANALYZE users;
