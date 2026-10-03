@@ -127,10 +127,27 @@ pub async fn update_appointment(
     principal: PrincipalContext,
     Json(request): Json<UpdateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
-    // TODO: Check that principal has ATTENDANT role or higher for this appointment
-    let _user_id = principal.user_id();
+    let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is authorized
+    let appointment = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    // User must be creator or a participant (ATTENDANT role or above)
+    let is_participant = repo
+        .is_participant(id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    if appointment.creator_id != user_id && !is_participant {
+        return Err(AppointmentError::Unauthorized);
+    }
+
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Validate and update appointment
@@ -155,10 +172,21 @@ pub async fn delete_appointment(
     Path(id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
-    // TODO: Check that principal is the creator (RESPONSIBLE role) of this appointment
-    let _user_id = principal.user_id();
+    let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is the creator
+    let appointment = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    if appointment.creator_id != user_id {
+        return Err(AppointmentError::Unauthorized);
+    }
+
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
@@ -182,10 +210,21 @@ pub async fn cancel_appointment(
     Path(id): Path<Uuid>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
-    // TODO: Check that principal is the creator (RESPONSIBLE role) of this appointment
-    let _user_id = principal.user_id();
+    let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is the creator
+    let appointment = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    if appointment.creator_id != user_id {
+        return Err(AppointmentError::Unauthorized);
+    }
+
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service

@@ -240,4 +240,18 @@ impl AppointmentRepository {
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
+
+    /// Check if a user is a participant in an appointment
+    pub async fn is_participant(&self, appointment_id: Uuid, user_id: Uuid) -> Result<bool, RepositoryError> {
+        let result = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2)"
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(result)
+    }
 }
