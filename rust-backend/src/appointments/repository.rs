@@ -254,4 +254,34 @@ impl AppointmentRepository {
 
         Ok(result)
     }
+
+    /// Add a participant to an appointment
+    pub async fn add_participant(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+        role: &str,
+        status: &str,
+    ) -> Result<(), RepositoryError> {
+        let id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        sqlx::query(
+            "INSERT INTO appointment_participants (id, appointment_id, user_id, role, status, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (appointment_id, user_id) DO NOTHING"
+        )
+        .bind(id)
+        .bind(appointment_id)
+        .bind(user_id)
+        .bind(role)
+        .bind(status)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
 }

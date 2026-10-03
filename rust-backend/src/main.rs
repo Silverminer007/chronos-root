@@ -1,8 +1,9 @@
-use axum::{middleware, response::IntoResponse, routing::{get, post, patch, delete}, Json, Router};
+use axum::{middleware, response::IntoResponse, routing::{get, post}, Json, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use chronos_date_api::appointments::handlers::{get_appointment, list_appointments, create_appointment, update_appointment, delete_appointment, cancel_appointment, AppState};
+use chronos_date_api::appointments::event_listeners::AppointmentParticipationListener;
 use chronos_date_api::database::init_pool;
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
@@ -24,6 +25,12 @@ async fn main() {
 
     // Initialize event bus
     let event_bus = Arc::new(PostgresEventBus::new(pool.clone()));
+
+    // Subscribe to appointment events
+    let listener = AppointmentParticipationListener::new(pool.clone());
+    if let Err(e) = listener.subscribe_to_events(event_bus.as_ref()).await {
+        tracing::error!("Failed to subscribe to appointment events: {:?}", e);
+    }
 
     // Create application state
     let app_state = Arc::new(AppState {

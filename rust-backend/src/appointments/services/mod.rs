@@ -211,6 +211,10 @@ impl AppointmentService {
         request: CreateAppointmentRequest,
         creator_id: String,
     ) -> Result<AppointmentResponse, String> {
+        // Parse creator_id as UUID
+        let creator_uuid = Uuid::parse_str(&creator_id)
+            .map_err(|_| "Invalid creator_id format".to_string())?;
+
         // Validation: name cannot be blank
         if request.name.trim().is_empty() {
             return Err("name cannot be blank".to_string());
@@ -244,7 +248,7 @@ impl AppointmentService {
             request.venue,
             start_time,
             end_time,
-            Uuid::new_v4(),
+            creator_uuid,
             request.minimal_attendees,
         ).await
         .map_err(|e| format!("Failed to create appointment: {}", e))?;
