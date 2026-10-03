@@ -55,13 +55,10 @@ frontend:
     NUXT_PUBLIC_IMPRESSUM_EMAIL: "henze5@gmx.de"
   envFromSecrets:
     - name: NUXT_AUTH_CLIENT_ID
-      secretName: chronos-secret
       secretKey: frontend_client_id
     - name: SENTRY_AUTH_TOKEN
-      secretName: chronos-secret
       secretKey: frontend_sentry_auth_token
     - name: NUXT_PUBLIC_SENTRY_DSN
-      secretName: chronos-secret
       secretKey: frontend_sentry_dsn
 
 backend:
@@ -93,22 +90,16 @@ backend:
     AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
   envFromSecrets:
     - name: DB_PASSWORD
-      secretName: chronos-secret
       secretKey: database_password
     - name: AUTH_SERVER_CLIENT_ID
-      secretName: chronos-secret
       secretKey: backend_client_id
     - name: AUTH_SERVER_CLIENT_SECRET
-      secretName: chronos-secret
       secretKey: backend_client_secret
     - name: VAPID_PUBLIC
-      secretName: chronos-secret
       secretKey: vapid_public_key
     - name: VAPID_PRIVATE
-      secretName: chronos-secret
       secretKey: vapid_private_key
     - name: VAPID_MAILTO
-      secretName: chronos-secret
       secretKey: vapid_mailto
   livenessProbe:
     httpGet:
