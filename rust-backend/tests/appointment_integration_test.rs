@@ -53,10 +53,7 @@ mod integration_tests {
             Some("Conference Room A".to_string())
         );
         assert_eq!(fetched_appointment.creator_id, creator_id);
-        assert_eq!(
-            fetched_appointment.end_time > fetched_appointment.start_time,
-            true
-        );
+        assert!(fetched_appointment.end_time > fetched_appointment.start_time);
     }
 
     #[tokio::test]
@@ -80,7 +77,7 @@ mod integration_tests {
             .expect("Failed to create user 2");
 
         // Create appointments by both users
-        let appt1_id = fixtures
+        let _appt1_id = fixtures
             .create_appointment(
                 user1_id,
                 &AppointmentFixture::new().with_title("User 1 Meeting"),
@@ -88,7 +85,7 @@ mod integration_tests {
             .await
             .expect("Failed to create appointment 1");
 
-        let appt2_id = fixtures
+        let _appt2_id = fixtures
             .create_appointment(
                 user2_id,
                 &AppointmentFixture::new().with_title("User 2 Meeting"),
@@ -148,18 +145,19 @@ mod integration_tests {
             .expect("Failed to create appointment");
 
         // Add participants
-        let p1_status = fixtures
+        let _p1_status = fixtures
             .add_participant(appointment_id, participant1_id, "ACCEPTED")
             .await
             .expect("Failed to add participant 1");
 
-        let p2_status = fixtures
+        let _p2_status = fixtures
             .add_participant(appointment_id, participant2_id, "PENDING")
             .await
             .expect("Failed to add participant 2");
 
         // Verify: Query participants
         #[derive(sqlx::FromRow)]
+        #[allow(dead_code)]
         struct Participant {
             id: Uuid,
             appointment_id: Uuid,
@@ -194,7 +192,7 @@ mod integration_tests {
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create initial user
-        let user_id = fixtures
+        let _user_id = fixtures
             .create_user("user", "user@example.com")
             .await
             .expect("Failed to create user");

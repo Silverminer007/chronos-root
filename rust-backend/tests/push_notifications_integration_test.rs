@@ -2,8 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use uuid::Uuid;
-
     /// Test that demonstrates firing an event and verification of push notification
     /// This is a placeholder test that shows the structure for testing
     #[tokio::test]
