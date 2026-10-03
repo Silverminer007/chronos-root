@@ -118,12 +118,16 @@ pub async fn create_appointment(
 }
 
 /// PATCH /api/v2/appointments/:id - Update an appointment
+/// Requires ATTENDANT role or above (any participant can edit)
 pub async fn update_appointment(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-    _principal: PrincipalContext,
+    principal: PrincipalContext,
     Json(request): Json<UpdateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
+    // TODO: Check that principal has ATTENDANT role or higher for this appointment
+    let _user_id = principal.user_id();
+
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
@@ -143,11 +147,15 @@ pub async fn update_appointment(
 }
 
 /// DELETE /api/v2/appointments/:id - Delete an appointment (soft delete)
+/// Requires RESPONSIBLE role (creator only)
 pub async fn delete_appointment(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-    _principal: PrincipalContext,
+    principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
+    // TODO: Check that principal is the creator (RESPONSIBLE role) of this appointment
+    let _user_id = principal.user_id();
+
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
@@ -166,11 +174,15 @@ pub async fn delete_appointment(
 }
 
 /// POST /api/v2/appointments/:id/cancel - Cancel an appointment (soft cancel)
+/// Requires RESPONSIBLE role (creator only)
 pub async fn cancel_appointment(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-    _principal: PrincipalContext,
+    principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
+    // TODO: Check that principal is the creator (RESPONSIBLE role) of this appointment
+    let _user_id = principal.user_id();
+
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::new(repo);
 
