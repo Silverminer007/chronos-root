@@ -98,9 +98,37 @@ impl EventSubscriber for PostgresEventBus {
                             match listener.recv().await {
                                 Ok(notification) => {
                                     info!("Received notification on channel: {}", event_type_clone);
-                                    // In a production system, you would fetch the event from the database
-                                    // using the event ID passed in the notification payload
-                                    let _ = (&notification, &callback); // Use callback in production implementation
+                                    let event_id = notification.payload();
+                                    match sqlx::query_as::<_, (String, String, String)>(
+                                        "SELECT id, event_type, payload FROM events WHERE id = $1"
+                                    )
+                                    .bind(event_id)
+                                    .fetch_optional(&pool)
+                                    .await {
+                                        Ok(Some((id, event_type, payload_str))) => {
+                                            match serde_json::from_str::<serde_json::Value>(&payload_str) {
+                                                Ok(payload) => {
+                                                    let timestamp = chrono::Utc::now().timestamp();
+                                                    let event = Event {
+                                                        id,
+                                                        event_type,
+                                                        payload,
+                                                        timestamp,
+                                                    };
+                                                    callback(event);
+                                                }
+                                                Err(e) => {
+                                                    error!("Failed to parse event payload: {}", e);
+                                                }
+                                            }
+                                        }
+                                        Ok(None) => {
+                                            error!("Event not found in database: {}", event_id);
+                                        }
+                                        Err(e) => {
+                                            error!("Failed to fetch event from database: {}", e);
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     error!("Listener error: {}", e);

@@ -65,8 +65,6 @@ impl AppointmentParticipationListener {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_event_listener_creation() {
         // This test would require a real database pool in a real test environment
