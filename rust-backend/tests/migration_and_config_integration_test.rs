@@ -1,6 +1,9 @@
+use std::sync::Mutex;
 use std::time::Duration;
 use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::postgres::Postgres;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -21,6 +24,20 @@ fn test_database_url_from_environment() -> Result<(), AnyError> {
 
 #[test]
 fn test_password_not_in_log_format() -> Result<(), AnyError> {
+    let logs = std::sync::Arc::new(Mutex::new(String::new()));
+    let logs_clone = logs.clone();
+
+    let layer = tracing_subscriber::fmt::layer()
+        .without_time()
+        .with_writer(move || {
+            let logs = logs_clone.clone();
+            MockWriter { logs }
+        });
+
+    let _guard = tracing_subscriber::registry()
+        .with(layer)
+        .set_default();
+
     let config = chronos_date_api::database::DatabaseConfig {
         url: "postgres://user:secret_password@localhost:5432/mydb".to_string(),
         max_connections: 10,
@@ -30,10 +47,39 @@ fn test_password_not_in_log_format() -> Result<(), AnyError> {
         run_migrations: false,
     };
 
-    // Verify that log_connection_info doesn't panic
     config.log_connection_info();
 
+    let captured_logs = logs.lock().unwrap();
+
+    // Password should NOT be in the logs
+    assert!(!captured_logs.contains("secret_password"),
+        "Password should not appear in logs. Log output: {}", captured_logs);
+
+    // Expected connection info SHOULD be in the logs
+    assert!(captured_logs.contains("host="), "Host info should be in logs");
+    assert!(captured_logs.contains("port="), "Port info should be in logs");
+    assert!(captured_logs.contains("database="), "Database info should be in logs");
+    assert!(captured_logs.contains("mydb"), "Database name should be in logs");
+    assert!(captured_logs.contains("localhost"), "Host should be in logs");
+
     Ok(())
+}
+
+struct MockWriter {
+    logs: std::sync::Arc<Mutex<String>>,
+}
+
+impl std::io::Write for MockWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if let Ok(s) = std::str::from_utf8(buf) {
+            self.logs.lock().unwrap().push_str(s);
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 #[test]
