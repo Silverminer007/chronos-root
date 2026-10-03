@@ -37,7 +37,7 @@ impl AppointmentRepository {
     /// Find an appointment by its ID
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(id)
@@ -49,7 +49,7 @@ impl AppointmentRepository {
     /// Find all appointments
     pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments ORDER BY start_time DESC"
         )
         .fetch_all(&self.pool)
@@ -63,7 +63,7 @@ impl AppointmentRepository {
         creator_id: Uuid,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE creator_id = $1 ORDER BY start_time DESC"
         )
         .bind(creator_id)
@@ -78,7 +78,7 @@ impl AppointmentRepository {
         user_id: Uuid,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT DISTINCT a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at
+            "SELECT DISTINCT a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at, a.status, a.minimal_attendees
              FROM appointments a
              LEFT JOIN appointment_participants ap ON a.id = ap.appointment_id
              WHERE a.creator_id = $1 OR ap.user_id = $1
@@ -97,12 +97,146 @@ impl AppointmentRepository {
         end: DateTime<Utc>,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE start_time >= $1 AND end_time <= $2 ORDER BY start_time ASC"
         )
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Create a new appointment
+    pub async fn create(&self,
+        title: String,
+        description: Option<String>,
+        location: Option<String>,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        creator_id: Uuid,
+        minimal_attendees: Option<i32>,
+    ) -> Result<Appointment, RepositoryError> {
+        let id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+        let status = "PLANNED";
+
+        sqlx::query_as::<_, Appointment>(
+            "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
+        )
+        .bind(id)
+        .bind(title)
+        .bind(description)
+        .bind(start_time)
+        .bind(end_time)
+        .bind(location)
+        .bind(creator_id)
+        .bind(now)
+        .bind(now)
+        .bind(status)
+        .bind(minimal_attendees)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Update an appointment
+    pub async fn update(&self,
+        id: Uuid,
+        title: Option<String>,
+        description: Option<String>,
+        location: Option<String>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        minimal_attendees: Option<i32>,
+    ) -> Result<Option<Appointment>, RepositoryError> {
+        let now = chrono::Utc::now();
+
+        // Build dynamic query based on which fields are provided
+        let mut query_str = "UPDATE appointments SET updated_at = $1".to_string();
+        let mut param_count = 1;
+
+        if title.is_some() {
+            param_count += 1;
+            query_str.push_str(&format!(", title = ${}", param_count));
+        }
+        if description.is_some() {
+            param_count += 1;
+            query_str.push_str(&format!(", description = ${}", param_count));
+        }
+        if location.is_some() {
+            param_count += 1;
+            query_str.push_str(&format!(", location = ${}", param_count));
+        }
+        if start_time.is_some() {
+            param_count += 1;
+            query_str.push_str(&format!(", start_time = ${}", param_count));
+        }
+        if end_time.is_some() {
+            param_count += 1;
+            query_str.push_str(&format!(", end_time = ${}", param_count));
+        }
+        if minimal_attendees.is_some() {
+            param_count += 1;
+            query_str.push_str(&format!(", minimal_attendees = ${}", param_count));
+        }
+
+        param_count += 1;
+        query_str.push_str(&format!(" WHERE id = ${}", param_count));
+        query_str.push_str(" RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees");
+
+        let mut query = sqlx::query_as::<_, Appointment>(&query_str)
+            .bind(now);
+
+        if let Some(t) = title {
+            query = query.bind(t);
+        }
+        if let Some(d) = description {
+            query = query.bind(d);
+        }
+        if let Some(l) = location {
+            query = query.bind(l);
+        }
+        if let Some(st) = start_time {
+            query = query.bind(st);
+        }
+        if let Some(et) = end_time {
+            query = query.bind(et);
+        }
+        if let Some(ma) = minimal_attendees {
+            query = query.bind(ma);
+        }
+
+        query = query.bind(id);
+
+        query
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Soft delete an appointment (set status to DELETED)
+    pub async fn delete_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(
+            "UPDATE appointments SET status = 'DELETED', updated_at = NOW() WHERE id = $1
+             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Soft cancel an appointment (set status to CANCELLED)
+    pub async fn cancel_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(
+            "UPDATE appointments SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1
+             RETURNING id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }

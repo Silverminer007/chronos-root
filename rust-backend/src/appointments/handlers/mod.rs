@@ -9,7 +9,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::AppointmentResponse, repository::AppointmentRepository, services::AppointmentService,
+    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest},
+    repository::AppointmentRepository,
+    services::AppointmentService,
 };
 use crate::security::PrincipalContext;
 
@@ -91,21 +93,117 @@ pub async fn list_appointments(
     Ok(Json(responses))
 }
 
+/// POST /api/v2/appointments - Create a new appointment
+pub async fn create_appointment(
+    State(state): State<Arc<AppState>>,
+    _principal: PrincipalContext,
+    Json(request): Json<CreateAppointmentRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::new(repo);
+
+    // Validate and create appointment
+    let response = service
+        .create_appointment(request)
+        .await
+        .map_err(|e| {
+            eprintln!("Appointment creation error: {}", e);
+            AppointmentError::ValidationError(e)
+        })?;
+
+    Ok((StatusCode::CREATED, Json(response)))
+}
+
+/// PATCH /api/v2/appointments/:id - Update an appointment
+pub async fn update_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    _principal: PrincipalContext,
+    Json(request): Json<UpdateAppointmentRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::new(repo);
+
+    // Validate and update appointment
+    let response = service
+        .update_appointment(id, request)
+        .await
+        .map_err(|e| {
+            if e.contains("not found") {
+                AppointmentError::NotFound
+            } else {
+                AppointmentError::ValidationError(e)
+            }
+        })?;
+
+    Ok(Json(response))
+}
+
+/// DELETE /api/v2/appointments/:id - Delete an appointment (soft delete)
+pub async fn delete_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    _principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::new(repo);
+
+    service
+        .delete_appointment(id)
+        .await
+        .map_err(|e| {
+            if e.contains("not found") {
+                AppointmentError::NotFound
+            } else {
+                AppointmentError::DatabaseError
+            }
+        })?;
+
+    Ok(StatusCode::OK)
+}
+
+/// POST /api/v2/appointments/:id/cancel - Cancel an appointment (soft cancel)
+pub async fn cancel_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    _principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::new(repo);
+
+    service
+        .cancel_appointment(id)
+        .await
+        .map_err(|e| {
+            if e.contains("not found") {
+                AppointmentError::NotFound
+            } else {
+                AppointmentError::DatabaseError
+            }
+        })?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
     NotFound,
     Unauthorized,
     DatabaseError,
+    ValidationError(String),
 }
 
 impl IntoResponse for AppointmentError {
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
-            AppointmentError::NotFound => (StatusCode::NOT_FOUND, "Appointment not found"),
-            AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized"),
+            AppointmentError::NotFound => (StatusCode::NOT_FOUND, "Appointment not found".to_string()),
+            AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
             AppointmentError::DatabaseError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+                (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+            }
+            AppointmentError::ValidationError(msg) => {
+                (StatusCode::BAD_REQUEST, msg)
             }
         };
 

@@ -1,4 +1,4 @@
-use crate::appointments::models::Appointment;
+use crate::appointments::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse};
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -189,6 +189,128 @@ impl AppointmentService {
         end: DateTime<Utc>,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         self.repo.find_by_date_range(start, end).await
+    }
+
+    /// Create a new appointment
+    pub async fn create_appointment(
+        &self,
+        request: CreateAppointmentRequest,
+    ) -> Result<AppointmentResponse, String> {
+        // Validation: name cannot be blank
+        if request.name.trim().is_empty() {
+            return Err("name cannot be blank".to_string());
+        }
+
+        // Validation: start and end times must be valid ISO-8601 strings
+        let start_time = DateTime::parse_from_rfc3339(&request.start)
+            .map_err(|_| "start must be a valid ISO-8601 timestamp".to_string())?
+            .with_timezone(&Utc);
+
+        let end_time = DateTime::parse_from_rfc3339(&request.end)
+            .map_err(|_| "end must be a valid ISO-8601 timestamp".to_string())?
+            .with_timezone(&Utc);
+
+        // Validation: end time must be >= start time
+        if end_time < start_time {
+            return Err("end time cannot be before start time".to_string());
+        }
+
+        // Validation: minimal_attendees must be non-negative if provided
+        if let Some(ma) = request.minimal_attendees {
+            if ma < 0 {
+                return Err("minimal_attendees must be non-negative".to_string());
+            }
+        }
+
+        // Create appointment in database
+        let appointment = self.repo.create(
+            request.name,
+            request.description,
+            request.venue,
+            start_time,
+            end_time,
+            Uuid::new_v4(), // TODO: use creator_id from principal context
+            request.minimal_attendees,
+        ).await
+        .map_err(|e| format!("Failed to create appointment: {}", e))?;
+
+        Ok(appointment.into())
+    }
+
+    /// Update an appointment
+    pub async fn update_appointment(
+        &self,
+        id: Uuid,
+        request: UpdateAppointmentRequest,
+    ) -> Result<AppointmentResponse, String> {
+        // Validation: if name is provided, it cannot be blank
+        if let Some(ref name) = request.name {
+            if name.trim().is_empty() {
+                return Err("name cannot be blank".to_string());
+            }
+        }
+
+        // Parse timestamps if provided
+        let start_time = if let Some(ref start) = request.start {
+            Some(DateTime::parse_from_rfc3339(start)
+                .map_err(|_| "start must be a valid ISO-8601 timestamp".to_string())?
+                .with_timezone(&Utc))
+        } else {
+            None
+        };
+
+        let end_time = if let Some(ref end) = request.end {
+            Some(DateTime::parse_from_rfc3339(end)
+                .map_err(|_| "end must be a valid ISO-8601 timestamp".to_string())?
+                .with_timezone(&Utc))
+        } else {
+            None
+        };
+
+        // Validation: if both start and end are provided, end must be >= start
+        if let (Some(st), Some(et)) = (start_time, end_time) {
+            if et < st {
+                return Err("end time cannot be before start time".to_string());
+            }
+        }
+
+        // Validation: minimal_attendees must be non-negative if provided
+        if let Some(ma) = request.minimal_attendees {
+            if ma < 0 {
+                return Err("minimal_attendees must be non-negative".to_string());
+            }
+        }
+
+        // Update appointment in database
+        let updated = self.repo.update(
+            id,
+            request.name,
+            request.description,
+            request.venue,
+            start_time,
+            end_time,
+            request.minimal_attendees,
+        ).await
+        .map_err(|e| format!("Failed to update appointment: {}", e))?
+        .ok_or_else(|| "Appointment not found".to_string())?;
+
+        Ok(updated.into())
+    }
+
+    /// Soft delete an appointment
+    pub async fn delete_appointment(&self, id: Uuid) -> Result<(), String> {
+        self.repo.delete_soft(id).await
+            .map_err(|e| format!("Failed to delete appointment: {}", e))?
+            .ok_or_else(|| "Appointment not found".to_string())?;
+        Ok(())
+    }
+
+    /// Soft cancel an appointment
+    pub async fn cancel_appointment(&self, id: Uuid) -> Result<(), String> {
+        self.repo.cancel_soft(id).await
+            .map_err(|e| format!("Failed to cancel appointment: {}", e))?
+            .ok_or_else(|| "Appointment not found".to_string())?;
+        Ok(())
     }
 }
 
