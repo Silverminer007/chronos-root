@@ -50,9 +50,11 @@ Implement **9 separate CI jobs**, each responsible for one quality gate. Jobs ru
    - Uploads `lcov.info` artifact for external tools
    - Enforces coverage threshold (see below)
 
-6. **deny** — `cargo deny check advisories licenses`
+6. **deny** — `cargo deny check advisories bans licenses sources`
    - Detects security advisories in dependency tree
    - Verifies licenses are OSI-approved or explicitly allowed
+   - Checks for duplicate/conflicting crate versions (bans)
+   - Validates approved registries (sources)
    - Ignores known advisories with documented reasons (see below)
 
 7. **docs** — `cargo doc --no-deps --locked` with `RUSTDOCFLAGS="-D warnings"`

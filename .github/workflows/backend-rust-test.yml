@@ -119,7 +119,7 @@ jobs:
       - name: Install cargo-deny
         run: cargo install cargo-deny
       - name: Check advisories, licenses, bans, sources
-        run: cargo deny check advisories licenses
+        run: cargo deny check advisories bans licenses sources
 
   docs:
     runs-on: ubuntu-latest
