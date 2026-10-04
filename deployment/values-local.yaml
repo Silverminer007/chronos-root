@@ -1,36 +1,43 @@
-namespace: chronos-main
+# Local development values for Chronos Helm chart
+# Use with: helm install chronos . -f values-local.yaml [--set-file secrets.values.database_password=...]
+
+namespace: chronos-local
 
 secrets:
-  organisationId: 3e4b7901-bc75-4688-9a82-b3f600a40fa8
-  db:
-    password: a1efa257-6675-437e-ad17-b3f700cf6878
-  backend:
-    clientId: 6f7e4147-4c30-408c-be5a-b3f700cf12f4
-    clientSecret: 22e2fb2f-83ca-4ce6-bf74-b3f700cf28ff
-  frontend:
-    clientId: a71d209e-4600-4eaa-a81f-b3f700cf38cb
-    sentryDsn: 6f37edcb-1d78-40ac-9510-b42001264cdb
-    sentryAuthToken: 9dcad1a6-ed91-41ae-8954-b420012664d7
-  vapid:
-    publicKey: aefad867-54b7-4764-9f12-b3f600b42da2
-    privateKey: fa639799-a9ef-465a-81c1-b3f600b4454b
-    mailto: 0f9266a6-9989-424a-9d91-b3f600b45aa1
-  imagePullSecret: f02d5821-dfeb-4b53-8611-b3f600aeefde
-  backup:
-    s3:
-      bucket: f3da84d7-5a2f-42f5-8af4-b403012e715d
-      access_key_id: 9e5a1327-c33b-4cc7-99ac-b403012edc34
-      secret_access_key: aa67843f-9d59-4c6c-be68-b403012eed93
-      region: 2c72168b-ebaf-4af4-a8d2-b403012f15a1
-      endpoint_url: e66b944a-d56d-495a-acc9-b403012ea6fc
+  provider: values
+  existingSecretName: chronos-secret
+
+  # All secret values must be provided (via --set or --set-file)
+  values:
+    database_password: "changeme"
+    backend_client_id: "chronos-backend"
+    backend_client_secret: "backend-secret"
+    frontend_client_id: "chronos-frontend"
+    frontend_sentry_auth_token: "sentry-token"
+    frontend_sentry_dsn: "https://example@sentry.io/12345"
+    vapid_public_key: "VAPID_PUBLIC"
+    vapid_private_key: "VAPID_PRIVATE"
+    vapid_mailto: "mailto:admin@chronos-live.de"
+    backup_bucket: "chronos-backups"
+    backup_access_key_id: "s3-access-key"
+    backup_secret_access_key: "s3-secret-key"
+    backup_region: "eu-central-1"
+    backup_endpoint_url: "https://s3.example.com"
+    container_registry_secret: ""
+
+imagePullSecret:
+  name: chronos-docker-secret
+  create: true
+  registry: ghcr.io
+  username: _json_key
+  password: '{"type":"service_account",...}'
 
 ingress:
   enabled: true
   className: nginx
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  host: local.chronos-live.de
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  host: localhost
   tls:
     secretName: chronos-tls-cert
 
@@ -38,117 +45,104 @@ frontend:
   replicaCount: 1
   autoscaling:
     enabled: false
-    minReplicas: 2
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    minReplicas: 1
+    maxReplicas: 3
   image:
-    repository: chronos-frontend
-    tag: local
-    pullPolicy: Never
+    repository: ghcr.io/silverminer007/chronos-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
   containerPort: 3000
   service:
     type: ClusterIP
     port: 80
   resources:
     requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
       memory: "256Mi"
       cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "200m"
   env:
-    NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
-    NUXT_AUTH_REDIRECT_URI: https://staging.chronos-live.de/api/auth/callback
+    NUXT_AUTH_ISSUER: "https://keycloak:8080/realms/chronos"
+    NUXT_AUTH_REDIRECT_URI: http://localhost/api/auth/callback
     NUXT_QUARKUS_URL: "http://chronos-backend"
-    NUXT_PUBLIC_IMPRESSUM_NAME: "Justus Henze"
-    NUXT_PUBLIC_IMPRESSUM_STREET: "Malmedystraße 3"
-    NUXT_PUBLIC_IMPRESSUM_CITY: "46145 Oberhausen"
-    NUXT_PUBLIC_IMPRESSUM_EMAIL: "henze5@gmx.de"
+    NUXT_PUBLIC_IMPRESSUM_NAME: "Local Development"
+    NUXT_PUBLIC_IMPRESSUM_STREET: "Street 1"
+    NUXT_PUBLIC_IMPRESSUM_CITY: "City"
+    NUXT_PUBLIC_IMPRESSUM_EMAIL: "dev@example.com"
   envFromSecrets:
     - name: NUXT_AUTH_CLIENT_ID
-      secretName: chronos-secret
       secretKey: frontend_client_id
     - name: SENTRY_AUTH_TOKEN
-      secretName: chronos-secret
       secretKey: frontend_sentry_auth_token
     - name: NUXT_PUBLIC_SENTRY_DSN
-      secretName: chronos-secret
       secretKey: frontend_sentry_dsn
 
 backend:
   replicaCount: 1
   autoscaling:
     enabled: false
-    minReplicas: 2
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    minReplicas: 1
+    maxReplicas: 3
   image:
-    repository: chronos-backend
-    tag: local
-    pullPolicy: Never
+    repository: ghcr.io/silverminer007/chronos-backend
+    tag: latest
+    pullPolicy: IfNotPresent
   containerPort: 8080
   service:
     type: ClusterIP
     port: 80
   resources:
     requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
       memory: "256Mi"
       cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "200m"
   env:
     DB_URL: "jdbc:postgresql://postgres:5432/chronos"
-    DB_USER: "chronos"
-    AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de"
+    DB_USER: "postgres"
+    AUTH_SERVER_URL: "https://keycloak:8080/realms/chronos"
+    AUTH_SERVER_BASE_URL: "https://keycloak:8080"
     AUTH_SERVER_REALM: "chronos"
+    QUARKUS_LOG_LEVEL: "DEBUG"
   envFromSecrets:
     - name: DB_PASSWORD
-      secretName: chronos-secret
       secretKey: database_password
     - name: AUTH_SERVER_CLIENT_ID
-      secretName: chronos-secret
       secretKey: backend_client_id
     - name: AUTH_SERVER_CLIENT_SECRET
-      secretName: chronos-secret
       secretKey: backend_client_secret
     - name: VAPID_PUBLIC
-      secretName: chronos-secret
       secretKey: vapid_public_key
     - name: VAPID_PRIVATE
-      secretName: chronos-secret
       secretKey: vapid_private_key
     - name: VAPID_MAILTO
-      secretName: chronos-secret
       secretKey: vapid_mailto
   livenessProbe:
     httpGet:
       path: /q/health/live
       port: 9000
-    initialDelaySeconds: 60
+    initialDelaySeconds: 30
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /q/health/ready
       port: 9000
-    initialDelaySeconds: 60
+    initialDelaySeconds: 5
     periodSeconds: 5
 
 rustBackend:
-  enabled: true
+  enabled: false
   replicaCount: 1
   autoscaling:
     enabled: false
     minReplicas: 1
     maxReplicas: 3
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
   image:
-    repository: chronos-rust-backend
-    tag: local
-    pullPolicy: Never
+    repository: ghcr.io/silverminer007/chronos-rust-backend
+    tag: latest
+    pullPolicy: IfNotPresent
   containerPort: 8080
   service:
     type: ClusterIP
@@ -159,31 +153,21 @@ rustBackend:
       cpu: "50m"
     limits:
       memory: "128Mi"
-      cpu: "500m"
+      cpu: "100m"
   env:
-    RUST_LOG: "chronos_date_api=info,tower_http=info"
-    ENVIRONMENT: "staging"
-  envFromSecrets:
-    - name: KEYCLOAK_URL
-      secretName: chronos-secret
-      secretKey: keycloak_url
-    - name: KEYCLOAK_REALM
-      secretName: chronos-secret
-      secretKey: keycloak_realm
-    - name: DATABASE_URL
-      secretName: chronos-secret
-      secretKey: database_url
+    RUST_LOG: "chronos_date_api=info"
+  envFromSecrets: []
   livenessProbe:
     httpGet:
       path: /q/health/live
       port: 8080
-    initialDelaySeconds: 30
+    initialDelaySeconds: 10
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /q/health/ready
       port: 8080
-    initialDelaySeconds: 10
+    initialDelaySeconds: 5
     periodSeconds: 5
 
 postgresql:
@@ -191,51 +175,30 @@ postgresql:
   image:
     tag: "16"
   database: chronos
-  user: chronos
   storage:
-    size: 10Gi
-    storageClass: hcloud-volumes
+    size: 5Gi
+    storageClass: standard
   passwordSecret:
     name: chronos-secret
     key: database_password
   backup:
-    s3_path: "chronos-staging-backup"
+    s3_path: "chronos-local-backup"
     host: "postgres"
   resources:
     requests:
-      cpu: "100m"
-      memory: "100Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
-      cpu: "500m"
+      cpu: "200m"
       memory: "256Mi"
 
 metrics:
-  enabled: true
+  enabled: false
   port: 9000
   targetPort: 9000
   path: /metrics
   serviceMonitor:
-    enabled: true
-    interval: 30s
-    scrapeTimeout: 10s
+    enabled: false
 
 alerts:
-  enabled: true
-  rules:
-    podDown:
-      for: 2m
-    postgresDown:
-      for: 1m
-    highCPU:
-      threshold: 0.8
-      for: 5m
-    highMemory:
-      threshold: 0.9
-      for: 5m
-    postgresDiskFull:
-      threshold: 0.85
-      for: 2m
-    podRestarting:
-      threshold: 3
-    sslExpiry:
-      daysWarning: 7
+  enabled: false

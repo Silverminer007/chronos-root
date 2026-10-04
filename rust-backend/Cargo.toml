@@ -2,6 +2,7 @@
 name = "chronos_date_api"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 # Build with minimal dependencies for now
 # The full web stack dependencies will be added incrementally
@@ -29,7 +30,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # JWT and security
 jsonwebtoken = "9"
 async-trait = "0.1"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
 http = "1"
 
 # Database

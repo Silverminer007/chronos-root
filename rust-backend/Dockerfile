@@ -12,7 +12,7 @@ COPY src ./src
 
 # Build the application with static linking
 # Uses musl libc for truly static binary (lower memory footprint)
-RUN cargo build --release --target x86_64-unknown-linux-musl --features web
+RUN cargo build --release --target x86_64-unknown-linux-musl --locked
 
 # Runtime stage - scratch image for minimal footprint
 FROM scratch

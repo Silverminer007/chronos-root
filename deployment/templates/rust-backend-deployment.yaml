@@ -18,8 +18,11 @@ spec:
       labels:
         app: chronos-rust-backend
     spec:
+      {{- $imagePullSecretName := include "chronos.imagePullSecretName" . }}
+      {{- if $imagePullSecretName }}
       imagePullSecrets:
-        - name: chronos-docker-secret
+        - name: {{ $imagePullSecretName }}
+      {{- end }}
       containers:
         - name: chronos-rust
           image: "{{ .Values.rustBackend.image.repository }}:{{ .Values.rustBackend.image.tag }}"
@@ -35,7 +38,7 @@ spec:
             - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ .secretName }}
+                  name: {{ include "chronos.secretName" $ }}
                   key: {{ .secretKey }}
             {{- end }}
           resources:

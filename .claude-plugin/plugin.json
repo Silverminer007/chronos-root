@@ -1,0 +1,5 @@
+{
+  "name": "chronos-litellm-tags",
+  "version": "0.1.0",
+  "description": "Dynamically set LiteLLM tags from Git branch info and ticket state"
+}

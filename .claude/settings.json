@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "before-prompt-submit": [
+      {
+        "type": "shell",
+        "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && eval \"$(./.claude-plugin/bin/litellm-update-tags)\" 2>&1 | grep -E '^litellm-tags|^warn|^error' >&2 || true"
+      }
+    ]
+  }
+}

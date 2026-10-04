@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && eval \"$(./.claude-plugin/bin/litellm-update-tags)\" && exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

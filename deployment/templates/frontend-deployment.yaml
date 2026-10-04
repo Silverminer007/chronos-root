@@ -17,8 +17,11 @@ spec:
       labels:
         app: chronos-frontend
     spec:
+      {{- $imagePullSecretName := include "chronos.imagePullSecretName" . }}
+      {{- if $imagePullSecretName }}
       imagePullSecrets:
-        - name: chronos-docker-secret
+        - name: {{ $imagePullSecretName }}
+      {{- end }}
       containers:
         - name: chronos
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
@@ -34,7 +37,7 @@ spec:
             - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ .secretName }}
+                  name: {{ include "chronos.secretName" $ }}
                   key: {{ .secretKey }}
             {{- end }}
           resources:

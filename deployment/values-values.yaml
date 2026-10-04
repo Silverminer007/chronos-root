@@ -1,0 +1,96 @@
+# Values for use with secrets.provider=values
+# Contains literal secret values (for dev/test only, never commit real secrets)
+
+namespace: chronos
+
+secrets:
+  provider: values
+  values:
+    database_password: "test-db-password"
+    backend_client_id: "test-backend-client-id"
+    backend_client_secret: "test-backend-client-secret"
+    frontend_client_id: "test-frontend-client-id"
+    frontend_sentry_auth_token: "test-sentry-auth-token"
+    frontend_sentry_dsn: "test-sentry-dsn"
+    vapid_public_key: "test-vapid-public"
+    vapid_private_key: "test-vapid-private"
+    vapid_mailto: "test@example.com"
+    container_registry_secret: ""
+  backup:
+    s3:
+      bucket: "test-backup-bucket"
+      access_key_id: "test-access-key"
+      secret_access_key: "test-secret-key"
+      region: "us-east-1"
+      endpoint_url: "s3.example.com"
+
+imagePullSecret:
+  name: chronos-docker-secret
+  create: true
+  registry: ghcr.io
+  username: testuser
+  password: testpass
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  host: cluster.chronos-live.de
+  tls:
+    secretName: chronos-tls-cert
+
+frontend:
+  replicaCount: 2
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  image:
+    repository: ghcr.io/silverminer007/chronos-frontend
+    tag: latest
+    pullPolicy: Always
+  containerPort: 3000
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  env:
+    NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
+    NUXT_AUTH_REDIRECT_URI: https://cluster.chronos-live.de/api/auth/callback
+
+backend:
+  replicaCount: 2
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  image:
+    repository: ghcr.io/silverminer007/chronos-backend
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  env:
+    QUARKUS_LOG_LEVEL: INFO
+    QUARKUS_PROFILE: prod
