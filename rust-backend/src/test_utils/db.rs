@@ -84,7 +84,6 @@ impl TestDb {
         Ok(TestDb { pool })
     }
 
-
     /// Get the connection pool
     pub fn pool(&self) -> &PgPool {
         &self.pool
