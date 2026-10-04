@@ -44,19 +44,16 @@ mod appointment_rsvp_tests {
             .expect("Failed to add participant");
 
         // Verify initial status is PENDING
-        let initial_status: String = sqlx::query_scalar(
-            "SELECT status FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
-        )
-        .bind(appointment_id)
-        .bind(participant_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch initial status");
+        let repo = AppointmentRepository::new(db.pool().clone());
+        let participant = repo
+            .find_participation(appointment_id, participant_id)
+            .await
+            .expect("Failed to fetch participant")
+            .expect("Participant not found");
 
-        assert_eq!(initial_status, "PENDING");
+        assert_eq!(participant.status, ParticipationStatus::Pending);
 
         // Create a service and call change_participation_status
-        let repo = AppointmentRepository::new(db.pool().clone());
         let service = AppointmentService::new(repo);
 
         // Call the RSVP method
@@ -66,16 +63,14 @@ mod appointment_rsvp_tests {
             .expect("Failed to change participation status");
 
         // Verify status is now APPROVED
-        let updated_status: String = sqlx::query_scalar(
-            "SELECT status FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
-        )
-        .bind(appointment_id)
-        .bind(participant_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch updated status");
+        let verify_repo = AppointmentRepository::new(db.pool().clone());
+        let updated_participant = verify_repo
+            .find_participation(appointment_id, participant_id)
+            .await
+            .expect("Failed to fetch participant")
+            .expect("Participant not found");
 
-        assert_eq!(updated_status, "APPROVED");
+        assert_eq!(updated_participant.status, ParticipationStatus::Approved);
     }
 
     #[tokio::test]
@@ -121,16 +116,14 @@ mod appointment_rsvp_tests {
             .expect("Failed to change participation status");
 
         // Verify status is now REJECTED
-        let updated_status: String = sqlx::query_scalar(
-            "SELECT status FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
-        )
-        .bind(appointment_id)
-        .bind(participant_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch updated status");
+        let verify_repo = AppointmentRepository::new(db.pool().clone());
+        let updated_participant = verify_repo
+            .find_participation(appointment_id, participant_id)
+            .await
+            .expect("Failed to fetch participant")
+            .expect("Participant not found");
 
-        assert_eq!(updated_status, "REJECTED");
+        assert_eq!(updated_participant.status, ParticipationStatus::Rejected);
     }
 
     #[tokio::test]
