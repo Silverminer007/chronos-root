@@ -9,7 +9,10 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UpdateParticipationStatusRequest, UserRole},
+    models::{
+        AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+        UpdateParticipationStatusRequest, UserRole,
+    },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };

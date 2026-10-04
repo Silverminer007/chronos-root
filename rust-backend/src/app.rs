@@ -34,7 +34,10 @@ pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) ->
                 .delete(delete_appointment),
         )
         .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
-        .route("/api/v2/appointments/:id/participation", post(rsvp_to_appointment))
+        .route(
+            "/api/v2/appointments/:id/participation",
+            post(rsvp_to_appointment),
+        )
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(
             validator.clone(),

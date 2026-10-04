@@ -58,7 +58,11 @@ mod appointment_rsvp_tests {
 
         // Call the RSVP method
         service
-            .change_participation_status(appointment_id, participant_id, ParticipationStatus::Approved)
+            .change_participation_status(
+                appointment_id,
+                participant_id,
+                ParticipationStatus::Approved,
+            )
             .await
             .expect("Failed to change participation status");
 
@@ -111,7 +115,11 @@ mod appointment_rsvp_tests {
 
         // Call the RSVP method with REJECTED status
         service
-            .change_participation_status(appointment_id, participant_id, ParticipationStatus::Rejected)
+            .change_participation_status(
+                appointment_id,
+                participant_id,
+                ParticipationStatus::Rejected,
+            )
             .await
             .expect("Failed to change participation status");
 
@@ -159,7 +167,11 @@ mod appointment_rsvp_tests {
 
         // This should fail because the user is not a participant
         let result = service
-            .change_participation_status(appointment_id, non_participant_id, ParticipationStatus::Approved)
+            .change_participation_status(
+                appointment_id,
+                non_participant_id,
+                ParticipationStatus::Approved,
+            )
             .await;
 
         // Verify that the error is as expected

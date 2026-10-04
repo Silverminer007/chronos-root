@@ -101,7 +101,12 @@ pub struct AppointmentParticipationStatusChangedEvent {
 }
 
 impl AppointmentParticipationStatusChangedEvent {
-    pub fn new(appointment_id: Uuid, user_id: String, new_status: ParticipationStatus, old_status: ParticipationStatus) -> Self {
+    pub fn new(
+        appointment_id: Uuid,
+        user_id: String,
+        new_status: ParticipationStatus,
+        old_status: ParticipationStatus,
+    ) -> Self {
         Self {
             appointment_id,
             user_id,
