@@ -1,6 +1,12 @@
 namespace: chronos
 
 secrets:
+  # Secret provider: bitwarden (default), values, or existing
+  provider: bitwarden
+  # Existing secret name (used by all providers)
+  existingSecretName: chronos-secret
+
+  # Bitwarden configuration (provider: bitwarden)
   organisationId:
   db:
     password:
@@ -15,7 +21,40 @@ secrets:
     publicKey:
     privateKey:
     mailto:
-  imagePullSecret:
+  backup:
+    s3:
+      bucket:
+      access_key_id:
+      secret_access_key:
+      region:
+      endpoint_url:
+
+  # Values-based secrets (provider: values)
+  values:
+    database_password:
+    backend_client_id:
+    backend_client_secret:
+    frontend_client_id:
+    frontend_sentry_auth_token:
+    frontend_sentry_dsn:
+    vapid_public_key:
+    vapid_private_key:
+    vapid_mailto:
+    backup_bucket:
+    backup_access_key_id:
+    backup_secret_access_key:
+    backup_region:
+    backup_endpoint_url:
+    container_registry_secret:
+
+# Image pull secret configuration
+imagePullSecret:
+  name: chronos-docker-secret
+  create: false
+  # Used when create: true and provider: values
+  registry:
+  username:
+  password:
 
 ingress:
   enabled: true
@@ -60,13 +99,10 @@ frontend:
     NUXT_PUBLIC_IMPRESSUM_EMAIL: "henze5@gmx.de"
   envFromSecrets:
     - name: NUXT_AUTH_CLIENT_ID
-      secretName: chronos-secret
       secretKey: frontend_client_id
     - name: SENTRY_AUTH_TOKEN
-      secretName: chronos-secret
       secretKey: frontend_sentry_auth_token
     - name: NUXT_PUBLIC_SENTRY_DSN
-      secretName: chronos-secret
       secretKey: frontend_sentry_dsn
 
 backend:
@@ -98,22 +134,16 @@ backend:
     AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
   envFromSecrets:
     - name: DB_PASSWORD
-      secretName: chronos-secret
       secretKey: database_password
     - name: AUTH_SERVER_CLIENT_ID
-      secretName: chronos-secret
       secretKey: backend_client_id
     - name: AUTH_SERVER_CLIENT_SECRET
-      secretName: chronos-secret
       secretKey: backend_client_secret
     - name: VAPID_PUBLIC
-      secretName: chronos-secret
       secretKey: vapid_public_key
     - name: VAPID_PRIVATE
-      secretName: chronos-secret
       secretKey: vapid_private_key
     - name: VAPID_MAILTO
-      secretName: chronos-secret
       secretKey: vapid_mailto
   livenessProbe:
     httpGet:
@@ -158,7 +188,6 @@ rustBackend:
     AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
   envFromSecrets:
     - name: DB_PASSWORD
-      secretName: chronos-secret
       secretKey: database_password
   livenessProbe:
     httpGet:
@@ -184,6 +213,9 @@ postgresql:
   passwordSecret:
     name: chronos-secret
     key: database_password
+  backup:
+    s3_path: ""
+    host: ""
   resources:
     requests:
       cpu: "100m"

@@ -1,4 +1,5 @@
 # postgres-restore-job.yaml
+{{- $secretName := include "chronos.secretName" . -}}
   #
   # ⚠️  DIESER JOB STELLT DIE DATENBANK AUS EINEM S3-BACKUP WIEDER HER!
   #
@@ -99,29 +100,29 @@ spec:
                 - name: S3_BUCKET
                   valueFrom:
                     secretKeyRef:
-                      name: chronos-secret
+                      name: {{ $secretName }}
                       key: backup_bucket
                 - name: S3_PREFIX
                   value: {{ .Values.postgresql.backup.s3_path }}
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
-                      name: chronos-secret
+                      name: {{ $secretName }}
                       key: backup_access_key_id
                 - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: chronos-secret
+                      name: {{ $secretName }}
                       key: backup_secret_access_key
                 - name: AWS_DEFAULT_REGION
                   valueFrom:
                     secretKeyRef:
-                      name: chronos-secret
+                      name: {{ $secretName }}
                       key: backup_region
                 - name: AWS_ENDPOINT_URL
                   valueFrom:
                     secretKeyRef:
-                      name: chronos-secret
+                      name: {{ $secretName }}
                       key: backup_endpoint_url
               volumeMounts:
                 - name: restore-storage
@@ -215,7 +216,7 @@ spec:
                 - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: chronos-secret
+                      name: {{ $secretName }}
                       key: database_password
               volumeMounts:
                 - name: restore-storage
