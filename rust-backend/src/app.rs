@@ -1,7 +1,15 @@
-use axum::{middleware, response::IntoResponse, routing::get, Json, Router};
+use axum::{
+    middleware,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
 use std::sync::Arc;
 
-use crate::appointments::handlers::{get_appointment, list_appointments, AppState};
+use crate::appointments::handlers::{
+    cancel_appointment, create_appointment, delete_appointment, get_appointment, list_appointments,
+    update_appointment, AppState,
+};
 use crate::security::TokenValidator;
 
 pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) -> Router {
@@ -15,8 +23,17 @@ pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) ->
 
     let protected_routes = Router::new()
         .route("/api/v2/me", get(get_user_info))
-        .route("/api/v2/appointments", get(list_appointments))
-        .route("/api/v2/appointments/:id", get(get_appointment))
+        .route(
+            "/api/v2/appointments",
+            get(list_appointments).post(create_appointment),
+        )
+        .route(
+            "/api/v2/appointments/:id",
+            get(get_appointment)
+                .patch(update_appointment)
+                .delete(delete_appointment),
+        )
+        .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(
             validator.clone(),

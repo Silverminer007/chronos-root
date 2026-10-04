@@ -3,8 +3,10 @@ use std::sync::Arc;
 use tracing::{error, info};
 
 use chronos_date_api::app::build_router;
+use chronos_date_api::appointments::event_listeners::AppointmentParticipationListener;
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::database::{init_pool, DatabaseConfig};
+use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::security::TokenValidator;
 
 #[tokio::main]
@@ -31,8 +33,19 @@ async fn main() {
         .unwrap_or_else(|_| "http://localhost:8080/realms/chronos".to_string());
     let validator = Arc::new(TokenValidator::new(keycloak_url));
 
+    // Initialize event bus
+    let event_bus = Arc::new(PostgresEventBus::new(pool.clone()));
+
+    // Subscribe to appointment events
+    let listener = AppointmentParticipationListener::new(pool.clone());
+    if let Err(e) = listener.subscribe_to_events(event_bus.as_ref()).await {
+        tracing::error!("Failed to subscribe to appointment events: {:?}", e);
+    }
+
+    // Create application state
     let app_state = Arc::new(AppState {
         db_pool: pool.clone(),
+        event_publisher: event_bus,
     });
 
     let app = build_router(app_state, validator);

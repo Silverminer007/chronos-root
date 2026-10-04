@@ -9,14 +9,18 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::AppointmentResponse, repository::AppointmentRepository, services::AppointmentService,
+    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    repository::AppointmentRepository,
+    services::{AppointmentService, ServiceError},
 };
+use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
 
 /// Shared application state
 #[derive(Clone)]
 pub struct AppState {
     pub db_pool: sqlx::PgPool,
+    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 /// Query parameters for listing appointments
@@ -37,17 +41,16 @@ pub async fn get_appointment(
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
     let user_id = principal.user_id();
 
     // Fetch the appointment
-    let appointment = service
-        .get_appointment(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
+    let appointment = service.get_appointment(id).await.map_err(|e| match e {
+        crate::appointments::services::ServiceError::NotFound => AppointmentError::NotFound,
+        _ => AppointmentError::DatabaseError,
+    })?;
 
     // Authorization check - user must be creator or invited participant
     // For now, only allow creators to view their appointments
@@ -67,7 +70,7 @@ pub async fn list_appointments(
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
-    let service = AppointmentService::new(repo);
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
     let user_id = principal.user_id();
@@ -91,22 +94,182 @@ pub async fn list_appointments(
     Ok(Json(responses))
 }
 
+/// POST /api/v2/appointments - Create a new appointment
+pub async fn create_appointment(
+    State(state): State<Arc<AppState>>,
+    principal: PrincipalContext,
+    Json(request): Json<CreateAppointmentRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    // Get creator ID from principal context
+    let creator_id = principal.user_id().to_string();
+
+    // Validate and create appointment
+    let response = service
+        .create_appointment(request, creator_id)
+        .await
+        .map_err(|e| {
+            eprintln!("Appointment creation error: {}", e);
+            AppointmentError::from(e)
+        })?;
+
+    Ok((StatusCode::CREATED, Json(response)))
+}
+
+/// PATCH /api/v2/appointments/:id - Update an appointment
+/// Requires ATTENDANT role or above (any participant can edit)
+pub async fn update_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    principal: PrincipalContext,
+    Json(request): Json<UpdateAppointmentRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is authorized
+    let appointment = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    // User must be creator or a participant with ATTENDANT role or above
+    if appointment.creator_id != user_id {
+        let participant_role = repo
+            .get_participant_role(id, user_id)
+            .await
+            .map_err(|_| AppointmentError::DatabaseError)?;
+
+        match participant_role {
+            Some(role) => {
+                let is_attendant_or_above = matches!(
+                    role,
+                    UserRole::Attendant | UserRole::Helper | UserRole::Responsible
+                );
+                if !is_attendant_or_above {
+                    return Err(AppointmentError::Unauthorized);
+                }
+            }
+            None => {
+                return Err(AppointmentError::Unauthorized);
+            }
+        }
+    }
+
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    // Validate and update appointment
+    let response = service
+        .update_appointment(id, request)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(Json(response))
+}
+
+/// DELETE /api/v2/appointments/:id - Delete an appointment (soft delete)
+/// Requires RESPONSIBLE role (creator only)
+pub async fn delete_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is the creator
+    let appointment = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    if appointment.creator_id != user_id {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .delete_appointment(id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
+/// POST /api/v2/appointments/:id/cancel - Cancel an appointment (soft cancel)
+/// Requires RESPONSIBLE role (creator only)
+pub async fn cancel_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is the creator
+    let appointment = repo
+        .find_by_id(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    if appointment.creator_id != user_id {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .cancel_appointment(id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
     NotFound,
     Unauthorized,
     DatabaseError,
+    ValidationError(String),
+}
+
+impl From<ServiceError> for AppointmentError {
+    fn from(error: ServiceError) -> Self {
+        match error {
+            ServiceError::NotFound => AppointmentError::NotFound,
+            ServiceError::ValidationError(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::DatabaseError(msg) => {
+                eprintln!("Database error: {}", msg);
+                AppointmentError::DatabaseError
+            }
+            ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+        }
+    }
 }
 
 impl IntoResponse for AppointmentError {
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
-            AppointmentError::NotFound => (StatusCode::NOT_FOUND, "Appointment not found"),
-            AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized"),
-            AppointmentError::DatabaseError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+            AppointmentError::NotFound => {
+                (StatusCode::NOT_FOUND, "Appointment not found".to_string())
             }
+            AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
+            AppointmentError::DatabaseError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            ),
+            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
         };
 
         (status, error_message).into_response()

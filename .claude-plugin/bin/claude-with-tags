@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Wrapper to run claude with LiteLLM tags dynamically set
+
+cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# Update tags from git branch
+eval "$(./.claude-plugin/bin/litellm-update-tags)"
+
+# Run claude with remaining args
+exec claude "$@"

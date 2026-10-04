@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Extract ticket number from current git branch and update ANTHROPIC_CUSTOM_HEADERS with tags
+# Usage: source <(bin/litellm-update-tags)
+
+set -euo pipefail
+
+# Get the current git branch
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
+# Extract ticket number from branch (e.g. "agent/issue-91" -> "91", "issue/30" -> "30")
+ticket="none"
+if [[ $branch =~ issue-([0-9]+) ]] || [[ $branch =~ issue/([0-9]+) ]]; then
+  ticket="${BASH_REMATCH[1]}"
+fi
+
+# Determine state from branch prefix or use env var or default
+state="${LITELLM_STATE:-developing}"
+case "$branch" in
+  fix/*|agent/issue-*) state="fixing" ;;
+  feat/*) state="developing" ;;
+  *)
+    # Try to read from .claude/litellm-state file if it exists
+    if [[ -f .claude/litellm-state ]]; then
+      state=$(cat .claude/litellm-state)
+    fi
+    ;;
+esac
+
+project=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+
+# Check if litellm is configured
+if [[ -z "${ANTHROPIC_BASE_URL:-}" ]] || [[ ! "$ANTHROPIC_BASE_URL" =~ litellm ]]; then
+  echo "warn: litellm not configured (ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL)" >&2
+  exit 0
+fi
+
+# Extract API key from existing headers or use env var
+api_key="${LITELLM_API_KEY:-}"
+if [[ -z "$api_key" && -n "${ANTHROPIC_CUSTOM_HEADERS:-}" ]]; then
+  # Try to extract from existing headers
+  api_key=$(echo "$ANTHROPIC_CUSTOM_HEADERS" | grep -o 'Bearer [^ ]*' | awk '{print $2}' || true)
+fi
+
+if [[ -z "$api_key" ]]; then
+  api_key=$(cat "${LITELLM_KEY_FILE:-$HOME/.config/litellm/orchestrator_key}" 2>/dev/null || echo "")
+fi
+
+if [[ -z "$api_key" ]]; then
+  echo "error: LITELLM_API_KEY not found" >&2
+  exit 1
+fi
+
+# Build metadata JSON
+meta=$(printf '{"ticket":"%s","project":"%s","state":"%s"}' "$ticket" "$project" "$state")
+
+# Build headers
+headers=$(printf 'x-litellm-api-key: Bearer %s\nx-litellm-tags: ticket:%s,project:%s,state:%s\nx-litellm-spend-logs-metadata: %s' \
+  "$api_key" "$ticket" "$project" "$state" "$meta")
+
+# Export the updated variable
+printf 'export ANTHROPIC_CUSTOM_HEADERS=%q\n' "$headers"
+printf 'echo "litellm-tags: ticket=%s project=%s state=%s branch=%s" >&2\n' "$ticket" "$project" "$state" "$branch"

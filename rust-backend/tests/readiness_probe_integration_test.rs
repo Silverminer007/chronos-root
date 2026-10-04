@@ -1,5 +1,7 @@
+use async_trait::async_trait;
 use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::AppState;
+use chronos_date_api::event_bus::{Event, EventPublisher};
 use chronos_date_api::security::TokenValidator;
 use http::StatusCode;
 use std::sync::Arc;
@@ -9,6 +11,15 @@ use testcontainers_modules::postgres::Postgres;
 use tower::Service;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync>;
+
+struct MockEventPublisher;
+
+#[async_trait]
+impl EventPublisher for MockEventPublisher {
+    async fn fire(&self, _event: Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+}
 
 #[tokio::test]
 async fn test_readiness_returns_503_when_database_unreachable() -> Result<(), AnyError> {
@@ -20,7 +31,10 @@ async fn test_readiness_returns_503_when_database_unreachable() -> Result<(), An
         .acquire_timeout(Duration::from_millis(100))
         .connect_lazy("postgres://user:pass@127.0.0.1:1/unreachable")?;
 
-    let app_state = Arc::new(AppState { db_pool: pool });
+    let app_state = Arc::new(AppState {
+        db_pool: pool,
+        event_publisher: Arc::new(MockEventPublisher),
+    });
     let validator = Arc::new(TokenValidator::new(
         "http://localhost:8080/realms/chronos".to_string(),
     ));
@@ -61,7 +75,10 @@ async fn test_readiness_returns_200_when_database_available() -> Result<(), AnyE
         .connect(&database_url)
         .await?;
 
-    let app_state = Arc::new(AppState { db_pool: pool });
+    let app_state = Arc::new(AppState {
+        db_pool: pool,
+        event_publisher: Arc::new(MockEventPublisher),
+    });
     let validator = Arc::new(TokenValidator::new(
         "http://localhost:8080/realms/chronos".to_string(),
     ));
@@ -92,7 +109,10 @@ async fn test_health_live_always_returns_200() -> Result<(), AnyError> {
         .acquire_timeout(Duration::from_millis(100))
         .connect_lazy("postgres://user:pass@127.0.0.1:1/unreachable")?;
 
-    let app_state = Arc::new(AppState { db_pool: pool });
+    let app_state = Arc::new(AppState {
+        db_pool: pool,
+        event_publisher: Arc::new(MockEventPublisher),
+    });
     let validator = Arc::new(TokenValidator::new(
         "http://localhost:8080/realms/chronos".to_string(),
     ));
