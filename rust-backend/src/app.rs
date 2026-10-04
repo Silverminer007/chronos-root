@@ -1,4 +1,9 @@
-use axum::{middleware, response::IntoResponse, routing::{get, post}, Json, Router};
+use axum::{
+    middleware,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
 use std::sync::Arc;
 
 use crate::appointments::handlers::{

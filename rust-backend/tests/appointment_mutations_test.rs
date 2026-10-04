@@ -724,7 +724,7 @@ mod appointment_mutation_tests {
 
         // Verify: Creator appears in appointment_participants with role=RESPONSIBLE
         let participant_role: Option<String> = sqlx::query_scalar(
-            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
         )
         .bind(response.id)
         .bind(creator_id)

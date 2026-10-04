@@ -39,9 +39,10 @@ impl AppointmentRepository {
 
     /// Find an appointment by its ID
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(
-            &format!("SELECT {} FROM appointments WHERE id = $1 AND status NOT IN ('DELETED', 'CANCELLED')", APPOINTMENT_COLUMNS)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointments WHERE id = $1 AND status NOT IN ('DELETED', 'CANCELLED')",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(id)
         .fetch_optional(&self.pool)
         .await
@@ -219,9 +220,10 @@ impl AppointmentRepository {
     /// Soft delete an appointment (set status to DELETED)
     pub async fn delete_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         let status = AppointmentStatus::Deleted;
-        sqlx::query_as::<_, Appointment>(
-            &format!("UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}", APPOINTMENT_COLUMNS)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(status)
         .bind(id)
         .fetch_optional(&self.pool)
@@ -232,9 +234,10 @@ impl AppointmentRepository {
     /// Soft cancel an appointment (set status to CANCELLED)
     pub async fn cancel_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
         let status = AppointmentStatus::Cancelled;
-        sqlx::query_as::<_, Appointment>(
-            &format!("UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}", APPOINTMENT_COLUMNS)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(status)
         .bind(id)
         .fetch_optional(&self.pool)

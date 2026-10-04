@@ -1,8 +1,8 @@
+use async_trait::async_trait;
 use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::event_bus::{Event, EventPublisher};
 use chronos_date_api::security::TokenValidator;
-use async_trait::async_trait;
 use http::StatusCode;
 use std::sync::Arc;
 use std::time::Duration;
