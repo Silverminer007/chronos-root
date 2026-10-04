@@ -33,7 +33,6 @@ impl TestDb {
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
         info!("Connecting to PostgreSQL test database");
 
-        // Use DATABASE_URL env var or default to testcontainers postgres
         let base_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
 
@@ -52,6 +51,7 @@ impl TestDb {
         let postgres_pool = loop {
             match sqlx::postgres::PgPoolOptions::new()
                 .max_connections(1)
+                .acquire_timeout(Duration::from_secs(5))
                 .connect(&postgres_url)
                 .await
             {
@@ -60,7 +60,7 @@ impl TestDb {
                     retries += 1;
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
-                Err(e) => return Err(Box::new(e)),
+                Err(e) => return Err(format!("Failed to connect to postgres: {}", e).into()),
             }
         };
 
@@ -71,9 +71,10 @@ impl TestDb {
 
         drop(postgres_pool);
 
-        // Connect to the test database
+        // Connect to the test database with explicit timeout
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
+            .acquire_timeout(config.connection_timeout)
             .connect(&database_url)
             .await?;
 
@@ -82,6 +83,7 @@ impl TestDb {
 
         Ok(TestDb { pool })
     }
+
 
     /// Get the connection pool
     pub fn pool(&self) -> &PgPool {
