@@ -1,6 +1,6 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
-    AppointmentEditedEvent, AppointmentMovedEvent,
+    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationRemovedEvent,
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
@@ -496,6 +496,62 @@ impl AppointmentService {
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Remove a participant from an appointment (requires creator authorization)
+    pub async fn remove_participant(
+        &self,
+        appointment_id: Uuid,
+        target_user_id: Uuid,
+        acting_user_id: Uuid,
+    ) -> Result<(), ServiceError> {
+        // Check if appointment exists
+        let appointment = self
+            .repo
+            .find_by_id(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        // Authorization: only the appointment creator can remove participants
+        if appointment.creator_id != acting_user_id {
+            return Err(ServiceError::ValidationError(
+                "Only the appointment creator can remove participants".to_string(),
+            ));
+        }
+
+        // Remove the participant (hard delete)
+        self.repo
+            .remove_participant(appointment_id, target_user_id)
+            .await
+            .map_err(|e| match e {
+                RepositoryError::NotFound => {
+                    ServiceError::ValidationError("Participant not found".to_string())
+                }
+                _ => ServiceError::DatabaseError(e.to_string()),
+            })?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationRemovedEvent::new(
+                appointment_id,
+                target_user_id.to_string(),
+                acting_user_id.to_string(),
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "target_user_id": event.target_user_id,
+                "acting_user_id": event.acting_user_id,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentParticipationRemovedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentParticipationRemovedEvent: {:?}", e);
             }
         }
 

@@ -87,3 +87,23 @@ impl AppointmentCancelledEvent {
         }
     }
 }
+
+/// Event fired when a participant is removed from an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipationRemovedEvent {
+    pub appointment_id: Uuid,
+    pub target_user_id: String,
+    pub acting_user_id: String,
+    pub timestamp: i64,
+}
+
+impl AppointmentParticipationRemovedEvent {
+    pub fn new(appointment_id: Uuid, target_user_id: String, acting_user_id: String) -> Self {
+        Self {
+            appointment_id,
+            target_user_id,
+            acting_user_id,
+            timestamp: Utc::now().timestamp(),
+        }
+    }
+}

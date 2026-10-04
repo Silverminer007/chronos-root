@@ -235,6 +235,44 @@ pub async fn cancel_appointment(
     Ok(StatusCode::OK)
 }
 
+/// Delete a participant from an appointment.
+///
+/// # Endpoint
+/// `DELETE /api/v2/appointments/{id}/participants/{userId}`
+///
+/// # Authorization
+/// Only the appointment creator (organizer) can remove participants from an appointment.
+///
+/// # Request Parameters
+/// - `id` (path): UUID of the appointment
+/// - `userId` (path): UUID of the user (participant) to be removed
+///
+/// # Response
+/// Returns 200 OK with an empty body on success. Fires an `AppointmentParticipationRemovedEvent`
+/// containing the appointment ID, target user ID, acting user ID, and timestamp.
+///
+/// # Errors
+/// - 404 Not Found: Appointment or participant not found
+/// - 403 Forbidden: User is not the appointment creator
+/// - 500 Internal Server Error: Database error
+pub async fn remove_participant(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, participant_id)): Path<(Uuid, Uuid)>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let acting_user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .remove_participant(appointment_id, participant_id, acting_user_id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
