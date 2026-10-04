@@ -9,7 +9,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    events::AppointmentParticipationAddedEvent,
+    models::{AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -274,4 +275,87 @@ impl IntoResponse for AppointmentError {
 
         (status, error_message).into_response()
     }
+}
+
+/// POST /api/v2/appointments/:id/participants/:userId - Add a participant to an appointment
+pub async fn add_participant(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, target_user_id)): Path<(Uuid, Uuid)>,
+    principal: PrincipalContext,
+    Json(request): Json<AddParticipantRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let acting_user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists
+    let _appointment = repo
+        .find_by_id(appointment_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    // Authorization check - user must be RESPONSIBLE (organizer) in the appointment
+    let acting_user_role = repo
+        .get_participant_role(appointment_id, acting_user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    match acting_user_role {
+        Some(UserRole::Responsible) => {
+            // User has permission to add participants
+        }
+        _ => {
+            return Err(AppointmentError::Unauthorized);
+        }
+    }
+
+    // Check if target user and acting user are friends
+    let are_friends = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1 FROM friendships
+            WHERE (requester_id = $1 AND recipient_id = $2 AND status = 'ACCEPTED')
+            OR (requester_id = $2 AND recipient_id = $1 AND status = 'ACCEPTED')
+        )"
+    )
+    .bind(acting_user_id)
+    .bind(target_user_id)
+    .fetch_one(&state.db_pool)
+    .await
+    .map_err(|_| AppointmentError::DatabaseError)?;
+
+    if !are_friends {
+        return Err(AppointmentError::ValidationError(
+            "You can only add friends to appointments".to_string(),
+        ));
+    }
+
+    // Add the participant with PENDING status
+    repo.add_participant_strict(
+        appointment_id,
+        target_user_id,
+        &request.user_role.to_string(),
+        "PENDING",
+    )
+    .await
+    .map_err(|e| match e {
+        crate::appointments::repository::RepositoryError::InvalidInput(msg) => {
+            AppointmentError::ValidationError(msg)
+        }
+        _ => AppointmentError::DatabaseError,
+    })?;
+
+    // Fire the event
+    let event = AppointmentParticipationAddedEvent::new(
+        appointment_id,
+        target_user_id.to_string(),
+        acting_user_id.to_string(),
+    );
+    let event_bus_event = crate::event_bus::Event::new(
+        "appointment_participation_added",
+        serde_json::to_value(&event).unwrap(),
+    );
+    let _ = state.event_publisher.fire(event_bus_event).await;
+
+    Ok(StatusCode::OK)
 }

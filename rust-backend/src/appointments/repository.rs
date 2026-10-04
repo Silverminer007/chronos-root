@@ -310,4 +310,40 @@ impl AppointmentRepository {
 
         Ok(())
     }
+
+    /// Add a participant to an appointment, returning error if already exists
+    pub async fn add_participant_strict(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+        role: &str,
+        status: &str,
+    ) -> Result<(), RepositoryError> {
+        // Check if user is already a participant
+        if self.is_participant(appointment_id, user_id).await? {
+            return Err(RepositoryError::InvalidInput(
+                "This user is already a participant of this appointment".to_string(),
+            ));
+        }
+
+        let id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        sqlx::query(
+            "INSERT INTO appointment_participants (id, appointment_id, user_id, role, status, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        )
+        .bind(id)
+        .bind(appointment_id)
+        .bind(user_id)
+        .bind(role)
+        .bind(status)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
 }
