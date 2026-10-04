@@ -138,7 +138,7 @@ fn test_connection_pool_memory_efficient() {
 
     println!("\n=== Connection Pool Memory Analysis ===");
     println!("Max connections: {}", config.max_connections);
-    println!("Min idle: {:?}", config.min_idle);
+    println!("Min connections: {}", config.min_connections);
     println!("Estimated memory: ~{:.1} MiB", estimated_memory_mb);
     println!("Target heap: < 50 MiB");
     println!(
