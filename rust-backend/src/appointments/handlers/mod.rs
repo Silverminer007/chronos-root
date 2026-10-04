@@ -279,6 +279,7 @@ pub enum AppointmentError {
     NotFound,
     Unauthorized,
     DatabaseError,
+    BadRequestError(String),
     ValidationError(String),
 }
 
@@ -286,12 +287,13 @@ impl From<ServiceError> for AppointmentError {
     fn from(error: ServiceError) -> Self {
         match error {
             ServiceError::NotFound => AppointmentError::NotFound,
+            ServiceError::BadRequestError(msg) => AppointmentError::BadRequestError(msg),
             ServiceError::ValidationError(msg) => AppointmentError::ValidationError(msg),
             ServiceError::DatabaseError(msg) => {
                 eprintln!("Database error: {}", msg);
                 AppointmentError::DatabaseError
             }
-            ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::InvalidFormat(msg) => AppointmentError::BadRequestError(msg),
         }
     }
 }
@@ -307,7 +309,8 @@ impl IntoResponse for AppointmentError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),
             ),
-            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppointmentError::BadRequestError(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppointmentError::ValidationError(msg) => (StatusCode::UNPROCESSABLE_ENTITY, msg),
         };
 
         (status, error_message).into_response()

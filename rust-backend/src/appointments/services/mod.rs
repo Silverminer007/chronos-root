@@ -13,6 +13,7 @@ use uuid::Uuid;
 /// Custom error type for appointment service operations
 #[derive(Debug, Clone)]
 pub enum ServiceError {
+    BadRequestError(String),
     ValidationError(String),
     NotFound,
     DatabaseError(String),
@@ -22,6 +23,7 @@ pub enum ServiceError {
 impl std::fmt::Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            ServiceError::BadRequestError(msg) => write!(f, "Bad request: {}", msg),
             ServiceError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             ServiceError::NotFound => write!(f, "Appointment not found"),
             ServiceError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
@@ -511,14 +513,14 @@ impl AppointmentService {
     ) -> Result<(), ServiceError> {
         // Validate status is not null/empty
         if new_status.is_empty() {
-            return Err(ServiceError::ValidationError(
+            return Err(ServiceError::BadRequestError(
                 "invalid participation status".to_string(),
             ));
         }
 
         // Validate status is not PENDING
         if new_status.eq_ignore_ascii_case("PENDING") {
-            return Err(ServiceError::ValidationError(
+            return Err(ServiceError::BadRequestError(
                 "you cannot set your participation status back to pending".to_string(),
             ));
         }
