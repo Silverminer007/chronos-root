@@ -245,6 +245,17 @@ pub async fn rsvp_to_appointment(
     let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Authorization check - user must be a participant in the appointment
+    let participant_role = repo
+        .get_participant_role(id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    if participant_role == Some(UserRole::None) || participant_role.is_none() {
+        return Err(AppointmentError::Unauthorized);
+    }
+
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     // Convert status to string
