@@ -87,3 +87,25 @@ impl AppointmentCancelledEvent {
         }
     }
 }
+
+/// Event fired when a user's participation status changes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipationStatusChangedEvent {
+    pub appointment_id: Uuid,
+    pub user_id: String,
+    pub new_status: String,
+    pub old_status: String,
+    pub timestamp: i64,
+}
+
+impl AppointmentParticipationStatusChangedEvent {
+    pub fn new(appointment_id: Uuid, user_id: String, new_status: String, old_status: String) -> Self {
+        Self {
+            appointment_id,
+            user_id,
+            new_status,
+            old_status,
+            timestamp: Utc::now().timestamp(),
+        }
+    }
+}

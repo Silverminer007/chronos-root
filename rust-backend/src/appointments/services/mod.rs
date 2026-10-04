@@ -1,6 +1,6 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
-    AppointmentEditedEvent, AppointmentMovedEvent,
+    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
@@ -496,6 +496,90 @@ impl AppointmentService {
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Change a user's participation status in an appointment
+    pub async fn change_participation_status(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+        new_status: &str,
+    ) -> Result<(), ServiceError> {
+        // Validate status is not null/empty
+        if new_status.is_empty() {
+            return Err(ServiceError::ValidationError(
+                "invalid participation status".to_string(),
+            ));
+        }
+
+        // Validate status is not PENDING
+        if new_status.eq_ignore_ascii_case("PENDING") {
+            return Err(ServiceError::ValidationError(
+                "you cannot set your participation status back to pending".to_string(),
+            ));
+        }
+
+        // Check appointment exists and is not deleted/cancelled
+        let appointment = self
+            .repo
+            .find_by_id(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        // Check that appointment is in PLANNED status
+        if appointment.status != crate::appointments::models::AppointmentStatus::Planned {
+            return Err(ServiceError::ValidationError(
+                "Appointment is not in PLANNED status".to_string(),
+            ));
+        }
+
+        // Find current participation status
+        let (current_status, _role) = self
+            .repo
+            .find_participation(appointment_id, user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or_else(|| {
+                ServiceError::ValidationError("This user is not a participant of this event".to_string())
+            })?;
+
+        // Validate status is different from current
+        if current_status.eq_ignore_ascii_case(new_status) {
+            return Err(ServiceError::ValidationError(
+                "this is already your participation status".to_string(),
+            ));
+        }
+
+        // Update participation status
+        self.repo
+            .update_participation_status(appointment_id, user_id, new_status)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationStatusChangedEvent::new(
+                appointment_id,
+                user_id.to_string(),
+                new_status.to_string(),
+                current_status.clone(),
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "user_id": event.user_id,
+                "new_status": event.new_status,
+                "old_status": event.old_status,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentParticipationStatusChangedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentParticipationStatusChangedEvent: {:?}", e);
             }
         }
 

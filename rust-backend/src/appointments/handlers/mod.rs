@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UpdateParticipationStatusRequest, UserRole},
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -229,6 +229,33 @@ pub async fn cancel_appointment(
 
     service
         .cancel_appointment(id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
+/// POST /api/v2/appointments/:id/participation - RSVP to an appointment
+pub async fn rsvp_to_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    principal: PrincipalContext,
+    Json(request): Json<UpdateParticipationStatusRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    // Convert status to string
+    let status_str = match request.status {
+        crate::appointments::models::ParticipationStatus::Approved => "APPROVED",
+        crate::appointments::models::ParticipationStatus::Rejected => "REJECTED",
+        crate::appointments::models::ParticipationStatus::Pending => "PENDING",
+    };
+
+    service
+        .change_participation_status(id, user_id, status_str)
         .await
         .map_err(AppointmentError::from)?;
 

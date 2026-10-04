@@ -310,4 +310,49 @@ impl AppointmentRepository {
 
         Ok(())
     }
+
+    /// Find a participant by appointment and user IDs
+    pub async fn find_participation(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<(String, String)>, RepositoryError> {
+        let result = sqlx::query_as::<_, (String, String)>(
+            "SELECT status, role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(result)
+    }
+
+    /// Update a participant's status
+    pub async fn update_participation_status(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+        new_status: &str,
+    ) -> Result<(), RepositoryError> {
+        let now = Utc::now();
+        let result = sqlx::query(
+            "UPDATE appointment_participants SET status = $1, updated_at = $2
+             WHERE appointment_id = $3 AND user_id = $4"
+        )
+        .bind(new_status)
+        .bind(now)
+        .bind(appointment_id)
+        .bind(user_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(RepositoryError::NotFound);
+        }
+
+        Ok(())
+    }
 }
