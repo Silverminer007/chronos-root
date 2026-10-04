@@ -61,6 +61,20 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v7
       - name: Set up Rust
@@ -72,10 +86,25 @@ jobs:
       - name: Run integration tests
         run: cargo test --test '*' --locked -- --include-ignored
         env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
           TESTCONTAINERS_RYUK_DISABLED: "true"
 
   coverage:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v7
       - name: Set up Rust
@@ -89,6 +118,7 @@ jobs:
       - name: Generate coverage (unit + integration tests)
         run: cargo llvm-cov --all-targets --all-features --workspace --locked --output-path lcov.info -- --include-ignored
         env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
           TESTCONTAINERS_RYUK_DISABLED: "true"
       - name: Report coverage summary
         run: |
