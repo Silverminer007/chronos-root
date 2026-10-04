@@ -302,6 +302,13 @@ pub struct UpdateParticipationStatusRequest {
     pub status: ParticipationStatus,
 }
 
+/// Participant info returned from the repository
+#[derive(Debug, Clone, Copy)]
+pub struct AppointmentParticipant {
+    pub status: ParticipationStatus,
+    pub role: UserRole,
+}
+
 /// Request to create a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateGroupRequest {

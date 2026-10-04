@@ -1,4 +1,4 @@
-use crate::appointments::models::{Appointment, AppointmentStatus, ParticipationStatus, UserRole};
+use crate::appointments::models::{Appointment, AppointmentParticipant, AppointmentStatus, ParticipationStatus, UserRole};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use std::str::FromStr;
@@ -317,7 +317,7 @@ impl AppointmentRepository {
         &self,
         appointment_id: Uuid,
         user_id: Uuid,
-    ) -> Result<Option<(ParticipationStatus, UserRole)>, RepositoryError> {
+    ) -> Result<Option<AppointmentParticipant>, RepositoryError> {
         let result = sqlx::query_as::<_, (String, String)>(
             "SELECT status, role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
         )
@@ -330,7 +330,7 @@ impl AppointmentRepository {
         Ok(result.and_then(|(status_str, role_str)| {
             let status = ParticipationStatus::from_str(&status_str).ok()?;
             let role = UserRole::from_str(&role_str).ok()?;
-            Some((status, role))
+            Some(AppointmentParticipant { status, role })
         }))
     }
 

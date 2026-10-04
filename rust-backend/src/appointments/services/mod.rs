@@ -520,7 +520,7 @@ impl AppointmentService {
         }
 
         // Find current participation status
-        let (current_status, _role) = self
+        let participant = self
             .repo
             .find_participation(appointment_id, user_id)
             .await
@@ -528,6 +528,8 @@ impl AppointmentService {
             .ok_or_else(|| {
                 ServiceError::ValidationError("This user is not a participant of this event".to_string())
             })?;
+
+        let current_status = participant.status;
 
         // Validate status is different from current
         if current_status == new_status {
