@@ -12,8 +12,8 @@ pub struct TestDbConfig {
 impl Default for TestDbConfig {
     fn default() -> Self {
         Self {
-            max_connections: 5,
-            connection_timeout: Duration::from_secs(10),
+            max_connections: 20,
+            connection_timeout: Duration::from_secs(30),
         }
     }
 }
@@ -34,12 +34,14 @@ impl TestDb {
         info!("Connecting to PostgreSQL test database");
 
         // Use DATABASE_URL env var or default to testcontainers postgres
-        let base_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://postgres:postgres@localhost:5432".to_string()
-        });
+        let base_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
 
         // Create a unique database name for this test
-        let test_db_name = format!("test_db_{}", uuid::Uuid::new_v4().to_string().replace('-', ""));
+        let test_db_name = format!(
+            "test_db_{}",
+            uuid::Uuid::new_v4().to_string().replace('-', "")
+        );
         let database_url = format!("{}/{}", base_url, test_db_name);
 
         info!("Creating test database: {}", test_db_name);
@@ -72,6 +74,7 @@ impl TestDb {
         // Connect to the test database
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
+            .connect_timeout(config.connection_timeout)
             .connect(&database_url)
             .await?;
 
