@@ -258,15 +258,8 @@ pub async fn rsvp_to_appointment(
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
-    // Convert status to string
-    let status_str = match request.status {
-        crate::appointments::models::ParticipationStatus::Approved => "APPROVED",
-        crate::appointments::models::ParticipationStatus::Rejected => "REJECTED",
-        crate::appointments::models::ParticipationStatus::Pending => "PENDING",
-    };
-
     service
-        .change_participation_status(id, user_id, status_str)
+        .change_participation_status(id, user_id, request.status)
         .await
         .map_err(AppointmentError::from)?;
 

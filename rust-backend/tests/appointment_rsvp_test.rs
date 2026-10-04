@@ -1,6 +1,7 @@
 /// Integration tests for appointment RSVP endpoint
 #[cfg(test)]
 mod appointment_rsvp_tests {
+    use chronos_date_api::appointments::models::ParticipationStatus;
     use chronos_date_api::appointments::repository::AppointmentRepository;
     use chronos_date_api::appointments::services::AppointmentService;
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
@@ -60,7 +61,7 @@ mod appointment_rsvp_tests {
 
         // Call the RSVP method
         service
-            .change_participation_status(appointment_id, participant_id, "APPROVED")
+            .change_participation_status(appointment_id, participant_id, ParticipationStatus::Approved)
             .await
             .expect("Failed to change participation status");
 
@@ -115,7 +116,7 @@ mod appointment_rsvp_tests {
 
         // Call the RSVP method with REJECTED status
         service
-            .change_participation_status(appointment_id, participant_id, "REJECTED")
+            .change_participation_status(appointment_id, participant_id, ParticipationStatus::Rejected)
             .await
             .expect("Failed to change participation status");
 
@@ -165,7 +166,7 @@ mod appointment_rsvp_tests {
 
         // This should fail because the user is not a participant
         let result = service
-            .change_participation_status(appointment_id, non_participant_id, "APPROVED")
+            .change_participation_status(appointment_id, non_participant_id, ParticipationStatus::Approved)
             .await;
 
         // Verify that the error is as expected

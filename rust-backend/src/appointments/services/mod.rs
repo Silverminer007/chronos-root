@@ -3,7 +3,8 @@ use crate::appointments::events::{
     AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
-    Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+    Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
+    UpdateAppointmentRequest,
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
@@ -509,17 +510,10 @@ impl AppointmentService {
         &self,
         appointment_id: Uuid,
         user_id: Uuid,
-        new_status: &str,
+        new_status: ParticipationStatus,
     ) -> Result<(), ServiceError> {
-        // Validate status is not null/empty
-        if new_status.is_empty() {
-            return Err(ServiceError::BadRequestError(
-                "invalid participation status".to_string(),
-            ));
-        }
-
         // Validate status is not PENDING
-        if new_status.eq_ignore_ascii_case("PENDING") {
+        if new_status == ParticipationStatus::Pending {
             return Err(ServiceError::BadRequestError(
                 "you cannot set your participation status back to pending".to_string(),
             ));
@@ -536,7 +530,7 @@ impl AppointmentService {
             })?;
 
         // Validate status is different from current
-        if current_status.eq_ignore_ascii_case(new_status) {
+        if current_status == new_status {
             return Err(ServiceError::ValidationError(
                 "this is already your participation status".to_string(),
             ));
@@ -553,8 +547,8 @@ impl AppointmentService {
             let event = AppointmentParticipationStatusChangedEvent::new(
                 appointment_id,
                 user_id.to_string(),
-                new_status.to_string(),
-                current_status.clone(),
+                new_status,
+                current_status,
             );
             let event_json = serde_json::json!({
                 "appointment_id": event.appointment_id.to_string(),

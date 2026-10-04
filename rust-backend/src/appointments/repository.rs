@@ -1,6 +1,7 @@
-use crate::appointments::models::{Appointment, AppointmentStatus, UserRole};
+use crate::appointments::models::{Appointment, AppointmentStatus, ParticipationStatus, UserRole};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
+use std::str::FromStr;
 use uuid::Uuid;
 
 const APPOINTMENT_COLUMNS: &str = "id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees";
@@ -316,7 +317,7 @@ impl AppointmentRepository {
         &self,
         appointment_id: Uuid,
         user_id: Uuid,
-    ) -> Result<Option<(String, String)>, RepositoryError> {
+    ) -> Result<Option<(ParticipationStatus, UserRole)>, RepositoryError> {
         let result = sqlx::query_as::<_, (String, String)>(
             "SELECT status, role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
         )
@@ -326,7 +327,11 @@ impl AppointmentRepository {
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
 
-        Ok(result)
+        Ok(result.and_then(|(status_str, role_str)| {
+            let status = ParticipationStatus::from_str(&status_str).ok()?;
+            let role = UserRole::from_str(&role_str).ok()?;
+            Some((status, role))
+        }))
     }
 
     /// Update a participant's status
@@ -334,14 +339,15 @@ impl AppointmentRepository {
         &self,
         appointment_id: Uuid,
         user_id: Uuid,
-        new_status: &str,
+        new_status: ParticipationStatus,
     ) -> Result<(), RepositoryError> {
         let now = Utc::now();
+        let status_str = new_status.to_string();
         let result = sqlx::query(
             "UPDATE appointment_participants SET status = $1, updated_at = $2
              WHERE appointment_id = $3 AND user_id = $4"
         )
-        .bind(new_status)
+        .bind(status_str)
         .bind(now)
         .bind(appointment_id)
         .bind(user_id)
