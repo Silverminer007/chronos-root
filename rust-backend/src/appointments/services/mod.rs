@@ -525,21 +525,6 @@ impl AppointmentService {
             ));
         }
 
-        // Check appointment exists and is not deleted/cancelled
-        let appointment = self
-            .repo
-            .find_by_id(appointment_id)
-            .await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
-            .ok_or(ServiceError::NotFound)?;
-
-        // Check that appointment is in PLANNED status
-        if appointment.status != crate::appointments::models::AppointmentStatus::Planned {
-            return Err(ServiceError::ValidationError(
-                "Appointment is not in PLANNED status".to_string(),
-            ));
-        }
-
         // Find current participation status
         let (current_status, _role) = self
             .repo
