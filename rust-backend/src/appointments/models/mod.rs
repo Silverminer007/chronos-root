@@ -299,6 +299,12 @@ pub struct CreateMessageRequest {
     pub body: String,
 }
 
+/// Request to add a participant to an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddParticipantRequest {
+    pub user_role: UserRole,
+}
+
 /// Response with message details
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageResponse {

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    models::{AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -274,4 +274,24 @@ impl IntoResponse for AppointmentError {
 
         (status, error_message).into_response()
     }
+}
+
+/// POST /api/v2/appointments/:id/participants/:userId - Add a participant to an appointment
+pub async fn add_participant(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, target_user_id)): Path<(Uuid, Uuid)>,
+    principal: PrincipalContext,
+    Json(request): Json<AddParticipantRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let acting_user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .add_participant(appointment_id, target_user_id, acting_user_id, &request.user_role.to_string())
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
 }
