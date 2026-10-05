@@ -6,6 +6,27 @@ use uuid::Uuid;
 const APPOINTMENT_COLUMNS: &str = "id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees";
 const APPOINTMENT_COLUMNS_ALIASED: &str = "a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at, a.status, a.minimal_attendees";
 
+/// Parameters for creating an appointment
+pub struct CreateAppointmentParams {
+    pub title: String,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub minimal_attendees: Option<i32>,
+}
+
+/// Parameters for updating an appointment
+pub struct UpdateAppointmentParams {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub minimal_attendees: Option<i32>,
+}
+
 /// Errors that can occur in the repository layer
 #[derive(Debug)]
 pub enum RepositoryError {
@@ -109,13 +130,7 @@ impl AppointmentRepository {
     /// Create a new appointment
     pub async fn create(
         &self,
-        title: String,
-        description: Option<String>,
-        location: Option<String>,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
-        creator_id: Uuid,
-        minimal_attendees: Option<i32>,
+        params: CreateAppointmentParams,
     ) -> Result<Appointment, RepositoryError> {
         let id = Uuid::new_v4();
         let now = chrono::Utc::now();
@@ -127,16 +142,16 @@ impl AppointmentRepository {
              RETURNING {}", APPOINTMENT_COLUMNS)
         )
         .bind(id)
-        .bind(title)
-        .bind(description)
-        .bind(start_time)
-        .bind(end_time)
-        .bind(location)
-        .bind(creator_id)
+        .bind(&params.title)
+        .bind(&params.description)
+        .bind(params.start_time)
+        .bind(params.end_time)
+        .bind(&params.location)
+        .bind(params.creator_id)
         .bind(now)
         .bind(now)
         .bind(status)
-        .bind(minimal_attendees)
+        .bind(params.minimal_attendees)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
@@ -146,12 +161,7 @@ impl AppointmentRepository {
     pub async fn update(
         &self,
         id: Uuid,
-        title: Option<String>,
-        description: Option<String>,
-        location: Option<String>,
-        start_time: Option<DateTime<Utc>>,
-        end_time: Option<DateTime<Utc>>,
-        minimal_attendees: Option<i32>,
+        params: UpdateAppointmentParams,
     ) -> Result<Option<Appointment>, RepositoryError> {
         let now = chrono::Utc::now();
 
@@ -159,27 +169,27 @@ impl AppointmentRepository {
         let mut query_str = "UPDATE appointments SET updated_at = $1".to_string();
         let mut param_count = 1;
 
-        if title.is_some() {
+        if params.title.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", title = ${}", param_count));
         }
-        if description.is_some() {
+        if params.description.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", description = ${}", param_count));
         }
-        if location.is_some() {
+        if params.location.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", location = ${}", param_count));
         }
-        if start_time.is_some() {
+        if params.start_time.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", start_time = ${}", param_count));
         }
-        if end_time.is_some() {
+        if params.end_time.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", end_time = ${}", param_count));
         }
-        if minimal_attendees.is_some() {
+        if params.minimal_attendees.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", minimal_attendees = ${}", param_count));
         }
@@ -190,22 +200,22 @@ impl AppointmentRepository {
 
         let mut query = sqlx::query_as::<_, Appointment>(&query_str).bind(now);
 
-        if let Some(t) = title {
+        if let Some(t) = params.title {
             query = query.bind(t);
         }
-        if let Some(d) = description {
+        if let Some(d) = params.description {
             query = query.bind(d);
         }
-        if let Some(l) = location {
+        if let Some(l) = params.location {
             query = query.bind(l);
         }
-        if let Some(st) = start_time {
+        if let Some(st) = params.start_time {
             query = query.bind(st);
         }
-        if let Some(et) = end_time {
+        if let Some(et) = params.end_time {
             query = query.bind(et);
         }
-        if let Some(ma) = minimal_attendees {
+        if let Some(ma) = params.minimal_attendees {
             query = query.bind(ma);
         }
 
@@ -318,7 +328,7 @@ impl AppointmentRepository {
         user_id: Uuid,
     ) -> Result<(), RepositoryError> {
         let result = sqlx::query(
-            "DELETE FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "DELETE FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
         )
         .bind(appointment_id)
         .bind(user_id)

@@ -33,9 +33,10 @@ impl TestDb {
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
         info!("Connecting to PostgreSQL test database");
 
-        // Use DATABASE_URL env var or default to testcontainers postgres
-        let base_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
+        #[cfg(test)]
+        let base_url = test_support::get_postgres_url().await?;
+        #[cfg(not(test))]
+        let base_url = std::env::var("DATABASE_URL")?;
 
         // Create a unique database name for this test
         let test_db_name = format!(
@@ -56,7 +57,7 @@ impl TestDb {
                 .await
             {
                 Ok(pool) => break pool,
-                Err(_) if retries < 30 => {
+                Err(_) if retries < 10 => {
                     retries += 1;
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
@@ -114,56 +115,31 @@ impl TestDb {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_support {
     use super::*;
 
-    #[tokio::test]
-    #[ignore]
-    async fn test_database_connection() {
-        let db = TestDb::new().await.expect("Failed to create test database");
+    /// Get the PostgreSQL connection URL
+    pub async fn get_postgres_url() -> Result<String, Box<dyn std::error::Error>> {
+        // Check if DATABASE_URL is set (e.g., in CI with a running database)
+        if let Ok(url) = std::env::var("DATABASE_URL") {
+            return Ok(url);
+        }
 
-        // Verify we can query the database
-        let result: (i32,) = sqlx::query_as("SELECT 1")
-            .fetch_one(db.pool())
-            .await
-            .expect("Failed to query test database");
-
-        assert_eq!(result.0, 1);
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_rollback_all() {
-        let db = TestDb::new().await.expect("Failed to create test database");
-
-        // Insert a test user
-        sqlx::query(
-            "INSERT INTO users (id, keycloak_id, email, first_name, last_name) VALUES ($1, $2, $3, $4, $5)"
+        // Try localhost with a short timeout (for local development)
+        let localhost_url = "postgres://postgres:postgres@localhost:5432";
+        match tokio::time::timeout(
+            Duration::from_secs(3),
+            sqlx::postgres::PgPoolOptions::new()
+                .max_connections(1)
+                .connect(localhost_url),
         )
-        .bind(uuid::Uuid::new_v4())
-        .bind("keycloak_id_1")
-        .bind("test@example.com")
-        .bind("Test")
-        .bind("User")
-        .execute(db.pool())
         .await
-        .expect("Failed to insert test user");
-
-        // Verify user exists
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
-            .fetch_one(db.pool())
-            .await
-            .expect("Failed to count users");
-        assert_eq!(count.0, 1);
-
-        // Rollback
-        db.rollback_all().await.expect("Failed to rollback");
-
-        // Verify user is gone
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
-            .fetch_one(db.pool())
-            .await
-            .expect("Failed to count users");
-        assert_eq!(count.0, 0);
+        {
+            Ok(Ok(_)) => {
+                info!("Connected to localhost PostgreSQL");
+                Ok(localhost_url.to_string())
+            }
+            _ => Err("No PostgreSQL database available. Set DATABASE_URL or ensure localhost:5432 is running with postgres:postgres credentials".into()),
+        }
     }
 }

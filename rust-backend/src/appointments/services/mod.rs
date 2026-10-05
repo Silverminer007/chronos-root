@@ -5,7 +5,9 @@ use crate::appointments::events::{
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
 };
-use crate::appointments::repository::{AppointmentRepository, RepositoryError};
+use crate::appointments::repository::{
+    AppointmentRepository, CreateAppointmentParams, RepositoryError, UpdateAppointmentParams,
+};
 use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -289,15 +291,15 @@ impl AppointmentService {
         // Create appointment in database
         let appointment = self
             .repo
-            .create(
-                request.name,
-                request.description,
-                request.venue,
+            .create(CreateAppointmentParams {
+                title: request.name,
+                description: request.description,
+                location: request.venue,
                 start_time,
                 end_time,
-                creator_uuid,
-                request.minimal_attendees,
-            )
+                creator_id: creator_uuid,
+                minimal_attendees: request.minimal_attendees,
+            })
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
@@ -406,12 +408,14 @@ impl AppointmentService {
             .repo
             .update(
                 id,
-                request.name,
-                request.description,
-                request.venue,
-                start_time,
-                end_time,
-                request.minimal_attendees,
+                UpdateAppointmentParams {
+                    title: request.name,
+                    description: request.description,
+                    location: request.venue,
+                    start_time,
+                    end_time,
+                    minimal_attendees: request.minimal_attendees,
+                },
             )
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
@@ -542,12 +546,16 @@ impl AppointmentService {
                 target_user_id,
                 acting_user_id,
             );
-            let event_json = serde_json::to_value(&event)
-                .map_err(|e| ServiceError::InvalidFormat(format!("Event serialization error: {}", e)))?;
+            let event_json = serde_json::to_value(&event).map_err(|e| {
+                ServiceError::InvalidFormat(format!("Event serialization error: {}", e))
+            })?;
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentParticipationRemovedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentParticipationRemovedEvent: {:?}", e);
+                eprintln!(
+                    "Failed to fire AppointmentParticipationRemovedEvent: {:?}",
+                    e
+                );
             }
         }
 

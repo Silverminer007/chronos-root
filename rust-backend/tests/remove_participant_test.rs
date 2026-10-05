@@ -84,12 +84,9 @@ mod remove_participant_tests {
     }
 
     /// Helper to create an appointment with the standard fixture
-    async fn create_appointment(
-        fixtures: &TestFixtures,
-        creator_id: uuid::Uuid,
-    ) -> uuid::Uuid {
-        let appointment_fixture = chronos_date_api::test_utils::AppointmentFixture::new()
-            .with_title("Team Meeting");
+    async fn create_appointment(fixtures: &TestFixtures, creator_id: uuid::Uuid) -> uuid::Uuid {
+        let appointment_fixture =
+            chronos_date_api::test_utils::AppointmentFixture::new().with_title("Team Meeting");
         fixtures
             .create_appointment(creator_id, &appointment_fixture)
             .await
@@ -122,7 +119,10 @@ mod remove_participant_tests {
             .is_participant(appt_id, setup.participant_id)
             .await
             .expect("Failed to check participant status");
-        assert!(is_participant_before, "Participant should be added before removal");
+        assert!(
+            is_participant_before,
+            "Participant should be added before removal"
+        );
 
         // Remove participant
         repo.remove_participant(appt_id, setup.participant_id)
@@ -159,7 +159,8 @@ mod remove_participant_tests {
             .ok();
 
         // Verify: No AppointmentParticipationRemovedEvent exists yet
-        let initial_count = count_events(setup.db.pool(), "AppointmentParticipationRemovedEvent").await;
+        let initial_count =
+            count_events(setup.db.pool(), "AppointmentParticipationRemovedEvent").await;
         assert_eq!(initial_count, 0);
 
         // Remove participant using service with events
@@ -172,7 +173,8 @@ mod remove_participant_tests {
             .expect("Failed to remove participant");
 
         // Verify: AppointmentParticipationRemovedEvent was fired
-        let final_count = count_events(setup.db.pool(), "AppointmentParticipationRemovedEvent").await;
+        let final_count =
+            count_events(setup.db.pool(), "AppointmentParticipationRemovedEvent").await;
         assert_eq!(
             final_count, 1,
             "AppointmentParticipationRemovedEvent should be fired after participant removal"
@@ -198,8 +200,9 @@ mod remove_participant_tests {
     /// NEGATIVE: Unauthorized user cannot remove participants (non-creator)
     #[tokio::test]
     async fn test_remove_participant_unauthorized_non_creator() {
-        let setup = setup_with_three_users("creator_unauth", "participant_unauth", "other_user_unauth")
-            .await;
+        let setup =
+            setup_with_three_users("creator_unauth", "participant_unauth", "other_user_unauth")
+                .await;
         let appt_id = create_appointment(&setup.fixtures, setup.creator_id).await;
 
         // Add participant to appointment
