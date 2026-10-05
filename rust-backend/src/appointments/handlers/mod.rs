@@ -263,6 +263,18 @@ pub async fn remove_participant(
     let acting_user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Check if appointment exists and user is the creator
+    let appointment = repo
+        .find_by_id(appointment_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?
+        .ok_or(AppointmentError::NotFound)?;
+
+    if appointment.creator_id != acting_user_id {
+        return Err(AppointmentError::Unauthorized);
+    }
+
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
