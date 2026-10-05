@@ -97,6 +97,9 @@ impl TestDb {
     /// Rollback all changes after test (useful for transaction-scoped tests)
     pub async fn rollback_all(&self) -> Result<(), sqlx::Error> {
         // Clear all tables in reverse dependency order
+        sqlx::query("TRUNCATE TABLE events CASCADE")
+            .execute(&self.pool)
+            .await?;
         sqlx::query("TRUNCATE TABLE appointment_participants CASCADE")
             .execute(&self.pool)
             .await?;
