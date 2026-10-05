@@ -24,58 +24,61 @@ pub struct TestDb {
 }
 
 impl TestDb {
-    /// Create a new test database with a PostgreSQL container
+    /// Create a new test database connection
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         Self::with_config(TestDbConfig::default()).await
     }
 
-    /// Create a new test database with custom configuration
+    /// Create a new test database connection with custom configuration
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        info!("Connecting to PostgreSQL test database");
+        // Get database URL from environment or use sensible default
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/postgres".to_string());
 
-        // Use DATABASE_URL env var or default to testcontainers postgres
-        let base_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
+        info!("Connecting to test database");
 
-        // Create a unique database name for this test
-        let test_db_name = format!(
-            "test_db_{}",
-            uuid::Uuid::new_v4().to_string().replace('-', "")
-        );
-        let database_url = format!("{}/{}", base_url, test_db_name);
-
-        info!("Creating test database: {}", test_db_name);
-
-        // Connect to postgres to create the test database
-        let postgres_url = base_url.clone();
+        // Connect with timeout to prevent hanging indefinitely
+        // Total wait time: 30 attempts * 100ms = 3 seconds
         let mut retries = 0;
-        let postgres_pool = loop {
-            match sqlx::postgres::PgPoolOptions::new()
-                .max_connections(1)
-                .connect(&postgres_url)
-                .await
+        const MAX_RETRIES: u32 = 30;
+        const RETRY_DELAY_MS: u64 = 100;
+
+        let pool = loop {
+            match tokio::time::timeout(
+                Duration::from_secs(3),
+                sqlx::postgres::PgPoolOptions::new()
+                    .max_connections(config.max_connections)
+                    .connect(&database_url),
+            )
+            .await
             {
-                Ok(pool) => break pool,
-                Err(_) if retries < 30 => {
-                    retries += 1;
-                    tokio::time::sleep(Duration::from_millis(100)).await;
+                Ok(Ok(pool)) => {
+                    info!("Successfully connected to test database");
+                    break pool;
                 }
-                Err(e) => return Err(Box::new(e)),
+                _ if retries < MAX_RETRIES => {
+                    retries += 1;
+                    tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+                }
+                Ok(Err(e)) => {
+                    return Err(format!(
+                        "Failed to connect to database at {}: {}. Set DATABASE_URL environment variable if needed.",
+                        database_url, e
+                    )
+                    .into());
+                }
+                Err(_) => {
+                    return Err(format!(
+                        "Database connection timeout after {} attempts ({}ms). \
+                         Database may not be running at {}. Set DATABASE_URL environment variable if needed.",
+                        MAX_RETRIES,
+                        MAX_RETRIES as u64 * RETRY_DELAY_MS,
+                        database_url
+                    )
+                    .into());
+                }
             }
         };
-
-        // Create the test database
-        sqlx::query(&format!("CREATE DATABASE {}", test_db_name))
-            .execute(&postgres_pool)
-            .await?;
-
-        drop(postgres_pool);
-
-        // Connect to the test database
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(config.max_connections)
-            .connect(&database_url)
-            .await?;
 
         info!("Running migrations on test database");
         sqlx::migrate!("./migrations").run(&pool).await?;

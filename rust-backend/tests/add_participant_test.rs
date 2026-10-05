@@ -26,7 +26,6 @@ mod add_participant_tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_add_participant_success() {
         // Setup
         let db = TestDb::new()
@@ -69,7 +68,6 @@ mod add_participant_tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_add_participant_creates_pending_status() {
         // Setup
         let db = TestDb::new()
@@ -114,7 +112,6 @@ mod add_participant_tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_cannot_add_participant_without_responsible_role() {
         // Setup
         let db = TestDb::new()
@@ -165,7 +162,6 @@ mod add_participant_tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_cannot_add_participant_who_is_already_participant() {
         // Setup
         let db = TestDb::new()
