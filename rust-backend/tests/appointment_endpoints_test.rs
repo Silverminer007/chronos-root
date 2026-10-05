@@ -40,7 +40,7 @@ mod appointment_endpoint_tests {
 
         // Verify the appointment exists in the database
         let fetched_appointment: Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(appointment_id)
@@ -75,7 +75,7 @@ mod appointment_endpoint_tests {
 
         // Verify the appointment doesn't exist
         let result: Result<Appointment, sqlx::Error> = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(nonexistent_id)
@@ -121,7 +121,7 @@ mod appointment_endpoint_tests {
 
         // Verify all appointments can be retrieved
         let all_appointments: Vec<Appointment> = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments ORDER BY start_time DESC"
         )
         .fetch_all(db.pool())
@@ -163,7 +163,7 @@ mod appointment_endpoint_tests {
 
         // Fetch and verify response structure
         let appointment: Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(appointment_id)
