@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    models::{AddGroupToAppointmentRequest, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -229,6 +229,27 @@ pub async fn cancel_appointment(
 
     service
         .cancel_appointment(id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
+/// POST /api/v2/appointments/:id/groups/:groupId - Add a group to an appointment
+/// Requires creator role (only the creator can add groups)
+pub async fn add_group_to_appointment(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, group_id)): Path<(Uuid, Uuid)>,
+    principal: PrincipalContext,
+    Json(request): Json<AddGroupToAppointmentRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .add_group_to_appointment(user_id, appointment_id, group_id, &request.role)
         .await
         .map_err(AppointmentError::from)?;
 

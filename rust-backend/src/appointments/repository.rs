@@ -310,4 +310,75 @@ impl AppointmentRepository {
 
         Ok(())
     }
+
+    /// Check if a group exists and is not deleted
+    pub async fn group_exists(&self, group_id: Uuid) -> Result<bool, RepositoryError> {
+        let result = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1 AND deleted_at IS NULL)"
+        )
+        .bind(group_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(result)
+    }
+
+    /// Check if a group is already a participant in an appointment
+    pub async fn group_participation_exists(
+        &self,
+        appointment_id: Uuid,
+        group_id: Uuid,
+    ) -> Result<bool, RepositoryError> {
+        let result = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM appointment_groups WHERE appointment_id = $1 AND group_id = $2 AND deleted_at IS NULL)"
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(result)
+    }
+
+    /// Add a group to an appointment
+    pub async fn add_group(
+        &self,
+        appointment_id: Uuid,
+        group_id: Uuid,
+        role: &str,
+    ) -> Result<(), RepositoryError> {
+        let id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        sqlx::query(
+            "INSERT INTO appointment_groups (id, appointment_id, group_id, role, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(id)
+        .bind(appointment_id)
+        .bind(group_id)
+        .bind(role)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Get all members of a group
+    pub async fn get_group_members(&self, group_id: Uuid) -> Result<Vec<Uuid>, RepositoryError> {
+        let members = sqlx::query_scalar::<_, Uuid>(
+            "SELECT user_id FROM group_members WHERE group_id = $1"
+        )
+        .bind(group_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(members)
+    }
 }

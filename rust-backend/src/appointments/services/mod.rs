@@ -501,6 +501,101 @@ impl AppointmentService {
 
         Ok(())
     }
+
+    /// Add a group to an appointment
+    /// Only the appointment creator can add groups
+    pub async fn add_group_to_appointment(
+        &self,
+        actor_id: Uuid,
+        appointment_id: Uuid,
+        group_id: Uuid,
+        role: &str,
+    ) -> Result<(), ServiceError> {
+        // Check if appointment exists
+        let appointment = self
+            .repo
+            .find_by_id(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        // Authorization: only creator can add groups
+        if appointment.creator_id != actor_id {
+            return Err(ServiceError::ValidationError(
+                "Only the appointment creator can add groups".to_string(),
+            ));
+        }
+
+        // Check if group exists and is not deleted
+        let group_exists = self
+            .repo
+            .group_exists(group_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if !group_exists {
+            return Err(ServiceError::NotFound);
+        }
+
+        // Check if group is already a participant
+        let already_participant = self
+            .repo
+            .group_participation_exists(appointment_id, group_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if already_participant {
+            return Err(ServiceError::ValidationError(
+                "This group is already a participant of this appointment".to_string(),
+            ));
+        }
+
+        // Add group to appointment
+        self.repo
+            .add_group(appointment_id, group_id, role)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Get group members and add them as participants
+        let members = self
+            .repo
+            .get_group_members(group_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        for member_id in members {
+            // Only add if not already a participant
+            let is_participant = self
+                .repo
+                .is_participant(appointment_id, member_id)
+                .await
+                .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+            if !is_participant {
+                self.repo
+                    .add_participant(appointment_id, member_id, role, "PENDING")
+                    .await
+                    .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+            }
+        }
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event_json = serde_json::json!({
+                "appointment_id": appointment_id.to_string(),
+                "group_id": group_id.to_string(),
+                "actor_id": actor_id.to_string(),
+                "timestamp": chrono::Utc::now().timestamp(),
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentGroupAddedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentGroupAddedEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
