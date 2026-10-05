@@ -3,9 +3,9 @@ use std::time::Duration;
 use tracing::info;
 
 #[cfg(test)]
-use testcontainers::ContainerAsync;
-#[cfg(test)]
 use testcontainers::runners::AsyncRunner;
+#[cfg(test)]
+use testcontainers::ContainerAsync;
 #[cfg(test)]
 use testcontainers_modules::postgres::Postgres as PostgresImage;
 
@@ -192,7 +192,8 @@ async fn get_postgres_url_with_container(
                 return Err(format!(
                     "Failed to connect to testcontainers PostgreSQL at {}: {}",
                     url, e
-                ).into());
+                )
+                .into());
             }
         }
     }
