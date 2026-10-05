@@ -170,7 +170,10 @@ mod tests {
         std::env::remove_var("DATABASE_RUN_MIGRATIONS");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
-        assert!(result.is_err(), "Production mode should require DATABASE_URL");
+        assert!(
+            result.is_err(),
+            "Production mode should require DATABASE_URL"
+        );
     }
 
     #[test]
