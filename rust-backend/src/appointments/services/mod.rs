@@ -502,14 +502,12 @@ impl AppointmentService {
         Ok(())
     }
 
-    /// Add a group to an appointment
-    /// Only the appointment creator can add groups
-    pub async fn add_group_to_appointment(
+    /// Validate authorization and preconditions for adding a group to an appointment
+    async fn validate_group_addition(
         &self,
         actor_id: Uuid,
         appointment_id: Uuid,
         group_id: Uuid,
-        role: UserRole,
     ) -> Result<(), ServiceError> {
         // Check if appointment exists
         let appointment = self
@@ -550,13 +548,29 @@ impl AppointmentService {
             ));
         }
 
-        // Add group to appointment
+        Ok(())
+    }
+
+    /// Add a group to an appointment
+    /// Only the appointment creator can add groups
+    pub async fn add_group_to_appointment(
+        &self,
+        actor_id: Uuid,
+        appointment_id: Uuid,
+        group_id: Uuid,
+        role: UserRole,
+    ) -> Result<(), ServiceError> {
+        // Validate authorization and preconditions
+        self.validate_group_addition(actor_id, appointment_id, group_id)
+            .await?;
+
+        // Mutate: add group to appointment
         self.repo
             .add_group(appointment_id, group_id, role)
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        // Fire event after successful database commit
+        // Publish event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
             let event_json = serde_json::json!({
                 "appointment_id": appointment_id.to_string(),
