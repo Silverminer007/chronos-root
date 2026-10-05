@@ -539,13 +539,13 @@ impl AppointmentService {
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentParticipationRemovedEvent::new(
                 appointment_id,
-                target_user_id.to_string(),
-                acting_user_id.to_string(),
+                target_user_id,
+                acting_user_id,
             );
             let event_json = serde_json::json!({
                 "appointment_id": event.appointment_id.to_string(),
-                "target_user_id": event.target_user_id,
-                "acting_user_id": event.acting_user_id,
+                "target_user_id": event.target_user_id.to_string(),
+                "acting_user_id": event.acting_user_id.to_string(),
                 "timestamp": event.timestamp,
             });
             let event_bus_event =

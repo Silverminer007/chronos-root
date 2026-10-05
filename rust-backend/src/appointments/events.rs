@@ -92,13 +92,13 @@ impl AppointmentCancelledEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentParticipationRemovedEvent {
     pub appointment_id: Uuid,
-    pub target_user_id: String,
-    pub acting_user_id: String,
+    pub target_user_id: Uuid,
+    pub acting_user_id: Uuid,
     pub timestamp: i64,
 }
 
 impl AppointmentParticipationRemovedEvent {
-    pub fn new(appointment_id: Uuid, target_user_id: String, acting_user_id: String) -> Self {
+    pub fn new(appointment_id: Uuid, target_user_id: Uuid, acting_user_id: Uuid) -> Self {
         Self {
             appointment_id,
             target_user_id,
