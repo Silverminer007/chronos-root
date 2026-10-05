@@ -9,7 +9,10 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    models::{
+        AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+        UpdateParticipationStatusRequest, UserRole,
+    },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -235,12 +238,44 @@ pub async fn cancel_appointment(
     Ok(StatusCode::OK)
 }
 
+/// POST /api/v2/appointments/:id/participation - RSVP to an appointment
+pub async fn rsvp_to_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    principal: PrincipalContext,
+    Json(request): Json<UpdateParticipationStatusRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Authorization check - user must be a participant in the appointment
+    let participant_role = repo
+        .get_participant_role(id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    if participant_role == Some(UserRole::None) || participant_role.is_none() {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .change_participation_status(id, user_id, request.status)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
     NotFound,
     Unauthorized,
     DatabaseError,
+    BadRequestError(String),
     ValidationError(String),
 }
 
@@ -248,12 +283,13 @@ impl From<ServiceError> for AppointmentError {
     fn from(error: ServiceError) -> Self {
         match error {
             ServiceError::NotFound => AppointmentError::NotFound,
+            ServiceError::BadRequestError(msg) => AppointmentError::BadRequestError(msg),
             ServiceError::ValidationError(msg) => AppointmentError::ValidationError(msg),
             ServiceError::DatabaseError(msg) => {
                 eprintln!("Database error: {}", msg);
                 AppointmentError::DatabaseError
             }
-            ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::InvalidFormat(msg) => AppointmentError::BadRequestError(msg),
         }
     }
 }
@@ -269,7 +305,8 @@ impl IntoResponse for AppointmentError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),
             ),
-            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppointmentError::BadRequestError(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppointmentError::ValidationError(msg) => (StatusCode::UNPROCESSABLE_ENTITY, msg),
         };
 
         (status, error_message).into_response()

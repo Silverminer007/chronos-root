@@ -24,7 +24,7 @@ impl DatabaseConfig {
 
         let url = if app_env == "development" {
             std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://chronos:chronos@localhost:5432/chronos".to_string())
+                .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string())
         } else {
             std::env::var("DATABASE_URL")
                 .map_err(|_| "DATABASE_URL environment variable is required".to_string())?
@@ -80,7 +80,7 @@ impl DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            url: "postgres://chronos:chronos@localhost:5432/chronos".to_string(),
+            url: "postgres://postgres:postgres@localhost:5432".to_string(),
             max_connections: 16, // Conservative for <50 MiB memory target
             min_connections: 2,
             acquire_timeout: Duration::from_secs(5),
@@ -132,6 +132,31 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), Box<dyn std::error::Err
 mod tests {
     use super::*;
 
+    struct EnvGuard {
+        vars: Vec<(&'static str, Option<String>)>,
+    }
+
+    impl EnvGuard {
+        fn new(vars: &[&'static str]) -> Self {
+            let saved = vars
+                .iter()
+                .map(|&var| (var, std::env::var(var).ok()))
+                .collect();
+            Self { vars: saved }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (var, original) in &self.vars {
+                match original {
+                    Some(val) => std::env::set_var(var, val),
+                    None => std::env::remove_var(var),
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_default_config() {
         let config = DatabaseConfig::default();
@@ -150,7 +175,9 @@ mod tests {
 
     #[test]
     fn test_config_from_env_development() {
+        let _guard = EnvGuard::new(&["APP_ENV", "DATABASE_URL"]);
         std::env::set_var("APP_ENV", "development");
+        std::env::remove_var("DATABASE_URL");
         // DATABASE_URL not set, should use default
         let config = DatabaseConfig::from_env().expect("Should succeed in dev");
         assert!(config.url.contains("localhost"));
@@ -158,6 +185,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_production_missing_url() {
+        let _guard = EnvGuard::new(&["APP_ENV", "DATABASE_URL"]);
         std::env::remove_var("DATABASE_URL");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
@@ -166,6 +194,14 @@ mod tests {
 
     #[test]
     fn test_config_from_env_respects_overrides() {
+        let _guard = EnvGuard::new(&[
+            "DATABASE_URL",
+            "DATABASE_MAX_CONNECTIONS",
+            "DATABASE_MIN_CONNECTIONS",
+            "DATABASE_ACQUIRE_TIMEOUT_SECS",
+            "DATABASE_RUN_MIGRATIONS",
+            "APP_ENV",
+        ]);
         std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
         std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
         std::env::set_var("DATABASE_MIN_CONNECTIONS", "4");

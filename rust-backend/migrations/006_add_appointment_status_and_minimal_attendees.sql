@@ -1,5 +1,5 @@
 -- Add status and minimal_attendees columns to appointments table
-ALTER TABLE appointments ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'PLANNED';
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PLANNED';
 ALTER TABLE appointments ADD COLUMN IF NOT EXISTS minimal_attendees INTEGER;
 
 -- Add constraint to ensure minimal_attendees is non-negative if set
