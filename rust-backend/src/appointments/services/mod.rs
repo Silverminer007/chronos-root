@@ -511,10 +511,10 @@ impl AppointmentService {
         acting_user_id: Uuid,
         user_role: &str,
     ) -> Result<(), ServiceError> {
-        // Check if appointment exists
+        // Check if appointment exists (allow any status - spec requires adding to DELETED/CANCELLED appointments)
         let _appointment = self
             .repo
-            .find_by_id(appointment_id)
+            .find_by_id_any_status(appointment_id)
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound)?;
