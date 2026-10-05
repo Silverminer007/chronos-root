@@ -160,7 +160,7 @@ mod tests {
 
     async fn create_test_pool() -> Result<PgPool, sqlx::Error> {
         let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://chronos:chronos@localhost:5432/chronos".to_string());
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
 
         sqlx::postgres::PgPoolOptions::new()
             .max_connections(5)

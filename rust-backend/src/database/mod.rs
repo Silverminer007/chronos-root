@@ -24,7 +24,7 @@ impl DatabaseConfig {
 
         let url = if app_env == "development" {
             std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://chronos:chronos@localhost:5432/chronos".to_string())
+                .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string())
         } else {
             std::env::var("DATABASE_URL")
                 .map_err(|_| "DATABASE_URL environment variable is required".to_string())?
@@ -80,7 +80,7 @@ impl DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            url: "postgres://chronos:chronos@localhost:5432/chronos".to_string(),
+            url: "postgres://postgres:postgres@localhost:5432".to_string(),
             max_connections: 16, // Conservative for <50 MiB memory target
             min_connections: 2,
             acquire_timeout: Duration::from_secs(5),
