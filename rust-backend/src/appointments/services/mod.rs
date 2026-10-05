@@ -556,29 +556,6 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        // Get group members and add them as participants
-        let members = self
-            .repo
-            .get_group_members(group_id)
-            .await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-
-        for member_id in members {
-            // Only add if not already a participant
-            let is_participant = self
-                .repo
-                .is_participant(appointment_id, member_id)
-                .await
-                .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-
-            if !is_participant {
-                self.repo
-                    .add_participant(appointment_id, member_id, role, "PENDING")
-                    .await
-                    .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-            }
-        }
-
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
             let event_json = serde_json::json!({
