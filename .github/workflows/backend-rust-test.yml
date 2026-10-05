@@ -102,9 +102,8 @@ jobs:
       - name: Enforce coverage threshold
         run: |
           # Extract line coverage and enforce ratchet (rounded down to nearest 5, min 40%)
-          set +e
-          COVERAGE=$(cargo llvm-cov report --output-path /dev/null 2>&1 | grep -oP 'Lines\s+\K[0-9.]+(?=%)' | head -1)
-          set -e
+          # Extract the line coverage percentage from the TOTAL line (field 10, which is $(NF-3))
+          COVERAGE=$(grep '^TOTAL' coverage-report.txt | awk '{print $(NF-3)}' | sed 's/%//')
           if [ -z "$COVERAGE" ]; then COVERAGE=0; fi
           THRESHOLD=$(awk "BEGIN {t = int($COVERAGE / 5) * 5; print (t < 40 ? 40 : t)}")
           echo "Coverage: $COVERAGE%, Threshold: $THRESHOLD%" | tee -a $GITHUB_STEP_SUMMARY
