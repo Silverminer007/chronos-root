@@ -37,15 +37,16 @@ impl TestDb {
 
         info!("Connecting to test database");
 
-        // Connect with timeout to prevent hanging indefinitely
-        // Total wait time: 30 attempts * 100ms = 3 seconds
+        // Connect with timeout to prevent hanging indefinitely.
+        // SQLx 0.7 doesn't expose per-connection timeout on PgPoolOptions, so we wrap with
+        // tokio::time::timeout. The outer timeout respects the configured connection_timeout.
         let mut retries = 0;
         const MAX_RETRIES: u32 = 30;
         const RETRY_DELAY_MS: u64 = 100;
 
         let pool = loop {
             match tokio::time::timeout(
-                Duration::from_secs(3),
+                config.connection_timeout,
                 sqlx::postgres::PgPoolOptions::new()
                     .max_connections(config.max_connections)
                     .connect(&database_url),
