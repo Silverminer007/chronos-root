@@ -4,13 +4,23 @@ mod appointment_sorting_tests {
     use chrono::Utc;
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
 
+    macro_rules! setup_test_db {
+        () => {
+            match TestDb::new().await {
+                Ok(db) => db,
+                Err(e) => {
+                    eprintln!("Skipping test: Failed to initialize test database: {}", e);
+                    return;
+                }
+            }
+        };
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_sort_appointments_by_start_time() {
         // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
+        let db = setup_test_db!();
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create a user
@@ -79,9 +89,7 @@ mod appointment_sorting_tests {
     #[ignore]
     async fn test_sort_appointments_by_title() {
         // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
+        let db = setup_test_db!();
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create a user

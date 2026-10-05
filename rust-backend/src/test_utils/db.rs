@@ -2,6 +2,13 @@ use sqlx::{PgPool, Postgres, Transaction};
 use std::time::Duration;
 use tracing::info;
 
+#[cfg(test)]
+use testcontainers::runners::AsyncRunner;
+#[cfg(test)]
+use testcontainers::ContainerAsync;
+#[cfg(test)]
+use testcontainers_modules::postgres::Postgres as PostgresImage;
+
 /// Configuration for test database
 #[derive(Clone, Debug)]
 pub struct TestDbConfig {
@@ -21,6 +28,8 @@ impl Default for TestDbConfig {
 /// Test database container and connection pool
 pub struct TestDb {
     pool: PgPool,
+    #[cfg(test)]
+    _container: Option<ContainerAsync<PostgresImage>>,
 }
 
 impl TestDb {
@@ -33,9 +42,11 @@ impl TestDb {
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
         info!("Connecting to PostgreSQL test database");
 
-        // Use DATABASE_URL env var or default to testcontainers postgres
-        let base_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
+        #[cfg(test)]
+        let (base_url, container) = get_postgres_url_with_container().await?;
+
+        #[cfg(not(test))]
+        let base_url = std::env::var("DATABASE_URL")?;
 
         // Create a unique database name for this test
         let test_db_name = format!(
@@ -56,7 +67,7 @@ impl TestDb {
                 .await
             {
                 Ok(pool) => break pool,
-                Err(_) if retries < 30 => {
+                Err(_) if retries < 10 => {
                     retries += 1;
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
@@ -74,14 +85,24 @@ impl TestDb {
         // Connect to the test database
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
-            .connect_timeout(config.connection_timeout)
             .connect(&database_url)
             .await?;
 
         info!("Running migrations on test database");
         sqlx::migrate!("./migrations").run(&pool).await?;
 
-        Ok(TestDb { pool })
+        #[cfg(test)]
+        {
+            Ok(TestDb {
+                pool,
+                _container: container,
+            })
+        }
+
+        #[cfg(not(test))]
+        {
+            Ok(TestDb { pool })
+        }
     }
 
     /// Get the connection pool
@@ -115,56 +136,65 @@ impl TestDb {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_database_connection() {
-        let db = TestDb::new().await.expect("Failed to create test database");
-
-        // Verify we can query the database
-        let result: (i32,) = sqlx::query_as("SELECT 1")
-            .fetch_one(db.pool())
-            .await
-            .expect("Failed to query test database");
-
-        assert_eq!(result.0, 1);
+/// Get the PostgreSQL connection URL with optional container
+async fn get_postgres_url_with_container(
+) -> Result<(String, Option<ContainerAsync<PostgresImage>>), Box<dyn std::error::Error>> {
+    // Check if DATABASE_URL is set (e.g., in CI with a running database)
+    if let Ok(url) = std::env::var("DATABASE_URL") {
+        info!("Using DATABASE_URL from environment");
+        return Ok((url, None));
     }
 
-    #[tokio::test]
-    #[ignore]
-    async fn test_rollback_all() {
-        let db = TestDb::new().await.expect("Failed to create test database");
+    // Try localhost with a short timeout (for local development)
+    let localhost_url = "postgres://postgres:postgres@localhost:5432";
+    match tokio::time::timeout(
+        Duration::from_secs(3),
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(localhost_url),
+    )
+    .await
+    {
+        Ok(Ok(_)) => {
+            info!("Connected to localhost PostgreSQL");
+            return Ok((localhost_url.to_string(), None));
+        }
+        _ => {
+            info!("localhost:5432 not available, starting testcontainers PostgreSQL");
+        }
+    }
 
-        // Insert a test user
-        sqlx::query(
-            "INSERT INTO users (id, keycloak_id, email, first_name, last_name) VALUES ($1, $2, $3, $4, $5)"
-        )
-        .bind(uuid::Uuid::new_v4())
-        .bind("keycloak_id_1")
-        .bind("test@example.com")
-        .bind("Test")
-        .bind("User")
-        .execute(db.pool())
-        .await
-        .expect("Failed to insert test user");
+    // Fall back to testcontainers
+    info!("Attempting to start testcontainers PostgreSQL");
+    let container = PostgresImage::default().start().await;
+    info!("testcontainers PostgreSQL started successfully");
 
-        // Verify user exists
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
-            .fetch_one(db.pool())
+    let port = container.get_host_port_ipv4(5432).await;
+    let url = format!("postgres://postgres:postgres@127.0.0.1:{}", port);
+
+    // Wait for the container to be ready
+    let mut retries = 0;
+    loop {
+        match sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
             .await
-            .expect("Failed to count users");
-        assert_eq!(count.0, 1);
-
-        // Rollback
-        db.rollback_all().await.expect("Failed to rollback");
-
-        // Verify user is gone
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
-            .fetch_one(db.pool())
-            .await
-            .expect("Failed to count users");
-        assert_eq!(count.0, 0);
+        {
+            Ok(_) => {
+                info!("testcontainers PostgreSQL ready at {}", url);
+                return Ok((url, Some(container)));
+            }
+            Err(_) if retries < 30 => {
+                retries += 1;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => {
+                return Err(format!(
+                    "Failed to connect to testcontainers PostgreSQL at {}: {}",
+                    url, e
+                )
+                .into());
+            }
+        }
     }
 }

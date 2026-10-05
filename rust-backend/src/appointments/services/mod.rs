@@ -1,11 +1,13 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
-    AppointmentEditedEvent, AppointmentMovedEvent,
+    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationRemovedEvent,
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
 };
-use crate::appointments::repository::{AppointmentRepository, RepositoryError};
+use crate::appointments::repository::{
+    AppointmentRepository, CreateAppointmentParams, RepositoryError, UpdateAppointmentParams,
+};
 use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -289,15 +291,15 @@ impl AppointmentService {
         // Create appointment in database
         let appointment = self
             .repo
-            .create(
-                request.name,
-                request.description,
-                request.venue,
+            .create(CreateAppointmentParams {
+                title: request.name,
+                description: request.description,
+                location: request.venue,
                 start_time,
                 end_time,
-                creator_uuid,
-                request.minimal_attendees,
-            )
+                creator_id: creator_uuid,
+                minimal_attendees: request.minimal_attendees,
+            })
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
@@ -406,12 +408,14 @@ impl AppointmentService {
             .repo
             .update(
                 id,
-                request.name,
-                request.description,
-                request.venue,
-                start_time,
-                end_time,
-                request.minimal_attendees,
+                UpdateAppointmentParams {
+                    title: request.name,
+                    description: request.description,
+                    location: request.venue,
+                    start_time,
+                    end_time,
+                    minimal_attendees: request.minimal_attendees,
+                },
             )
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
@@ -496,6 +500,62 @@ impl AppointmentService {
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Remove a participant from an appointment (requires creator authorization)
+    pub async fn remove_participant(
+        &self,
+        appointment_id: Uuid,
+        target_user_id: Uuid,
+        acting_user_id: Uuid,
+    ) -> Result<(), ServiceError> {
+        // Check if appointment exists
+        let appointment = self
+            .repo
+            .find_by_id(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        // Authorization: only the appointment creator can remove participants
+        if appointment.creator_id != acting_user_id {
+            return Err(ServiceError::ValidationError(
+                "Only the appointment creator can remove participants".to_string(),
+            ));
+        }
+
+        // Remove the participant (hard delete)
+        self.repo
+            .remove_participant(appointment_id, target_user_id)
+            .await
+            .map_err(|e| match e {
+                RepositoryError::NotFound => {
+                    ServiceError::ValidationError("Participant not found".to_string())
+                }
+                _ => ServiceError::DatabaseError(e.to_string()),
+            })?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationRemovedEvent::new(
+                appointment_id,
+                target_user_id,
+                acting_user_id,
+            );
+            let event_json = serde_json::to_value(&event).map_err(|e| {
+                ServiceError::InvalidFormat(format!("Event serialization error: {}", e))
+            })?;
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentParticipationRemovedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!(
+                    "Failed to fire AppointmentParticipationRemovedEvent: {:?}",
+                    e
+                );
             }
         }
 
