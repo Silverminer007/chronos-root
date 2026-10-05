@@ -347,7 +347,7 @@ impl AppointmentRepository {
         &self,
         appointment_id: Uuid,
         group_id: Uuid,
-        role: &str,
+        role: UserRole,
     ) -> Result<(), RepositoryError> {
         let id = Uuid::new_v4();
         let now = chrono::Utc::now();

@@ -5,6 +5,7 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
+use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -248,8 +249,11 @@ pub async fn add_group_to_appointment(
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
+    let role = UserRole::from_str(&request.role)
+        .map_err(|_| AppointmentError::ValidationError("Invalid role".to_string()))?;
+
     service
-        .add_group_to_appointment(user_id, appointment_id, group_id, &request.role)
+        .add_group_to_appointment(user_id, appointment_id, group_id, role)
         .await
         .map_err(AppointmentError::from)?;
 

@@ -2,10 +2,12 @@
 /// Tests verify: authorization checks, group validation, and event publishing
 #[cfg(test)]
 mod appointment_add_group_tests {
+    use chronos_date_api::appointments::models::UserRole;
     use chronos_date_api::appointments::repository::AppointmentRepository;
     use chronos_date_api::appointments::services::AppointmentService;
     use chronos_date_api::event_bus::postgres::PostgresEventBus;
     use chronos_date_api::test_utils::{TestDb, TestFixtures};
+    use std::str::FromStr;
     use std::sync::Arc;
     use uuid::Uuid;
 
@@ -26,8 +28,10 @@ mod appointment_add_group_tests {
         group_id: Uuid,
         role: &str,
     ) -> Result<(), String> {
+        let user_role = UserRole::from_str(role)
+            .map_err(|e| format!("Invalid role: {}", e))?;
         service
-            .add_group_to_appointment(actor_id, appointment_id, group_id, role)
+            .add_group_to_appointment(actor_id, appointment_id, group_id, user_role)
             .await
             .map_err(|e| e.to_string())
     }

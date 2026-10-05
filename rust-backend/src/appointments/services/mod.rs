@@ -3,7 +3,7 @@ use crate::appointments::events::{
     AppointmentEditedEvent, AppointmentMovedEvent,
 };
 use crate::appointments::models::{
-    Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+    Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole,
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
@@ -509,7 +509,7 @@ impl AppointmentService {
         actor_id: Uuid,
         appointment_id: Uuid,
         group_id: Uuid,
-        role: &str,
+        role: UserRole,
     ) -> Result<(), ServiceError> {
         // Check if appointment exists
         let appointment = self
