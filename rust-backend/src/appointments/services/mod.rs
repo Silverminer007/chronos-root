@@ -542,12 +542,8 @@ impl AppointmentService {
                 target_user_id,
                 acting_user_id,
             );
-            let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
-                "target_user_id": event.target_user_id.to_string(),
-                "acting_user_id": event.acting_user_id.to_string(),
-                "timestamp": event.timestamp,
-            });
+            let event_json = serde_json::to_value(&event)
+                .map_err(|e| ServiceError::InvalidFormat(format!("Event serialization error: {}", e)))?;
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentParticipationRemovedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
