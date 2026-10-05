@@ -2,6 +2,13 @@ use sqlx::{PgPool, Postgres, Transaction};
 use std::time::Duration;
 use tracing::info;
 
+#[cfg(test)]
+use testcontainers::ContainerAsync;
+#[cfg(test)]
+use testcontainers::runners::AsyncRunner;
+#[cfg(test)]
+use testcontainers_modules::postgres::Postgres as PostgresImage;
+
 /// Configuration for test database
 #[derive(Clone, Debug)]
 pub struct TestDbConfig {
@@ -21,6 +28,8 @@ impl Default for TestDbConfig {
 /// Test database container and connection pool
 pub struct TestDb {
     pool: PgPool,
+    #[cfg(test)]
+    _container: Option<ContainerAsync<PostgresImage>>,
 }
 
 impl TestDb {
@@ -34,7 +43,8 @@ impl TestDb {
         info!("Connecting to PostgreSQL test database");
 
         #[cfg(test)]
-        let base_url = test_support::get_postgres_url().await?;
+        let (base_url, container) = get_postgres_url_with_container().await?;
+
         #[cfg(not(test))]
         let base_url = std::env::var("DATABASE_URL")?;
 
@@ -81,7 +91,18 @@ impl TestDb {
         info!("Running migrations on test database");
         sqlx::migrate!("./migrations").run(&pool).await?;
 
-        Ok(TestDb { pool })
+        #[cfg(test)]
+        {
+            Ok(TestDb {
+                pool,
+                _container: container,
+            })
+        }
+
+        #[cfg(not(test))]
+        {
+            Ok(TestDb { pool })
+        }
     }
 
     /// Get the connection pool
@@ -115,31 +136,64 @@ impl TestDb {
 }
 
 #[cfg(test)]
-mod test_support {
-    use super::*;
+/// Get the PostgreSQL connection URL with optional container
+async fn get_postgres_url_with_container(
+) -> Result<(String, Option<ContainerAsync<PostgresImage>>), Box<dyn std::error::Error>> {
+    // Check if DATABASE_URL is set (e.g., in CI with a running database)
+    if let Ok(url) = std::env::var("DATABASE_URL") {
+        info!("Using DATABASE_URL from environment");
+        return Ok((url, None));
+    }
 
-    /// Get the PostgreSQL connection URL
-    pub async fn get_postgres_url() -> Result<String, Box<dyn std::error::Error>> {
-        // Check if DATABASE_URL is set (e.g., in CI with a running database)
-        if let Ok(url) = std::env::var("DATABASE_URL") {
-            return Ok(url);
+    // Try localhost with a short timeout (for local development)
+    let localhost_url = "postgres://postgres:postgres@localhost:5432";
+    match tokio::time::timeout(
+        Duration::from_secs(3),
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(localhost_url),
+    )
+    .await
+    {
+        Ok(Ok(_)) => {
+            info!("Connected to localhost PostgreSQL");
+            return Ok((localhost_url.to_string(), None));
         }
+        _ => {
+            info!("localhost:5432 not available, starting testcontainers PostgreSQL");
+        }
+    }
 
-        // Try localhost with a short timeout (for local development)
-        let localhost_url = "postgres://postgres:postgres@localhost:5432";
-        match tokio::time::timeout(
-            Duration::from_secs(3),
-            sqlx::postgres::PgPoolOptions::new()
-                .max_connections(1)
-                .connect(localhost_url),
-        )
-        .await
+    // Fall back to testcontainers
+    info!("Attempting to start testcontainers PostgreSQL");
+    let container = PostgresImage::default().start().await;
+    info!("testcontainers PostgreSQL started successfully");
+
+    let port = container.get_host_port_ipv4(5432).await;
+    let url = format!("postgres://postgres:postgres@127.0.0.1:{}", port);
+
+    // Wait for the container to be ready
+    let mut retries = 0;
+    loop {
+        match sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
         {
-            Ok(Ok(_)) => {
-                info!("Connected to localhost PostgreSQL");
-                Ok(localhost_url.to_string())
+            Ok(_) => {
+                info!("testcontainers PostgreSQL ready at {}", url);
+                return Ok((url, Some(container)));
             }
-            _ => Err("No PostgreSQL database available. Set DATABASE_URL or ensure localhost:5432 is running with postgres:postgres credentials".into()),
+            Err(_) if retries < 30 => {
+                retries += 1;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => {
+                return Err(format!(
+                    "Failed to connect to testcontainers PostgreSQL at {}: {}",
+                    url, e
+                ).into());
+            }
         }
     }
 }
