@@ -4,23 +4,6 @@ mod add_participant_tests {
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
     use uuid::Uuid;
 
-    /// Helper to create a friendship between two users
-    async fn create_friendship(
-        pool: &sqlx::PgPool,
-        requester_id: Uuid,
-        recipient_id: Uuid,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query(
-            "INSERT INTO friendships (requester_id, recipient_id, status) VALUES ($1, $2, 'ACCEPTED')"
-        )
-        .bind(requester_id)
-        .bind(recipient_id)
-        .execute(pool)
-        .await?;
-
-        Ok(())
-    }
-
     /// Helper to add a user as participant with a specific role
     async fn add_participant_with_role(
         pool: &sqlx::PgPool,
@@ -40,25 +23,6 @@ mod add_participant_tests {
         .await?;
 
         Ok(participant_id)
-    }
-
-    /// Helper to set a user's role in an appointment
-    async fn set_user_role(
-        pool: &sqlx::PgPool,
-        appointment_id: Uuid,
-        user_id: Uuid,
-        role: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query(
-            "UPDATE appointment_participants SET role = $1 WHERE appointment_id = $2 AND user_id = $3"
-        )
-        .bind(role)
-        .bind(appointment_id)
-        .bind(user_id)
-        .execute(pool)
-        .await?;
-
-        Ok(())
     }
 
     #[tokio::test]
@@ -89,9 +53,6 @@ mod add_participant_tests {
 
         // Creator should already be added as RESPONSIBLE participant
         // Now verify adding another participant works
-        create_friendship(db.pool(), creator_id, participant_id)
-            .await
-            .expect("Failed to create friendship");
 
         // Verify participant can be added
         let participant = sqlx::query_scalar::<_, i64>(
@@ -172,7 +133,7 @@ mod add_participant_tests {
             .await
             .expect("Failed to create helper");
 
-        let target_user_id = fixtures
+        let _target_user_id = fixtures
             .create_user("target", "target@example.com")
             .await
             .expect("Failed to create target");
@@ -187,11 +148,6 @@ mod add_participant_tests {
         add_participant_with_role(db.pool(), appointment_id, non_responsible_user_id, "HELPER")
             .await
             .expect("Failed to add helper");
-
-        // Create friendship between helper and target
-        create_friendship(db.pool(), non_responsible_user_id, target_user_id)
-            .await
-            .expect("Failed to create friendship");
 
         // Helper (with HELPER role) should not be able to add participants
         // This will be verified at the handler level with proper authorization

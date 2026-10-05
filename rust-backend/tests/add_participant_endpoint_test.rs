@@ -5,23 +5,6 @@ mod add_participant_endpoint_tests {
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
     use uuid::Uuid;
 
-    /// Helper to create a friendship between two users
-    async fn create_friendship(
-        pool: &sqlx::PgPool,
-        requester_id: Uuid,
-        recipient_id: Uuid,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query(
-            "INSERT INTO friendships (requester_id, recipient_id, status) VALUES ($1, $2, 'ACCEPTED')"
-        )
-        .bind(requester_id)
-        .bind(recipient_id)
-        .execute(pool)
-        .await?;
-
-        Ok(())
-    }
-
     /// Helper to add a user as participant with RESPONSIBLE role (organizer)
     async fn add_participant_as_organizer(
         pool: &sqlx::PgPool,
@@ -55,7 +38,7 @@ mod add_participant_endpoint_tests {
             .await
             .expect("Failed to create creator");
 
-        let participant_id = fixtures
+        let _participant_id = fixtures
             .create_user("participant", "participant@example.com")
             .await
             .expect("Failed to create participant");
@@ -69,11 +52,6 @@ mod add_participant_endpoint_tests {
         add_participant_as_organizer(db.pool(), appointment_id, creator_id)
             .await
             .expect("Failed to add creator as organizer");
-
-        // Create friendship
-        create_friendship(db.pool(), creator_id, participant_id)
-            .await
-            .expect("Failed to create friendship");
 
         // Verify the request struct can be created
         let request = AddParticipantRequest {
@@ -142,56 +120,4 @@ mod add_participant_endpoint_tests {
         assert_eq!(role, "HELPER");
     }
 
-    #[tokio::test]
-    #[ignore]
-    async fn test_friendships_must_be_accepted_to_add_participant() {
-        // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
-        let fixtures = TestFixtures::new(db.pool().clone());
-
-        // Create users
-        let creator_id = fixtures
-            .create_user("creator", "creator@example.com")
-            .await
-            .expect("Failed to create creator");
-
-        let non_friend_id = fixtures
-            .create_user("non_friend", "non_friend@example.com")
-            .await
-            .expect("Failed to create non-friend");
-
-        // Create appointment
-        let appointment_id = fixtures
-            .create_appointment(creator_id, &AppointmentFixture::new().with_title("Meeting"))
-            .await
-            .expect("Failed to create appointment");
-
-        add_participant_as_organizer(db.pool(), appointment_id, creator_id)
-            .await
-            .expect("Failed to add creator as organizer");
-
-        // Create a pending friendship (not ACCEPTED)
-        sqlx::query(
-            "INSERT INTO friendships (requester_id, recipient_id, status) VALUES ($1, $2, 'PENDING')"
-        )
-        .bind(creator_id)
-        .bind(non_friend_id)
-        .execute(db.pool())
-        .await
-        .expect("Failed to create pending friendship");
-
-        // Verify the friendship is not accepted
-        let status: String = sqlx::query_scalar(
-            "SELECT status FROM friendships WHERE requester_id = $1 AND recipient_id = $2"
-        )
-        .bind(creator_id)
-        .bind(non_friend_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch friendship");
-
-        assert_eq!(status, "PENDING");
-    }
 }
