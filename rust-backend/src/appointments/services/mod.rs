@@ -501,6 +501,75 @@ impl AppointmentService {
 
         Ok(())
     }
+
+    /// Add a participant to an appointment
+    /// Requires the acting user to be RESPONSIBLE in the appointment
+    pub async fn add_participant(
+        &self,
+        appointment_id: Uuid,
+        target_user_id: Uuid,
+        acting_user_id: Uuid,
+        user_role: &str,
+    ) -> Result<(), ServiceError> {
+        // Check if appointment exists
+        let _appointment = self
+            .repo
+            .find_by_id(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        // Check authorization - acting user must be RESPONSIBLE
+        let acting_user_role = self
+            .repo
+            .get_participant_role(appointment_id, acting_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        match acting_user_role {
+            Some(crate::appointments::models::UserRole::Responsible) => {
+                // User has permission to add participants
+            }
+            _ => {
+                return Err(ServiceError::ValidationError(
+                    "Only RESPONSIBLE participants can add participants".to_string(),
+                ));
+            }
+        }
+
+        // Add the participant with PENDING status
+        self.repo
+            .add_participant_strict(appointment_id, target_user_id, user_role, "PENDING")
+            .await
+            .map_err(|e| match e {
+                crate::appointments::repository::RepositoryError::InvalidInput(msg) => {
+                    ServiceError::ValidationError(msg)
+                }
+                _ => ServiceError::DatabaseError(e.to_string()),
+            })?;
+
+        // Fire the event
+        if let Some(ref publisher) = self.event_publisher {
+            let event = crate::appointments::events::AppointmentParticipationAddedEvent::new(
+                appointment_id,
+                target_user_id.to_string(),
+                acting_user_id.to_string(),
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "target_user_id": event.target_user_id,
+                "acting_user_id": event.acting_user_id,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentParticipationAddedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentParticipationAddedEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
