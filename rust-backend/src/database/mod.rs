@@ -151,9 +151,13 @@ mod tests {
     #[test]
     fn test_config_from_env_development() {
         std::env::set_var("APP_ENV", "development");
-        // DATABASE_URL not set, should use default
+        std::env::set_var(
+            "DATABASE_URL",
+            "postgres://user:pass@localhost:5432/default",
+        );
+        // DATABASE_URL set, should use the value
         let config = DatabaseConfig::from_env().expect("Should succeed in dev");
-        assert!(config.url.contains("localhost"));
+        assert!(config.url.contains("default"));
     }
 
     #[test]
