@@ -66,6 +66,14 @@ in the wrong order), because no test applied them.
   with role `RESPONSIBLE`. Rust inserts the appointment and the creator's participation in one
   transaction. Authorization that used `creator_id` (view, delete, cancel) now requires the
   `RESPONSIBLE` participation; update requires `ATTENDANT` or above (unchanged).
+  This supersedes sections 4 (status storage, fourth value) and 5 (creator participation via event after
+  commit) of [ADR-2026-10-03-011](ADR-2026-10-03-011-appointment-mutations.md); the event example and DTO
+  example there (`creator_id` column semantics, `id: String`) are superseded as well.
+- **`AppointmentCreatedEvent` listener stays, as an idempotent safeguard.** `AppointmentCreatedEvent`
+  is still published after commit and `AppointmentParticipationListener` (`event_listeners.rs`) still
+  handles it by inserting the creator as `RESPONSIBLE`/`APPROVED`. Because the service already inserted
+  that row, the insert hits `uk_appointment_participation_user` and is a no-op (`ON CONFLICT DO NOTHING`).
+  Authorization never depends on the listener. It can be removed in a follow-up without behaviour change.
 - **Fields without a Java column are gone.** `groups` has only `groupname`/`owner_oidcid`
   (no description, no timestamps); `friendship_requests` has `created_at`/`responded_at`
   (no `updated_at`); `pushsubscription` has no timestamps; appointments have `createdat`/`lastupdate`.
