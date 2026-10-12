@@ -1,10 +1,14 @@
 # Build stage with musl for static linking
-FROM rust:1.98.1 as builder
+FROM rust:1.98.1 AS builder
 
 WORKDIR /build
 
-# Add musl target for static linking
-RUN rustup target add x86_64-unknown-linux-musl
+# musl C toolchain (needed by crates with C code such as ring) and musl target
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends musl-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && rustup target add x86_64-unknown-linux-musl
+ENV CC_x86_64_unknown_linux_musl=musl-gcc
 
 # Copy the project files
 COPY Cargo.* ./
