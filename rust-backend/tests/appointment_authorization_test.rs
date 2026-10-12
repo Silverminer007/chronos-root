@@ -1,6 +1,10 @@
 /// Integration tests for appointment authorization and filtering
+///
+/// The Java-compatible schema has no creator column: the creator of an appointment is its
+/// RESPONSIBLE participant (ADR 0013).
 #[cfg(test)]
 mod appointment_auth_tests {
+    use chronos_date_api::appointments::repository::AppointmentRepository;
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
 
     #[tokio::test]
@@ -23,47 +27,34 @@ mod appointment_auth_tests {
             .await
             .expect("Failed to create creator2");
 
-        // Creator 1 creates an appointment
+        // Each creator creates an appointment
         let appt1_id = fixtures
             .create_appointment(
-                creator1_id,
+                &creator1_id,
                 &AppointmentFixture::new().with_title("Creator 1 Meeting"),
             )
             .await
             .expect("Failed to create appointment 1");
 
-        // Creator 2 creates an appointment
         let appt2_id = fixtures
             .create_appointment(
-                creator2_id,
+                &creator2_id,
                 &AppointmentFixture::new().with_title("Creator 2 Meeting"),
             )
             .await
             .expect("Failed to create appointment 2");
 
-        // Verify creator1's appointment belongs to creator1
-        let appt1: chronos_date_api::appointments::models::Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments WHERE id = $1"
-        )
-        .bind(appt1_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch appointment 1");
+        let repo = AppointmentRepository::new(db.pool().clone());
 
-        assert_eq!(appt1.creator_id, creator1_id);
+        // The creator is the RESPONSIBLE participant of exactly their own appointment
+        let creator1_appointments = repo.find_by_creator(&creator1_id).await.unwrap();
+        assert_eq!(creator1_appointments.len(), 1);
+        assert_eq!(creator1_appointments[0].id, appt1_id);
+        assert_eq!(creator1_appointments[0].name, "Creator 1 Meeting");
 
-        // Verify creator2's appointment belongs to creator2
-        let appt2: chronos_date_api::appointments::models::Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments WHERE id = $1"
-        )
-        .bind(appt2_id)
-        .fetch_one(db.pool())
-        .await
-        .expect("Failed to fetch appointment 2");
-
-        assert_eq!(appt2.creator_id, creator2_id);
+        let creator2_appointments = repo.find_by_creator(&creator2_id).await.unwrap();
+        assert_eq!(creator2_appointments.len(), 1);
+        assert_eq!(creator2_appointments[0].id, appt2_id);
     }
 
     #[tokio::test]
@@ -75,7 +66,6 @@ mod appointment_auth_tests {
             .expect("Failed to initialize test database");
         let fixtures = TestFixtures::new(db.pool().clone());
 
-        // Create two users
         let user1_id = fixtures
             .create_user("user1", "user1@example.com")
             .await
@@ -88,9 +78,9 @@ mod appointment_auth_tests {
 
         // User 1 creates 3 appointments
         for i in 1..=3 {
-            let _appt_id = fixtures
+            fixtures
                 .create_appointment(
-                    user1_id,
+                    &user1_id,
                     &AppointmentFixture::new().with_title(&format!("User1 Meeting {}", i)),
                 )
                 .await
@@ -99,35 +89,48 @@ mod appointment_auth_tests {
 
         // User 2 creates 2 appointments
         for i in 1..=2 {
-            let _appt_id = fixtures
+            fixtures
                 .create_appointment(
-                    user2_id,
+                    &user2_id,
                     &AppointmentFixture::new().with_title(&format!("User2 Meeting {}", i)),
                 )
                 .await
                 .unwrap_or_else(|_| panic!("Failed to create user2 appointment {}", i));
         }
 
-        // Verify User 1 has exactly 3 appointments
-        let user1_appointments: Vec<(i64,)> =
-            sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE creator_id = $1")
-                .bind(user1_id)
-                .fetch_all(db.pool())
-                .await
-                .expect("Failed to fetch user1 appointments count");
+        let repo = AppointmentRepository::new(db.pool().clone());
+        assert_eq!(repo.find_by_creator(&user1_id).await.unwrap().len(), 3);
+        assert_eq!(repo.find_by_creator(&user2_id).await.unwrap().len(), 2);
+    }
 
-        assert_eq!(user1_appointments.len(), 1);
-        assert_eq!(user1_appointments[0].0, 3);
+    #[tokio::test]
+    #[ignore]
+    async fn test_visible_to_user_includes_participations_but_not_creator_only_filter() {
+        let db = TestDb::new()
+            .await
+            .expect("Failed to initialize test database");
+        let fixtures = TestFixtures::new(db.pool().clone());
 
-        // Verify User 2 has exactly 2 appointments
-        let user2_appointments: Vec<(i64,)> =
-            sqlx::query_as("SELECT COUNT(*) FROM appointments WHERE creator_id = $1")
-                .bind(user2_id)
-                .fetch_all(db.pool())
-                .await
-                .expect("Failed to fetch user2 appointments count");
+        let creator = fixtures
+            .create_user("creator", "c@example.com")
+            .await
+            .unwrap();
+        let guest = fixtures
+            .create_user("guest", "g@example.com")
+            .await
+            .unwrap();
 
-        assert_eq!(user2_appointments.len(), 1);
-        assert_eq!(user2_appointments[0].0, 2);
+        let appt = fixtures
+            .create_appointment(&creator, &AppointmentFixture::new())
+            .await
+            .unwrap();
+        fixtures
+            .add_participant(appt, &guest, "PENDING")
+            .await
+            .unwrap();
+
+        let repo = AppointmentRepository::new(db.pool().clone());
+        assert_eq!(repo.find_visible_to_user(&guest).await.unwrap().len(), 1);
+        assert!(repo.find_by_creator(&guest).await.unwrap().is_empty());
     }
 }

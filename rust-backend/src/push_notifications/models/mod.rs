@@ -1,18 +1,15 @@
 // Data models for push_notifications
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-/// Represents a user's web push subscription
+/// Represents a user's web push subscription (table `pushsubscription`)
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct PushSubscription {
-    pub id: Uuid,
-    pub user_id: Uuid,
+    pub id: i64,
+    /// OIDC subject of the subscriber
+    pub user_id: String,
     pub endpoint: String,
     pub p256dh: String,
     pub auth: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 /// Request model for subscribing to push notifications
@@ -45,13 +42,11 @@ mod tests {
     #[test]
     fn test_push_subscription_creation() {
         let subscription = PushSubscription {
-            id: Uuid::new_v4(),
-            user_id: Uuid::new_v4(),
+            id: 1,
+            user_id: "user-sub".to_string(),
             endpoint: "https://example.com/endpoint".to_string(),
             p256dh: "test_p256dh".to_string(),
             auth: "test_auth".to_string(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
         };
 
         assert!(!subscription.endpoint.is_empty());

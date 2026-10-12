@@ -236,4 +236,4 @@ event_bus.publish(AppointmentEditedEvent { ... });
 
 - [ADR-2026-10-03-010: Event bus trait split](#) — fire-and-forget events after commit
 - Frontend code: `frontend/app/stores/appointments.ts` (calls PATCH/DELETE endpoints)
-- Database migration: `rust-backend/migrations/006_add_appointment_status_and_minimal_attendees.sql`
+- Database schema: `status`/`minimal_attendees` are part of the Java-compatible baseline `rust-backend/migrations/001_baseline.sql` (`appointment.status` SMALLINT ordinal, `minimalattendees`), see [ADR 0013](0013-rust-schema-identical-to-java.md); the separate `006` ALTER migration was removed

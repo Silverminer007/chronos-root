@@ -32,7 +32,7 @@ let appointments = sqlx::query_as::<_, Appointment>(
 let mut results = vec![];
 for appt in appointments {
     let participants = sqlx::query_as::<_, Participant>(
-        "SELECT * FROM appointment_participants WHERE appointment_id = $1"
+        "SELECT * FROM appointment_participation WHERE appointment_id = $1"
     )
     .bind(appt.id)
     .fetch_all(&pool)
@@ -92,7 +92,7 @@ let results = sqlx::query!(
         a.id, a.title, a.start_time, a.end_time,
         p.id as participant_id, p.user_id, p.status
     FROM appointments a
-    LEFT JOIN appointment_participants p ON a.id = p.appointment_id
+    LEFT JOIN appointment_participation p ON a.id = p.appointment_id
     WHERE a.creator_id = $1
     "#,
     user_id
@@ -101,7 +101,7 @@ let results = sqlx::query!(
 .await?;
 
 // Transform into structured result
-let mut appointments_map: HashMap<Uuid, Appointment> = HashMap::new();
+let mut appointments_map: HashMap<i64, Appointment> = HashMap::new();
 for row in results {
     let appt = appointments_map.entry(row.id).or_insert_with(|| Appointment {
         id: row.id,
@@ -134,11 +134,11 @@ let appointments = sqlx::query_as::<_, Appointment>(
 .fetch_all(&pool)
 .await?;
 
-let appointment_ids: Vec<Uuid> = appointments.iter().map(|a| a.id).collect();
+let appointment_ids: Vec<i64> = appointments.iter().map(|a| a.id).collect();
 
-let participants = sqlx::query_as::<_, (Uuid, Participant)>(
+let participants = sqlx::query_as::<_, (i64, Participant)>(
     "SELECT appointment_id, id, user_id, status 
-     FROM appointment_participants 
+     FROM appointment_participation 
      WHERE appointment_id = ANY($1)"
 )
 .bind(&appointment_ids)
@@ -146,7 +146,7 @@ let participants = sqlx::query_as::<_, (Uuid, Participant)>(
 .await?;
 
 // Group participants by appointment
-let participants_by_appt: HashMap<Uuid, Vec<Participant>> = 
+let participants_by_appt: HashMap<i64, Vec<Participant>> = 
     participants.iter()
         .fold(HashMap::new(), |mut map, (appt_id, p)| {
             map.entry(*appt_id).or_insert_with(Vec::new).push(p.clone());
@@ -244,7 +244,7 @@ pub struct PaginatedResponse<T> {
 
 pub async fn list_appointments_paginated(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: String,
     limit: i32,
     cursor: Option<String>,
 ) -> Result<PaginatedResponse<Appointment>> {
@@ -368,7 +368,7 @@ let appointments = sqlx::query!(
 let results = sqlx::query!(
     r#"
     SELECT a.id, a.title,
-           (SELECT COUNT(*) FROM appointment_participants 
+           (SELECT COUNT(*) FROM appointment_participation 
             WHERE appointment_id = a.id) as participant_count
     FROM appointments a
     WHERE creator_id = $1
@@ -383,7 +383,7 @@ let results = sqlx::query!(
     r#"
     SELECT a.id, a.title, COUNT(p.id) as participant_count
     FROM appointments a
-    LEFT JOIN appointment_participants p ON a.id = p.appointment_id
+    LEFT JOIN appointment_participation p ON a.id = p.appointment_id
     WHERE a.creator_id = $1
     GROUP BY a.id
     "#,
@@ -432,7 +432,7 @@ tracing_subscriber::fmt()
 
 ```
 2024-09-14T10:15:30Z DEBUG sqlx::query: sqlx::postgres: query=SELECT * FROM appointments WHERE creator_id = $1; execution time=2.5ms
-2024-09-14T10:15:31Z DEBUG sqlx::query: sqlx::postgres: query=SELECT * FROM appointment_participants WHERE appointment_id = ANY($1); execution time=1.2ms
+2024-09-14T10:15:31Z DEBUG sqlx::query: sqlx::postgres: query=SELECT * FROM appointment_participation WHERE appointment_id = ANY($1); execution time=1.2ms
 ```
 
 ## References

@@ -1,56 +1,40 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use uuid::Uuid;
+//! Users are identified by their OIDC subject; their profile is cached in `user_profiles`
+//! (ADR 0013). There is no `users` table.
 
-/// User entity for database persistence
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-#[sqlx(type_name = "users")]
-pub struct User {
-    pub id: Uuid,
-    pub keycloak_id: String,
-    pub email: String,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
+pub use crate::appointments::models::UserProfile;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
 
     #[test]
-    fn test_user_creation() {
-        let now = Utc::now();
-        let user = User {
-            id: Uuid::new_v4(),
-            keycloak_id: "keycloak_123".to_string(),
-            email: "user@example.com".to_string(),
+    fn test_user_profile_is_keyed_by_oidc_subject() {
+        let profile = UserProfile {
+            oidc_id: "keycloak-sub-1".to_string(),
             first_name: Some("John".to_string()),
             last_name: Some("Doe".to_string()),
-            created_at: now,
-            updated_at: now,
+            email: Some("user@example.com".to_string()),
+            profile_picture_url: None,
+            updated_at: Utc::now(),
         };
 
-        assert_eq!(user.email, "user@example.com");
-        assert!(user.first_name.is_some());
+        assert_eq!(profile.oidc_id, "keycloak-sub-1");
+        assert!(profile.first_name.is_some());
     }
 
     #[test]
-    fn test_user_without_name() {
-        let now = Utc::now();
-        let user = User {
-            id: Uuid::new_v4(),
-            keycloak_id: "keycloak_456".to_string(),
-            email: "user2@example.com".to_string(),
+    fn test_user_profile_without_name() {
+        let profile = UserProfile {
+            oidc_id: "keycloak-sub-2".to_string(),
             first_name: None,
             last_name: None,
-            created_at: now,
-            updated_at: now,
+            email: None,
+            profile_picture_url: None,
+            updated_at: Utc::now(),
         };
 
-        assert!(user.first_name.is_none());
-        assert!(user.last_name.is_none());
+        assert!(profile.first_name.is_none());
+        assert!(profile.last_name.is_none());
     }
 }

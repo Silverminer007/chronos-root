@@ -3,8 +3,8 @@
 mod appointment_endpoint_tests {
     use chrono::Utc;
     use chronos_date_api::appointments::models::Appointment;
+    use chronos_date_api::appointments::repository::APPOINTMENT_COLUMNS;
     use chronos_date_api::test_utils::{AppointmentFixture, TestAuthHelper, TestDb, TestFixtures};
-    use uuid::Uuid;
 
     #[tokio::test]
     #[ignore]
@@ -28,21 +28,21 @@ mod appointment_endpoint_tests {
             .with_location(Some("Conference Room A"));
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
         // Create an auth token for the creator
         let auth_helper = TestAuthHelper::new();
         let _auth_header = auth_helper
-            .create_auth_header(&creator_id.to_string())
+            .create_auth_header(&creator_id)
             .expect("Failed to create auth header");
 
         // Verify the appointment exists in the database
-        let fetched_appointment: Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments WHERE id = $1"
-        )
+        let fetched_appointment: Appointment = sqlx::query_as(&format!(
+            "SELECT {} FROM appointment WHERE id = $1",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(appointment_id)
         .fetch_one(db.pool())
         .await
@@ -50,16 +50,26 @@ mod appointment_endpoint_tests {
 
         // Assert
         assert_eq!(fetched_appointment.id, appointment_id);
-        assert_eq!(fetched_appointment.title, "Team Standup");
+        assert_eq!(fetched_appointment.name, "Team Standup");
         assert_eq!(
             fetched_appointment.description,
             Some("Daily team standup meeting".to_string())
         );
         assert_eq!(
-            fetched_appointment.location,
+            fetched_appointment.venue,
             Some("Conference Room A".to_string())
         );
-        assert_eq!(fetched_appointment.creator_id, creator_id);
+
+        // The creator is the RESPONSIBLE participant
+        let role: String = sqlx::query_scalar(
+            "SELECT role FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
+        )
+        .bind(appointment_id)
+        .bind(&creator_id)
+        .fetch_one(db.pool())
+        .await
+        .expect("Failed to fetch creator participation");
+        assert_eq!(role, "RESPONSIBLE");
     }
 
     #[tokio::test]
@@ -71,13 +81,13 @@ mod appointment_endpoint_tests {
             .expect("Failed to initialize test database");
 
         // Create a fake appointment ID that doesn't exist
-        let nonexistent_id = Uuid::new_v4();
+        let nonexistent_id: i64 = 987_654_321;
 
         // Verify the appointment doesn't exist
-        let result: Result<Appointment, sqlx::Error> = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments WHERE id = $1"
-        )
+        let result: Result<Appointment, sqlx::Error> = sqlx::query_as(&format!(
+            "SELECT {} FROM appointment WHERE id = $1",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(nonexistent_id)
         .fetch_optional(db.pool())
         .await
@@ -110,20 +120,26 @@ mod appointment_endpoint_tests {
 
         // Create appointments by different users
         let appt1_id = fixtures
-            .create_appointment(user1_id, &AppointmentFixture::new().with_title("Meeting 1"))
+            .create_appointment(
+                &user1_id,
+                &AppointmentFixture::new().with_title("Meeting 1"),
+            )
             .await
             .expect("Failed to create appointment 1");
 
         let appt2_id = fixtures
-            .create_appointment(user2_id, &AppointmentFixture::new().with_title("Meeting 2"))
+            .create_appointment(
+                &user2_id,
+                &AppointmentFixture::new().with_title("Meeting 2"),
+            )
             .await
             .expect("Failed to create appointment 2");
 
         // Verify all appointments can be retrieved
-        let all_appointments: Vec<Appointment> = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments ORDER BY start_time DESC"
-        )
+        let all_appointments: Vec<Appointment> = sqlx::query_as(&format!(
+            "SELECT {} FROM appointment ORDER BY start_time DESC",
+            APPOINTMENT_COLUMNS
+        ))
         .fetch_all(db.pool())
         .await
         .expect("Failed to fetch appointments");
@@ -157,15 +173,15 @@ mod appointment_endpoint_tests {
             .with_times(now, now + chrono::Duration::hours(2));
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &appt_fixture)
+            .create_appointment(&creator_id, &appt_fixture)
             .await
             .expect("Failed to create appointment");
 
         // Fetch and verify response structure
-        let appointment: Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments WHERE id = $1"
-        )
+        let appointment: Appointment = sqlx::query_as(&format!(
+            "SELECT {} FROM appointment WHERE id = $1",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(appointment_id)
         .fetch_one(db.pool())
         .await
@@ -174,20 +190,21 @@ mod appointment_endpoint_tests {
         // Convert to response and verify all fields are present
         let response = serde_json::json!({
             "id": appointment.id,
-            "title": appointment.title,
+            "name": appointment.name,
             "description": appointment.description,
             "start_time": appointment.start_time,
             "end_time": appointment.end_time,
-            "location": appointment.location,
-            "creator_id": appointment.creator_id,
+            "venue": appointment.venue,
+            "status": appointment.status,
             "created_at": appointment.created_at,
-            "updated_at": appointment.updated_at,
+            "last_update": appointment.last_update,
         });
 
         // Assert all fields are present and properly formatted
         assert!(response.get("id").is_some());
-        assert!(response.get("title").is_some());
-        assert!(response.get("creator_id").is_some());
+        assert!(response["id"].is_i64(), "ids are JSON numbers");
+        assert!(response.get("name").is_some());
+        assert_eq!(response["status"], "PLANNED");
         assert!(response.get("start_time").is_some());
         assert!(response.get("end_time").is_some());
     }

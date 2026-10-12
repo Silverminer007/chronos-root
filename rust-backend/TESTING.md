@@ -20,7 +20,10 @@ The testing infrastructure provides:
 ```bash
 cd rust-backend
 
-# Run all integration tests (requires Docker for testcontainers)
+# Run all integration tests. `TestDb` needs a PostgreSQL server: set TEST_DATABASE_URL (or
+# DATABASE_URL) to its base URL, e.g. postgres://postgres:postgres@localhost:5432
+# (default); every test creates and migrates its own database. Docker is needed for the
+# Testcontainers based tests (schema parity, migrations, readiness probe).
 cargo test --test '*' -- --ignored
 
 # Run a specific integration test
@@ -251,7 +254,7 @@ async fn test_appointment_with_participants() {
     
     // Verify relationship
     let participants: Vec<_> = sqlx::query_as::<_, Participant>(
-        "SELECT * FROM appointment_participants WHERE appointment_id = $1"
+        "SELECT * FROM appointment_participation WHERE appointment_id = $1"
     )
     .bind(appt)
     .fetch_all(db.pool())
@@ -302,8 +305,8 @@ async fn test_protected_endpoint_with_jwt() {
     let auth_helper = TestAuthHelper::new();
     let client = TestHttpClient::new("http://localhost:8000".to_string());
     
-    let user_id = Uuid::new_v4();
-    let token = auth_helper.create_token(&user_id.to_string())?;
+    let user_id = "keycloak-sub-123"; // OIDC subject
+    let token = auth_helper.create_token(user_id)?;
     let auth_header = format!("Bearer {}", token);
     
     // Call protected endpoint with auth
@@ -413,3 +416,10 @@ db.rollback_all().await?;
 - [ ] Test data snapshots (JSON fixtures)
 - [ ] Performance profiling helpers
 - [ ] Database state assertions helper
+
+## Schema parity with the Java backend
+
+`tests/schema_parity_test.rs` (not ignored, needs Docker) applies all migrations to an empty
+PostgreSQL and compares the result with `schema/java_schema_expected.txt`, the schema of the Java
+Flyway migrations (ADR 0013). After a change of the Java schema run
+`scripts/regenerate-java-schema.sh` and add a matching Rust migration.
