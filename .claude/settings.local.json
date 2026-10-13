@@ -1,0 +1,5 @@
+{
+  "env": {
+    "ANTHROPIC_CUSTOM_HEADERS": "x-litellm-api-key: Bearer $LITELLM_API_KEY\nx-litellm-tags: chronos,ticket-133,phase-pipeline"
+  }
+}
