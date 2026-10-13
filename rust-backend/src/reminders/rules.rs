@@ -193,7 +193,7 @@ mod tests {
         let appointment = create_test_appointment(start, end);
 
         let result = rule.evaluate(&appointment).await;
-        assert!(result.trigger_times.len() > 0);
+        assert!(!result.trigger_times.is_empty());
         assert!(result.trigger_times.len() <= 30); // Should have multiple trigger times
     }
 
