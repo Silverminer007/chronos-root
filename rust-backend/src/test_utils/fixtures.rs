@@ -96,6 +96,25 @@ impl TestFixtures {
 
         Ok(participant_id)
     }
+
+    /// Add a member to a group
+    pub async fn add_group_member(
+        &self,
+        group_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Uuid, Box<dyn std::error::Error>> {
+        let member_id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO group_members (id, group_id, user_id) VALUES ($1, $2, $3)"
+        )
+        .bind(member_id)
+        .bind(group_id)
+        .bind(user_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(member_id)
+    }
 }
 
 /// Builder for appointment test data

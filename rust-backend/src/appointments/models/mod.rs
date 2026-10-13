@@ -309,6 +309,13 @@ pub struct MessageResponse {
     pub timestamp: DateTime<Utc>,
 }
 
+/// Request to add a group to an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddGroupToAppointmentRequest {
+    #[serde(alias = "user_role")]
+    pub role: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
