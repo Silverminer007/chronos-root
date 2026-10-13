@@ -24,58 +24,87 @@ pub struct TestDb {
 }
 
 impl TestDb {
-    /// Create a new test database with a PostgreSQL container
+    /// Create a new test database connection
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         Self::with_config(TestDbConfig::default()).await
     }
 
-    /// Create a new test database with custom configuration
+    /// Create a new test database connection with custom configuration
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        info!("Connecting to PostgreSQL test database");
+        // Server URL from environment or use sensible default. Any database path in the URL is
+        // ignored: the server is addressed via the `postgres` database to create test databases.
+        let base_url = {
+            let _env_guard = crate::database::test_env_lock();
+            std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://postgres:postgres@localhost:5432/postgres".to_string()
+            })
+        };
+        let mut admin_url = url::Url::parse(&base_url)?;
+        admin_url.set_path("/postgres");
 
-        // Use DATABASE_URL env var or default to testcontainers postgres
-        let base_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
-
-        // Create a unique database name for this test
+        // Each test gets its own database so parallel tests cannot collide on unique keys
         let test_db_name = format!(
             "test_db_{}",
             uuid::Uuid::new_v4().to_string().replace('-', "")
         );
-        let database_url = format!("{}/{}", base_url, test_db_name);
+        let mut database_url = admin_url.clone();
+        database_url.set_path(&format!("/{}", test_db_name));
 
-        info!("Creating test database: {}", test_db_name);
+        info!("Connecting to test database server");
 
-        // Connect to postgres to create the test database
-        let postgres_url = base_url.clone();
+        // Connect with timeout to prevent hanging indefinitely.
+        // SQLx 0.7 doesn't expose per-connection timeout on PgPoolOptions, so we wrap with
+        // tokio::time::timeout. The outer timeout respects the configured connection_timeout.
         let mut retries = 0;
-        let postgres_pool = loop {
-            match sqlx::postgres::PgPoolOptions::new()
-                .max_connections(1)
-                .connect(&postgres_url)
-                .await
+        const MAX_RETRIES: u32 = 30;
+        const RETRY_DELAY_MS: u64 = 100;
+
+        let admin_pool = loop {
+            match tokio::time::timeout(
+                config.connection_timeout,
+                sqlx::postgres::PgPoolOptions::new()
+                    .max_connections(1)
+                    .connect(admin_url.as_str()),
+            )
+            .await
             {
-                Ok(pool) => break pool,
-                Err(_) if retries < 30 => {
-                    retries += 1;
-                    tokio::time::sleep(Duration::from_millis(100)).await;
+                Ok(Ok(pool)) => {
+                    info!("Successfully connected to test database server");
+                    break pool;
                 }
-                Err(e) => return Err(Box::new(e)),
+                _ if retries < MAX_RETRIES => {
+                    retries += 1;
+                    tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+                }
+                Ok(Err(e)) => {
+                    return Err(format!(
+                        "Failed to connect to database at {}: {}. Set DATABASE_URL environment variable if needed.",
+                        admin_url, e
+                    )
+                    .into());
+                }
+                Err(_) => {
+                    return Err(format!(
+                        "Database connection timeout after {} attempts ({}ms). \
+                         Database may not be running at {}. Set DATABASE_URL environment variable if needed.",
+                        MAX_RETRIES,
+                        MAX_RETRIES as u64 * RETRY_DELAY_MS,
+                        admin_url
+                    )
+                    .into());
+                }
             }
         };
 
-        // Create the test database
+        info!("Creating test database: {}", test_db_name);
         sqlx::query(&format!("CREATE DATABASE {}", test_db_name))
-            .execute(&postgres_pool)
+            .execute(&admin_pool)
             .await?;
+        admin_pool.close().await;
 
-        drop(postgres_pool);
-
-        // Connect to the test database
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
-            .connect_timeout(config.connection_timeout)
-            .connect(&database_url)
+            .connect(database_url.as_str())
             .await?;
 
         info!("Running migrations on test database");

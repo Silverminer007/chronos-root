@@ -61,6 +61,20 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Set up Rust
@@ -73,9 +87,24 @@ jobs:
         run: cargo test --test '*' --locked -- --include-ignored
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
 
   coverage:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Set up Rust
@@ -90,6 +119,7 @@ jobs:
         run: cargo llvm-cov --all-targets --all-features --workspace --locked --output-path lcov.info -- --include-ignored
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       - name: Report coverage summary
         run: |
           cargo llvm-cov report --output-path coverage-report.txt
@@ -101,11 +131,11 @@ jobs:
           path: rust-backend/lcov.info
       - name: Enforce coverage threshold
         run: |
-          # Extract line coverage and enforce ratchet (rounded down to nearest 5, min 40%)
-          set +e
-          COVERAGE=$(cargo llvm-cov report --output-path /dev/null 2>&1 | grep -oP 'Lines\s+\K[0-9.]+(?=%)' | head -1)
-          set -e
-          if [ -z "$COVERAGE" ]; then COVERAGE=0; fi
+          # Read line coverage from the JSON totals. `--output-path` would send the report to a file,
+          # so the JSON must go to stdout. A parse failure aborts instead of reading as 0%.
+          COVERAGE=$(cargo llvm-cov report --json --summary-only | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
+          if [ -z "$COVERAGE" ]; then echo "::error::Could not read line coverage from llvm-cov report" >&2; exit 1; fi
+          # Ratchet: threshold is the coverage rounded down to the nearest 5, min 40%
           THRESHOLD=$(awk "BEGIN {t = int($COVERAGE / 5) * 5; print (t < 40 ? 40 : t)}")
           echo "Coverage: $COVERAGE%, Threshold: $THRESHOLD%" | tee -a $GITHUB_STEP_SUMMARY
           (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )) || exit 1

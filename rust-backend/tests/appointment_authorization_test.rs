@@ -43,7 +43,7 @@ mod appointment_auth_tests {
 
         // Verify creator1's appointment belongs to creator1
         let appt1: chronos_date_api::appointments::models::Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(appt1_id)
@@ -55,7 +55,7 @@ mod appointment_auth_tests {
 
         // Verify creator2's appointment belongs to creator2
         let appt2: chronos_date_api::appointments::models::Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(appt2_id)
