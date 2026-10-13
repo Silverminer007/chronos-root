@@ -74,7 +74,7 @@ impl TestDb {
         // Connect to the test database
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
-            .connect_timeout(config.connection_timeout)
+            .acquire_timeout(config.connection_timeout)
             .connect(&database_url)
             .await?;
 
