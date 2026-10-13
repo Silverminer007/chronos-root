@@ -5,9 +5,15 @@
 #[cfg(test)]
 mod tests {
     use sqlx::postgres::PgPoolOptions;
+    use tokio::sync::Mutex;
     use uuid::Uuid;
     // use testcontainers::clients;
     // use testcontainers_modules::postgres;
+
+    /// Serializes schema setup across tests: they share one database, and
+    /// concurrent `CREATE TABLE IF NOT EXISTS` statements race on `pg_type`
+    /// and fail with a duplicate-key error.
+    static SCHEMA_LOCK: Mutex<()> = Mutex::const_new(());
 
     /// Helper function to set up a test database with migrations
     #[allow(dead_code)]
@@ -22,6 +28,8 @@ mod tests {
             .connect(&connection_string)
             .await
             .expect("Failed to connect to test database");
+
+        let _schema_guard = SCHEMA_LOCK.lock().await;
 
         // Create necessary tables for testing
         sqlx::query(

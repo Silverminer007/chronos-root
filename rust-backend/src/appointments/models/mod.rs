@@ -17,7 +17,7 @@ pub enum ParticipationStatus {
 /// Status of an appointment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "TEXT")]
+#[sqlx(type_name = "VARCHAR")]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AppointmentStatus {
     Planned,
@@ -54,7 +54,7 @@ impl std::fmt::Display for AppointmentStatus {
 /// Role of a user in an appointment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "UPPERCASE")]
-#[sqlx(type_name = "TEXT")]
+#[sqlx(type_name = "VARCHAR")]
 #[sqlx(rename_all = "UPPERCASE")]
 pub enum UserRole {
     None,

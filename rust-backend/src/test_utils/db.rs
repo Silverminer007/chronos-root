@@ -33,8 +33,8 @@ impl TestDb {
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
         info!("Connecting to PostgreSQL test database");
 
-        // Use DATABASE_URL env var or default to testcontainers postgres
-        let base_url = std::env::var("DATABASE_URL")
+        // Use TEST_DATABASE_URL env var (distinct from DATABASE_URL, which config tests mutate) or default to testcontainers postgres
+        let base_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
 
         // Create a unique database name for this test
@@ -74,7 +74,7 @@ impl TestDb {
         // Connect to the test database
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
-            .connect_timeout(config.connection_timeout)
+            .acquire_timeout(config.connection_timeout)
             .connect(&database_url)
             .await?;
 
