@@ -107,6 +107,7 @@ impl AppointmentRepository {
     }
 
     /// Create a new appointment
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         title: String,
@@ -143,6 +144,7 @@ impl AppointmentRepository {
     }
 
     /// Update an appointment
+    #[allow(clippy::too_many_arguments)]
     pub async fn update(
         &self,
         id: Uuid,
