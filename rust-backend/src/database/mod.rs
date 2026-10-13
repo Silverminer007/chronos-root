@@ -131,6 +131,17 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), Box<dyn std::error::Err
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, MutexGuard};
+
+    /// Serializes tests that mutate process-wide environment variables,
+    /// because `cargo test` runs tests on parallel threads.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_env() -> MutexGuard<'static, ()> {
+        ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
 
     struct EnvGuard {
         vars: Vec<(&'static str, Option<String>)>,
@@ -175,6 +186,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_development() {
+        let _env_lock = lock_env();
         let _guard = EnvGuard::new(&["APP_ENV", "DATABASE_URL"]);
         std::env::set_var("APP_ENV", "development");
         std::env::remove_var("DATABASE_URL");
@@ -185,6 +197,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_production_missing_url() {
+        let _env_lock = lock_env();
         let _guard = EnvGuard::new(&["APP_ENV", "DATABASE_URL"]);
         std::env::remove_var("DATABASE_URL");
         std::env::set_var("APP_ENV", "production");
@@ -194,6 +207,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_respects_overrides() {
+        let _env_lock = lock_env();
         let _guard = EnvGuard::new(&[
             "DATABASE_URL",
             "DATABASE_MAX_CONNECTIONS",
