@@ -45,6 +45,12 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 # Web Push
 web-push = "0.11"
 
+# web-push pulls in OpenSSL (via isahc/curl and ece). The distro OpenSSL is built
+# for glibc and cannot be linked into the static musl binary, so OpenSSL is built
+# from source for the musl target only.
+[target.x86_64-unknown-linux-musl.dependencies]
+openssl-sys = { version = "0.9", features = ["vendored"] }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 testcontainers = "0.16"
