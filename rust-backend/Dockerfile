@@ -16,6 +16,8 @@ ENV CC_x86_64_unknown_linux_musl=musl-gcc
 # Copy the project files
 COPY Cargo.* ./
 COPY src ./src
+# sqlx::migrate! embeds the SQL files at compile time, so the directory must exist during the build
+COPY migrations ./migrations
 
 # Build the application with static linking
 # Uses musl libc for truly static binary (lower memory footprint)
