@@ -187,5 +187,13 @@ mod tests {
         assert_eq!(config.min_connections, 4);
         assert_eq!(config.acquire_timeout, Duration::from_secs(10));
         assert!(!config.run_migrations);
+
+        // Unset again so the fake credentials do not leak into other tests in this process
+        std::env::remove_var("DATABASE_URL");
+        std::env::remove_var("DATABASE_MAX_CONNECTIONS");
+        std::env::remove_var("DATABASE_MIN_CONNECTIONS");
+        std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
+        std::env::remove_var("DATABASE_RUN_MIGRATIONS");
+        std::env::remove_var("APP_ENV");
     }
 }
