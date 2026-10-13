@@ -33,7 +33,7 @@ mod integration_tests {
 
         // Verify: Query the appointment from the database
         let fetched_appointment: Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments WHERE id = $1"
         )
         .bind(appointment_id)
@@ -95,7 +95,7 @@ mod integration_tests {
 
         // Verify: Query all appointments
         let appointments: Vec<Appointment> = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
+            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees
              FROM appointments ORDER BY created_at"
         )
         .fetch_all(db.pool())
