@@ -14,6 +14,29 @@ pub enum ParticipationStatus {
     Rejected,
 }
 
+impl FromStr for ParticipationStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "PENDING" => Ok(ParticipationStatus::Pending),
+            "APPROVED" => Ok(ParticipationStatus::Approved),
+            "REJECTED" => Ok(ParticipationStatus::Rejected),
+            _ => Err(format!("Unknown participation status: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for ParticipationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParticipationStatus::Pending => write!(f, "PENDING"),
+            ParticipationStatus::Approved => write!(f, "APPROVED"),
+            ParticipationStatus::Rejected => write!(f, "REJECTED"),
+        }
+    }
+}
+
 /// Status of an appointment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -277,6 +300,13 @@ pub struct ParticipationResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateParticipationStatusRequest {
     pub status: ParticipationStatus,
+}
+
+/// Participant info returned from the repository
+#[derive(Debug, Clone, Copy)]
+pub struct AppointmentParticipant {
+    pub status: ParticipationStatus,
+    pub role: UserRole,
 }
 
 /// Request to create a group

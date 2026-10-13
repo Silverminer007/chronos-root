@@ -34,7 +34,7 @@ reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"
 http = "1"
 
 # Database
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "migrate"] }
 
 # URL parsing
 url = "2.5"
@@ -44,6 +44,11 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Web Push
 web-push = "0.11"
+
+# The static musl build (Dockerfile) has no musl-built system OpenSSL, so build it from source there.
+# Enabling the feature unifies it for web-push's transitive openssl-sys dependency.
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

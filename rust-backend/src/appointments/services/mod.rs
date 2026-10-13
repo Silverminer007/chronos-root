@@ -1,11 +1,14 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
-    AppointmentEditedEvent, AppointmentMovedEvent,
+    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
-    Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+    Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
+    UpdateAppointmentRequest,
 };
-use crate::appointments::repository::{AppointmentRepository, RepositoryError};
+use crate::appointments::repository::{
+    AppointmentRepository, CreateAppointmentParams, RepositoryError, UpdateAppointmentParams,
+};
 use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -13,6 +16,7 @@ use uuid::Uuid;
 /// Custom error type for appointment service operations
 #[derive(Debug, Clone)]
 pub enum ServiceError {
+    BadRequestError(String),
     ValidationError(String),
     NotFound,
     DatabaseError(String),
@@ -22,6 +26,7 @@ pub enum ServiceError {
 impl std::fmt::Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            ServiceError::BadRequestError(msg) => write!(f, "Bad request: {}", msg),
             ServiceError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             ServiceError::NotFound => write!(f, "Appointment not found"),
             ServiceError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
@@ -289,15 +294,15 @@ impl AppointmentService {
         // Create appointment in database
         let appointment = self
             .repo
-            .create(
-                request.name,
-                request.description,
-                request.venue,
+            .create(CreateAppointmentParams {
+                title: request.name,
+                description: request.description,
+                location: request.venue,
                 start_time,
                 end_time,
-                creator_uuid,
-                request.minimal_attendees,
-            )
+                creator_id: creator_uuid,
+                minimal_attendees: request.minimal_attendees,
+            })
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
@@ -406,12 +411,14 @@ impl AppointmentService {
             .repo
             .update(
                 id,
-                request.name,
-                request.description,
-                request.venue,
-                start_time,
-                end_time,
-                request.minimal_attendees,
+                UpdateAppointmentParams {
+                    title: request.name,
+                    description: request.description,
+                    location: request.venue,
+                    start_time,
+                    end_time,
+                    minimal_attendees: request.minimal_attendees,
+                },
             )
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
@@ -496,6 +503,77 @@ impl AppointmentService {
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Change a user's participation status in an appointment
+    pub async fn change_participation_status(
+        &self,
+        appointment_id: Uuid,
+        user_id: Uuid,
+        new_status: ParticipationStatus,
+    ) -> Result<(), ServiceError> {
+        // Validate status is not PENDING
+        if new_status == ParticipationStatus::Pending {
+            return Err(ServiceError::BadRequestError(
+                "you cannot set your participation status back to pending".to_string(),
+            ));
+        }
+
+        // Find current participation status
+        let participant = self
+            .repo
+            .find_participation(appointment_id, user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or_else(|| {
+                ServiceError::ValidationError(
+                    "This user is not a participant of this event".to_string(),
+                )
+            })?;
+
+        let current_status = participant.status;
+
+        // Validate status is different from current
+        if current_status == new_status {
+            return Err(ServiceError::ValidationError(
+                "this is already your participation status".to_string(),
+            ));
+        }
+
+        // Update participation status
+        self.repo
+            .update_participation_status(appointment_id, user_id, new_status)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationStatusChangedEvent::new(
+                appointment_id,
+                user_id.to_string(),
+                new_status,
+                current_status,
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id.to_string(),
+                "user_id": event.user_id,
+                "new_status": event.new_status,
+                "old_status": event.old_status,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new(
+                "AppointmentParticipationStatusChangedEvent",
+                event_json,
+            );
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!(
+                    "Failed to fire AppointmentParticipationStatusChangedEvent: {:?}",
+                    e
+                );
             }
         }
 

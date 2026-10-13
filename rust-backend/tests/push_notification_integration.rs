@@ -4,63 +4,20 @@
 
 #[cfg(test)]
 mod tests {
-    use sqlx::postgres::PgPoolOptions;
+    use chronos_date_api::test_utils::TestDb;
     use uuid::Uuid;
     // use testcontainers::clients;
     // use testcontainers_modules::postgres;
 
-    /// Helper function to set up a test database with migrations
+    /// Helper function to set up an isolated test database with migrations applied.
+    /// Each call gets its own database, so concurrently running tests never race on DDL.
     #[allow(dead_code)]
     async fn setup_test_db() -> sqlx::PgPool {
-        // Use DATABASE_URL environment variable or default
-        let connection_string = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/postgres".to_string());
-
-        // Wait for PostgreSQL to be ready and create pool
-        let pool = PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&connection_string)
+        TestDb::new()
             .await
-            .expect("Failed to connect to test database");
-
-        // Create necessary tables for testing
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY,
-                keycloak_id VARCHAR(255) NOT NULL UNIQUE,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                first_name VARCHAR(255),
-                last_name VARCHAR(255),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            "#,
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create users table");
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS push_subscriptions (
-                id UUID PRIMARY KEY,
-                user_id UUID NOT NULL,
-                endpoint VARCHAR(1000) NOT NULL,
-                p256dh TEXT NOT NULL,
-                auth TEXT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                CONSTRAINT fk_push_subscriptions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                CONSTRAINT unique_subscription UNIQUE(user_id, endpoint)
-            );
-            "#,
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create push_subscriptions table");
-
-        pool
+            .expect("Failed to create test database")
+            .pool()
+            .clone()
     }
 
     /// Test creating a push subscription

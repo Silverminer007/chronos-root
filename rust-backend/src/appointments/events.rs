@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::models::ParticipationStatus;
+
 /// Event fired when an appointment is created
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentCreatedEvent {
@@ -83,6 +85,33 @@ impl AppointmentCancelledEvent {
     pub fn new(appointment_id: Uuid) -> Self {
         Self {
             appointment_id,
+            timestamp: Utc::now().timestamp(),
+        }
+    }
+}
+
+/// Event fired when a user's participation status changes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipationStatusChangedEvent {
+    pub appointment_id: Uuid,
+    pub user_id: String,
+    pub new_status: ParticipationStatus,
+    pub old_status: ParticipationStatus,
+    pub timestamp: i64,
+}
+
+impl AppointmentParticipationStatusChangedEvent {
+    pub fn new(
+        appointment_id: Uuid,
+        user_id: String,
+        new_status: ParticipationStatus,
+        old_status: ParticipationStatus,
+    ) -> Self {
+        Self {
+            appointment_id,
+            user_id,
+            new_status,
+            old_status,
             timestamp: Utc::now().timestamp(),
         }
     }
