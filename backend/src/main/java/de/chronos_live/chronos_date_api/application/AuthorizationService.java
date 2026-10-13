@@ -3,12 +3,11 @@ package de.chronos_live.chronos_date_api.application;
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.exception.ForbiddenException;
 import de.chronos_live.chronos_date_api.infrastructure.GroupRepository;
+import de.chronos_live.chronos_date_api.infrastructure.TeamRepository;
 import de.chronos_live.chronos_date_api.security.PrincipalContext;
 import io.micrometer.core.annotation.Timed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-
-import java.util.Objects;
 
 @ApplicationScoped
 @Timed("service.authorization")
@@ -18,7 +17,7 @@ public class AuthorizationService {
     @Inject
     GroupRepository groupRepository;
     @Inject
-    FriendshipQueryService friendshipQueryService;
+    TeamRepository teamRepository;
     @Inject
     PrincipalContext principalContext;
 
@@ -64,8 +63,8 @@ public class AuthorizationService {
         if (!UserRole.RESPONSIBLE.equals(role)) {
             throw new ForbiddenException("You have to be responsible for this appointment");
         }
-        if (!friendshipQueryService.areFriends(actingUserOidcId, targetUserOidcId)) {
-            throw new ForbiddenException("You can only add friends to appointments");
+        if (!teamRepository.shareTeam(actingUserOidcId, targetUserOidcId)) {
+            throw new ForbiddenException("Du kannst nur Mitglieder deines Teams einladen");
         }
     }
 
@@ -107,22 +106,18 @@ public class AuthorizationService {
     public void requireAddGroupMember(Long groupId, String actingUserOidcId, String targetUserOidcId) {
         if (isAdminRequest()) return;
         if (!groupRepository.isMember(groupId, actingUserOidcId)) {
-            throw new ForbiddenException("You can only add members to group you are a member of");
+            throw new ForbiddenException("You can only add members to groups you are a member of");
         }
-        if (!friendshipQueryService.areFriends(actingUserOidcId, targetUserOidcId)) {
-            throw new ForbiddenException("You can only add friends to groups");
+        if (!teamRepository.shareTeam(actingUserOidcId, targetUserOidcId)) {
+            throw new ForbiddenException("Du kannst nur Mitglieder deines Teams zur Gruppe hinzufügen");
         }
     }
 
     public void requireRemoveGroupMember(Long groupId, String actingUserOidcId, String targetUserOidcId) {
         if (isAdminRequest()) return;
-        if (Objects.equals(actingUserOidcId, targetUserOidcId)) {
-            throw new ForbiddenException("You cannot remove yourself from a group");
+        if (!groupRepository.isMember(groupId, actingUserOidcId)) {
+            throw new ForbiddenException("Du bist kein Mitglied dieser Gruppe");
         }
-        if (groupRepository.isOwner(groupId, actingUserOidcId)) {
-            return;
-        }
-        throw new ForbiddenException("Only the group owner can remove members");
     }
 
     public void requireReadGroupMembers(Long groupId, String requestingUserOidcId) {
@@ -135,18 +130,18 @@ public class AuthorizationService {
 
     public void requireEditGroup(Long groupId, String actingUserOidcId) {
         if (isAdminRequest()) return;
-        if (groupRepository.isOwner(groupId, actingUserOidcId)) {
+        if (groupRepository.isMember(groupId, actingUserOidcId)) {
             return;
         }
-        throw new ForbiddenException("Only the group owner can edit a group");
+        throw new ForbiddenException("Du bist kein Mitglied dieser Gruppe und kannst sie nicht bearbeiten");
     }
 
     public void requireDeleteGroup(Long groupId, String actingUserOidcId) {
         if (isAdminRequest()) return;
-        if (groupRepository.isOwner(groupId, actingUserOidcId)) {
+        if (groupRepository.isMember(groupId, actingUserOidcId)) {
             return;
         }
-        throw new ForbiddenException("Only the group owner can delete a group");
+        throw new ForbiddenException("Du bist kein Mitglied dieser Gruppe und kannst sie nicht löschen");
     }
 
     public void requireSendMessage(Long appointmentId, String requestingUserOidcId) {

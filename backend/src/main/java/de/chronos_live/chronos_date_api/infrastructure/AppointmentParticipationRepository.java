@@ -36,6 +36,23 @@ public class AppointmentParticipationRepository implements PanacheRepository<App
                 .delete("appointment.id = ?1 AND userOidcId = ?2", appointmentId, userOidcId);
     }
 
+    public List<Long> findAppointmentIdsByUser(String userOidcId) {
+        return AppointmentParticipation.<AppointmentParticipation>list("userOidcId = ?1", userOidcId)
+                .stream()
+                .map(ap -> ap.getAppointment().id)
+                .distinct()
+                .toList();
+    }
+
+    public List<String> findParticipantOidcIdsByAppointment(Long appointmentId, String excludeOidcId) {
+        return AppointmentParticipation.<AppointmentParticipation>list(
+                        "appointment.id = ?1 AND userOidcId != ?2", appointmentId, excludeOidcId)
+                .stream()
+                .map(AppointmentParticipation::getUserOidcId)
+                .distinct()
+                .toList();
+    }
+
     public void deleteByGroupAndUser(Long groupId, String userOidcId) {
         AppointmentParticipation.delete("groupParticipationId = ?1 AND userOidcId = ?2", groupId, userOidcId);
     }

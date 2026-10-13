@@ -169,17 +169,17 @@ const demoAppointment1 = ref<Appointment>({
   venue: "",
   minimal_attendees: 8,
   participants: [
-    { user_id: 1, name: "A", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
-    { user_id: 2, name: "B", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 3, name: "C", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 6, name: "F", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 7, name: "G", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 8, name: "H", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 9, name: "I", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 10, name: "J", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 11, name: "K", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
+    { user_id: "1", name: "A", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: "2", name: "B", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "3", name: "C", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "4", name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "5", name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "6", name: "F", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "7", name: "G", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "8", name: "H", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "9", name: "I", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "10", name: "J", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "11", name: "K", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
   ],
   group_participants: [],
   messages: []
@@ -194,11 +194,11 @@ const demoAppointment2 = ref<Appointment>({
   venue: "",
   minimal_attendees: 5,
   participants: [
-    { user_id: 1, name: "A", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 2, name: "B", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 3, name: "C", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
-    { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
+    { user_id: "1", name: "A", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "2", name: "B", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "3", name: "C", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: "4", name: "D", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "5", name: "E", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null }
   ],
   group_participants: [],
   messages: []
@@ -213,11 +213,11 @@ const demoAppointment3 = ref<Appointment>({
   venue: "",
   minimal_attendees: 2,
   participants: [
-    { user_id: 1, name: "A", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
-    { user_id: 2, name: "B", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
-    { user_id: 3, name: "C", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
-    { user_id: 4, name: "D", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
-    { user_id: 5, name: "E", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null }
+    { user_id: "1", name: "A", profile_picture_url: "", role: "ATTENDANT", status: "APPROVED", via_group_id: null, via_group_name: null },
+    { user_id: "2", name: "B", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: "3", name: "C", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: "4", name: "D", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null },
+    { user_id: "5", name: "E", profile_picture_url: "", role: "ATTENDANT", status: "REJECTED", via_group_id: null, via_group_name: null }
   ],
   group_participants: [],
   messages: []

@@ -5,10 +5,14 @@ interface Props {
   message: string;
   confirmText: string;
   confirmColor?: 'red' | 'purple' | 'green';
+  warnings?: string[];
+  loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  confirmColor: 'purple'
+  confirmColor: 'purple',
+  warnings: () => [],
+  loading: false
 });
 
 const emit = defineEmits<{
@@ -87,25 +91,32 @@ const confirm = () => {
       </div>
 
       <!-- Content -->
-      <div class="p-6">
+      <div class="p-6 space-y-4">
         <p class="text-gray-700 dark:text-gray-300">{{ message }}</p>
+        <div v-if="warnings?.length" class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <ul class="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside">
+            <li v-for="w in warnings" :key="w">{{ w }}</li>
+          </ul>
+        </div>
       </div>
 
       <!-- Footer -->
       <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 p-6 border-t border-gray-200 dark:border-neutral-700">
         <button
-            class="px-5 py-2.5 rounded-lg font-medium transition-all border-2 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
+            class="px-5 py-2.5 rounded-lg font-medium transition-all border-2 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="loading"
             @click="close"
         >
           Abbrechen
         </button>
 
         <button
-            class="px-5 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg flex items-center justify-center gap-2"
+            class="px-5 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             :class="getConfirmButtonClass()"
+            :disabled="loading"
             @click="confirm"
         >
-          <Icon :name="getConfirmIconName()" />
+          <Icon :name="loading ? 'lucide:loader-2' : getConfirmIconName()" :class="{ 'animate-spin': loading }" />
           <span>{{ confirmText }}</span>
         </button>
       </div>

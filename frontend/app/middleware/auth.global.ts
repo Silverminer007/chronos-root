@@ -4,7 +4,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const authStore = useAuthStore();
     const isLoggedIn = await authStore.checkSession();
     if (!isLoggedIn) {
-        if (to.path !== '/' && !to.path.startsWith('/public')) {
+        if (to.path !== '/' && !to.path.startsWith('/public') && !to.path.startsWith('/invite')) {
             return navigateTo('/');
         }
         return;
