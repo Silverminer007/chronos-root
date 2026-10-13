@@ -1,0 +1,93 @@
+version: '3.8'
+
+# Docker Compose for running Prometheus + Grafana locally
+# Run with: docker-compose -f docker-compose.prometheus.yml up
+#
+# This stack assumes the Chronos backend is running locally on localhost:8080
+# If backend is in Docker on the same network, update prometheus-config.yml to use service name
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployment/prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - chronos-perf
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deployment/grafana-dashboards:/etc/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - chronos-perf
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  chronos-perf:
+    driver: bridge
+
+# Usage Instructions:
+#
+# 1. Start the monitoring stack:
+#    docker-compose -f docker-compose.prometheus.yml up -d
+#
+# 2. Wait for services to start (10-15 seconds)
+#
+# 3. Start the Chronos backend (in another terminal):
+#    cd backend && ./mvnw quarkus:dev
+#
+# 4. Access services:
+#    - Prometheus: http://localhost:9090
+#    - Grafana: http://localhost:3000 (admin/admin)
+#
+# 5. In Grafana:
+#    - Data source should auto-connect to Prometheus (http://prometheus:9090)
+#    - Import dashboard: upload deployment/grafana-dashboards/java-backend-performance.json
+#
+# 6. Run load tests (in third terminal):
+#    ./load-tests/run-tests.sh realistic http://host.docker.internal:8080
+#    # Use host.docker.internal to reach backend from Docker container
+#    # Or if backend is on same Docker network: http://chronos-backend:8080
+#
+# 7. View metrics in Grafana dashboard
+#
+# Cleanup:
+#    docker-compose -f docker-compose.prometheus.yml down -v  # -v removes volumes
