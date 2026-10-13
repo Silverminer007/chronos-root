@@ -1,14 +1,14 @@
 use axum::{
     middleware,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use std::sync::Arc;
 
 use crate::appointments::handlers::{
     cancel_appointment, create_appointment, delete_appointment, get_appointment, list_appointments,
-    update_appointment, AppState,
+    remove_participant, update_appointment, AppState,
 };
 use crate::security::TokenValidator;
 
@@ -34,6 +34,10 @@ pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) ->
                 .delete(delete_appointment),
         )
         .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
+        .route(
+            "/api/v2/appointments/:id/participants/:userId",
+            delete(remove_participant),
+        )
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(
             validator.clone(),

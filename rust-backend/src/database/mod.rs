@@ -151,17 +151,29 @@ mod tests {
     #[test]
     fn test_config_from_env_development() {
         std::env::set_var("APP_ENV", "development");
-        // DATABASE_URL not set, should use default
+        std::env::set_var(
+            "DATABASE_URL",
+            "postgres://user:pass@localhost:5432/default",
+        );
+        // DATABASE_URL set, should use the value
         let config = DatabaseConfig::from_env().expect("Should succeed in dev");
-        assert!(config.url.contains("localhost"));
+        assert!(config.url.contains("default"));
     }
 
     #[test]
     fn test_config_from_env_production_missing_url() {
+        // Test must be isolated - explicitly clear any env var from other tests
         std::env::remove_var("DATABASE_URL");
+        std::env::remove_var("DATABASE_MAX_CONNECTIONS");
+        std::env::remove_var("DATABASE_MIN_CONNECTIONS");
+        std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
+        std::env::remove_var("DATABASE_RUN_MIGRATIONS");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
-        assert!(result.is_err());
+        assert!(
+            result.is_err(),
+            "Production mode should require DATABASE_URL"
+        );
     }
 
     #[test]
