@@ -6,8 +6,10 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 /// Participation status for an appointment
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "TEXT")]
+#[sqlx(rename_all = "UPPERCASE")]
 pub enum ParticipationStatus {
     Pending,
     Approved,
@@ -276,6 +278,13 @@ pub struct ParticipationResponse {
 /// Request to update participation status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateParticipationStatusRequest {
+    pub status: ParticipationStatus,
+}
+
+/// Response for GET /api/v2/appointments/:id/participation/status
+/// (matches Java AppointmentDto with only `status` set)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParticipationStatusResponse {
     pub status: ParticipationStatus,
 }
 
