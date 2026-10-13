@@ -128,15 +128,51 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/// Serialises tests that read or write process-wide environment variables (such as `DATABASE_URL`),
+/// because every test thread shares the same environment. `test_utils` is always compiled, so this is too.
+pub(crate) fn test_env_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, OnceLock};
 
-    /// `from_env` reads process-wide environment variables, so tests that touch them must not run concurrently.
-    fn env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
+    const ENV_VARS: &[&str] = &[
+        "APP_ENV",
+        "DATABASE_URL",
+        "DATABASE_MAX_CONNECTIONS",
+        "DATABASE_MIN_CONNECTIONS",
+        "DATABASE_ACQUIRE_TIMEOUT_SECS",
+        "DATABASE_RUN_MIGRATIONS",
+    ];
+
+    /// Restores the captured environment variables on drop, so one test cannot leak values into another
+    struct EnvRestore(Vec<(&'static str, Option<std::ffi::OsString>)>);
+
+    impl EnvRestore {
+        fn capture() -> Self {
+            Self(
+                ENV_VARS
+                    .iter()
+                    .map(|name| (*name, std::env::var_os(name)))
+                    .collect(),
+            )
+        }
+    }
+
+    impl Drop for EnvRestore {
+        fn drop(&mut self) {
+            for (name, value) in &self.0 {
+                match value {
+                    Some(value) => std::env::set_var(name, value),
+                    None => std::env::remove_var(name),
+                }
+            }
+        }
     }
 
     #[test]
@@ -157,7 +193,8 @@ mod tests {
 
     #[test]
     fn test_config_from_env_development() {
-        let _guard = env_lock().lock().unwrap();
+        let _guard = test_env_lock();
+        let _env = EnvRestore::capture();
         std::env::set_var("APP_ENV", "development");
         // DATABASE_URL not set, should use default
         let config = DatabaseConfig::from_env().expect("Should succeed in dev");
@@ -166,7 +203,8 @@ mod tests {
 
     #[test]
     fn test_config_from_env_production_missing_url() {
-        let _guard = env_lock().lock().unwrap();
+        let _guard = test_env_lock();
+        let _env = EnvRestore::capture();
         std::env::remove_var("DATABASE_URL");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
@@ -175,7 +213,8 @@ mod tests {
 
     #[test]
     fn test_config_from_env_respects_overrides() {
-        let _guard = env_lock().lock().unwrap();
+        let _guard = test_env_lock();
+        let _env = EnvRestore::capture();
         std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
         std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
         std::env::set_var("DATABASE_MIN_CONNECTIONS", "4");
