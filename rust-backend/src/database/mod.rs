@@ -135,6 +135,10 @@ mod tests {
 
     /// Serialises tests that mutate process-wide environment variables.
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+    use std::sync::Mutex;
+
+    /// Serialises tests that mutate process-wide environment variables.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_default_config() {
@@ -165,6 +169,7 @@ mod tests {
     #[test]
     fn test_config_from_env_production_missing_url() {
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::remove_var("DATABASE_URL");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
@@ -173,6 +178,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_respects_overrides() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
         std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
