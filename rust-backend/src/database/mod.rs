@@ -131,6 +131,13 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), Box<dyn std::error::Err
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    /// `from_env` reads process-wide environment variables, so tests that touch them must not run concurrently.
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     #[test]
     fn test_default_config() {
@@ -150,6 +157,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_development() {
+        let _guard = env_lock().lock().unwrap();
         std::env::set_var("APP_ENV", "development");
         // DATABASE_URL not set, should use default
         let config = DatabaseConfig::from_env().expect("Should succeed in dev");
@@ -158,6 +166,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_production_missing_url() {
+        let _guard = env_lock().lock().unwrap();
         std::env::remove_var("DATABASE_URL");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
@@ -166,6 +175,7 @@ mod tests {
 
     #[test]
     fn test_config_from_env_respects_overrides() {
+        let _guard = env_lock().lock().unwrap();
         std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
         std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
         std::env::set_var("DATABASE_MIN_CONNECTIONS", "4");

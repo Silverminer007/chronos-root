@@ -9,7 +9,10 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::appointments::{
-    models::{AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    models::{
+        AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest,
+        UpdateAppointmentRequest, UserRole,
+    },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -289,7 +292,12 @@ pub async fn add_participant(
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
-        .add_participant(appointment_id, target_user_id, acting_user_id, &request.user_role.to_string())
+        .add_participant(
+            appointment_id,
+            target_user_id,
+            acting_user_id,
+            &request.user_role.to_string(),
+        )
         .await
         .map_err(AppointmentError::from)?;
 

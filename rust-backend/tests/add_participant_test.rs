@@ -46,7 +46,10 @@ mod add_participant_tests {
 
         // Create appointment with creator as responsible
         let appointment_id = fixtures
-            .create_appointment(creator_id, &AppointmentFixture::new().with_title("Team Meeting"))
+            .create_appointment(
+                creator_id,
+                &AppointmentFixture::new().with_title("Team Meeting"),
+            )
             .await
             .expect("Failed to create appointment");
 
@@ -149,7 +152,7 @@ mod add_participant_tests {
         // Helper (with HELPER role) should not be able to add participants
         // This will be verified at the handler level with proper authorization
         let helper_role: String = sqlx::query_scalar(
-            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
         )
         .bind(appointment_id)
         .bind(non_responsible_user_id)
@@ -192,8 +195,8 @@ mod add_participant_tests {
             .expect("Failed to add participant first time");
 
         // Try to add again - should fail due to UNIQUE constraint
-        let result = add_participant_with_role(db.pool(), appointment_id, participant_id, "HELPER")
-            .await;
+        let result =
+            add_participant_with_role(db.pool(), appointment_id, participant_id, "HELPER").await;
 
         // Should fail with database constraint error
         assert!(result.is_err());

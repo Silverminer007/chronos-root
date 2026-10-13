@@ -51,7 +51,10 @@ impl AppointmentRepository {
 
     /// Find an appointment by its ID without filtering by status
     /// Used for operations that should work on any appointment regardless of status (e.g., adding participants)
-    pub async fn find_by_id_any_status(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+    pub async fn find_by_id_any_status(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(&format!(
             "SELECT {} FROM appointments WHERE id = $1",
             APPOINTMENT_COLUMNS
@@ -120,6 +123,7 @@ impl AppointmentRepository {
     }
 
     /// Create a new appointment
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         title: String,
@@ -156,6 +160,7 @@ impl AppointmentRepository {
     }
 
     /// Update an appointment
+    #[allow(clippy::too_many_arguments)]
     pub async fn update(
         &self,
         id: Uuid,
