@@ -3,8 +3,11 @@ FROM rust:1.98.1 as builder
 
 WORKDIR /build
 
-# Add musl target for static linking
-RUN rustup target add x86_64-unknown-linux-musl
+# Add musl target and the musl C toolchain (provides x86_64-linux-musl-gcc for crates with C code, e.g. ring)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends musl-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && rustup target add x86_64-unknown-linux-musl
 
 # Copy the project files
 COPY Cargo.* ./
