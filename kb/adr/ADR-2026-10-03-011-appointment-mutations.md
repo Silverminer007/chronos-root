@@ -57,7 +57,7 @@ Add `status` column with three values:
 - `CANCELLED`: set by `POST /api/v2/appointments/{id}/cancel` (soft delete)
 - `DELETED`: set by `DELETE /api/v2/appointments/{id}` (soft delete)
 
-No rows are ever removed from the database. Query filters exclude CANCELLED and DELETED from list endpoints and read endpoints.
+No rows are ever removed from the database. Query filters exclude CANCELLED and DELETED from list endpoints and read endpoints. Exception: `GET /api/v2/appointments/{id}/participation/status` returns the caller's status for CANCELLED and DELETED appointments, matching Java; see [ADR-2026-10-13-013](ADR-2026-10-13-013-participation-status-endpoint.md).
 
 ### 5. Creator Participation: Auto-Join via Event
 
