@@ -59,8 +59,8 @@ fn assert_same(what: &str, actual: &BTreeSet<String>, expected: &BTreeSet<String
 
 #[tokio::test]
 async fn rust_migrations_produce_the_java_schema() -> Result<(), AnyError> {
-    let container = Postgres::default().start().await;
-    let port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let port = container.get_host_port_ipv4(5432).await?;
     let pool = connect(port, "postgres").await?;
 
     // Applies ALL migrations to an empty database; fails if any of them does not apply.
@@ -103,8 +103,8 @@ async fn checked_in_snapshot_matches_java_flyway_migrations() -> Result<(), AnyE
         dir.display()
     );
 
-    let container = Postgres::default().start().await;
-    let port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let port = container.get_host_port_ipv4(5432).await?;
     let pool = connect(port, "postgres").await?;
     for file in files {
         let sql = std::fs::read_to_string(&file)?;
@@ -141,8 +141,8 @@ fn baseline_is_the_only_schema_migration_and_rust_only_tables_are_separate() {
 
 #[tokio::test]
 async fn ids_are_bigint_and_users_are_oidc_strings() -> Result<(), AnyError> {
-    let container = Postgres::default().start().await;
-    let port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let port = container.get_host_port_ipv4(5432).await?;
     let pool = connect(port, "postgres").await?;
     sqlx::migrate!("./migrations").run(&pool).await?;
 

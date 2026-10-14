@@ -8,7 +8,10 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::appointments::{
-    models::{AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest, UserRole},
+    models::{
+        AppointmentResponse, CreateAppointmentRequest, ParticipationStatusResponse,
+        UpdateAppointmentRequest, UserRole,
+    },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
@@ -58,6 +61,24 @@ pub async fn get_appointment(
 
     let response: AppointmentResponse = appointment.into();
     Ok(Json(response))
+}
+
+/// GET /api/v2/appointments/:id/participation/status - Current user's participation status
+/// Always 200 OK; PENDING when the user has no participation row (matches Java backend)
+pub async fn get_participation_status(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    let status = service
+        .get_participation_status(id, principal.user_id())
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(Json(ParticipationStatusResponse { status }))
 }
 
 /// GET /api/v2/appointments - List appointments with pagination
