@@ -73,4 +73,5 @@ Match the Java backend exactly:
 ### Tests
 
 - `rust-backend/tests/appointment_participation_status_test.rs` covers APPROVED, REJECTED, PENDING, another user's status not being returned, non-participant (PENDING), unknown appointment (PENDING), and cancelled and deleted appointments (participant status returned).
-- The tests build a router containing the handler and inject the principal directly, because the production auth middleware needs a live Keycloak JWKS. Route registration in `build_router` is covered by compilation and by the existing auth middleware, not by these tests.
+- Most tests build a router containing the handler and inject the principal directly. They check the response per status, not the production route or middleware.
+- Two tests go through `build_router`, so route registration and the auth middleware are exercised: an authenticated caller gets `200` with its status, and a request without a token gets `401`. They use a local mock JWKS endpoint and a test-only RS256 key (`rust-backend/tests/fixtures/rs256_test_key.pem`), so no live Keycloak is needed.

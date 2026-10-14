@@ -11,14 +11,22 @@ use axum::{
     http::StatusCode,
     middleware::{self, Next},
     routing::get,
-    Router,
+    Json, Router,
 };
+use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::{get_participation_status, AppState};
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
-use chronos_date_api::security::PrincipalContext;
+use chronos_date_api::security::{PrincipalContext, TokenValidator};
 use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
+use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use std::sync::Arc;
 use tower::Service;
+
+/// Test-only RSA key pair. The public half is served from a local mock JWKS endpoint.
+const TEST_PRIVATE_KEY_PEM: &str = include_str!("fixtures/rs256_test_key.pem");
+const TEST_JWK_KID: &str = "participation-status-test";
+const TEST_JWK_MODULUS: &str = "915TXanmgE10B-CUnu4gKx24VaNysPwL0PTTu59SiJ9PEwRL2NHdx44BC_G0_vACwXOtrFhE6oLHpezfZnNb2NwM8Jcxh1XWNRRjuzBwEWtfcbb27U0cHnjwSu7gMoWVAuUq0Uj1j2vI1GBdFGJSoZpdFrIwiuvpo5hu5kWJYbu-kYKFxzdPmaQoVTGryxecwZCndLSOoY2Lal36BvFtnknGj_i32P1ll4lND7l3yYpdjGOuEXfrfUX9PkPfCHmK2_vAFnA1b54uW0xoDIfZbP6cS0BIaEZsq-0xqOIMdr1Jj3l-tSlhtJxairnmH02eujLRA1abGtTUc4jI7-p8sw";
+const TEST_JWK_EXPONENT: &str = "AQAB";
 
 /// Builds a router with the status route, authenticated as `user_id`.
 ///
@@ -249,4 +257,107 @@ async fn test_deleted_appointment_still_returns_participant_status() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "REJECTED" }));
+}
+
+/// Starts a local mock Keycloak JWKS endpoint and returns the realm URL the validator should use.
+async fn start_mock_keycloak() -> String {
+    let jwks = serde_json::json!({
+        "keys": [{
+            "kid": TEST_JWK_KID,
+            "kty": "RSA",
+            "n": TEST_JWK_MODULUS,
+            "e": TEST_JWK_EXPONENT,
+        }]
+    });
+    let app = Router::new().route(
+        "/realms/chronos/protocol/openid-connect/certs",
+        get(move || {
+            let jwks = jwks.clone();
+            async move { Json(jwks) }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("Failed to bind mock Keycloak");
+    let addr = listener
+        .local_addr()
+        .expect("Failed to read mock Keycloak address");
+    tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("Mock Keycloak server failed")
+    });
+    format!("http://{}/realms/chronos", addr)
+}
+
+/// Signs an RS256 access token for `user_id` that the mock JWKS endpoint can verify
+fn sign_token(user_id: &str) -> String {
+    let now = chrono::Utc::now().timestamp();
+    let claims = serde_json::json!({ "sub": user_id, "iat": now, "exp": now + 3600 });
+    let mut header = Header::new(Algorithm::RS256);
+    header.kid = Some(TEST_JWK_KID.to_string());
+    let key = EncodingKey::from_rsa_pem(TEST_PRIVATE_KEY_PEM.as_bytes())
+        .expect("Invalid test private key");
+    encode(&header, &claims, &key).expect("Failed to sign test token")
+}
+
+#[tokio::test]
+async fn test_status_route_via_build_router_returns_200_for_authenticated_user() {
+    let db = TestDb::new()
+        .await
+        .expect("Failed to initialize test database");
+    let (_creator, appointment_id) = setup_appointment(&db, "router_creator").await;
+    let user_id = add_user_with_status(&db, "router_user", appointment_id, "APPROVED").await;
+
+    let state = Arc::new(AppState {
+        db_pool: db.pool().clone(),
+        event_publisher: Arc::new(PostgresEventBus::new(db.pool().clone())),
+    });
+    let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
+    let mut router = build_router(state, validator);
+
+    let request = http::Request::builder()
+        .uri(format!(
+            "/api/v2/appointments/{}/participation/status",
+            appointment_id
+        ))
+        .method("GET")
+        .header("authorization", format!("Bearer {}", sign_token(&user_id)))
+        .body(Body::empty())
+        .expect("Failed to build request");
+
+    let response = router.call(request).await.expect("Router call failed");
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("Failed to read body");
+    let body: serde_json::Value = serde_json::from_slice(&bytes).expect("Body is not JSON");
+    assert_eq!(body, serde_json::json!({ "status": "APPROVED" }));
+}
+
+#[tokio::test]
+async fn test_status_route_via_build_router_rejects_missing_token() {
+    let db = TestDb::new()
+        .await
+        .expect("Failed to initialize test database");
+    let (_creator, appointment_id) = setup_appointment(&db, "router_anon_creator").await;
+
+    let state = Arc::new(AppState {
+        db_pool: db.pool().clone(),
+        event_publisher: Arc::new(PostgresEventBus::new(db.pool().clone())),
+    });
+    let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
+    let mut router = build_router(state, validator);
+
+    let request = http::Request::builder()
+        .uri(format!(
+            "/api/v2/appointments/{}/participation/status",
+            appointment_id
+        ))
+        .method("GET")
+        .body(Body::empty())
+        .expect("Failed to build request");
+
+    let response = router.call(request).await.expect("Router call failed");
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
