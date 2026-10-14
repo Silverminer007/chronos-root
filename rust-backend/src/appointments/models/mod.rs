@@ -58,7 +58,10 @@ impl sqlx::Type<sqlx::Postgres> for AppointmentStatus {
 }
 
 impl<'q> sqlx::Encode<'q, sqlx::Postgres> for AppointmentStatus {
-    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> sqlx::encode::IsNull {
+    fn encode_by_ref(
+        &self,
+        buf: &mut sqlx::postgres::PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <i16 as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.ordinal(), buf)
     }
 }
