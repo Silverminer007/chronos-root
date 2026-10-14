@@ -1,5 +1,5 @@
 ---
-title: ADR-2026-10-13-013: Participation status endpoint (Java parity)
+title: ADR-2026-10-14-016: Participation status endpoint (Java parity)
 date: 2026-10-13
 status: Accepted
 supercedes: (none)
