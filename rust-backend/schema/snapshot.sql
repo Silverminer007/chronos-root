@@ -1,6 +1,6 @@
 -- Canonical description of the shared schema, one line per table, column,
 -- constraint, index and sequence, sorted. Used to compare the Rust schema with the
--- schema the Java Flyway migrations produce (see kb/adr/0013-rust-schema-identical-to-java.md).
+-- schema the Java Flyway migrations produce (see kb/adr/ADR-2026-10-12-014-rust-schema-identical-to-java.md).
 --
 -- Left out on purpose:
 --   * Rust-only tables (events, _sqlx_migrations)

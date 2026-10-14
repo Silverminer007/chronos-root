@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_principal_context_accepts_non_uuid_subjects() {
-        // OIDC subjects are opaque strings (ADR 0013)
+        // OIDC subjects are opaque strings (ADR-2026-10-12-014)
         let principal = PrincipalContext::new("keycloak|user-42");
         assert_eq!(principal.user_id(), "keycloak|user-42");
     }

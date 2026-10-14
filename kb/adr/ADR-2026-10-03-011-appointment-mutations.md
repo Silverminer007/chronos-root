@@ -3,11 +3,11 @@ title: ADR-2026-10-03-011: Appointment mutations (create/edit/delete/move)
 date: 2026-10-03
 status: Accepted
 supercedes: (none)
-superceded_by: (partially) [ADR 0013](0013-rust-schema-identical-to-java.md) — sections 4 and 5, the "Event Firing Pattern" and "DTO Field Mapping" examples
+superceded_by: (partially) [ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md) — sections 4 and 5, the "Event Firing Pattern" and "DTO Field Mapping" examples
 ---
 
-> **Partially superseded by [ADR 0013](0013-rust-schema-identical-to-java.md)** (issue #95). Where this
-> document conflicts with ADR 0013, ADR 0013 wins. Superseded parts are marked "Superseded" below:
+> **Partially superseded by [ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md)** (issue #95). Where this
+> document conflicts with ADR-2026-10-12-014, ADR-2026-10-12-014 wins. Superseded parts are marked "Superseded" below:
 > section 4 (status values/storage), section 5 (creator participation), the *Event Firing Pattern* and
 > the *DTO Field Mapping* example. Everything else (field naming, ISO-8601, validation, role checks other
 > than "creator only", event list) still applies.
@@ -58,7 +58,7 @@ Omit null fields via `#[serde(skip_serializing_if = "Option::is_none")]` matchin
 
 ### 4. Status Field: PLANNED/CANCELLED/DELETED
 
-> **Superseded in part by ADR 0013 (decision 5):** the status is stored as a `SMALLINT` ordinal like in Java (`PLANNED=0, CANCELLED=1, DELETED=2, NOT_ENOUGH_ATTENDEES=3`); `NOT_ENOUGH_ATTENDEES` is a fourth value. JSON still shows the enum name.
+> **Superseded in part by ADR-2026-10-12-014 (decision 5):** the status is stored as a `SMALLINT` ordinal like in Java (`PLANNED=0, CANCELLED=1, DELETED=2, NOT_ENOUGH_ATTENDEES=3`); `NOT_ENOUGH_ATTENDEES` is a fourth value. JSON still shows the enum name.
 
 Add `status` column with three values:
 - `PLANNED`: default on creation
@@ -69,7 +69,7 @@ No rows are ever removed from the database. Query filters exclude CANCELLED and 
 
 ### 5. Creator Participation: Auto-Join via Event
 
-> **Superseded by ADR 0013 (Consequences, "No creator column"):** the creator's `RESPONSIBLE` participation is inserted in the **same transaction** as the appointment, not after commit by an event handler. There is no `creator_id` column; authorization uses the `RESPONSIBLE` participation. The `AppointmentCreatedEvent` listener is only a redundant, idempotent safeguard (see ADR 0013). The text below is kept for history.
+> **Superseded by ADR-2026-10-12-014 (Consequences, "No creator column"):** the creator's `RESPONSIBLE` participation is inserted in the **same transaction** as the appointment, not after commit by an event handler. There is no `creator_id` column; authorization uses the `RESPONSIBLE` participation. The `AppointmentCreatedEvent` listener is only a redundant, idempotent safeguard (see ADR-2026-10-12-014). The text below is kept for history.
 
 Creating an appointment automatically makes the creator a RESPONSIBLE participant.
 
@@ -177,7 +177,7 @@ fn validate(&self, req: &CreateAppointmentRequest) -> Result<(), ValidationError
 
 ### Event Firing Pattern
 
-> **Superseded in part by ADR 0013:** the creator participation is persisted in the create transaction; `appointment_id` is an `i64` (JSON number) and the event still carries `creator_id` (the OIDC subject, a `String`) for consumers. Only the post-commit event publication shown here remains valid.
+> **Superseded in part by ADR-2026-10-12-014:** the creator participation is persisted in the create transaction; `appointment_id` is an `i64` (JSON number) and the event still carries `creator_id` (the OIDC subject, a `String`) for consumers. Only the post-commit event publication shown here remains valid.
 
 ```rust
 // Create appointment in transaction
@@ -195,7 +195,7 @@ Ok(appointment)
 
 ### DTO Field Mapping
 
-> **Superseded in part by ADR 0013:** `id` is an `i64` (JSON number), not `String`; user ids are OIDC subject strings; `status` is `PLANNED`/`CANCELLED`/`DELETED`/`NOT_ENOUGH_ATTENDEES`.
+> **Superseded in part by ADR-2026-10-12-014:** `id` is an `i64` (JSON number), not `String`; user ids are OIDC subject strings; `status` is `PLANNED`/`CANCELLED`/`DELETED`/`NOT_ENOUGH_ATTENDEES`.
 
 ```rust
 #[derive(Serialize, Deserialize)]
@@ -250,4 +250,4 @@ event_bus.publish(AppointmentEditedEvent { ... });
 
 - [ADR-2026-10-03-010: Event bus trait split](#) — fire-and-forget events after commit
 - Frontend code: `frontend/app/stores/appointments.ts` (calls PATCH/DELETE endpoints)
-- Database schema: `status`/`minimal_attendees` are part of the Java-compatible baseline `rust-backend/migrations/001_baseline.sql` (`appointment.status` SMALLINT ordinal, `minimalattendees`), see [ADR 0013](0013-rust-schema-identical-to-java.md); the separate `006` ALTER migration was removed
+- Database schema: `status`/`minimal_attendees` are part of the Java-compatible baseline `rust-backend/migrations/001_baseline.sql` (`appointment.status` SMALLINT ordinal, `minimalattendees`), see [ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md); the separate `006` ALTER migration was removed

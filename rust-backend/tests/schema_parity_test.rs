@@ -1,5 +1,5 @@
 //! The Rust schema must be identical to the final schema of the Java Flyway migrations
-//! (ADR 0013). Both sides are described by `schema/snapshot.sql`; the Java side is a
+//! (ADR-2026-10-12-014). Both sides are described by `schema/snapshot.sql`; the Java side is a
 //! checked-in snapshot (`schema/java_schema_expected.txt`) that is itself re-derived from the
 //! Flyway SQL files in `../backend` by one of the tests below, so it cannot drift.
 //!

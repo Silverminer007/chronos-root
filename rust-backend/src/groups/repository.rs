@@ -1,7 +1,7 @@
 use crate::groups::models::{Friendship, Group, GroupMember};
 use sqlx::PgPool;
 
-// Columns of the Java-compatible tables, aliased to the field names of the models (ADR 0013).
+// Columns of the Java-compatible tables, aliased to the field names of the models (ADR-2026-10-12-014).
 // Ids come from the `<table>_seq` sequences, users are OIDC subjects (`*_oidcid`).
 const GROUP_COLUMNS: &str = "id, groupname AS name, owner_oidcid AS owner_id";
 const MEMBER_COLUMNS: &str = "id, group_id, user_oidcid AS user_id";

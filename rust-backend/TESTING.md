@@ -326,7 +326,7 @@ Migrations are automatically run when a test database is created. Migration file
 
 ```
 rust-backend/migrations/
-├── 001_baseline.sql               # Final Java schema (ADR 0013)
+├── 001_baseline.sql               # Final Java schema (ADR-2026-10-12-014)
 └── 002_create_events_table.sql    # Event bus table (Rust-only)
 ```
 
@@ -423,5 +423,5 @@ db.rollback_all().await?;
 
 `tests/schema_parity_test.rs` (not ignored, needs Docker) applies all migrations to an empty
 PostgreSQL and compares the result with `schema/java_schema_expected.txt`, the schema of the Java
-Flyway migrations (ADR 0013). After a change of the Java schema run
+Flyway migrations (ADR-2026-10-12-014). After a change of the Java schema run
 `scripts/regenerate-java-schema.sh` and add a matching Rust migration.

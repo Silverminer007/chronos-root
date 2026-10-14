@@ -1,7 +1,7 @@
 /// Integration tests for appointment authorization and filtering
 ///
 /// The Java-compatible schema has no creator column: the creator of an appointment is its
-/// RESPONSIBLE participant (ADR 0013).
+/// RESPONSIBLE participant (ADR-2026-10-12-014).
 #[cfg(test)]
 mod appointment_auth_tests {
     use chronos_date_api::appointments::repository::AppointmentRepository;

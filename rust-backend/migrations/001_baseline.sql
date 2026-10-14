@@ -1,5 +1,5 @@
 -- Baseline: the final schema of the Java backend (Flyway V1.0.0 ... V2.1.0), see
--- kb/adr/0013-rust-schema-identical-to-java.md.
+-- kb/adr/ADR-2026-10-12-014-rust-schema-identical-to-java.md.
 --
 -- Ids are BIGINT. Tables without a column default take their ids from the matching
 -- <table>_seq sequence (INCREMENT BY 50, as Hibernate does); the tables that Java created

@@ -1,9 +1,12 @@
-# ADR 0013: Rust database schema identical to the Java schema
+---
+title: ADR-2026-10-12-014: Rust database schema identical to the Java schema
+date: 2026-10-12
+status: Accepted
+supercedes: 0011-user-id-uuid-in-principal.md (user id as `Uuid`) and the migration layout of 0012-rust-backend-configuration-and-migrations.md (`001`–`008`)
+superceded_by: (none)
+---
 
-**Date:** 2026-10-12  
-**Status:** Accepted  
-**Issue:** #95 — Rust: database schema identical to the Java schema (bigint ids, OIDC user ids)  
-**Supersedes:** [ADR 0011](0011-user-id-uuid-in-principal.md) (user id as `Uuid`) and the migration layout of [ADR 0012](0012-rust-backend-configuration-and-migrations.md) (`001`–`008`)
+**Issue:** #95 — Rust: database schema identical to the Java schema (bigint ids, OIDC user ids)
 
 ## Context
 

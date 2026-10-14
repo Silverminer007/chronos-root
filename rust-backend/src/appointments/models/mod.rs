@@ -15,7 +15,7 @@ pub enum ParticipationStatus {
 
 /// Status of an appointment
 ///
-/// Stored as `SMALLINT` holding the ordinal of the Java enum (`appointment.status`, ADR 0013),
+/// Stored as `SMALLINT` holding the ordinal of the Java enum (`appointment.status`, ADR-2026-10-12-014),
 /// serialized as the enum name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]

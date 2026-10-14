@@ -1,5 +1,5 @@
 //! Users are identified by their OIDC subject; their profile is cached in `user_profiles`
-//! (ADR 0013). There is no `users` table.
+//! (ADR-2026-10-12-014). There is no `users` table.
 
 pub use crate::appointments::models::UserProfile;
 
