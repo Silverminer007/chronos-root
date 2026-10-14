@@ -66,9 +66,11 @@ Implement **9 separate CI jobs**, each responsible for one quality gate. Jobs ru
    - Validates Dockerfile builds successfully
    - Catches Rust build failures before merge
    - Uses docker/build-push-action for caching
+   - Build prerequisites (musl-tools, perl, make, vendored OpenSSL, CA bundle in the scratch image) are defined in `ADR-2026-10-13-013-vendored-openssl-musl-image.md`
 
 9. **build** (release) — `cargo build --release --target x86_64-unknown-linux-musl --locked`
    - Full release build for `main` and `develop` branches
+   - Needs `musl-tools`, `perl` and `make` for the vendored OpenSSL (see `ADR-2026-10-13-013-vendored-openssl-musl-image.md`)
    - Depends on all 8 quality gates
    - Pushes image to GHCR if all gates pass
 

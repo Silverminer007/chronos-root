@@ -158,59 +158,49 @@ impl EventBus for PostgresEventBus {}
 mod tests {
     use super::*;
 
-    async fn create_test_pool() -> Result<PgPool, sqlx::Error> {
-        let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://chronos:chronos@localhost:5432/chronos".to_string());
-
-        sqlx::postgres::PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&database_url)
-            .await
-    }
+    use crate::test_utils::db::TestDb;
 
     #[tokio::test]
     #[ignore]
     async fn test_event_bus_creation() {
-        if let Ok(pool) = create_test_pool().await {
-            let bus = PostgresEventBus::new(pool);
-            // Event bus created successfully with valid pool
-            assert!(!bus.pool.is_closed());
-        }
+        let db = TestDb::new().await.expect("Failed to create test database");
+        let bus = PostgresEventBus::new(db.pool().clone());
+        // Event bus created successfully with valid pool
+        assert!(!bus.pool.is_closed());
     }
 
     #[tokio::test]
     #[ignore]
     async fn test_fire_event() {
-        if let Ok(pool) = create_test_pool().await {
-            let bus = PostgresEventBus::new(pool);
-            let event = Event::new("test_event", serde_json::json!({"data": "test"}));
-            let result = bus.fire(event).await;
-            assert!(result.is_ok(), "Failed to fire event: {:?}", result);
-        }
+        let db = TestDb::new().await.expect("Failed to create test database");
+        let bus = PostgresEventBus::new(db.pool().clone());
+        let event = Event::new("test_event", serde_json::json!({"data": "test"}));
+        let result = bus.fire(event).await;
+        assert!(result.is_ok(), "Failed to fire event: {:?}", result);
     }
 
     #[tokio::test]
     #[ignore]
     async fn test_event_persistence() {
-        if let Ok(pool) = create_test_pool().await {
-            let bus = PostgresEventBus::new(pool.clone());
-            let event = Event::new("persistence_test", serde_json::json!({"id": 123}));
-            let event_id = event.id.clone();
+        let db = TestDb::new().await.expect("Failed to create test database");
+        let pool = db.pool().clone();
+        let bus = PostgresEventBus::new(pool.clone());
+        let event = Event::new("persistence_test", serde_json::json!({"id": 123}));
+        let event_id = event.id.clone();
 
-            bus.fire(event).await.expect("Failed to fire event");
+        bus.fire(event).await.expect("Failed to fire event");
 
-            // Query the events table to verify persistence
-            let result = sqlx::query_as::<_, (String, String)>(
-                "SELECT id, event_type FROM events WHERE id = $1",
-            )
-            .bind(&event_id)
-            .fetch_one(&pool)
-            .await;
+        // Query the events table to verify persistence
+        let result = sqlx::query_as::<_, (String, String)>(
+            "SELECT id, event_type FROM events WHERE id = $1",
+        )
+        .bind(&event_id)
+        .fetch_one(&pool)
+        .await;
 
-            assert!(result.is_ok());
-            let (id, event_type) = result.unwrap();
-            assert_eq!(id, event_id);
-            assert_eq!(event_type, "persistence_test");
-        }
+        assert!(result.is_ok());
+        let (id, event_type) = result.unwrap();
+        assert_eq!(id, event_id);
+        assert_eq!(event_type, "persistence_test");
     }
 }

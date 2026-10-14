@@ -33,10 +33,8 @@ impl TestDb {
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
         info!("Connecting to PostgreSQL test database");
 
-        // Base URL of a PostgreSQL server (without database name): TEST_DATABASE_URL, then
-        // DATABASE_URL, then a local default. Every TestDb gets its own freshly migrated database.
+        // Use TEST_DATABASE_URL env var (distinct from DATABASE_URL, which config tests mutate) or default to testcontainers postgres
         let base_url = std::env::var("TEST_DATABASE_URL")
-            .or_else(|_| std::env::var("DATABASE_URL"))
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string());
 
         // Create a unique database name for this test

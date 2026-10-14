@@ -119,9 +119,9 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    #[allow(clippy::too_many_arguments)]
     /// Create a new appointment; the creator becomes its RESPONSIBLE participant in the same
     /// transaction (the Java schema has no creator column).
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         name: String,

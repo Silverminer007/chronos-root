@@ -63,8 +63,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16
         env:
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
@@ -84,15 +85,17 @@ jobs:
       - name: Run integration tests
         run: cargo test --test '*' --locked -- --include-ignored
         env:
-          TESTCONTAINERS_RYUK_DISABLED: "true"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          TESTCONTAINERS_RYUK_DISABLED: "true"
 
   coverage:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16
         env:
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
@@ -114,8 +117,9 @@ jobs:
       - name: Generate coverage (unit + integration tests)
         run: cargo llvm-cov --all-targets --all-features --workspace --locked --output-path lcov.info -- --include-ignored
         env:
-          TESTCONTAINERS_RYUK_DISABLED: "true"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          TESTCONTAINERS_RYUK_DISABLED: "true"
       - name: Report coverage summary
         run: |
           cargo llvm-cov report --output-path coverage-report.txt
@@ -128,12 +132,10 @@ jobs:
       - name: Enforce coverage threshold
         run: |
           # Extract line coverage and enforce ratchet (rounded down to nearest 5, min 40%)
-          # Line coverage is the 10th column of the TOTAL row of the llvm-cov report
-          COVERAGE=$(awk '/^TOTAL/ {gsub("%", "", $10); print $10}' coverage-report.txt)
-          if [ -z "$COVERAGE" ]; then COVERAGE=0; fi
+          COVERAGE=$(cargo llvm-cov report --json --summary-only | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["totals"]["lines"]["percent"])')
           THRESHOLD=$(awk "BEGIN {t = int($COVERAGE / 5) * 5; print (t < 40 ? 40 : t)}")
           echo "Coverage: $COVERAGE%, Threshold: $THRESHOLD%" | tee -a $GITHUB_STEP_SUMMARY
-          (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )) || exit 1
+          awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}" || exit 1
 
   deny:
     runs-on: ubuntu-latest
@@ -251,6 +253,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust-backend
+      - name: Install musl toolchain for vendored OpenSSL
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends musl-tools perl make
       - name: Build release binary
         run: cargo build --release --target x86_64-unknown-linux-musl --locked
       - name: Log in to GHCR
