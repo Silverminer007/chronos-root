@@ -324,8 +324,8 @@ Migrations are automatically run when a test database is created. Migration file
 
 ```
 rust-backend/migrations/
-├── 001_initial_schema.sql    # Schema definition
-└── ...
+├── 001_baseline.sql               # Final Java schema (ADR 0013)
+└── 002_create_events_table.sql    # Event bus table (Rust-only)
 ```
 
 The `TestDb` initializer:
