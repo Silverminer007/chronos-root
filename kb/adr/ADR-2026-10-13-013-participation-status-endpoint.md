@@ -44,7 +44,7 @@ Match the Java backend exactly:
 ### 5. Storage mapping
 
 - `appointment_participation.status` is `VARCHAR(255)`. `ParticipationStatus` derives `sqlx::Type` with `type_name = "TEXT"` and `UPPERCASE`.
-- `UserRole` uses `type_name = "VARCHAR"` and is read uncast. `ParticipationStatus` differs: its derived type is compatible only with the `TEXT` OID (sqlx's default `compatible` is `*ty == Self::type_info()`), so the query selects `status::TEXT`. Without the cast, sqlx rejects the `VARCHAR` column at runtime with a mismatched-type error.
+- `UserRole` uses `type_name = "VARCHAR"`, which matches the `VARCHAR` column, so `get_participant_role` reads `role` uncast. `ParticipationStatus` differs: its derived type is compatible only with the `TEXT` OID (sqlx's default `compatible` is `*ty == Self::type_info()`), so `find_participation_status` must select `status::TEXT`. Without that cast, sqlx rejects the `VARCHAR` column at runtime with a mismatched-type error (verified: with the cast removed, 7 of 10 tests in `appointment_participation_status_test` fail with `TEXT is not compatible with SQL type VARCHAR`).
 - `AppointmentStatus` is not sqlx-derived. It is a hand-written `SMALLINT` mapping and reads through `COALESCE(status, 0)::smallint`, so it is unrelated to this cast.
 
 ### Layering
