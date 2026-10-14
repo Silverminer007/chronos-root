@@ -1,7 +1,7 @@
 // Handler functions for push_notifications
 pub mod event_listener;
 
-use crate::event_bus::Event;
+use crate::event_bus::{appointment_id_from, Event};
 use crate::push_notifications::models::NotificationPayload;
 use crate::push_notifications::repository::PushSubscriptionRepository;
 use crate::push_notifications::PushNotificationService;
@@ -9,15 +9,6 @@ use std::sync::Arc;
 use tracing::{error, info, warn};
 
 pub use event_listener::{event_types, PushNotificationEventListener};
-
-/// Event payloads carry appointment ids as JSON numbers; older senders used strings.
-fn appointment_id_from(payload: &serde_json::Value) -> Option<String> {
-    let value = payload.get("appointment_id")?;
-    value
-        .as_i64()
-        .map(|n| n.to_string())
-        .or_else(|| value.as_str().map(str::to_string))
-}
 
 /// Participant ids are OIDC subjects (strings)
 fn participant_ids_from(payload: &serde_json::Value) -> Vec<String> {
@@ -57,8 +48,9 @@ impl AppointmentEventHandler {
         info!("Handling appointment created event: {}", event.id);
 
         // Extract appointment data from event payload
-        let appointment_id =
-            appointment_id_from(&event.payload).ok_or("Missing appointment_id in event payload")?;
+        let appointment_id = appointment_id_from(&event.payload)
+            .map(|id| id.to_string())
+            .ok_or("Missing appointment_id in event payload")?;
 
         let title = event
             .payload
@@ -124,7 +116,9 @@ impl AppointmentEventHandler {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Handling appointment updated event: {}", event.id);
 
-        let appointment_id = appointment_id_from(&event.payload).ok_or("Missing appointment_id")?;
+        let appointment_id = appointment_id_from(&event.payload)
+            .map(|id| id.to_string())
+            .ok_or("Missing appointment_id")?;
 
         let title = event
             .payload
@@ -252,19 +246,6 @@ mod tests {
 
         assert_eq!(payload.title, "Test Termin");
         assert_eq!(payload.body, "Test Beschreibung");
-    }
-
-    #[test]
-    fn test_appointment_id_from_accepts_numbers_and_strings() {
-        assert_eq!(
-            appointment_id_from(&serde_json::json!({"appointment_id": 12})),
-            Some("12".to_string())
-        );
-        assert_eq!(
-            appointment_id_from(&serde_json::json!({"appointment_id": "13"})),
-            Some("13".to_string())
-        );
-        assert_eq!(appointment_id_from(&serde_json::json!({})), None);
     }
 
     #[test]
