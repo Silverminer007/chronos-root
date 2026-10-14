@@ -81,8 +81,10 @@ in the wrong order), because no test applied them.
   with the Java contract in the follow-up endpoint tickets.
 - **Constraints Java does not have are not enforced by the database anymore**: unique group member,
   unique friendship pair, unique (user, endpoint) push subscription, no self-friendship.
-  Duplicate push subscriptions are still rejected in `PushSubscriptionRepository::create`; the rest
-  belongs to the services of the contract tickets.
+  Duplicate push subscriptions are still rejected in `PushSubscriptionRepository::create`: the check
+  runs after a transaction-scoped advisory lock keyed on (user, endpoint), so concurrent subscribe
+  requests for the same pair cannot both insert (`test_concurrent_create_same_subscription_inserts_once`).
+  The rest belongs to the services of the contract tickets.
 - **Soft delete** is the `appointment.status` (DELETED/CANCELLED) only; the `deleted_at` columns of the
   old Rust design are gone.
 - Event payloads carry `appointment_id` as a JSON number (was a UUID string); consumers also accept strings.

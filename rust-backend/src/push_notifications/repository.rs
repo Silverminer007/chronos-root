@@ -91,10 +91,25 @@ impl Repository<PushSubscription> for PushSubscriptionRepository {
     }
 
     /// Create a new subscription. The Java schema has no unique constraint on
-    /// (user, endpoint), so duplicates are rejected here; the entity's `id` is ignored
-    /// (the id comes from `pushsubscription_seq`).
+    /// (user, endpoint), so duplicates are rejected here. The check is race-safe: a
+    /// transaction-scoped advisory lock keyed on (user, endpoint) serializes concurrent
+    /// creates for the same pair, and the insert runs in a statement that starts after the
+    /// lock is granted, so it sees the row a concurrent winner has committed. The entity's
+    /// `id` is ignored (the id comes from `pushsubscription_seq`).
     async fn create(&self, entity: PushSubscription) -> Result<PushSubscription, RepositoryError> {
-        sqlx::query_as::<_, PushSubscription>(&format!(
+        let db_error = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
+
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+            .bind(format!(
+                "pushsubscription:{}:{}",
+                entity.user_id, entity.endpoint
+            ))
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+
+        let created = sqlx::query_as::<_, PushSubscription>(&format!(
             "INSERT INTO pushsubscription (id, user_oidcid, endpoint, p256dh, auth)
              SELECT nextval('pushsubscription_seq'), $1, $2, $3, $4
              WHERE NOT EXISTS (
@@ -107,14 +122,17 @@ impl Repository<PushSubscription> for PushSubscriptionRepository {
         .bind(&entity.endpoint)
         .bind(&entity.p256dh)
         .bind(&entity.auth)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?
+        .map_err(db_error)?
         .ok_or_else(|| {
             RepositoryError::ConflictError(
                 "Subscription already exists for this user and endpoint".to_string(),
             )
-        })
+        })?;
+
+        tx.commit().await.map_err(db_error)?;
+        Ok(created)
     }
 
     /// Update an existing subscription

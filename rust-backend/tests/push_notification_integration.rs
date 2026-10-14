@@ -49,6 +49,42 @@ mod tests {
         assert!(matches!(duplicate, Err(RepositoryError::ConflictError(_))));
     }
 
+    /// Concurrent creates for the same user/endpoint must insert exactly one row
+    #[tokio::test]
+    #[ignore] // Requires a PostgreSQL server (TEST_DATABASE_URL)
+    async fn test_concurrent_create_same_subscription_inserts_once() {
+        let db = setup_test_db().await;
+        let repo = std::sync::Arc::new(PushSubscriptionRepository::new(db.pool().clone()));
+
+        let handles: Vec<_> = (0..16)
+            .map(|_| {
+                let repo = repo.clone();
+                tokio::spawn(async move {
+                    repo.create(subscription("sub-race", "https://example.com/push/race"))
+                        .await
+                })
+            })
+            .collect();
+
+        let mut created = 0;
+        let mut conflicts = 0;
+        for handle in handles {
+            match handle.await.expect("task panicked") {
+                Ok(_) => created += 1,
+                Err(RepositoryError::ConflictError(_)) => conflicts += 1,
+                Err(other) => panic!("unexpected error: {other:?}"),
+            }
+        }
+
+        assert_eq!(created, 1, "exactly one concurrent create may succeed");
+        assert_eq!(conflicts, 15);
+        let rows = repo
+            .find_by_user_id("sub-race")
+            .await
+            .expect("Failed to list subscriptions");
+        assert_eq!(rows.len(), 1);
+    }
+
     /// Test retrieving push subscriptions for a user
     #[tokio::test]
     #[ignore] // Requires a PostgreSQL server (TEST_DATABASE_URL)
