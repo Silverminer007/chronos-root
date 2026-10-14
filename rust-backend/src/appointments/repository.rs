@@ -309,7 +309,7 @@ impl AppointmentRepository {
         appointment_id: i64,
         user_id: &str,
     ) -> Result<Option<ParticipationStatus>, RepositoryError> {
-        // status is VARCHAR; cast to TEXT because ParticipationStatus derives the sqlx type TEXT, which rejects a VARCHAR column
+        // The status column is VARCHAR, but ParticipationStatus declares `sqlx(type_name = "TEXT")`, which rejects a VARCHAR column, so it is cast to TEXT
         sqlx::query_scalar::<_, ParticipationStatus>(
             "SELECT status::TEXT FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
         )
