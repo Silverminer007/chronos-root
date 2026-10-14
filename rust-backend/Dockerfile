@@ -3,14 +3,14 @@ FROM rust:1.98.1 AS builder
 
 WORKDIR /build
 
-# musl C toolchain (needed by crates with C code such as ring) and musl target.
-# perl and make build the vendored OpenSSL pulled in by openssl
-# (see kb/adr/ADR-2026-10-13-013-vendored-openssl-musl-image.md).
+# musl-tools provides musl-gcc; perl and make are needed to build the vendored
+# OpenSSL pulled in by web-push (see kb/adr/ADR-2026-10-13-013-vendored-openssl-musl-image.md).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends musl-tools perl make \
-    && rm -rf /var/lib/apt/lists/* \
-    && rustup target add x86_64-unknown-linux-musl
-ENV CC_x86_64_unknown_linux_musl=musl-gcc
+    && rm -rf /var/lib/apt/lists/*
+
+# Add musl target for static linking
+RUN rustup target add x86_64-unknown-linux-musl
 
 # Copy the project files
 COPY Cargo.* ./
