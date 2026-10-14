@@ -1,7 +1,7 @@
 # ADR 0012: Rust Backend Configuration and Migration Safety
 
 **Date:** 2026-10-03  
-**Status:** Accepted (the migration files it names were replaced by the single baseline of [ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md); the configuration, startup and readiness decisions stand)  
+**Status:** Accepted  
 **Issue:** #103 — Rust backend cannot start; migration 005 fails on empty database, DATABASE_URL ignored  
 
 ## Context

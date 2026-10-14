@@ -1,7 +1,7 @@
 # ADR 0011: Store user_id as UUID in PrincipalContext
 
 **Date:** 2026-10-03  
-**Status:** Superseded by [ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md) — user ids are OIDC subject strings, not UUIDs  
+**Status:** Accepted  
 **Context:** `PrincipalContext` stored user_id as `String`, requiring handlers and services to convert strings to UUIDs when needed. JWT token subject (OIDC `sub`) is the user's UUID.  
 **Decision:** Store `user_id: Uuid` in `PrincipalContext`. The auth middleware parses the JWT subject once and returns **401 Unauthorized** if it is not a valid UUID.
 
