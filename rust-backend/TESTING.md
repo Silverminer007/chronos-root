@@ -23,8 +23,10 @@ cd rust-backend
 # Run all integration tests. `TestDb` needs a PostgreSQL server: set TEST_DATABASE_URL (or
 # DATABASE_URL) to its base URL, e.g. postgres://postgres:postgres@localhost:5432
 # (default); every test creates and migrates its own database. Docker is needed for the
-# Testcontainers based tests (schema parity, migrations, readiness probe).
-cargo test --test '*' -- --ignored
+# Testcontainers based tests (schema parity, migrations, readiness probe). `--include-ignored`
+# runs the ignored and the non-ignored tests (as CI does); `--ignored` alone would skip the
+# non-ignored tests, e.g. the schema parity test.
+cargo test --test '*' -- --include-ignored
 
 # Run a specific integration test
 cargo test --test appointment_integration_test test_create_appointment_and_verify_in_db -- --ignored
@@ -345,7 +347,7 @@ Tests can run in parallel safely because:
 Run tests in parallel:
 
 ```bash
-cargo test --test '*' -- --ignored --test-threads=4
+cargo test --test '*' -- --include-ignored --test-threads=4
 ```
 
 ## Running Tests Without Docker
