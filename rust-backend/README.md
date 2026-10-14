@@ -79,6 +79,13 @@ docker build -t chronos-rust-backend:latest .
 - `GET /q/health/ready` - Readiness probe (returns 200 if service is ready to handle traffic)
 - `GET /health` - Alternative health check endpoint
 
+### Appointments
+
+- `GET /api/v2/appointments/:id/participation/status` - Current user's participation status. Requires a valid bearer token. Always `200 OK`; any authenticated user may call it.
+  - Response body: `{"status": "PENDING" | "APPROVED" | "REJECTED"}`
+  - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-13-013](../kb/adr/ADR-2026-10-13-013-participation-status-endpoint.md)).
+  - Returns only the caller's own status; there is no way to query another user's status.
+
 ## Authentication
 
 The backend uses **Keycloak OIDC** for authentication. JWT tokens are validated against Keycloak's public key set. Protected routes require a valid `Authorization: Bearer <token>` header.
