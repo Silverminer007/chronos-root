@@ -17,9 +17,10 @@ user ids; there is no `users` table (removed in Flyway V2.0.0, profiles live in 
 since V2.1.0).
 
 The Rust migrations `001`–`008` followed their own design (`UUID` primary keys, a `users` table,
-`appointment_participants`, ...). They could not even be applied to an empty database
-(`005_performance_indexes.sql`, `008_add_soft_delete_columns.sql` referenced missing columns/tables
-in the wrong order), because no test applied them.
+`appointment_participants`, ...). Before #104 they could not be applied to an empty database:
+`005_performance_indexes.sql` used `WHERE deleted_at IS NULL` on tables without that column. #104
+fixed that, and `001`–`008` now apply cleanly to an empty database in order, but no test applied them,
+so nothing noticed the design mismatch with Java.
 
 ## Decision
 
@@ -29,9 +30,10 @@ in the wrong order), because no test applied them.
    (tables `appointment`, `appointment_participation`, `appointment_group_participations`,
    `friendship_requests`, `group_member`, `groups`, `message`, `push_notification_log`,
    `pushsubscription`, `settings`, `user_profiles`, with the same columns, types, nullability,
-   defaults, constraints, indexes and sequences). The former `001`, `003`–`008` are removed — no
-   Rust deployment holds data, so no data migration. Rust-only tables stay as further migrations
-   (`002_create_events_table.sql`: event bus outbox).
+   defaults, constraints, indexes and sequences). The former `001`, `003`–`008` are removed; this
+   rewrites the Rust migration history and is an explicit exception to C2025-09-28-004 (see
+   [Exception](#exception-to-c2025-09-28-004-forward-only-migrations)). No data migration. Rust-only tables
+   stay as further migrations (`002_create_events_table.sql`: event bus outbox).
 3. **Ids are `BIGINT`**, `i64` in Rust, JSON numbers. Tables that Java created without a column
    default (`appointment`, `appointment_participation`, `appointment_group_participations`,
    `friendship_requests`, `group_member`) and the Java-`BIGSERIAL` tables (`groups`, `message`,
@@ -62,6 +64,35 @@ in the wrong order), because no test applied them.
    Excluded from the comparison: Rust-only tables (`events`, `_sqlx_migrations`) and the
    `message_backup`/`settings_backup` tables Flyway V1.1.0 leaves behind (`CREATE TABLE AS SELECT`,
    no entity, no constraints).
+
+## Exception to C2025-09-28-004 (forward-only migrations)
+
+[C2025-09-28-004](../constraints/C2025-09-28-004-forward-migrations.md) makes a deployed migration immutable.
+This decision changes the Rust chain: `001_initial_schema.sql` is replaced by `001_baseline.sql` (same
+version, different content, so the sqlx checksum changes) and `003`–`008` are deleted. The exception covers
+the Rust chain only; the Java Flyway chain is not touched. The constraint names Flyway, but the Rust backend
+uses sqlx 0.7.4, which records every applied migration with its checksum in `_sqlx_migrations`; the rule
+applies to it in the same way.
+
+The exception rests on these facts (checked in the repository and against a PostgreSQL 15 server):
+
+- **Production never ran the Rust chain.** `deployment/values.yaml` sets `rustBackend.enabled: false`, and
+  `values-prod.yaml` does not enable it.
+- **Staging may have run it.** `values-staging.yaml` enables the Rust backend with the `develop` image.
+  Migrations run at startup unless `DATABASE_RUN_MIGRATIONS=false`, which staging does not set. The versions
+  applied to the staging database cannot be read from the repository.
+- **`005` failed before #104.** The pre-#104 `005_performance_indexes.sql` fails on an empty database
+  (`column "deleted_at" does not exist`). A database that migrated before #104 therefore holds at most
+  `001`–`004`. Since #104, `001`–`008` apply cleanly to an empty database in order. `008` never failed.
+- **sqlx refuses the baseline on top of the old chain.** sqlx 0.7.4 returns `VersionMissing` for an applied
+  version that is no longer in `migrations/`, and `VersionMismatch` for an applied version whose checksum
+  changed (`sqlx-core/src/migrate/migrator.rs`). A staging database that applied `001`–`008` will not start
+  with this chain.
+
+**Condition for deployment:** before the Rust backend with this chain starts on staging, the staging Rust
+database must be recreated, and its contents are lost. Production is not affected because it never ran the
+chain. After this baseline, the rule of C2025-09-28-004 applies again: a Rust migration that has reached
+production is immutable, and fixes are new migrations.
 
 ## Consequences
 
