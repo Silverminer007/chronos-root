@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-use uuid::Uuid;
 
 /// Base repository trait defining common CRUD operations
 #[async_trait]
 pub trait Repository<T: Send + Sync>: Send + Sync {
     /// Find an entity by its ID
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<T>, RepositoryError>;
+    async fn find_by_id(&self, id: i64) -> Result<Option<T>, RepositoryError>;
 
     /// Find all entities
     async fn find_all(&self) -> Result<Vec<T>, RepositoryError>;
@@ -14,10 +13,10 @@ pub trait Repository<T: Send + Sync>: Send + Sync {
     async fn create(&self, entity: T) -> Result<T, RepositoryError>;
 
     /// Update an existing entity
-    async fn update(&self, id: Uuid, entity: T) -> Result<Option<T>, RepositoryError>;
+    async fn update(&self, id: i64, entity: T) -> Result<Option<T>, RepositoryError>;
 
     /// Delete an entity
-    async fn delete(&self, id: Uuid) -> Result<bool, RepositoryError>;
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
 }
 
 /// Repository errors

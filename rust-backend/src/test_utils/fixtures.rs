@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use uuid::Uuid;
 
-/// Test fixture for creating reproducible test data
+/// Test fixture for creating reproducible test data in the Java-compatible schema.
+/// Users are OIDC subjects (rows of `user_profiles`); ids come from the `<table>_seq` sequences.
 #[derive(Clone, Debug)]
 pub struct TestFixtures {
     pool: PgPool,
@@ -14,54 +14,60 @@ impl TestFixtures {
         Self { pool }
     }
 
-    /// Create a test user
+    /// Create a test user: a `user_profiles` row keyed by the given OIDC subject.
+    /// Returns the OIDC subject (the user's id).
     pub async fn create_user(
         &self,
-        keycloak_id: &str,
+        oidc_id: &str,
         email: &str,
-    ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        let user_id = Uuid::new_v4();
+    ) -> Result<String, Box<dyn std::error::Error>> {
         sqlx::query(
-            "INSERT INTO users (id, keycloak_id, email, first_name, last_name) VALUES ($1, $2, $3, $4, $5)"
+            "INSERT INTO user_profiles (oidc_id, first_name, last_name, email) VALUES ($1, $2, $3, $4)",
         )
-        .bind(user_id)
-        .bind(keycloak_id)
-        .bind(email)
+        .bind(oidc_id)
         .bind("Test")
         .bind("User")
+        .bind(email)
         .execute(&self.pool)
         .await?;
 
-        Ok(user_id)
+        Ok(oidc_id.to_string())
     }
 
     /// Create a test group
     pub async fn create_group(
         &self,
-        owner_id: Uuid,
+        owner_id: &str,
         name: &str,
-    ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        let group_id = Uuid::new_v4();
-        sqlx::query("INSERT INTO groups (id, name, owner_id) VALUES ($1, $2, $3)")
-            .bind(group_id)
-            .bind(name)
-            .bind(owner_id)
-            .execute(&self.pool)
-            .await?;
+    ) -> Result<i64, Box<dyn std::error::Error>> {
+        let group_id = sqlx::query_scalar::<_, i64>(
+            "INSERT INTO groups (id, groupname, owner_oidcid) VALUES (nextval('groups_seq'), $1, $2) RETURNING id",
+        )
+        .bind(name)
+        .bind(owner_id)
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(group_id)
     }
 
-    /// Create a test appointment
+    /// Create a test appointment; the creator becomes its RESPONSIBLE participant
     pub async fn create_appointment(
         &self,
-        creator_id: Uuid,
+        creator_id: &str,
         fixture: &AppointmentFixture,
-    ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        let appointment_id = fixture.id.unwrap_or_else(Uuid::new_v4);
+    ) -> Result<i64, Box<dyn std::error::Error>> {
+        let appointment_id = match fixture.id {
+            Some(id) => id,
+            None => {
+                sqlx::query_scalar::<_, i64>("SELECT nextval('appointment_seq')")
+                    .fetch_one(&self.pool)
+                    .await?
+            }
+        };
         sqlx::query(
-            "INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            "INSERT INTO appointment (id, name, description, start_time, end_time, venue, status, createdat, lastupdate)
+             VALUES ($1, $2, $3, $4, $5, $6, 0, NOW(), NOW())",
         )
         .bind(appointment_id)
         .bind(&fixture.title)
@@ -69,6 +75,14 @@ impl TestFixtures {
         .bind(fixture.start_time)
         .bind(fixture.end_time)
         .bind(&fixture.location)
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
+             VALUES (nextval('appointment_participation_seq'), $1, $2, 'RESPONSIBLE', 'APPROVED')",
+        )
+        .bind(appointment_id)
         .bind(creator_id)
         .execute(&self.pool)
         .await?;
@@ -76,22 +90,21 @@ impl TestFixtures {
         Ok(appointment_id)
     }
 
-    /// Add a participant to an appointment
+    /// Add an ATTENDANT participant to an appointment
     pub async fn add_participant(
         &self,
-        appointment_id: Uuid,
-        user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
         status: &str,
-    ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        let participant_id = Uuid::new_v4();
-        sqlx::query(
-            "INSERT INTO appointment_participants (id, appointment_id, user_id, status) VALUES ($1, $2, $3, $4)"
+    ) -> Result<i64, Box<dyn std::error::Error>> {
+        let participant_id = sqlx::query_scalar::<_, i64>(
+            "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
+             VALUES (nextval('appointment_participation_seq'), $1, $2, 'ATTENDANT', $3) RETURNING id",
         )
-        .bind(participant_id)
         .bind(appointment_id)
         .bind(user_id)
         .bind(status)
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(participant_id)
@@ -101,7 +114,7 @@ impl TestFixtures {
 /// Builder for appointment test data
 #[derive(Clone, Debug)]
 pub struct AppointmentFixture {
-    pub id: Option<Uuid>,
+    pub id: Option<i64>,
     pub title: String,
     pub description: Option<String>,
     pub start_time: DateTime<Utc>,
@@ -124,7 +137,7 @@ impl AppointmentFixture {
     }
 
     /// Set the appointment ID
-    pub fn with_id(mut self, id: Uuid) -> Self {
+    pub fn with_id(mut self, id: i64) -> Self {
         self.id = Some(id);
         self
     }
@@ -173,6 +186,12 @@ mod tests {
 
         assert_eq!(fixture.title, "Team Meeting");
         assert_eq!(fixture.location, Some("Conference Room".to_string()));
+    }
+
+    #[test]
+    fn test_appointment_fixture_with_id() {
+        let fixture = AppointmentFixture::new().with_id(42);
+        assert_eq!(fixture.id, Some(42));
     }
 
     #[test]

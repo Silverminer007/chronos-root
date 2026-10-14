@@ -10,7 +10,6 @@ mod appointment_mutation_tests {
     use chronos_date_api::event_bus::postgres::PostgresEventBus;
     use chronos_date_api::test_utils::{TestDb, TestFixtures};
     use std::sync::Arc;
-    use uuid::Uuid;
 
     /// Helper to count events of a specific type in the events table
     async fn count_events(pool: &sqlx::PgPool, event_type: &str) -> i64 {
@@ -76,7 +75,7 @@ mod appointment_mutation_tests {
         assert_eq!(event.0, "AppointmentCreatedEvent");
         let payload = serde_json::from_str::<serde_json::Value>(&event.1)
             .expect("Invalid event payload JSON");
-        assert!(payload["appointment_id"].is_string());
+        assert!(payload["appointment_id"].is_i64());
         assert!(payload["creator_id"].is_string());
         assert!(payload["timestamp"].is_number());
     }
@@ -104,7 +103,7 @@ mod appointment_mutation_tests {
             .with_location(Some("Room A"));
 
         let appt_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -161,7 +160,7 @@ mod appointment_mutation_tests {
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("Meeting");
 
         let appt_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -218,7 +217,7 @@ mod appointment_mutation_tests {
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Delete");
 
         let appt_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -266,7 +265,7 @@ mod appointment_mutation_tests {
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Cancel");
 
         let appt_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -305,7 +304,7 @@ mod appointment_mutation_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Attempt to update non-existent appointment
-        let fake_id = Uuid::new_v4();
+        let fake_id: i64 = 987_654_321;
         let request = UpdateAppointmentRequest {
             name: Some("Won't work".to_string()),
             description: None,
@@ -341,7 +340,7 @@ mod appointment_mutation_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Attempt to delete non-existent appointment
-        let fake_id = Uuid::new_v4();
+        let fake_id: i64 = 987_654_321;
         let result = service.delete_appointment(fake_id).await;
         assert!(
             result.is_err(),
@@ -368,7 +367,7 @@ mod appointment_mutation_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Attempt to cancel non-existent appointment
-        let fake_id = Uuid::new_v4();
+        let fake_id: i64 = 987_654_321;
         let result = service.cancel_appointment(fake_id).await;
         assert!(
             result.is_err(),
@@ -494,7 +493,7 @@ mod appointment_mutation_tests {
             .with_title("Creator Only Meeting");
 
         let appt_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -502,7 +501,7 @@ mod appointment_mutation_tests {
 
         // Creator can view their own appointment
         let visible_to_creator = service
-            .list_user_appointments(creator_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&creator_id, ListAppointmentsQuery::default())
             .await
             .expect("Failed to list creator appointments");
         assert!(
@@ -512,7 +511,7 @@ mod appointment_mutation_tests {
 
         // Other user cannot view creator's appointment (not a participant)
         let visible_to_other = service
-            .list_user_appointments(other_user_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&other_user_id, ListAppointmentsQuery::default())
             .await
             .expect("Failed to list other user appointments");
         assert!(
@@ -542,14 +541,14 @@ mod appointment_mutation_tests {
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Delete");
 
         let appt_id = fixtures
-            .create_appointment(user_id, &appointment_fixture)
+            .create_appointment(&user_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
         // Verify appointment appears in list before deletion
         let service = AppointmentService::with_events(repo, event_bus.clone());
         let list_before = service
-            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
             .await
             .expect("Failed to list appointments");
         assert!(
@@ -567,7 +566,7 @@ mod appointment_mutation_tests {
         let repo2 = AppointmentRepository::new(db.pool().clone());
         let service2 = AppointmentService::with_events(repo2, event_bus);
         let list_after = service2
-            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
             .await
             .expect("Failed to list appointments");
         assert!(
@@ -576,12 +575,13 @@ mod appointment_mutation_tests {
         );
 
         // Verify status is DELETED in database
-        let status: String = sqlx::query_scalar("SELECT status FROM appointments WHERE id = $1")
+        let status: i16 = sqlx::query_scalar("SELECT status FROM appointment WHERE id = $1")
             .bind(appt_id)
             .fetch_one(db.pool())
             .await
             .expect("Failed to fetch appointment status");
-        assert_eq!(status, "DELETED", "Appointment status should be DELETED");
+        // Java stores the enum ordinal: PLANNED=0, CANCELLED=1, DELETED=2
+        assert_eq!(status, 2, "Appointment status should be DELETED");
     }
 
     /// SOFT-DELETE FILTERING: Cancelled appointments do not appear in list queries
@@ -605,14 +605,14 @@ mod appointment_mutation_tests {
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Cancel");
 
         let appt_id = fixtures
-            .create_appointment(user_id, &appointment_fixture)
+            .create_appointment(&user_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
         // Verify appointment appears in list before cancellation
         let service = AppointmentService::with_events(repo, event_bus.clone());
         let list_before = service
-            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
             .await
             .expect("Failed to list appointments");
         assert!(
@@ -630,7 +630,7 @@ mod appointment_mutation_tests {
         let repo2 = AppointmentRepository::new(db.pool().clone());
         let service2 = AppointmentService::with_events(repo2, event_bus);
         let list_after = service2
-            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
             .await
             .expect("Failed to list appointments");
         assert!(
@@ -639,15 +639,12 @@ mod appointment_mutation_tests {
         );
 
         // Verify status is CANCELLED in database
-        let status: String = sqlx::query_scalar("SELECT status FROM appointments WHERE id = $1")
+        let status: i16 = sqlx::query_scalar("SELECT status FROM appointment WHERE id = $1")
             .bind(appt_id)
             .fetch_one(db.pool())
             .await
             .expect("Failed to fetch appointment status");
-        assert_eq!(
-            status, "CANCELLED",
-            "Appointment status should be CANCELLED"
-        );
+        assert_eq!(status, 1, "Appointment status should be CANCELLED");
     }
 
     /// SOFT-DELETE FILTERING: Detailed get by ID returns 404 for deleted appointments
@@ -671,7 +668,7 @@ mod appointment_mutation_tests {
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("To Get Deleted");
 
         let appt_id = fixtures
-            .create_appointment(user_id, &appointment_fixture)
+            .create_appointment(&user_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -722,12 +719,12 @@ mod appointment_mutation_tests {
             .await
             .expect("Failed to create appointment");
 
-        // Verify: Creator appears in appointment_participants with role=RESPONSIBLE
+        // Verify: Creator appears in appointment_participation with role=RESPONSIBLE
         let participant_role: Option<String> = sqlx::query_scalar(
-            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
+            "SELECT role FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
         )
         .bind(response.id)
-        .bind(creator_id)
+        .bind(&creator_id)
         .fetch_optional(db.pool())
         .await
         .expect("Failed to query participant role");
@@ -745,10 +742,10 @@ mod appointment_mutation_tests {
 
         // Verify: Creator participation status is APPROVED
         let participation_status: String = sqlx::query_scalar(
-            "SELECT status FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT status FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2"
         )
         .bind(response.id)
-        .bind(creator_id)
+        .bind(&creator_id)
         .fetch_one(db.pool())
         .await
         .expect("Failed to fetch participation status");

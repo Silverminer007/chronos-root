@@ -1,10 +1,15 @@
 use crate::appointments::models::{Appointment, AppointmentStatus, UserRole};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use uuid::Uuid;
 
-const APPOINTMENT_COLUMNS: &str = "id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees";
-const APPOINTMENT_COLUMNS_ALIASED: &str = "a.id, a.title, a.description, a.start_time, a.end_time, a.location, a.creator_id, a.created_at, a.updated_at, a.status, a.minimal_attendees";
+/// Columns of the Java-compatible `appointment` table, aliased to the field names of `Appointment`.
+/// `status` is the ordinal of the Java enum; a NULL (possible in the Java schema) means PLANNED.
+pub const APPOINTMENT_COLUMNS: &str = "id, name, description, start_time, end_time, venue, COALESCE(status, 0)::smallint AS status, minimalattendees AS minimal_attendees, createdat AS created_at, lastupdate AS last_update";
+const APPOINTMENT_COLUMNS_ALIASED: &str = "a.id, a.name, a.description, a.start_time, a.end_time, a.venue, COALESCE(a.status, 0)::smallint AS status, a.minimalattendees AS minimal_attendees, a.createdat AS created_at, a.lastupdate AS last_update";
+
+/// Appointments that are neither DELETED (2) nor CANCELLED (1)
+const ACTIVE: &str = "COALESCE(status, 0) NOT IN (1, 2)";
+const ACTIVE_ALIASED: &str = "COALESCE(a.status, 0) NOT IN (1, 2)";
 
 /// Errors that can occur in the repository layer
 #[derive(Debug)]
@@ -38,10 +43,10 @@ impl AppointmentRepository {
     }
 
     /// Find an appointment by its ID
-    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(&format!(
-            "SELECT {} FROM appointments WHERE id = $1 AND status NOT IN ('DELETED', 'CANCELLED')",
-            APPOINTMENT_COLUMNS
+            "SELECT {} FROM appointment WHERE id = $1 AND {}",
+            APPOINTMENT_COLUMNS, ACTIVE
         ))
         .bind(id)
         .fetch_optional(&self.pool)
@@ -51,39 +56,46 @@ impl AppointmentRepository {
 
     /// Find all appointments
     pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(
-            &format!("SELECT {} FROM appointments WHERE status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC", APPOINTMENT_COLUMNS)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment WHERE {} ORDER BY start_time DESC",
+            APPOINTMENT_COLUMNS, ACTIVE
+        ))
         .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Find appointments by creator_id
+    /// Find appointments created by a user (the user is a RESPONSIBLE participant)
     pub async fn find_by_creator(
         &self,
-        creator_id: Uuid,
+        creator_id: &str,
     ) -> Result<Vec<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(
-            &format!("SELECT {} FROM appointments WHERE creator_id = $1 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time DESC", APPOINTMENT_COLUMNS)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment a
+             JOIN appointment_participation ap ON a.id = ap.appointment_id
+             WHERE ap.user_oidcid = $1 AND ap.role = 'RESPONSIBLE' AND {}
+             ORDER BY a.start_time DESC",
+            APPOINTMENT_COLUMNS_ALIASED, ACTIVE_ALIASED
+        ))
         .bind(creator_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Find appointments visible to a user (created by user or user is a participant)
+    /// Find appointments visible to a user (the user is a participant)
     pub async fn find_visible_to_user(
         &self,
-        user_id: Uuid,
+        user_id: &str,
     ) -> Result<Vec<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(
-            &format!("SELECT DISTINCT {} FROM appointments a
-             LEFT JOIN appointment_participants ap ON a.id = ap.appointment_id
-             WHERE (a.creator_id = $1 OR ap.user_id = $1) AND a.status NOT IN ('DELETED', 'CANCELLED')
-             ORDER BY a.start_time DESC", APPOINTMENT_COLUMNS_ALIASED)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment a
+             WHERE EXISTS (SELECT 1 FROM appointment_participation ap
+                           WHERE ap.appointment_id = a.id AND ap.user_oidcid = $1)
+               AND {}
+             ORDER BY a.start_time DESC",
+            APPOINTMENT_COLUMNS_ALIASED, ACTIVE_ALIASED
+        ))
         .bind(user_id)
         .fetch_all(&self.pool)
         .await
@@ -96,9 +108,10 @@ impl AppointmentRepository {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(
-            &format!("SELECT {} FROM appointments WHERE start_time >= $1 AND end_time <= $2 AND status NOT IN ('DELETED', 'CANCELLED') ORDER BY start_time ASC", APPOINTMENT_COLUMNS)
-        )
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment WHERE start_time >= $1 AND end_time <= $2 AND {} ORDER BY start_time ASC",
+            APPOINTMENT_COLUMNS, ACTIVE
+        ))
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)
@@ -106,51 +119,64 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Create a new appointment
+    /// Create a new appointment; the creator becomes its RESPONSIBLE participant in the same
+    /// transaction (the Java schema has no creator column).
     #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
-        title: String,
+        name: String,
         description: Option<String>,
-        location: Option<String>,
+        venue: Option<String>,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
-        creator_id: Uuid,
+        creator_id: &str,
         minimal_attendees: Option<i32>,
     ) -> Result<Appointment, RepositoryError> {
-        let id = Uuid::new_v4();
         let now = chrono::Utc::now();
-        let status = AppointmentStatus::Planned;
+        let db_err = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
 
-        sqlx::query_as::<_, Appointment>(
-            &format!("INSERT INTO appointments (id, title, description, start_time, end_time, location, creator_id, created_at, updated_at, status, minimal_attendees)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             RETURNING {}", APPOINTMENT_COLUMNS)
-        )
-        .bind(id)
-        .bind(title)
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
+
+        let appointment = sqlx::query_as::<_, Appointment>(&format!(
+            "INSERT INTO appointment (id, name, description, start_time, end_time, venue, status, minimalattendees, createdat, lastupdate)
+             VALUES (nextval('appointment_seq'), $1, $2, $3, $4, $5, $6, $7, $8, $8)
+             RETURNING {}",
+            APPOINTMENT_COLUMNS
+        ))
+        .bind(name)
         .bind(description)
         .bind(start_time)
         .bind(end_time)
-        .bind(location)
-        .bind(creator_id)
-        .bind(now)
-        .bind(now)
-        .bind(status)
+        .bind(venue)
+        .bind(AppointmentStatus::Planned)
         .bind(minimal_attendees)
-        .fetch_one(&self.pool)
+        .bind(now)
+        .fetch_one(&mut *tx)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+        .map_err(db_err)?;
+
+        sqlx::query(
+            "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
+             VALUES (nextval('appointment_participation_seq'), $1, $2, 'RESPONSIBLE', 'APPROVED')",
+        )
+        .bind(appointment.id)
+        .bind(creator_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_err)?;
+
+        tx.commit().await.map_err(db_err)?;
+        Ok(appointment)
     }
 
     /// Update an appointment
     #[allow(clippy::too_many_arguments)]
     pub async fn update(
         &self,
-        id: Uuid,
-        title: Option<String>,
+        id: i64,
+        name: Option<String>,
         description: Option<String>,
-        location: Option<String>,
+        venue: Option<String>,
         start_time: Option<DateTime<Utc>>,
         end_time: Option<DateTime<Utc>>,
         minimal_attendees: Option<i32>,
@@ -158,20 +184,20 @@ impl AppointmentRepository {
         let now = chrono::Utc::now();
 
         // Build dynamic query based on which fields are provided
-        let mut query_str = "UPDATE appointments SET updated_at = $1".to_string();
+        let mut query_str = "UPDATE appointment SET lastupdate = $1".to_string();
         let mut param_count = 1;
 
-        if title.is_some() {
+        if name.is_some() {
             param_count += 1;
-            query_str.push_str(&format!(", title = ${}", param_count));
+            query_str.push_str(&format!(", name = ${}", param_count));
         }
         if description.is_some() {
             param_count += 1;
             query_str.push_str(&format!(", description = ${}", param_count));
         }
-        if location.is_some() {
+        if venue.is_some() {
             param_count += 1;
-            query_str.push_str(&format!(", location = ${}", param_count));
+            query_str.push_str(&format!(", venue = ${}", param_count));
         }
         if start_time.is_some() {
             param_count += 1;
@@ -183,7 +209,7 @@ impl AppointmentRepository {
         }
         if minimal_attendees.is_some() {
             param_count += 1;
-            query_str.push_str(&format!(", minimal_attendees = ${}", param_count));
+            query_str.push_str(&format!(", minimalattendees = ${}", param_count));
         }
 
         param_count += 1;
@@ -192,14 +218,14 @@ impl AppointmentRepository {
 
         let mut query = sqlx::query_as::<_, Appointment>(&query_str).bind(now);
 
-        if let Some(t) = title {
-            query = query.bind(t);
+        if let Some(n) = name {
+            query = query.bind(n);
         }
         if let Some(d) = description {
             query = query.bind(d);
         }
-        if let Some(l) = location {
-            query = query.bind(l);
+        if let Some(v) = venue {
+            query = query.bind(v);
         }
         if let Some(st) = start_time {
             query = query.bind(st);
@@ -220,24 +246,22 @@ impl AppointmentRepository {
     }
 
     /// Soft delete an appointment (set status to DELETED)
-    pub async fn delete_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
-        let status = AppointmentStatus::Deleted;
-        sqlx::query_as::<_, Appointment>(&format!(
-            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}",
-            APPOINTMENT_COLUMNS
-        ))
-        .bind(status)
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    pub async fn delete_soft(&self, id: i64) -> Result<Option<Appointment>, RepositoryError> {
+        self.set_status(id, AppointmentStatus::Deleted).await
     }
 
     /// Soft cancel an appointment (set status to CANCELLED)
-    pub async fn cancel_soft(&self, id: Uuid) -> Result<Option<Appointment>, RepositoryError> {
-        let status = AppointmentStatus::Cancelled;
+    pub async fn cancel_soft(&self, id: i64) -> Result<Option<Appointment>, RepositoryError> {
+        self.set_status(id, AppointmentStatus::Cancelled).await
+    }
+
+    async fn set_status(
+        &self,
+        id: i64,
+        status: AppointmentStatus,
+    ) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(&format!(
-            "UPDATE appointments SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING {}",
+            "UPDATE appointment SET status = $1, lastupdate = NOW() WHERE id = $2 RETURNING {}",
             APPOINTMENT_COLUMNS
         ))
         .bind(status)
@@ -250,62 +274,52 @@ impl AppointmentRepository {
     /// Check if a user is a participant in an appointment
     pub async fn is_participant(
         &self,
-        appointment_id: Uuid,
-        user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
     ) -> Result<bool, RepositoryError> {
-        let result = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2)"
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2)"
         )
         .bind(appointment_id)
         .bind(user_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
-
-        Ok(result)
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
     /// Get the role of a participant in an appointment
     pub async fn get_participant_role(
         &self,
-        appointment_id: Uuid,
-        user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
     ) -> Result<Option<UserRole>, RepositoryError> {
-        let result = sqlx::query_scalar::<_, UserRole>(
-            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
+        sqlx::query_scalar::<_, UserRole>(
+            "SELECT role FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
         )
         .bind(appointment_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
-
-        Ok(result)
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Add a participant to an appointment
+    /// Add a participant to an appointment (no-op if the user already participates)
     pub async fn add_participant(
         &self,
-        appointment_id: Uuid,
-        user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
         role: &str,
         status: &str,
     ) -> Result<(), RepositoryError> {
-        let id = Uuid::new_v4();
-        let now = chrono::Utc::now();
-
         sqlx::query(
-            "INSERT INTO appointment_participants (id, appointment_id, user_id, role, status, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             ON CONFLICT (appointment_id, user_id) DO NOTHING"
+            "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
+             VALUES (nextval('appointment_participation_seq'), $1, $2, $3, $4)
+             ON CONFLICT (appointment_id, user_oidcid) DO NOTHING",
         )
-        .bind(id)
         .bind(appointment_id)
         .bind(user_id)
         .bind(role)
         .bind(status)
-        .bind(now)
-        .bind(now)
         .execute(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
