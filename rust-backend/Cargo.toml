@@ -44,6 +44,9 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Web Push
 web-push = "0.11"
+# web-push pulls in openssl-sys (via isahc/curl-sys and ece). Build it from
+# source so the musl target needs no system OpenSSL. See kb/adr/ADR-2026-10-13-013-vendored-openssl-musl-image.md.
+openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

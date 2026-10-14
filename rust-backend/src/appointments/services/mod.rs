@@ -9,7 +9,6 @@ use crate::appointments::models::{
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 /// Custom error type for appointment service operations
 #[derive(Debug, Clone)]
@@ -134,9 +133,9 @@ impl AppointmentService {
             }
             SortField::Title => {
                 if sort_direction == SortDirection::Ascending {
-                    appointments.sort_by_key(|a| a.title.clone());
+                    appointments.sort_by_key(|a| a.name.clone());
                 } else {
-                    appointments.sort_by_key(|a| std::cmp::Reverse(a.title.clone()));
+                    appointments.sort_by_key(|a| std::cmp::Reverse(a.name.clone()));
                 }
             }
         }
@@ -144,7 +143,7 @@ impl AppointmentService {
     }
 
     /// Get a single appointment by ID
-    pub async fn get_appointment(&self, id: Uuid) -> Result<Appointment, ServiceError> {
+    pub async fn get_appointment(&self, id: i64) -> Result<Appointment, ServiceError> {
         self.repo
             .find_by_id(id)
             .await
@@ -157,8 +156,8 @@ impl AppointmentService {
     /// Does not check appointment existence or soft-delete state, matching the Java backend.
     pub async fn get_participation_status(
         &self,
-        appointment_id: Uuid,
-        user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
     ) -> Result<ParticipationStatus, ServiceError> {
         let status = self
             .repo
@@ -172,7 +171,7 @@ impl AppointmentService {
     /// List appointments visible to a user with pagination and sorting
     pub async fn list_user_appointments(
         &self,
-        user_id: Uuid,
+        user_id: &str,
         query: ListAppointmentsQuery,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         let appointments = self.repo.find_visible_to_user(user_id).await?;
@@ -243,7 +242,7 @@ impl AppointmentService {
     /// Get appointments for a specific creator
     pub async fn get_creator_appointments(
         &self,
-        creator_id: Uuid,
+        creator_id: &str,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         self.repo.find_by_creator(creator_id).await
     }
@@ -263,11 +262,6 @@ impl AppointmentService {
         request: CreateAppointmentRequest,
         creator_id: String,
     ) -> Result<AppointmentResponse, ServiceError> {
-        // Parse creator_id as UUID
-        let creator_uuid = Uuid::parse_str(&creator_id).map_err(|_| {
-            ServiceError::InvalidFormat("creator_id must be a valid UUID".to_string())
-        })?;
-
         // Validation: name cannot be blank
         if request.name.trim().is_empty() {
             return Err(ServiceError::ValidationError(
@@ -313,24 +307,18 @@ impl AppointmentService {
                 request.venue,
                 start_time,
                 end_time,
-                creator_uuid,
+                &creator_id,
                 request.minimal_attendees,
             )
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        // Add creator as RESPONSIBLE participant synchronously before firing event
-        // This ensures the creator is added before the HTTP response is sent
-        self.repo
-            .add_participant(appointment.id, creator_uuid, "RESPONSIBLE", "APPROVED")
-            .await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-
-        // Fire event after successful database commit and participant addition
+        // The repository stored the creator as RESPONSIBLE participant in the same transaction.
+        // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentCreatedEvent::new(appointment.id, creator_id);
             let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
+                "appointment_id": event.appointment_id,
                 "creator_id": event.creator_id,
                 "timestamp": event.timestamp,
             });
@@ -348,7 +336,7 @@ impl AppointmentService {
     /// Update an appointment
     pub async fn update_appointment(
         &self,
-        id: Uuid,
+        id: i64,
         request: UpdateAppointmentRequest,
     ) -> Result<AppointmentResponse, ServiceError> {
         // Get the existing appointment first to check if time changed
@@ -440,7 +428,7 @@ impl AppointmentService {
             // Always fire AppointmentEditedEvent
             let edited_event = AppointmentEditedEvent::new(id);
             let edited_json = serde_json::json!({
-                "appointment_id": edited_event.appointment_id.to_string(),
+                "appointment_id": edited_event.appointment_id,
                 "timestamp": edited_event.timestamp,
             });
             let event_bus_event =
@@ -454,7 +442,7 @@ impl AppointmentService {
                 let moved_event =
                     AppointmentMovedEvent::new(id, existing.start_time, existing.end_time);
                 let moved_json = serde_json::json!({
-                    "appointment_id": moved_event.appointment_id.to_string(),
+                    "appointment_id": moved_event.appointment_id,
                     "old_start": moved_event.old_start,
                     "old_end": moved_event.old_end,
                     "timestamp": moved_event.timestamp,
@@ -471,7 +459,7 @@ impl AppointmentService {
     }
 
     /// Soft delete an appointment
-    pub async fn delete_appointment(&self, id: Uuid) -> Result<(), ServiceError> {
+    pub async fn delete_appointment(&self, id: i64) -> Result<(), ServiceError> {
         self.repo
             .delete_soft(id)
             .await
@@ -482,7 +470,7 @@ impl AppointmentService {
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentDeletedEvent::new(id);
             let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
+                "appointment_id": event.appointment_id,
                 "timestamp": event.timestamp,
             });
             let event_bus_event =
@@ -496,7 +484,7 @@ impl AppointmentService {
     }
 
     /// Soft cancel an appointment
-    pub async fn cancel_appointment(&self, id: Uuid) -> Result<(), ServiceError> {
+    pub async fn cancel_appointment(&self, id: i64) -> Result<(), ServiceError> {
         self.repo
             .cancel_soft(id)
             .await
@@ -507,7 +495,7 @@ impl AppointmentService {
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentCancelledEvent::new(id);
             let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
+                "appointment_id": event.appointment_id,
                 "timestamp": event.timestamp,
             });
             let event_bus_event =

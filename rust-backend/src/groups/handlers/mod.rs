@@ -6,7 +6,6 @@ use axum::{
 };
 use serde_json::json;
 use std::sync::Arc;
-use uuid::Uuid;
 
 use crate::groups::models::{
     CreateGroupRequest, FriendshipResponse, GroupResponse, SendFriendshipRequestRequest,
@@ -55,7 +54,7 @@ pub async fn create_group(
 ) -> impl IntoResponse {
     match state
         .group_service
-        .create_group(principal.user_id(), req.name, req.description)
+        .create_group(principal.user_id(), req.name)
         .await
     {
         Ok(group) => (StatusCode::CREATED, Json(GroupResponse::from(group))).into_response(),
@@ -94,13 +93,13 @@ pub async fn list_groups(
 /// PUT /api/v2/groups/:id - Update a group
 pub async fn update_group(
     State(state): State<GroupHandlerState>,
-    Path(group_id): Path<Uuid>,
+    Path(group_id): Path<i64>,
     principal: PrincipalContext,
     Json(req): Json<UpdateGroupRequest>,
 ) -> impl IntoResponse {
     match state
         .group_service
-        .update_group(group_id, principal.user_id(), req.name, req.description)
+        .update_group(group_id, principal.user_id(), req.name)
         .await
     {
         Ok(Some(group)) => (StatusCode::OK, Json(GroupResponse::from(group))).into_response(),
@@ -120,7 +119,7 @@ pub async fn update_group(
 /// DELETE /api/v2/groups/:id - Delete a group
 pub async fn delete_group(
     State(state): State<GroupHandlerState>,
-    Path(group_id): Path<Uuid>,
+    Path(group_id): Path<i64>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
@@ -145,12 +144,12 @@ pub async fn delete_group(
 /// POST /api/v2/groups/:id/members/:userId - Add a member to a group
 pub async fn add_group_member(
     State(state): State<GroupHandlerState>,
-    Path((group_id, user_id)): Path<(Uuid, Uuid)>,
+    Path((group_id, user_id)): Path<(i64, String)>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
         .group_service
-        .add_member(group_id, principal.user_id(), user_id)
+        .add_member(group_id, principal.user_id(), &user_id)
         .await
     {
         Ok(_) => (StatusCode::CREATED, Json(json!({"success": true}))).into_response(),
@@ -165,12 +164,12 @@ pub async fn add_group_member(
 /// DELETE /api/v2/groups/:id/members/:userId - Remove a member from a group
 pub async fn remove_group_member(
     State(state): State<GroupHandlerState>,
-    Path((group_id, user_id)): Path<(Uuid, Uuid)>,
+    Path((group_id, user_id)): Path<(i64, String)>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
         .group_service
-        .remove_member(group_id, principal.user_id(), user_id)
+        .remove_member(group_id, principal.user_id(), &user_id)
         .await
     {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
@@ -197,7 +196,7 @@ pub async fn send_friendship_request(
 ) -> impl IntoResponse {
     match state
         .friendship_service
-        .send_request(principal.user_id(), req.recipient_id)
+        .send_request(principal.user_id(), &req.recipient_id)
         .await
     {
         Ok(friendship) => (
@@ -219,7 +218,7 @@ pub async fn send_friendship_request(
 /// POST /api/v2/friendships/:id/accept - Accept a friendship request
 pub async fn accept_friendship(
     State(state): State<GroupHandlerState>,
-    Path(friendship_id): Path<Uuid>,
+    Path(friendship_id): Path<i64>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
@@ -241,7 +240,7 @@ pub async fn accept_friendship(
 /// POST /api/v2/friendships/:id/decline - Decline a friendship request
 pub async fn decline_friendship(
     State(state): State<GroupHandlerState>,
-    Path(friendship_id): Path<Uuid>,
+    Path(friendship_id): Path<i64>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
@@ -263,7 +262,7 @@ pub async fn decline_friendship(
 /// DELETE /api/v2/friendships/:id - Remove a friendship
 pub async fn delete_friendship(
     State(state): State<GroupHandlerState>,
-    Path(friendship_id): Path<Uuid>,
+    Path(friendship_id): Path<i64>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
@@ -290,7 +289,7 @@ pub async fn delete_friendship(
 /// GET /api/v2/groups/:id/members - List members of a group (owner only)
 pub async fn list_group_members(
     State(state): State<GroupHandlerState>,
-    Path(group_id): Path<Uuid>,
+    Path(group_id): Path<i64>,
     principal: PrincipalContext,
 ) -> impl IntoResponse {
     match state
@@ -299,7 +298,7 @@ pub async fn list_group_members(
         .await
     {
         Ok(members) => {
-            let member_ids: Vec<Uuid> = members.iter().map(|m| m.user_id).collect();
+            let member_ids: Vec<&str> = members.iter().map(|m| m.user_id.as_str()).collect();
             (StatusCode::OK, Json(json!({"members": member_ids}))).into_response()
         }
         Err(e) => {

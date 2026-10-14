@@ -19,13 +19,12 @@ use chronos_date_api::security::PrincipalContext;
 use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
 use std::sync::Arc;
 use tower::Service;
-use uuid::Uuid;
 
 /// Builds a router with the status route, authenticated as `user_id`.
 ///
 /// Token validation needs a live Keycloak JWKS, so the principal is injected
 /// the same way the auth middleware would after a successful validation.
-fn router_for(state: Arc<AppState>, user_id: Uuid) -> Router {
+fn router_for(state: Arc<AppState>, user_id: String) -> Router {
     Router::new()
         .route(
             "/api/v2/appointments/:id/participation/status",
@@ -33,11 +32,14 @@ fn router_for(state: Arc<AppState>, user_id: Uuid) -> Router {
         )
         .with_state(state)
         .layer(middleware::from_fn(
-            move |mut request: Request, next: Next| async move {
-                request
-                    .extensions_mut()
-                    .insert(Arc::new(PrincipalContext::new(user_id)));
-                next.run(request).await
+            move |mut request: Request, next: Next| {
+                let user_id = user_id.clone();
+                async move {
+                    request
+                        .extensions_mut()
+                        .insert(Arc::new(PrincipalContext::new(user_id)));
+                    next.run(request).await
+                }
             },
         ))
 }
@@ -45,14 +47,14 @@ fn router_for(state: Arc<AppState>, user_id: Uuid) -> Router {
 /// Calls the status endpoint as `user_id` and returns status code and JSON body
 async fn get_status(
     db: &TestDb,
-    user_id: Uuid,
-    appointment_id: Uuid,
+    user_id: &str,
+    appointment_id: i64,
 ) -> (StatusCode, serde_json::Value) {
     let state = Arc::new(AppState {
         db_pool: db.pool().clone(),
         event_publisher: Arc::new(PostgresEventBus::new(db.pool().clone())),
     });
-    let mut router = router_for(state, user_id);
+    let mut router = router_for(state, user_id.to_string());
 
     let request = http::Request::builder()
         .uri(format!(
@@ -83,7 +85,7 @@ async fn get_status(
 }
 
 /// Creates a user with an appointment created by `creator`
-async fn setup_appointment(db: &TestDb, creator_name: &str) -> (Uuid, Uuid) {
+async fn setup_appointment(db: &TestDb, creator_name: &str) -> (String, i64) {
     let fixtures = TestFixtures::new(db.pool().clone());
     let creator_id = fixtures
         .create_user(creator_name, &format!("{}@example.com", creator_name))
@@ -91,7 +93,7 @@ async fn setup_appointment(db: &TestDb, creator_name: &str) -> (Uuid, Uuid) {
         .expect("Failed to create creator");
     let appointment_id = fixtures
         .create_appointment(
-            creator_id,
+            &creator_id,
             &AppointmentFixture::new().with_title("Status Test"),
         )
         .await
@@ -100,14 +102,19 @@ async fn setup_appointment(db: &TestDb, creator_name: &str) -> (Uuid, Uuid) {
 }
 
 /// Creates a user and adds them as participant with the given status
-async fn add_user_with_status(db: &TestDb, name: &str, appointment_id: Uuid, status: &str) -> Uuid {
+async fn add_user_with_status(
+    db: &TestDb,
+    name: &str,
+    appointment_id: i64,
+    status: &str,
+) -> String {
     let fixtures = TestFixtures::new(db.pool().clone());
     let user_id = fixtures
         .create_user(name, &format!("{}@example.com", name))
         .await
         .expect("Failed to create user");
     fixtures
-        .add_participant(appointment_id, user_id, status)
+        .add_participant(appointment_id, &user_id, status)
         .await
         .expect("Failed to add participant");
     user_id
@@ -121,7 +128,7 @@ async fn test_returns_approved_status_for_participant() {
     let (_creator, appointment_id) = setup_appointment(&db, "approved_creator").await;
     let user_id = add_user_with_status(&db, "approved_user", appointment_id, "APPROVED").await;
 
-    let (status, body) = get_status(&db, user_id, appointment_id).await;
+    let (status, body) = get_status(&db, &user_id, appointment_id).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "APPROVED" }));
@@ -135,7 +142,7 @@ async fn test_returns_rejected_status_for_participant() {
     let (_creator, appointment_id) = setup_appointment(&db, "rejected_creator").await;
     let user_id = add_user_with_status(&db, "rejected_user", appointment_id, "REJECTED").await;
 
-    let (status, body) = get_status(&db, user_id, appointment_id).await;
+    let (status, body) = get_status(&db, &user_id, appointment_id).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "REJECTED" }));
@@ -149,7 +156,7 @@ async fn test_returns_pending_status_for_pending_participant() {
     let (_creator, appointment_id) = setup_appointment(&db, "pending_creator").await;
     let user_id = add_user_with_status(&db, "pending_user", appointment_id, "PENDING").await;
 
-    let (status, body) = get_status(&db, user_id, appointment_id).await;
+    let (status, body) = get_status(&db, &user_id, appointment_id).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "PENDING" }));
@@ -166,8 +173,8 @@ async fn test_returns_only_callers_own_status() {
     let rejected_user =
         add_user_with_status(&db, "own_status_rejected", appointment_id, "REJECTED").await;
 
-    let (_, approved_body) = get_status(&db, approved_user, appointment_id).await;
-    let (_, rejected_body) = get_status(&db, rejected_user, appointment_id).await;
+    let (_, approved_body) = get_status(&db, &approved_user, appointment_id).await;
+    let (_, rejected_body) = get_status(&db, &rejected_user, appointment_id).await;
 
     assert_eq!(approved_body, serde_json::json!({ "status": "APPROVED" }));
     assert_eq!(rejected_body, serde_json::json!({ "status": "REJECTED" }));
@@ -184,7 +191,7 @@ async fn test_non_participant_gets_pending_status() {
         .await
         .expect("Failed to create user");
 
-    let (status, body) = get_status(&db, stranger, appointment_id).await;
+    let (status, body) = get_status(&db, &stranger, appointment_id).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "PENDING" }));
@@ -200,7 +207,7 @@ async fn test_nonexistent_appointment_returns_pending_status() {
         .await
         .expect("Failed to create user");
 
-    let (status, body) = get_status(&db, user, Uuid::new_v4()).await;
+    let (status, body) = get_status(&db, &user, i64::MAX).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "PENDING" }));
@@ -213,13 +220,13 @@ async fn test_cancelled_appointment_still_returns_participant_status() {
         .expect("Failed to initialize test database");
     let (_creator, appointment_id) = setup_appointment(&db, "cancelled_creator").await;
     let user_id = add_user_with_status(&db, "cancelled_user", appointment_id, "APPROVED").await;
-    sqlx::query("UPDATE appointments SET status = 'CANCELLED' WHERE id = $1")
+    sqlx::query("UPDATE appointment SET status = 1 WHERE id = $1")
         .bind(appointment_id)
         .execute(db.pool())
         .await
         .expect("Failed to cancel appointment");
 
-    let (status, body) = get_status(&db, user_id, appointment_id).await;
+    let (status, body) = get_status(&db, &user_id, appointment_id).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "APPROVED" }));
@@ -232,13 +239,13 @@ async fn test_deleted_appointment_still_returns_participant_status() {
         .expect("Failed to initialize test database");
     let (_creator, appointment_id) = setup_appointment(&db, "deleted_creator").await;
     let user_id = add_user_with_status(&db, "deleted_user", appointment_id, "REJECTED").await;
-    sqlx::query("UPDATE appointments SET status = 'DELETED' WHERE id = $1")
+    sqlx::query("UPDATE appointment SET status = 2 WHERE id = $1")
         .bind(appointment_id)
         .execute(db.pool())
         .await
         .expect("Failed to delete appointment");
 
-    let (status, body) = get_status(&db, user_id, appointment_id).await;
+    let (status, body) = get_status(&db, &user_id, appointment_id).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, serde_json::json!({ "status": "REJECTED" }));
