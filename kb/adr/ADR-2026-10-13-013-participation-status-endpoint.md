@@ -23,7 +23,7 @@ Match the Java backend exactly:
 
 ### 2. No existence or soft-delete check
 
-- The query reads `appointment_participants` only. It does not join `appointments` and does not filter on `status`.
+- The query reads `appointment_participation` only. It does not join `appointments` and does not filter on `status`.
 - **Deliberate exception** to the read-filter rule in [ADR-2026-10-03-011](ADR-2026-10-03-011-appointment-mutations.md) (which excludes CANCELLED and DELETED from read endpoints). This endpoint returns the caller's status for cancelled and deleted appointments too, because Java does.
 
 ### 3. Caller's own status only
@@ -43,8 +43,9 @@ Match the Java backend exactly:
 
 ### 5. Storage mapping
 
-- `appointment_participants.status` is `VARCHAR(50)`. `ParticipationStatus` derives `sqlx::Type` with `TEXT` and `UPPERCASE`, mirroring `UserRole`.
-- The query selects `status::TEXT`, because the derived type is compatible only with `TEXT`. Without the cast sqlx rejects the `VARCHAR` column at runtime.
+- `appointment_participation.status` is `VARCHAR(255)`. `ParticipationStatus` derives `sqlx::Type` with `type_name = "TEXT"` and `UPPERCASE`.
+- `UserRole` uses `type_name = "VARCHAR"` and is read uncast. `ParticipationStatus` differs: its derived type is compatible only with the `TEXT` OID (sqlx's default `compatible` is `*ty == Self::type_info()`), so the query selects `status::TEXT`. Without the cast, sqlx rejects the `VARCHAR` column at runtime with a mismatched-type error.
+- `AppointmentStatus` is not sqlx-derived. It is a hand-written `SMALLINT` mapping and reads through `COALESCE(status, 0)::smallint`, so it is unrelated to this cast.
 
 ### Layering
 

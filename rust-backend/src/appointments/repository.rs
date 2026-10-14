@@ -309,7 +309,7 @@ impl AppointmentRepository {
         appointment_id: i64,
         user_id: &str,
     ) -> Result<Option<ParticipationStatus>, RepositoryError> {
-        // status is VARCHAR; cast to TEXT because the enum's sqlx type is TEXT-compatible only
+        // status is VARCHAR; cast to TEXT because ParticipationStatus derives the sqlx type TEXT, which rejects a VARCHAR column
         sqlx::query_scalar::<_, ParticipationStatus>(
             "SELECT status::TEXT FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
         )
