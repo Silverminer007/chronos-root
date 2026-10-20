@@ -5,10 +5,11 @@ use crate::appointments::events::{
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
-    UpdateAppointmentRequest, UserRole,
+    UpdateAppointmentRequest, UserParticipantDto, UserRole,
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
+use crate::users::identity::UserIdentity;
 use chrono::{DateTime, Utc};
 
 /// Custom error type for appointment service operations
@@ -179,6 +180,56 @@ impl AppointmentService {
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
         Ok(status.unwrap_or(ParticipationStatus::Pending))
+    }
+
+    /// List the participants of an appointment (Java: `AppointmentParticipationService#getParticipants`).
+    /// Every user with a role other than NONE may read; this includes unknown appointments, which
+    /// yield `Forbidden` like in Java. No soft-delete filtering: removed participants are hard-deleted.
+    pub async fn get_participants(
+        &self,
+        appointment_id: i64,
+        requesting_user_id: &str,
+    ) -> Result<Vec<UserParticipantDto>, ServiceError> {
+        let db_error = |e: RepositoryError| ServiceError::DatabaseError(e.to_string());
+
+        let role = self
+            .repo
+            .get_participant_role(appointment_id, requesting_user_id)
+            .await
+            .map_err(db_error)?;
+        if matches!(role, None | Some(UserRole::None)) {
+            return Err(ServiceError::Forbidden(
+                "You have no role at this appointment".to_string(),
+            ));
+        }
+
+        let rows = self
+            .repo
+            .list_participants(appointment_id)
+            .await
+            .map_err(db_error)?;
+        let user_ids: Vec<String> = rows.iter().map(|r| r.user_oidcid.clone()).collect();
+        let users = self
+            .repo
+            .find_identities(&user_ids)
+            .await
+            .map_err(db_error)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let user = users.get(&row.user_oidcid);
+                UserParticipantDto {
+                    name: user.map(UserIdentity::name),
+                    profile_picture_url: user.and_then(|u| u.profile_picture_url.clone()),
+                    user_id: row.user_oidcid,
+                    role: row.role,
+                    status: row.status,
+                    via_group_id: row.group_participation_id,
+                    via_group_name: row.group_name,
+                }
+            })
+            .collect())
     }
 
     /// List appointments visible to a user with pagination and sorting
