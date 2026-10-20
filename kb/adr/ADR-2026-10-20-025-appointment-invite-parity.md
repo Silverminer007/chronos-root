@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Ticket: #158 (found by the parity run in #137; Java is the reference)
+- Amends: [ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md) (view access no longer requires `RESPONSIBLE`; creator and listener insert use `PENDING`, not `APPROVED`)
 
 ## Context
 
