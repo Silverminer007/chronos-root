@@ -85,6 +85,27 @@ impl TestApp {
         (status, body)
     }
 
+    /// Sends a GET as `user_id`; returns status and the raw body (for non-JSON responses)
+    pub async fn get_raw(&self, user_id: &str, uri: &str) -> (StatusCode, String) {
+        let request = http::Request::builder()
+            .uri(uri)
+            .method("GET")
+            .header("authorization", format!("Bearer {}", sign_token(user_id)))
+            .body(Body::empty())
+            .expect("Failed to build request");
+        let response = self
+            .router
+            .clone()
+            .call(request)
+            .await
+            .expect("Router call failed");
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("Failed to read body");
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
     pub async fn get(&self, user: &str, uri: &str) -> (StatusCode, Value) {
         self.call(Some(user), "GET", uri, None).await
     }

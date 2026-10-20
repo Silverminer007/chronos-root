@@ -491,3 +491,16 @@ async fn test_removing_a_non_member_is_a_validation_error() {
     );
     assert_eq!(body["fieldErrors"], json!({}));
 }
+
+// ===== regression: appointment errors are not touched by `fill_error_path` =====
+
+#[tokio::test]
+async fn test_appointment_error_responses_keep_their_plain_text_body() {
+    let app = app_with_users().await;
+
+    let (status, body) = app.get_raw("alice", "/api/v2/appointments/987654321").await;
+
+    // `AppointmentError` does not use `AppError`, so the path middleware leaves it as it was
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body, "Appointment not found");
+}
