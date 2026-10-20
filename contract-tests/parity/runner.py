@@ -7,7 +7,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
 
-from .compare import Diff, Response, compare_responses
+from .compare import Diff, Response, compare_responses, unchecked_shapes
 from .endpoints import normalize
 
 ROLE_USER = "user"
@@ -39,6 +39,7 @@ class StepResult:
     rust: Response
     diffs: "list[Diff]"
     allowed: "list[Diff]" = field(default_factory=list)
+    unchecked: "list[str]" = field(default_factory=list)  # arrays whose element shape was not compared
 
 
 class Target:
@@ -133,7 +134,11 @@ def run_scenario(steps: "list[Step]", java: Target, rust: Target, variables: dic
         rust_resp = _send(rust, step, rust_ctx)
         _capture(step, java_resp, java_ctx)
         _capture(step, rust_resp, rust_ctx)
-        results.append(StepResult(step, java_resp, rust_resp, compare_responses(java_resp, rust_resp)))
+        diffs = compare_responses(java_resp, rust_resp)
+        unchecked = []
+        if java_resp.status == rust_resp.status and java_resp.status < 400:
+            unchecked = unchecked_shapes(java_resp.body, rust_resp.body)
+        results.append(StepResult(step, java_resp, rust_resp, diffs, unchecked=unchecked))
     return results
 
 

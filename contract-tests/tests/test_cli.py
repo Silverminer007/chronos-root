@@ -39,6 +39,13 @@ class MainTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("2 steps, 0 mismatches", out)
 
+    def test_empty_arrays_are_reported_as_unchecked(self):
+        t = {("GET", "/a"): ok({"x": 1}), ("GET", "/b"): ok([])}
+        code, out = run([], Stub(t), Stub(t))
+        self.assertEqual(code, 0)
+        self.assertIn("UNCHECKED get b (GET /b) $  beide leer, Form ungeprüft", out)
+        self.assertIn("1 arrays with unchecked element shape", out)
+
     def test_mismatch_exits_one_and_prints_readable_diff(self):
         java = Stub({("GET", "/a"): ok({"x": 1}), ("GET", "/b"): ok([])})
         rust = Stub({("GET", "/a"): ok({"x": "1"}), ("GET", "/b"): ok([])})

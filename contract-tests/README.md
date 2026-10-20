@@ -28,6 +28,10 @@ Exit code 0: no mismatch. 1: mismatch. 2: harness error (backend unreachable, in
 A route that Rust does not serve yet shows up as `missing_route` (Rust 404/405 where Java answers) and
 cannot be allowlisted.
 
+Arrays that are empty on one or both sides cannot be compared element by element. The run stays green but
+prints `UNCHECKED <step> ... <path>  beide leer, Form ungeprüft` (or `Java leer` / `Rust leer`) and counts them in
+the summary, so a green run with empty lists is not mistaken for verified element shapes.
+
 ## Coverage check
 
 ```bash

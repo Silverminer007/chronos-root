@@ -97,8 +97,12 @@ def coverage_report(steps, java_src: Path, rust_src: Path, allowlist: Allowlist)
 def print_report(results, allowlist: Allowlist) -> int:
     mismatches = 0
     allowed = 0
+    unchecked = 0
     for result in results:
         step = result.step
+        for note in result.unchecked:
+            unchecked += 1
+            print(f"UNCHECKED {step.name} ({step.method} {step.path}) {note}")
         if result.diffs:
             mismatches += 1
             print(f"MISMATCH {step.name} ({step.method} {step.path})")
@@ -112,7 +116,8 @@ def print_report(results, allowlist: Allowlist) -> int:
             print(f"ALLOWED {entry.step} {entry.path} {entry.kind}: {entry.reason}")
     for entry in allowlist.unused():
         print(f"NOTE unused allowlist entry: {entry.step} {entry.path} {entry.kind} ({entry.reason})")
-    print(f"{len(results)} steps, {mismatches} mismatches, {allowed} allowed differences")
+    print(f"{len(results)} steps, {mismatches} mismatches, {allowed} allowed differences, "
+          f"{unchecked} arrays with unchecked element shape")
     return EXIT_MISMATCH if mismatches else EXIT_OK
 
 

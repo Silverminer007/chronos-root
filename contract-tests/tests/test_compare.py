@@ -1,10 +1,26 @@
 import unittest
 
-from parity.compare import Response, compare_responses, shape_diffs
+from parity.compare import Response, compare_responses, shape_diffs, unchecked_shapes
 
 
 def resp(status, body=None, ctype="application/json"):
     return Response(status=status, body=body, content_type=ctype)
+
+
+class UncheckedShapesTest(unittest.TestCase):
+    def test_both_empty_is_reported(self):
+        self.assertEqual(unchecked_shapes([], []), ["$  beide leer, Form ungeprüft"])
+
+    def test_one_side_empty_is_reported(self):
+        self.assertEqual(unchecked_shapes([{"a": 1}], []), ["$  Rust leer, Form ungeprüft"])
+        self.assertEqual(unchecked_shapes([], [{"a": 1}]), ["$  Java leer, Form ungeprüft"])
+
+    def test_nested_paths(self):
+        self.assertEqual(unchecked_shapes({"a": {"b": []}, "c": [1]}, {"a": {"b": []}, "c": [2]}),
+                         ["$.a.b  beide leer, Form ungeprüft"])
+
+    def test_filled_arrays_are_checked(self):
+        self.assertEqual(unchecked_shapes([{"a": 1}], [{"a": 2}]), [])
 
 
 class ShapeDiffTest(unittest.TestCase):

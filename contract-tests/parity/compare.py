@@ -94,6 +94,21 @@ def shape_diffs(java: Any, rust: Any, path: str = "$") -> "list[Diff]":
     return []
 
 
+def unchecked_shapes(java: Any, rust: Any, path: str = "$") -> "list[str]":
+    """Paths of arrays whose element shape was not compared because one or both sides are empty."""
+    if isinstance(java, dict) and isinstance(rust, dict):
+        out = []
+        for key in sorted(java.keys() & rust.keys()):
+            out.extend(unchecked_shapes(java[key], rust[key], f"{path}.{key}"))
+        return out
+    if isinstance(java, list) and isinstance(rust, list):
+        if not java or not rust:
+            side = "beide leer" if not java and not rust else ("Java leer" if not java else "Rust leer")
+            return [f"{path}  {side}, Form ungeprüft"]
+        return unchecked_shapes(_merge_elements(java), _merge_elements(rust), f"{path}[]")
+    return []
+
+
 def _value_diffs(java: Any, rust: Any, path: str = "$") -> "list[Diff]":
     """Error bodies: besides the shape, scalar values must be equal."""
     if isinstance(java, dict) and isinstance(rust, dict):
