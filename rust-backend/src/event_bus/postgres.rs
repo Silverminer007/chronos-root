@@ -105,6 +105,8 @@ async fn run_dispatcher(pool: PgPool, mut subscriptions: mpsc::UnboundedReceiver
                 },
             }
         }
+        // Only reached after a listener error: back off so a persistent failure is no hot loop
+        tokio::time::sleep(RECONNECT_DELAY).await;
     }
 }
 
