@@ -48,6 +48,24 @@ async fn test_group_routes_require_authentication() {
     }
 }
 
+// ===== trailing slash =====
+
+#[tokio::test]
+async fn test_collection_routes_with_trailing_slash_answer_like_without() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+
+    for uri in ["/api/v2/groups", "/api/v2/appointments"] {
+        let (status, body) = app.get("alice", uri).await;
+        let (slash_status, slash_body) = app.get("alice", &format!("{uri}/")).await;
+        assert_eq!(status, StatusCode::OK, "{uri}");
+        assert_eq!(slash_status, StatusCode::OK, "{uri}/");
+        assert_eq!(slash_body, body, "{uri}/");
+    }
+    let (_, body) = app.get("alice", "/api/v2/groups/").await;
+    assert_eq!(body[0]["id"], json!(team));
+}
+
 // ===== GET /groups =====
 
 #[tokio::test]

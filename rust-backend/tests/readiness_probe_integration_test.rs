@@ -196,10 +196,11 @@ async fn test_readiness_reports_the_datasource_as_down_when_database_unreachable
     Ok(())
 }
 
-/// Java maps `@Path("/")` on the collection resources, so `/groups/` answers like `/groups`.
-/// Without a token both are 401 (authentication runs before routing), a 404 would mean no route.
+/// Java maps `@Path("/")` on the collection resources, so a trailing slash answers like none.
+/// The public health routes are not behind the auth layer, so 200 proves the route matched.
+/// (Authenticated collection routes: `groups_integration_test`.)
 #[tokio::test]
-async fn test_trailing_slash_reaches_the_same_route_as_without() -> Result<(), AnyError> {
+async fn test_health_routes_answer_with_a_trailing_slash() -> Result<(), AnyError> {
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(1)
         .min_connections(0)
@@ -220,28 +221,13 @@ async fn test_trailing_slash_reaches_the_same_route_as_without() -> Result<(), A
             "http://localhost:8080/realms/chronos".to_string(),
         )),
     );
-    for uri in [
-        "/q/health/live/",
-        "/api/v2/groups/",
-        "/api/v2/appointments/",
-    ] {
-        let with = router
-            .call(
-                http::Request::builder()
-                    .uri(uri)
-                    .body(axum::body::Body::empty())?,
-            )
-            .await?
-            .status();
-        let without = router
-            .call(
-                http::Request::builder()
-                    .uri(uri.trim_end_matches('/'))
-                    .body(axum::body::Body::empty())?,
-            )
-            .await?
-            .status();
-        assert_eq!(with, without, "{uri}");
-    }
+    let response = router
+        .call(
+            http::Request::builder()
+                .uri("/q/health/live/")
+                .body(axum::body::Body::empty())?,
+        )
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
     Ok(())
 }
