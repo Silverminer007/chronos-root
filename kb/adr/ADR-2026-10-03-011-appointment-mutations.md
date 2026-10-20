@@ -99,6 +99,7 @@ All events fire **after** the database commit succeeds (transactional safety):
 - `AppointmentMovedEvent` — additionally fires when `start` or `end` changed (in same PATCH)
 - `AppointmentDeletedEvent` — every DELETE
 - `AppointmentCancelledEvent` — every POST /cancel
+- `AppointmentGroupAddedEvent` — every POST /appointments/{id}/groups/{groupId}
 
 Multiple events from a single request (e.g., both EditedEvent and MovedEvent on PATCH) fire in the same transaction, after repository succeeds.
 
@@ -136,6 +137,7 @@ Multiple events from a single request (e.g., both EditedEvent and MovedEvent on 
 | PATCH | `/api/v2/appointments/{id}` | ATTENDANT+ | `AppointmentEditedEvent` + `AppointmentMovedEvent` (if start/end changed) |
 | DELETE | `/api/v2/appointments/{id}` | RESPONSIBLE | `AppointmentDeletedEvent` |
 | POST | `/api/v2/appointments/{id}/cancel` | RESPONSIBLE | `AppointmentCancelledEvent` |
+| POST | `/api/v2/appointments/{id}/groups/{groupId}` | RESPONSIBLE | `AppointmentGroupAddedEvent` |
 
 ### Validation Layer
 
@@ -224,10 +226,22 @@ repository.update(updated)?;
 event_bus.publish(AppointmentEditedEvent { ... });
 ```
 
+### Event Types Table
+
+| Event Name | Fired by | Event Fields |
+|---|---|---|
+| `AppointmentCreatedEvent` | POST `/api/v2/appointments` | `appointment_id`, `creator_id`, `timestamp` |
+| `AppointmentEditedEvent` | PATCH `/api/v2/appointments/{id}` | `appointment_id`, `timestamp` |
+| `AppointmentMovedEvent` | PATCH `/api/v2/appointments/{id}` (when start/end changes) | `appointment_id`, `old_start`, `old_end`, `timestamp` |
+| `AppointmentDeletedEvent` | DELETE `/api/v2/appointments/{id}` | `appointment_id`, `timestamp` |
+| `AppointmentCancelledEvent` | POST `/api/v2/appointments/{id}/cancel` | `appointment_id`, `timestamp` |
+| `AppointmentGroupAddedEvent` | POST `/api/v2/appointments/{id}/groups/{groupId}` | `appointment_id`, `group_id`, `actor_id`, `timestamp` |
+
 ## References
 
 - Issue #91: [Appointment mutations: Create/Edit/Delete/Move](https://github.com/Silverminer007/chronos-root/issues/91)
 - Issue #30: [Original Java implementation](https://github.com/Silverminer007/chronos-root/issues/30)
+- Ticket #122: [Rust Gap - Appointment Groups: Add group](https://github.com/Silverminer007/chronos-root/issues/122)
 - Ticket clarifications (2026-10-03): Field naming, DateTime format, nested arrays, status, creator participation, validation, authorization, event firing
 - [ADR-2025-09-28-007: Layered backend (service/domain/infrastructure pattern)](ADR-2025-09-28-007-layered-backend.md)
 - [ADR-2025-09-28-009: Panache ORM (Hibernate, soft deletes via status column)](ADR-2025-09-28-009-panache.md)

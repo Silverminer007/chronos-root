@@ -5,13 +5,14 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::appointments::{
     models::{
-        AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest,
-        ParticipationStatusResponse, UpdateAppointmentRequest, UpdateParticipationStatusRequest,
-        UserRole,
+        AddGroupToAppointmentRequest, AddParticipantRequest, AppointmentResponse,
+        CreateAppointmentRequest, ParticipationStatusResponse, UpdateAppointmentRequest,
+        UpdateParticipationStatusRequest, UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
@@ -286,6 +287,30 @@ async fn ensure_creator(
         Some(UserRole::Responsible) => Ok(()),
         _ => Err(AppointmentError::Unauthorized),
     }
+}
+
+/// POST /api/v2/appointments/:id/groups/:groupId - Add a group to an appointment
+/// Requires the RESPONSIBLE role (only the creator can add groups)
+pub async fn add_group_to_appointment(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, group_id)): Path<(i64, i64)>,
+    principal: PrincipalContext,
+    Json(request): Json<AddGroupToAppointmentRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    let role = UserRole::from_str(&request.role)
+        .map_err(|_| AppointmentError::ValidationError("Invalid role".to_string()))?;
+
+    service
+        .add_group_to_appointment(user_id, appointment_id, group_id, role)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
 }
 
 /// DELETE /api/v2/appointments/:id/participants/:userId - Remove a participant (hard delete)

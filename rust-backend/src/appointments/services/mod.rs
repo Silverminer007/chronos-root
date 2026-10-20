@@ -5,7 +5,7 @@ use crate::appointments::events::{
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
-    UpdateAppointmentRequest,
+    UpdateAppointmentRequest, UserRole,
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
@@ -326,7 +326,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentCreatedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentCreatedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentCreatedEvent: {:?}", e);
                 // Don't fail the request if event firing fails - this is a side effect
             }
         }
@@ -435,7 +435,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentEditedEvent", edited_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentEditedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentEditedEvent: {:?}", e);
             }
 
             // Fire AppointmentMovedEvent if time changed
@@ -451,7 +451,7 @@ impl AppointmentService {
                 let event_bus_event =
                     crate::event_bus::Event::new("AppointmentMovedEvent", moved_json);
                 if let Err(e) = publisher.fire(event_bus_event).await {
-                    eprintln!("Failed to fire AppointmentMovedEvent: {:?}", e);
+                    tracing::error!("Failed to fire AppointmentMovedEvent: {:?}", e);
                 }
             }
         }
@@ -477,7 +477,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentDeletedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentDeletedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentDeletedEvent: {:?}", e);
             }
         }
 
@@ -502,7 +502,100 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate authorization and preconditions for adding a group to an appointment
+    async fn validate_group_addition(
+        &self,
+        actor_id: &str,
+        appointment_id: i64,
+        group_id: i64,
+    ) -> Result<(), ServiceError> {
+        // Check if appointment exists
+        let _appointment = self
+            .repo
+            .find_by_id(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        // Authorization: the creator is the RESPONSIBLE participant (the Java schema has no creator column)
+        let actor_role = self
+            .repo
+            .get_participant_role(appointment_id, actor_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if actor_role != Some(UserRole::Responsible) {
+            return Err(ServiceError::ValidationError(
+                "Only the appointment creator can add groups".to_string(),
+            ));
+        }
+
+        // Check if group exists
+        let group_exists = self
+            .repo
+            .group_exists(group_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if !group_exists {
+            return Err(ServiceError::NotFound);
+        }
+
+        // Check if group is already a participant
+        let already_participant = self
+            .repo
+            .group_participation_exists(appointment_id, group_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if already_participant {
+            return Err(ServiceError::ValidationError(
+                "This group is already a participant of this appointment".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Add a group to an appointment
+    /// Only the appointment creator can add groups
+    pub async fn add_group_to_appointment(
+        &self,
+        actor_id: &str,
+        appointment_id: i64,
+        group_id: i64,
+        role: UserRole,
+    ) -> Result<(), ServiceError> {
+        // Validate authorization and preconditions
+        self.validate_group_addition(actor_id, appointment_id, group_id)
+            .await?;
+
+        // Mutate: add group to appointment
+        self.repo
+            .add_group(appointment_id, group_id, role)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Publish event after successful database commit. The group is already persisted, so a
+        // publish failure is logged instead of reported as a failed request (as for the other events).
+        if let Some(ref publisher) = self.event_publisher {
+            let event_json = serde_json::json!({
+                "appointment_id": appointment_id,
+                "group_id": group_id,
+                "actor_id": actor_id,
+                "timestamp": chrono::Utc::now().timestamp(),
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentGroupAddedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                tracing::error!("Failed to fire AppointmentGroupAddedEvent: {:?}", e);
             }
         }
 
