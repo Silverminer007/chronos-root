@@ -278,6 +278,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-023: Admin endpoints (`/api/v2/admin/*`) in the Rust backend](adr/ADR-2026-10-20-023-admin-endpoints.md)
 - [ADR-2026-10-20-024: One shared LISTEN connection for the Postgres event bus](adr/ADR-2026-10-20-024-event-bus-single-listener.md)
 - [ADR-2026-10-20-024: Remove group from appointment (Java parity)](adr/ADR-2026-10-20-024-appointment-remove-group.md)
+- [ADR-2026-10-20-024: Java and Rust backend side by side in the local k3s cluster (parity run)](adr/ADR-2026-10-20-024-parity-deployment-local-k3s.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)
@@ -296,6 +297,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ARCH-2025-09-28-004: Database schema management](architecture/ARCH-2025-09-28-004-schema-management.md)
 - [ARCH-2025-09-28-005: Push notification pipeline](architecture/ARCH-2025-09-28-005-notifications.md)
 - [ARCH-2025-09-28-006: Authorization and security](architecture/ARCH-2025-09-28-006-authorization.md)
+- [ARCH-2026-10-20-001: Parity run of the Rust backend against the Java reference in the local k3s cluster](architecture/ARCH-2026-10-20-001-rust-java-parity-run.md)
 
 ### Patterns
 - [PATTERN-2025-09-28-001: Principal context pattern](patterns/PATTERN-2025-09-28-001-principal-context.md)
