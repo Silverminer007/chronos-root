@@ -2,8 +2,8 @@
 #[cfg(test)]
 mod integration_tests {
     use chronos_date_api::appointments::models::Appointment;
+    use chronos_date_api::appointments::repository::APPOINTMENT_COLUMNS;
     use chronos_date_api::test_utils::{AppointmentFixture, TestAuthHelper, TestDb, TestFixtures};
-    use uuid::Uuid;
 
     macro_rules! setup_test_db {
         () => {
@@ -37,15 +37,15 @@ mod integration_tests {
             .with_location(Some("Conference Room A"));
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
         // Verify: Query the appointment from the database
-        let fetched_appointment: Appointment = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments WHERE id = $1"
-        )
+        let fetched_appointment: Appointment = sqlx::query_as(&format!(
+            "SELECT {} FROM appointment WHERE id = $1",
+            APPOINTMENT_COLUMNS
+        ))
         .bind(appointment_id)
         .fetch_one(db.pool())
         .await
@@ -53,16 +53,15 @@ mod integration_tests {
 
         // Assert
         assert_eq!(fetched_appointment.id, appointment_id);
-        assert_eq!(fetched_appointment.title, "Team Standup");
+        assert_eq!(fetched_appointment.name, "Team Standup");
         assert_eq!(
             fetched_appointment.description,
             Some("Daily team standup meeting".to_string())
         );
         assert_eq!(
-            fetched_appointment.location,
+            fetched_appointment.venue,
             Some("Conference Room A".to_string())
         );
-        assert_eq!(fetched_appointment.creator_id, creator_id);
         assert!(fetched_appointment.end_time > fetched_appointment.start_time);
     }
 
@@ -87,7 +86,7 @@ mod integration_tests {
         // Create appointments by both users
         let _appt1_id = fixtures
             .create_appointment(
-                user1_id,
+                &user1_id,
                 &AppointmentFixture::new().with_title("User 1 Meeting"),
             )
             .await
@@ -95,27 +94,25 @@ mod integration_tests {
 
         let _appt2_id = fixtures
             .create_appointment(
-                user2_id,
+                &user2_id,
                 &AppointmentFixture::new().with_title("User 2 Meeting"),
             )
             .await
             .expect("Failed to create appointment 2");
 
         // Verify: Query all appointments
-        let appointments: Vec<Appointment> = sqlx::query_as(
-            "SELECT id, title, description, start_time, end_time, location, creator_id, created_at, updated_at
-             FROM appointments ORDER BY created_at"
-        )
+        let appointments: Vec<Appointment> = sqlx::query_as(&format!(
+            "SELECT {} FROM appointment ORDER BY createdat, id",
+            APPOINTMENT_COLUMNS
+        ))
         .fetch_all(db.pool())
         .await
         .expect("Failed to fetch appointments");
 
         // Assert
         assert_eq!(appointments.len(), 2);
-        assert_eq!(appointments[0].creator_id, user1_id);
-        assert_eq!(appointments[1].creator_id, user2_id);
-        assert_eq!(appointments[0].title, "User 1 Meeting");
-        assert_eq!(appointments[1].title, "User 2 Meeting");
+        assert_eq!(appointments[0].name, "User 1 Meeting");
+        assert_eq!(appointments[1].name, "User 2 Meeting");
     }
 
     #[tokio::test]
@@ -144,7 +141,7 @@ mod integration_tests {
         // Create appointment
         let appointment_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new().with_title("Team Workshop"),
             )
             .await
@@ -152,12 +149,12 @@ mod integration_tests {
 
         // Add participants
         let _p1_status = fixtures
-            .add_participant(appointment_id, participant1_id, "ACCEPTED")
+            .add_participant(appointment_id, &participant1_id, "ACCEPTED")
             .await
             .expect("Failed to add participant 1");
 
         let _p2_status = fixtures
-            .add_participant(appointment_id, participant2_id, "PENDING")
+            .add_participant(appointment_id, &participant2_id, "PENDING")
             .await
             .expect("Failed to add participant 2");
 
@@ -165,15 +162,15 @@ mod integration_tests {
         #[derive(sqlx::FromRow)]
         #[allow(dead_code)]
         struct Participant {
-            id: Uuid,
-            appointment_id: Uuid,
-            user_id: Uuid,
+            id: i64,
+            appointment_id: i64,
+            user_id: String,
             status: String,
         }
 
         let participants: Vec<Participant> = sqlx::query_as(
-            "SELECT id, appointment_id, user_id, status FROM appointment_participants
-             WHERE appointment_id = $1 ORDER BY created_at",
+            "SELECT id, appointment_id, user_oidcid AS user_id, status FROM appointment_participation
+             WHERE appointment_id = $1 AND role = 'ATTENDANT' ORDER BY id",
         )
         .bind(appointment_id)
         .fetch_all(db.pool())
@@ -182,6 +179,7 @@ mod integration_tests {
 
         // Assert
         assert_eq!(participants.len(), 2);
+        assert!(participants[0].id > 0);
         assert_eq!(participants[0].user_id, participant1_id);
         assert_eq!(participants[0].status, "ACCEPTED");
         assert_eq!(participants[1].user_id, participant2_id);
@@ -202,7 +200,7 @@ mod integration_tests {
             .expect("Failed to create user");
 
         // Verify user exists
-        let count_before: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+        let count_before: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_profiles")
             .fetch_one(db.pool())
             .await
             .expect("Failed to count users");
@@ -214,7 +212,7 @@ mod integration_tests {
             .expect("Failed to rollback all data");
 
         // Verify all data is gone
-        let count_after: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+        let count_after: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_profiles")
             .fetch_one(db.pool())
             .await
             .expect("Failed to count users after rollback");

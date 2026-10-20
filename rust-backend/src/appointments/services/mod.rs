@@ -1,16 +1,15 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
     AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationRemovedEvent,
+    AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
-    Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+    Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
+    UpdateAppointmentRequest,
 };
-use crate::appointments::repository::{
-    AppointmentRepository, CreateAppointmentParams, RepositoryError, UpdateAppointmentParams,
-};
+use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 /// Custom error type for appointment service operations
 #[derive(Debug, Clone)]
@@ -135,9 +134,9 @@ impl AppointmentService {
             }
             SortField::Title => {
                 if sort_direction == SortDirection::Ascending {
-                    appointments.sort_by_key(|a| a.title.clone());
+                    appointments.sort_by_key(|a| a.name.clone());
                 } else {
-                    appointments.sort_by_key(|a| std::cmp::Reverse(a.title.clone()));
+                    appointments.sort_by_key(|a| std::cmp::Reverse(a.name.clone()));
                 }
             }
         }
@@ -145,7 +144,7 @@ impl AppointmentService {
     }
 
     /// Get a single appointment by ID
-    pub async fn get_appointment(&self, id: Uuid) -> Result<Appointment, ServiceError> {
+    pub async fn get_appointment(&self, id: i64) -> Result<Appointment, ServiceError> {
         self.repo
             .find_by_id(id)
             .await
@@ -153,10 +152,27 @@ impl AppointmentService {
             .ok_or(ServiceError::NotFound)
     }
 
+    /// Get a user's participation status for an appointment.
+    /// Defaults to PENDING without a participation row (matches Java AppointmentParticipationQueryService).
+    /// Does not check appointment existence or soft-delete state, matching the Java backend.
+    pub async fn get_participation_status(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+    ) -> Result<ParticipationStatus, ServiceError> {
+        let status = self
+            .repo
+            .find_participation_status(appointment_id, user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        Ok(status.unwrap_or(ParticipationStatus::Pending))
+    }
+
     /// List appointments visible to a user with pagination and sorting
     pub async fn list_user_appointments(
         &self,
-        user_id: Uuid,
+        user_id: &str,
         query: ListAppointmentsQuery,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         let appointments = self.repo.find_visible_to_user(user_id).await?;
@@ -227,7 +243,7 @@ impl AppointmentService {
     /// Get appointments for a specific creator
     pub async fn get_creator_appointments(
         &self,
-        creator_id: Uuid,
+        creator_id: &str,
     ) -> Result<Vec<Appointment>, RepositoryError> {
         self.repo.find_by_creator(creator_id).await
     }
@@ -247,11 +263,6 @@ impl AppointmentService {
         request: CreateAppointmentRequest,
         creator_id: String,
     ) -> Result<AppointmentResponse, ServiceError> {
-        // Parse creator_id as UUID
-        let creator_uuid = Uuid::parse_str(&creator_id).map_err(|_| {
-            ServiceError::InvalidFormat("creator_id must be a valid UUID".to_string())
-        })?;
-
         // Validation: name cannot be blank
         if request.name.trim().is_empty() {
             return Err(ServiceError::ValidationError(
@@ -291,30 +302,24 @@ impl AppointmentService {
         // Create appointment in database
         let appointment = self
             .repo
-            .create(CreateAppointmentParams {
-                title: request.name,
-                description: request.description,
-                location: request.venue,
+            .create(
+                request.name,
+                request.description,
+                request.venue,
                 start_time,
                 end_time,
-                creator_id: creator_uuid,
-                minimal_attendees: request.minimal_attendees,
-            })
+                &creator_id,
+                request.minimal_attendees,
+            )
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        // Add creator as RESPONSIBLE participant synchronously before firing event
-        // This ensures the creator is added before the HTTP response is sent
-        self.repo
-            .add_participant(appointment.id, creator_uuid, "RESPONSIBLE", "APPROVED")
-            .await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-
-        // Fire event after successful database commit and participant addition
+        // The repository stored the creator as RESPONSIBLE participant in the same transaction.
+        // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentCreatedEvent::new(appointment.id, creator_id);
             let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
+                "appointment_id": event.appointment_id,
                 "creator_id": event.creator_id,
                 "timestamp": event.timestamp,
             });
@@ -332,7 +337,7 @@ impl AppointmentService {
     /// Update an appointment
     pub async fn update_appointment(
         &self,
-        id: Uuid,
+        id: i64,
         request: UpdateAppointmentRequest,
     ) -> Result<AppointmentResponse, ServiceError> {
         // Get the existing appointment first to check if time changed
@@ -408,14 +413,12 @@ impl AppointmentService {
             .repo
             .update(
                 id,
-                UpdateAppointmentParams {
-                    title: request.name,
-                    description: request.description,
-                    location: request.venue,
-                    start_time,
-                    end_time,
-                    minimal_attendees: request.minimal_attendees,
-                },
+                request.name,
+                request.description,
+                request.venue,
+                start_time,
+                end_time,
+                request.minimal_attendees,
             )
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
@@ -426,7 +429,7 @@ impl AppointmentService {
             // Always fire AppointmentEditedEvent
             let edited_event = AppointmentEditedEvent::new(id);
             let edited_json = serde_json::json!({
-                "appointment_id": edited_event.appointment_id.to_string(),
+                "appointment_id": edited_event.appointment_id,
                 "timestamp": edited_event.timestamp,
             });
             let event_bus_event =
@@ -440,7 +443,7 @@ impl AppointmentService {
                 let moved_event =
                     AppointmentMovedEvent::new(id, existing.start_time, existing.end_time);
                 let moved_json = serde_json::json!({
-                    "appointment_id": moved_event.appointment_id.to_string(),
+                    "appointment_id": moved_event.appointment_id,
                     "old_start": moved_event.old_start,
                     "old_end": moved_event.old_end,
                     "timestamp": moved_event.timestamp,
@@ -457,7 +460,7 @@ impl AppointmentService {
     }
 
     /// Soft delete an appointment
-    pub async fn delete_appointment(&self, id: Uuid) -> Result<(), ServiceError> {
+    pub async fn delete_appointment(&self, id: i64) -> Result<(), ServiceError> {
         self.repo
             .delete_soft(id)
             .await
@@ -468,7 +471,7 @@ impl AppointmentService {
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentDeletedEvent::new(id);
             let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
+                "appointment_id": event.appointment_id,
                 "timestamp": event.timestamp,
             });
             let event_bus_event =
@@ -482,7 +485,7 @@ impl AppointmentService {
     }
 
     /// Soft cancel an appointment
-    pub async fn cancel_appointment(&self, id: Uuid) -> Result<(), ServiceError> {
+    pub async fn cancel_appointment(&self, id: i64) -> Result<(), ServiceError> {
         self.repo
             .cancel_soft(id)
             .await
@@ -493,7 +496,7 @@ impl AppointmentService {
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentCancelledEvent::new(id);
             let event_json = serde_json::json!({
-                "appointment_id": event.appointment_id.to_string(),
+                "appointment_id": event.appointment_id,
                 "timestamp": event.timestamp,
             });
             let event_bus_event =
@@ -506,29 +509,169 @@ impl AppointmentService {
         Ok(())
     }
 
-    /// Remove a participant from an appointment (requires creator authorization)
-    pub async fn remove_participant(
+    /// Change a user's participation status in an appointment
+    pub async fn change_participation_status(
         &self,
-        appointment_id: Uuid,
-        target_user_id: Uuid,
-        acting_user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
+        new_status: ParticipationStatus,
     ) -> Result<(), ServiceError> {
-        // Check if appointment exists
-        let appointment = self
+        if new_status == ParticipationStatus::Pending {
+            return Err(ServiceError::ValidationError(
+                "you cannot set your participation status back to pending".to_string(),
+            ));
+        }
+
+        let current_status = self
             .repo
-            .find_by_id(appointment_id)
+            .find_participation_status(appointment_id, user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or_else(|| {
+                ServiceError::ValidationError(
+                    "This user is not a participant of this event".to_string(),
+                )
+            })?;
+
+        if current_status == new_status {
+            return Err(ServiceError::ValidationError(
+                "this is already your participation status".to_string(),
+            ));
+        }
+
+        self.repo
+            .update_participation_status(appointment_id, user_id, new_status)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationStatusChangedEvent::new(
+                appointment_id,
+                user_id.to_string(),
+                new_status,
+                current_status,
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id,
+                "user_id": event.user_id,
+                "new_status": event.new_status,
+                "old_status": event.old_status,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new(
+                "AppointmentParticipationStatusChangedEvent",
+                event_json,
+            );
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!(
+                    "Failed to fire AppointmentParticipationStatusChangedEvent: {:?}",
+                    e
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Add a participant to an appointment
+    /// Requires the acting user to be RESPONSIBLE in the appointment
+    pub async fn add_participant(
+        &self,
+        appointment_id: i64,
+        target_user_id: &str,
+        acting_user_id: &str,
+        user_role: &str,
+    ) -> Result<(), ServiceError> {
+        // Check if appointment exists (allow any status - spec requires adding to DELETED/CANCELLED appointments)
+        let _appointment = self
+            .repo
+            .find_by_id_any_status(appointment_id)
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound)?;
 
-        // Authorization: only the appointment creator can remove participants
-        if appointment.creator_id != acting_user_id {
+        // Check authorization - acting user must be RESPONSIBLE
+        let acting_user_role = self
+            .repo
+            .get_participant_role(appointment_id, acting_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        match acting_user_role {
+            Some(crate::appointments::models::UserRole::Responsible) => {
+                // User has permission to add participants
+            }
+            _ => {
+                return Err(ServiceError::ValidationError(
+                    "Only RESPONSIBLE participants can add participants".to_string(),
+                ));
+            }
+        }
+
+        // Add the participant with PENDING status
+        self.repo
+            .add_participant_strict(appointment_id, target_user_id, user_role, "PENDING")
+            .await
+            .map_err(|e| match e {
+                crate::appointments::repository::RepositoryError::InvalidInput(msg) => {
+                    ServiceError::ValidationError(msg)
+                }
+                _ => ServiceError::DatabaseError(e.to_string()),
+            })?;
+
+        // Fire the event
+        if let Some(ref publisher) = self.event_publisher {
+            let event = crate::appointments::events::AppointmentParticipationAddedEvent::new(
+                appointment_id,
+                target_user_id.to_string(),
+                acting_user_id.to_string(),
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id,
+                "target_user_id": event.target_user_id,
+                "acting_user_id": event.acting_user_id,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentParticipationAddedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!("Failed to fire AppointmentParticipationAddedEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Remove a participant from an appointment (hard delete)
+    /// Requires the acting user to be RESPONSIBLE in the appointment
+    pub async fn remove_participant(
+        &self,
+        appointment_id: i64,
+        target_user_id: &str,
+        acting_user_id: &str,
+    ) -> Result<(), ServiceError> {
+        self.repo
+            .find_by_id_any_status(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        let acting_user_role = self
+            .repo
+            .get_participant_role(appointment_id, acting_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if !matches!(
+            acting_user_role,
+            Some(crate::appointments::models::UserRole::Responsible)
+        ) {
             return Err(ServiceError::ValidationError(
-                "Only the appointment creator can remove participants".to_string(),
+                "Only RESPONSIBLE participants can remove participants".to_string(),
             ));
         }
 
-        // Remove the participant (hard delete)
         self.repo
             .remove_participant(appointment_id, target_user_id)
             .await
@@ -543,12 +686,15 @@ impl AppointmentService {
         if let Some(ref publisher) = self.event_publisher {
             let event = AppointmentParticipationRemovedEvent::new(
                 appointment_id,
-                target_user_id,
-                acting_user_id,
+                target_user_id.to_string(),
+                acting_user_id.to_string(),
             );
-            let event_json = serde_json::to_value(&event).map_err(|e| {
-                ServiceError::InvalidFormat(format!("Event serialization error: {}", e))
-            })?;
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id,
+                "target_user_id": event.target_user_id,
+                "acting_user_id": event.acting_user_id,
+                "timestamp": event.timestamp,
+            });
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentParticipationRemovedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {

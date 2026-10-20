@@ -12,16 +12,16 @@ mod remove_participant_tests {
     struct TestSetup {
         db: TestDb,
         fixtures: TestFixtures,
-        creator_id: uuid::Uuid,
-        participant_id: uuid::Uuid,
+        creator_id: String,
+        participant_id: String,
     }
 
     struct TestSetupWithOtherUser {
         db: TestDb,
         fixtures: TestFixtures,
-        creator_id: uuid::Uuid,
-        participant_id: uuid::Uuid,
-        other_user_id: uuid::Uuid,
+        creator_id: String,
+        participant_id: String,
+        other_user_id: String,
     }
 
     /// Helper to set up common test database, fixtures, and users (creator and participant)
@@ -84,7 +84,7 @@ mod remove_participant_tests {
     }
 
     /// Helper to create an appointment with the standard fixture
-    async fn create_appointment(fixtures: &TestFixtures, creator_id: uuid::Uuid) -> uuid::Uuid {
+    async fn create_appointment(fixtures: &TestFixtures, creator_id: &str) -> i64 {
         let appointment_fixture =
             chronos_date_api::test_utils::AppointmentFixture::new().with_title("Team Meeting");
         fixtures
@@ -112,17 +112,19 @@ mod remove_participant_tests {
                 return;
             }
         };
-        let appt_id = create_appointment(&setup.fixtures, setup.creator_id).await;
+        let appt_id = create_appointment(&setup.fixtures, &setup.creator_id).await;
 
         // Add participant to appointment
         let repo = AppointmentRepository::new(setup.db.pool().clone());
-        repo.add_participant(appt_id, setup.participant_id, "ATTENDANT", "APPROVED")
+        setup
+            .fixtures
+            .add_participant(appt_id, &setup.participant_id, "APPROVED")
             .await
             .expect("Failed to add participant");
 
         // Verify participant was added
         let is_participant_before = repo
-            .is_participant(appt_id, setup.participant_id)
+            .is_participant(appt_id, &setup.participant_id)
             .await
             .expect("Failed to check participant status");
         assert!(
@@ -131,13 +133,13 @@ mod remove_participant_tests {
         );
 
         // Remove participant
-        repo.remove_participant(appt_id, setup.participant_id)
+        repo.remove_participant(appt_id, &setup.participant_id)
             .await
             .expect("Failed to remove participant");
 
         // Verify participant was removed
         let is_participant_after = repo
-            .is_participant(appt_id, setup.participant_id)
+            .is_participant(appt_id, &setup.participant_id)
             .await
             .expect("Failed to check participant status");
         assert!(
@@ -156,11 +158,13 @@ mod remove_participant_tests {
                 return;
             }
         };
-        let appt_id = create_appointment(&setup.fixtures, setup.creator_id).await;
+        let appt_id = create_appointment(&setup.fixtures, &setup.creator_id).await;
 
         // Add participant to appointment
         let repo = AppointmentRepository::new(setup.db.pool().clone());
-        repo.add_participant(appt_id, setup.participant_id, "ATTENDANT", "APPROVED")
+        setup
+            .fixtures
+            .add_participant(appt_id, &setup.participant_id, "APPROVED")
             .await
             .expect("Failed to add participant");
 
@@ -180,7 +184,7 @@ mod remove_participant_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         service
-            .remove_participant(appt_id, setup.participant_id, setup.creator_id)
+            .remove_participant(appt_id, &setup.participant_id, &setup.creator_id)
             .await
             .expect("Failed to remove participant");
 
@@ -203,7 +207,7 @@ mod remove_participant_tests {
         assert_eq!(event.0, "AppointmentParticipationRemovedEvent");
         let payload = serde_json::from_str::<serde_json::Value>(&event.1)
             .expect("Invalid event payload JSON");
-        assert!(payload["appointment_id"].is_string());
+        assert!(payload["appointment_id"].is_number());
         assert!(payload["target_user_id"].is_string());
         assert!(payload["acting_user_id"].is_string());
         assert!(payload["timestamp"].is_number());
@@ -225,11 +229,13 @@ mod remove_participant_tests {
                 return;
             }
         };
-        let appt_id = create_appointment(&setup.fixtures, setup.creator_id).await;
+        let appt_id = create_appointment(&setup.fixtures, &setup.creator_id).await;
 
         // Add participant to appointment
         let repo = AppointmentRepository::new(setup.db.pool().clone());
-        repo.add_participant(appt_id, setup.participant_id, "ATTENDANT", "APPROVED")
+        setup
+            .fixtures
+            .add_participant(appt_id, &setup.participant_id, "APPROVED")
             .await
             .expect("Failed to add participant");
 
@@ -238,7 +244,7 @@ mod remove_participant_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         let result = service
-            .remove_participant(appt_id, setup.participant_id, setup.other_user_id)
+            .remove_participant(appt_id, &setup.participant_id, &setup.other_user_id)
             .await;
 
         assert!(
@@ -263,9 +269,9 @@ mod remove_participant_tests {
         let event_bus = Arc::new(PostgresEventBus::new(setup.db.pool().clone()));
         let service = AppointmentService::with_events(repo, event_bus);
 
-        let fake_appt_id = uuid::Uuid::new_v4();
+        let fake_appt_id = 999_999_i64;
         let result = service
-            .remove_participant(fake_appt_id, setup.participant_id, setup.creator_id)
+            .remove_participant(fake_appt_id, &setup.participant_id, &setup.creator_id)
             .await;
 
         assert!(
@@ -284,7 +290,7 @@ mod remove_participant_tests {
                 return;
             }
         };
-        let appt_id = create_appointment(&setup.fixtures, setup.creator_id).await;
+        let appt_id = create_appointment(&setup.fixtures, &setup.creator_id).await;
 
         // Try to remove user who is not a participant
         let repo = AppointmentRepository::new(setup.db.pool().clone());
@@ -292,7 +298,7 @@ mod remove_participant_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         let result = service
-            .remove_participant(appt_id, setup.participant_id, setup.creator_id)
+            .remove_participant(appt_id, &setup.participant_id, &setup.creator_id)
             .await;
 
         assert!(

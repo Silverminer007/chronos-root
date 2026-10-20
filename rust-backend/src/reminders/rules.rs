@@ -133,7 +133,6 @@ impl ReminderRule for ShortWeekendRSVPRule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
 
     fn create_test_appointment(
         start: chrono::DateTime<Utc>,
@@ -141,16 +140,15 @@ mod tests {
     ) -> Appointment {
         use crate::appointments::models::AppointmentStatus;
         Appointment {
-            id: Uuid::new_v4(),
-            title: "Test Appointment".to_string(),
+            id: 1,
+            name: "Test Appointment".to_string(),
             description: None,
-            location: None,
+            venue: None,
             start_time: start,
             end_time: end,
-            creator_id: Uuid::new_v4(),
             minimal_attendees: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: Some(Utc::now()),
+            last_update: Some(Utc::now()),
             status: AppointmentStatus::Planned,
         }
     }

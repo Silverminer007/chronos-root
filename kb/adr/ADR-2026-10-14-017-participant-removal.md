@@ -1,5 +1,5 @@
 ---
-title: ADR-2026-10-04-012: Participant removal with hard delete
+title: ADR-2026-10-14-017: Participant removal with hard delete
 date: 2026-10-04
 status: Accepted
 supercedes: (none)

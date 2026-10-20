@@ -8,7 +8,6 @@ use chronos_date_api::groups::helpers::{ensure_friendship_recipient, ensure_grou
 use chronos_date_api::groups::services::{FriendshipService, GroupService};
 use chronos_date_api::test_utils::{TestDb, TestFixtures};
 use std::sync::{Arc, Mutex};
-use uuid::Uuid;
 
 /// Event publisher that records the type of every fired event
 #[derive(Default)]
@@ -40,8 +39,8 @@ struct Setup {
     groups: GroupService,
     friendships: FriendshipService,
     publisher: Arc<RecordingPublisher>,
-    owner: Uuid,
-    other: Uuid,
+    owner: String,
+    other: String,
 }
 
 async fn setup() -> Option<Setup> {
@@ -79,7 +78,7 @@ async fn test_group_lifecycle_fires_events() {
 
     let group = s
         .groups
-        .create_group(s.owner, "Jugend".into(), Some("Gruppe".into()))
+        .create_group(&s.owner, "Jugend".into())
         .await
         .unwrap();
     assert_eq!(s.publisher.count("GroupCreatedEvent"), 1);
@@ -90,14 +89,14 @@ async fn test_group_lifecycle_fires_events() {
 
     let updated = s
         .groups
-        .update_group(group.id, s.owner, Some("Neu".into()), None)
+        .update_group(group.id, &s.owner, Some("Neu".into()))
         .await
         .unwrap()
         .unwrap();
     assert_eq!(updated.name, "Neu");
     assert_eq!(s.publisher.count("GroupNameChangedEvent"), 1);
 
-    assert!(s.groups.delete_group(group.id, s.owner).await.unwrap());
+    assert!(s.groups.delete_group(group.id, &s.owner).await.unwrap());
     assert_eq!(s.publisher.count("GroupDeletedEvent"), 1);
     assert!(s.groups.get_group(group.id).await.unwrap().is_none());
 }
@@ -105,79 +104,75 @@ async fn test_group_lifecycle_fires_events() {
 #[tokio::test]
 async fn test_group_members_and_listing() {
     let Some(s) = setup().await else { return };
-    let group = s
-        .groups
-        .create_group(s.owner, "G".into(), None)
-        .await
-        .unwrap();
+    let group = s.groups.create_group(&s.owner, "G".into()).await.unwrap();
 
     let member = s
         .groups
-        .add_member(group.id, s.owner, s.other)
+        .add_member(group.id, &s.owner, &s.other)
         .await
         .unwrap();
     assert_eq!(member.user_id, s.other);
     assert_eq!(s.publisher.count("GroupMemberAddedEvent"), 1);
 
-    let members = s.groups.list_members(group.id, s.owner).await.unwrap();
+    let members = s.groups.list_members(group.id, &s.owner).await.unwrap();
     assert_eq!(members.len(), 1);
 
     // Both owner and member see the group
-    assert_eq!(s.groups.list_groups(s.owner).await.unwrap().len(), 1);
-    assert_eq!(s.groups.list_groups(s.other).await.unwrap().len(), 1);
+    assert_eq!(s.groups.list_groups(&s.owner).await.unwrap().len(), 1);
+    assert_eq!(s.groups.list_groups(&s.other).await.unwrap().len(), 1);
 
     assert!(s
         .groups
-        .remove_member(group.id, s.owner, s.other)
+        .remove_member(group.id, &s.owner, &s.other)
         .await
         .unwrap());
     assert_eq!(s.publisher.count("GroupMemberRemovedEvent"), 1);
-    assert!(s.groups.list_groups(s.other).await.unwrap().is_empty());
+    assert!(s.groups.list_groups(&s.other).await.unwrap().is_empty());
 }
 
 #[tokio::test]
 async fn test_group_owner_authorization() {
     let Some(s) = setup().await else { return };
-    let group = s
-        .groups
-        .create_group(s.owner, "G".into(), None)
-        .await
-        .unwrap();
+    let group = s.groups.create_group(&s.owner, "G".into()).await.unwrap();
 
-    assert!(s.groups.list_members(group.id, s.other).await.is_err());
+    assert!(s.groups.list_members(group.id, &s.other).await.is_err());
     assert!(s
         .groups
-        .update_group(group.id, s.other, Some("x".into()), None)
+        .update_group(group.id, &s.other, Some("x".into()))
         .await
         .is_err());
-    assert!(s.groups.delete_group(group.id, s.other).await.is_err());
+    assert!(s.groups.delete_group(group.id, &s.other).await.is_err());
     assert!(s
         .groups
-        .add_member(group.id, s.other, s.other)
+        .add_member(group.id, &s.other, &s.other)
         .await
         .is_err());
     assert!(s
         .groups
-        .remove_member(group.id, s.other, s.owner)
+        .remove_member(group.id, &s.other, &s.owner)
         .await
         .is_err());
 
     // Unknown group
-    let missing = Uuid::new_v4();
-    assert!(s.groups.list_members(missing, s.owner).await.is_err());
-    assert!(s.groups.delete_group(missing, s.owner).await.is_err());
+    let missing = 999_999_i64;
+    assert!(s.groups.list_members(missing, &s.owner).await.is_err());
+    assert!(s.groups.delete_group(missing, &s.owner).await.is_err());
 }
 
 #[tokio::test]
 async fn test_friendship_accept_and_remove() {
     let Some(s) = setup().await else { return };
 
-    let request = s.friendships.send_request(s.owner, s.other).await.unwrap();
+    let request = s
+        .friendships
+        .send_request(&s.owner, &s.other)
+        .await
+        .unwrap();
     assert_eq!(request.status, "PENDING");
     assert_eq!(s.publisher.count("FriendshipRequestSentEvent"), 1);
     assert_eq!(
         s.friendships
-            .list_pending_requests(s.other)
+            .list_pending_requests(&s.other)
             .await
             .unwrap()
             .len(),
@@ -185,7 +180,7 @@ async fn test_friendship_accept_and_remove() {
     );
     assert!(s
         .friendships
-        .list_pending_requests(s.owner)
+        .list_pending_requests(&s.owner)
         .await
         .unwrap()
         .is_empty());
@@ -193,12 +188,12 @@ async fn test_friendship_accept_and_remove() {
     // Only the recipient may accept
     assert!(s
         .friendships
-        .accept_request(request.id, s.owner)
+        .accept_request(request.id, &s.owner)
         .await
         .is_err());
     let accepted = s
         .friendships
-        .accept_request(request.id, s.other)
+        .accept_request(request.id, &s.other)
         .await
         .unwrap();
     assert_eq!(accepted.status, "ACCEPTED");
@@ -206,24 +201,28 @@ async fn test_friendship_accept_and_remove() {
 
     assert!(s
         .friendships
-        .get_friendship(s.owner, s.other)
+        .get_friendship(&s.owner, &s.other)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        s.friendships.list_friendships(s.owner).await.unwrap().len(),
+        s.friendships
+            .list_friendships(&s.owner)
+            .await
+            .unwrap()
+            .len(),
         1
     );
 
     assert!(s
         .friendships
-        .remove_friendship(request.id, s.owner)
+        .remove_friendship(request.id, &s.owner)
         .await
         .unwrap());
     assert_eq!(s.publisher.count("FriendshipRemovedEvent"), 1);
     assert!(s
         .friendships
-        .get_friendship(s.owner, s.other)
+        .get_friendship(&s.owner, &s.other)
         .await
         .unwrap()
         .is_none());
@@ -233,22 +232,30 @@ async fn test_friendship_accept_and_remove() {
 async fn test_friendship_decline_and_validation() {
     let Some(s) = setup().await else { return };
 
-    assert!(s.friendships.send_request(s.owner, s.owner).await.is_err());
-
-    let request = s.friendships.send_request(s.owner, s.other).await.unwrap();
     assert!(s
         .friendships
-        .decline_request(request.id, s.owner)
+        .send_request(&s.owner, &s.owner)
+        .await
+        .is_err());
+
+    let request = s
+        .friendships
+        .send_request(&s.owner, &s.other)
+        .await
+        .unwrap();
+    assert!(s
+        .friendships
+        .decline_request(request.id, &s.owner)
         .await
         .is_err());
     let declined = s
         .friendships
-        .decline_request(request.id, s.other)
+        .decline_request(request.id, &s.other)
         .await
         .unwrap();
     assert_eq!(declined.status, "DECLINED");
 
-    let stranger = Uuid::new_v4();
+    let stranger = "stranger";
     assert!(s
         .friendships
         .remove_friendship(request.id, stranger)
@@ -256,28 +263,24 @@ async fn test_friendship_decline_and_validation() {
         .is_err());
     assert!(s
         .friendships
-        .accept_request(Uuid::new_v4(), s.other)
+        .accept_request(999_999, &s.other)
         .await
         .is_err());
 }
 
 #[test]
 fn test_ensure_helpers() {
-    let id = Uuid::new_v4();
+    let id = "owner-sub";
     assert!(ensure_friendship_recipient(id, id).is_ok());
-    assert!(ensure_friendship_recipient(id, Uuid::new_v4()).is_err());
+    assert!(ensure_friendship_recipient(id, "someone-else").is_err());
 
-    let now = chrono::Utc::now();
     let group = chronos_date_api::groups::models::Group {
-        id: Uuid::new_v4(),
+        id: 1,
         name: "g".into(),
-        description: None,
-        owner_id: id,
-        created_at: now,
-        updated_at: now,
+        owner_id: id.to_string(),
     };
     assert!(ensure_group_owner(&group, id).is_ok());
-    assert!(ensure_group_owner(&group, Uuid::new_v4()).is_err());
+    assert!(ensure_group_owner(&group, "someone-else").is_err());
 }
 
 #[test]

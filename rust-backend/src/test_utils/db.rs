@@ -2,13 +2,6 @@ use sqlx::{PgPool, Postgres, Transaction};
 use std::time::Duration;
 use tracing::info;
 
-#[cfg(test)]
-use testcontainers::runners::AsyncRunner;
-#[cfg(test)]
-use testcontainers::ContainerAsync;
-#[cfg(test)]
-use testcontainers_modules::postgres::Postgres as PostgresImage;
-
 /// Configuration for test database
 #[derive(Clone, Debug)]
 pub struct TestDbConfig {
@@ -28,81 +21,99 @@ impl Default for TestDbConfig {
 /// Test database container and connection pool
 pub struct TestDb {
     pool: PgPool,
-    #[cfg(test)]
-    _container: Option<ContainerAsync<PostgresImage>>,
 }
 
 impl TestDb {
-    /// Create a new test database with a PostgreSQL container
+    /// Create a new test database connection
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         Self::with_config(TestDbConfig::default()).await
     }
 
-    /// Create a new test database with custom configuration
+    /// Create a new test database connection with custom configuration
     pub async fn with_config(config: TestDbConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        info!("Connecting to PostgreSQL test database");
+        // Server URL from environment or use sensible default. Any database path in the URL is
+        // ignored: the server is addressed via the `postgres` database to create test databases.
+        let base_url = {
+            let _env_guard = crate::database::test_env_lock();
+            std::env::var("TEST_DATABASE_URL")
+                .or_else(|_| std::env::var("DATABASE_URL"))
+                .unwrap_or_else(|_| {
+                    "postgres://postgres:postgres@localhost:5432/postgres".to_string()
+                })
+        };
+        let mut admin_url = url::Url::parse(&base_url)?;
+        admin_url.set_path("/postgres");
 
-        #[cfg(test)]
-        let (base_url, container) = get_postgres_url_with_container().await?;
-
-        #[cfg(not(test))]
-        let base_url = std::env::var("DATABASE_URL")?;
-
-        // Create a unique database name for this test
+        // Each test gets its own database so parallel tests cannot collide on unique keys
         let test_db_name = format!(
             "test_db_{}",
             uuid::Uuid::new_v4().to_string().replace('-', "")
         );
-        let database_url = format!("{}/{}", base_url, test_db_name);
+        let mut database_url = admin_url.clone();
+        database_url.set_path(&format!("/{}", test_db_name));
 
-        info!("Creating test database: {}", test_db_name);
+        info!("Connecting to test database server");
 
-        // Connect to postgres to create the test database
-        let postgres_url = base_url.clone();
+        // Connect with timeout to prevent hanging indefinitely.
+        // SQLx 0.7 doesn't expose per-connection timeout on PgPoolOptions, so we wrap with
+        // tokio::time::timeout. The outer timeout respects the configured connection_timeout.
         let mut retries = 0;
-        let postgres_pool = loop {
-            match sqlx::postgres::PgPoolOptions::new()
-                .max_connections(1)
-                .connect(&postgres_url)
-                .await
+        const MAX_RETRIES: u32 = 30;
+        const RETRY_DELAY_MS: u64 = 100;
+
+        let admin_pool = loop {
+            match tokio::time::timeout(
+                config.connection_timeout,
+                sqlx::postgres::PgPoolOptions::new()
+                    .max_connections(1)
+                    .connect(admin_url.as_str()),
+            )
+            .await
             {
-                Ok(pool) => break pool,
-                Err(_) if retries < 10 => {
-                    retries += 1;
-                    tokio::time::sleep(Duration::from_millis(100)).await;
+                Ok(Ok(pool)) => {
+                    info!("Successfully connected to test database server");
+                    break pool;
                 }
-                Err(e) => return Err(Box::new(e)),
+                _ if retries < MAX_RETRIES => {
+                    retries += 1;
+                    tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+                }
+                Ok(Err(e)) => {
+                    return Err(format!(
+                        "Failed to connect to database at {}: {}. Set DATABASE_URL environment variable if needed.",
+                        admin_url, e
+                    )
+                    .into());
+                }
+                Err(_) => {
+                    return Err(format!(
+                        "Database connection timeout after {} attempts ({}ms). \
+                         Database may not be running at {}. Set DATABASE_URL environment variable if needed.",
+                        MAX_RETRIES,
+                        MAX_RETRIES as u64 * RETRY_DELAY_MS,
+                        admin_url
+                    )
+                    .into());
+                }
             }
         };
 
-        // Create the test database
+        info!("Creating test database: {}", test_db_name);
         sqlx::query(&format!("CREATE DATABASE {}", test_db_name))
-            .execute(&postgres_pool)
+            .execute(&admin_pool)
             .await?;
+        admin_pool.close().await;
 
-        drop(postgres_pool);
-
-        // Connect to the test database
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
-            .connect(&database_url)
+            .acquire_timeout(config.connection_timeout)
+            .connect(database_url.as_str())
             .await?;
 
         info!("Running migrations on test database");
         sqlx::migrate!("./migrations").run(&pool).await?;
 
-        #[cfg(test)]
-        {
-            Ok(TestDb {
-                pool,
-                _container: container,
-            })
-        }
-
-        #[cfg(not(test))]
-        {
-            Ok(TestDb { pool })
-        }
+        Ok(TestDb { pool })
     }
 
     /// Get the connection pool
@@ -117,17 +128,9 @@ impl TestDb {
 
     /// Rollback all changes after test (useful for transaction-scoped tests)
     pub async fn rollback_all(&self) -> Result<(), sqlx::Error> {
-        // Clear all tables in reverse dependency order
-        sqlx::query("TRUNCATE TABLE appointment_participants CASCADE")
-            .execute(&self.pool)
-            .await?;
-        sqlx::query("TRUNCATE TABLE appointments CASCADE")
-            .execute(&self.pool)
-            .await?;
-        sqlx::query("TRUNCATE TABLE groups CASCADE")
-            .execute(&self.pool)
-            .await?;
-        sqlx::query("TRUNCATE TABLE users CASCADE")
+        // TRUNCATE ... CASCADE also clears every table that references these (participations,
+        // group members, messages, ...); sequences are not reset.
+        sqlx::query("TRUNCATE TABLE appointment, groups, friendship_requests, pushsubscription, push_notification_log, settings, user_profiles CASCADE")
             .execute(&self.pool)
             .await?;
 
@@ -136,65 +139,49 @@ impl TestDb {
 }
 
 #[cfg(test)]
-/// Get the PostgreSQL connection URL with optional container
-async fn get_postgres_url_with_container(
-) -> Result<(String, Option<ContainerAsync<PostgresImage>>), Box<dyn std::error::Error>> {
-    // Check if DATABASE_URL is set (e.g., in CI with a running database)
-    if let Ok(url) = std::env::var("DATABASE_URL") {
-        info!("Using DATABASE_URL from environment");
-        return Ok((url, None));
-    }
+mod tests {
+    use super::*;
 
-    // Try localhost with a short timeout (for local development)
-    let localhost_url = "postgres://postgres:postgres@localhost:5432";
-    match tokio::time::timeout(
-        Duration::from_secs(3),
-        sqlx::postgres::PgPoolOptions::new()
-            .max_connections(1)
-            .connect(localhost_url),
-    )
-    .await
-    {
-        Ok(Ok(_)) => {
-            info!("Connected to localhost PostgreSQL");
-            return Ok((localhost_url.to_string(), None));
-        }
-        _ => {
-            info!("localhost:5432 not available, starting testcontainers PostgreSQL");
-        }
-    }
+    #[tokio::test]
+    #[ignore]
+    async fn test_database_connection() {
+        let db = TestDb::new().await.expect("Failed to create test database");
 
-    // Fall back to testcontainers
-    info!("Attempting to start testcontainers PostgreSQL");
-    let container = PostgresImage::default().start().await;
-    info!("testcontainers PostgreSQL started successfully");
-
-    let port = container.get_host_port_ipv4(5432).await;
-    let url = format!("postgres://postgres:postgres@127.0.0.1:{}", port);
-
-    // Wait for the container to be ready
-    let mut retries = 0;
-    loop {
-        match sqlx::postgres::PgPoolOptions::new()
-            .max_connections(1)
-            .connect(&url)
+        // Verify we can query the database
+        let result: (i32,) = sqlx::query_as("SELECT 1")
+            .fetch_one(db.pool())
             .await
-        {
-            Ok(_) => {
-                info!("testcontainers PostgreSQL ready at {}", url);
-                return Ok((url, Some(container)));
-            }
-            Err(_) if retries < 30 => {
-                retries += 1;
-                tokio::time::sleep(Duration::from_millis(100)).await;
-            }
-            Err(e) => {
-                return Err(format!(
-                    "Failed to connect to testcontainers PostgreSQL at {}: {}",
-                    url, e
-                )
-                .into());
-            }
-        }
+            .expect("Failed to query test database");
+
+        assert_eq!(result.0, 1);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_rollback_all() {
+        let db = TestDb::new().await.expect("Failed to create test database");
+
+        sqlx::query("INSERT INTO user_profiles (oidc_id, first_name, last_name, email) VALUES ($1, $2, $3, $4)")
+            .bind("keycloak-sub-1")
+            .bind("Test")
+            .bind("User")
+            .bind("test@example.com")
+            .execute(db.pool())
+            .await
+            .expect("Failed to insert test user profile");
+
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_profiles")
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to count user profiles");
+        assert_eq!(count.0, 1);
+
+        db.rollback_all().await.expect("Failed to rollback");
+
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_profiles")
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to count user profiles");
+        assert_eq!(count.0, 0);
     }
 }

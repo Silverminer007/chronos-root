@@ -26,7 +26,7 @@ mod appointment_service_tests {
         let repo = AppointmentRepository::new(db.pool().clone());
         let service = AppointmentService::new(repo);
 
-        let result = service.get_appointment(uuid::Uuid::new_v4()).await;
+        let result = service.get_appointment(999_999_i64).await;
         assert!(result.is_err());
     }
 
@@ -45,7 +45,7 @@ mod appointment_service_tests {
         let service = AppointmentService::new(repo);
 
         let result = service
-            .list_user_appointments(user_id, ListAppointmentsQuery::default())
+            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
             .await;
 
         assert!(result.is_ok());
@@ -100,7 +100,7 @@ mod appointment_service_tests {
             sort_dir: Some("asc".to_string()),
         };
 
-        let result = service.list_user_appointments(user_id, query).await;
+        let result = service.list_user_appointments(&user_id, query).await;
 
         assert!(result.is_ok());
         let appointments = result.unwrap();
@@ -144,7 +144,7 @@ mod appointment_service_tests {
             sort_dir: None,
         };
 
-        let result = service.list_user_appointments(user_id, query).await;
+        let result = service.list_user_appointments(&user_id, query).await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().len() <= 2);
@@ -278,7 +278,7 @@ mod appointment_service_tests {
         };
 
         let result = service
-            .update_appointment(uuid::Uuid::new_v4(), update_request)
+            .update_appointment(999_999_i64, update_request)
             .await;
 
         assert!(result.is_err());
@@ -292,7 +292,7 @@ mod appointment_service_tests {
         let repo = AppointmentRepository::new(pool);
         let service = AppointmentService::new(repo);
 
-        let result = service.delete_appointment(uuid::Uuid::new_v4()).await;
+        let result = service.delete_appointment(999_999_i64).await;
 
         assert!(result.is_err());
     }
@@ -305,7 +305,7 @@ mod appointment_service_tests {
         let repo = AppointmentRepository::new(pool);
         let service = AppointmentService::new(repo);
 
-        let result = service.cancel_appointment(uuid::Uuid::new_v4()).await;
+        let result = service.cancel_appointment(999_999_i64).await;
 
         assert!(result.is_err());
     }

@@ -1,17 +1,18 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use super::models::ParticipationStatus;
 
 /// Event fired when an appointment is created
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentCreatedEvent {
-    pub appointment_id: Uuid,
+    pub appointment_id: i64,
     pub creator_id: String,
     pub timestamp: i64,
 }
 
 impl AppointmentCreatedEvent {
-    pub fn new(appointment_id: Uuid, creator_id: String) -> Self {
+    pub fn new(appointment_id: i64, creator_id: String) -> Self {
         Self {
             appointment_id,
             creator_id,
@@ -23,12 +24,12 @@ impl AppointmentCreatedEvent {
 /// Event fired when an appointment is edited
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentEditedEvent {
-    pub appointment_id: Uuid,
+    pub appointment_id: i64,
     pub timestamp: i64,
 }
 
 impl AppointmentEditedEvent {
-    pub fn new(appointment_id: Uuid) -> Self {
+    pub fn new(appointment_id: i64) -> Self {
         Self {
             appointment_id,
             timestamp: Utc::now().timestamp(),
@@ -39,14 +40,14 @@ impl AppointmentEditedEvent {
 /// Event fired when an appointment is moved (time changed)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentMovedEvent {
-    pub appointment_id: Uuid,
+    pub appointment_id: i64,
     pub old_start: i64,
     pub old_end: i64,
     pub timestamp: i64,
 }
 
 impl AppointmentMovedEvent {
-    pub fn new(appointment_id: Uuid, old_start: DateTime<Utc>, old_end: DateTime<Utc>) -> Self {
+    pub fn new(appointment_id: i64, old_start: DateTime<Utc>, old_end: DateTime<Utc>) -> Self {
         Self {
             appointment_id,
             old_start: old_start.timestamp(),
@@ -59,12 +60,12 @@ impl AppointmentMovedEvent {
 /// Event fired when an appointment is deleted
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentDeletedEvent {
-    pub appointment_id: Uuid,
+    pub appointment_id: i64,
     pub timestamp: i64,
 }
 
 impl AppointmentDeletedEvent {
-    pub fn new(appointment_id: Uuid) -> Self {
+    pub fn new(appointment_id: i64) -> Self {
         Self {
             appointment_id,
             timestamp: Utc::now().timestamp(),
@@ -75,14 +76,41 @@ impl AppointmentDeletedEvent {
 /// Event fired when an appointment is cancelled
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentCancelledEvent {
-    pub appointment_id: Uuid,
+    pub appointment_id: i64,
     pub timestamp: i64,
 }
 
 impl AppointmentCancelledEvent {
-    pub fn new(appointment_id: Uuid) -> Self {
+    pub fn new(appointment_id: i64) -> Self {
         Self {
             appointment_id,
+            timestamp: Utc::now().timestamp(),
+        }
+    }
+}
+
+/// Event fired when a user's participation status changes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipationStatusChangedEvent {
+    pub appointment_id: i64,
+    pub user_id: String,
+    pub new_status: ParticipationStatus,
+    pub old_status: ParticipationStatus,
+    pub timestamp: i64,
+}
+
+impl AppointmentParticipationStatusChangedEvent {
+    pub fn new(
+        appointment_id: i64,
+        user_id: String,
+        new_status: ParticipationStatus,
+        old_status: ParticipationStatus,
+    ) -> Self {
+        Self {
+            appointment_id,
+            user_id,
+            new_status,
+            old_status,
             timestamp: Utc::now().timestamp(),
         }
     }
@@ -91,14 +119,34 @@ impl AppointmentCancelledEvent {
 /// Event fired when a participant is removed from an appointment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentParticipationRemovedEvent {
-    pub appointment_id: Uuid,
-    pub target_user_id: Uuid,
-    pub acting_user_id: Uuid,
+    pub appointment_id: i64,
+    pub target_user_id: String,
+    pub acting_user_id: String,
     pub timestamp: i64,
 }
 
 impl AppointmentParticipationRemovedEvent {
-    pub fn new(appointment_id: Uuid, target_user_id: Uuid, acting_user_id: Uuid) -> Self {
+    pub fn new(appointment_id: i64, target_user_id: String, acting_user_id: String) -> Self {
+        Self {
+            appointment_id,
+            target_user_id,
+            acting_user_id,
+            timestamp: Utc::now().timestamp(),
+        }
+    }
+}
+
+/// Event fired when a participant is added to an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipationAddedEvent {
+    pub appointment_id: i64,
+    pub target_user_id: String,
+    pub acting_user_id: String,
+    pub timestamp: i64,
+}
+
+impl AppointmentParticipationAddedEvent {
+    pub fn new(appointment_id: i64, target_user_id: String, acting_user_id: String) -> Self {
         Self {
             appointment_id,
             target_user_id,

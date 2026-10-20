@@ -37,7 +37,7 @@ mod appointment_sorting_tests {
         // Create in reverse order to test sorting
         let _appt3_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new()
                     .with_title("Next Week Meeting")
                     .with_times(next_week, next_week + chrono::Duration::hours(1)),
@@ -47,7 +47,7 @@ mod appointment_sorting_tests {
 
         let _appt1_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new()
                     .with_title("Today Meeting")
                     .with_times(now, now + chrono::Duration::hours(1)),
@@ -57,7 +57,7 @@ mod appointment_sorting_tests {
 
         let _appt2_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new()
                     .with_title("Tomorrow Meeting")
                     .with_times(tomorrow, tomorrow + chrono::Duration::hours(1)),
@@ -67,9 +67,11 @@ mod appointment_sorting_tests {
 
         // Fetch appointments ordered by start_time
         let appointments: Vec<(String, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
-            "SELECT title, start_time FROM appointments WHERE creator_id = $1 ORDER BY start_time ASC"
+            "SELECT a.name, a.start_time FROM appointment a
+             JOIN appointment_participation ap ON ap.appointment_id = a.id
+             WHERE ap.user_oidcid = $1 AND ap.role = 'RESPONSIBLE' ORDER BY a.start_time ASC",
         )
-        .bind(creator_id)
+        .bind(&creator_id)
         .fetch_all(db.pool())
         .await
         .expect("Failed to fetch appointments");
@@ -101,7 +103,7 @@ mod appointment_sorting_tests {
         // Create appointments with different titles
         let _appt1_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new().with_title("Charlie Meeting"),
             )
             .await
@@ -109,7 +111,7 @@ mod appointment_sorting_tests {
 
         let _appt2_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new().with_title("Alpha Meeting"),
             )
             .await
@@ -117,7 +119,7 @@ mod appointment_sorting_tests {
 
         let _appt3_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new().with_title("Bravo Meeting"),
             )
             .await
@@ -125,9 +127,11 @@ mod appointment_sorting_tests {
 
         // Fetch appointments ordered by title
         let appointments: Vec<(String,)> = sqlx::query_as(
-            "SELECT title FROM appointments WHERE creator_id = $1 ORDER BY title ASC",
+            "SELECT a.name FROM appointment a
+             JOIN appointment_participation ap ON ap.appointment_id = a.id
+             WHERE ap.user_oidcid = $1 AND ap.role = 'RESPONSIBLE' ORDER BY a.name ASC",
         )
-        .bind(creator_id)
+        .bind(&creator_id)
         .fetch_all(db.pool())
         .await
         .expect("Failed to fetch appointments");
