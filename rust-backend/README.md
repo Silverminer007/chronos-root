@@ -86,6 +86,13 @@ docker build -t chronos-rust-backend:latest .
   - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-14-016](../kb/adr/ADR-2026-10-14-016-participation-status-endpoint.md)).
   - Returns only the caller's own status; there is no way to query another user's status.
 
+### Groups and friendships
+
+All routes require a valid bearer token and follow the Java contract (see [ADR-2026-10-20-019](../kb/adr/ADR-2026-10-20-019-groups-friendships-endpoints.md)). Names are resolved from `user_profiles`.
+
+- `GET|POST /api/v2/groups`, `DELETE|PATCH /api/v2/groups/:group`, `GET /api/v2/groups/:group/users`, `POST|DELETE /api/v2/groups/:groupId/user/:userId`
+- `GET /api/v2/friendships/suggestions`, `POST /api/v2/friendships/requests`, `POST /api/v2/friendships/requests/:requestId/accept|decline`, `DELETE /api/v2/friendships/requests/:requestId`, `GET /api/v2/friendships/requests/incoming|outgoing`, `GET /api/v2/friendships/friends`, `DELETE /api/v2/friendships/friends/:friendId`
+
 ## Authentication
 
 The backend uses **Keycloak OIDC** for authentication. JWT tokens are validated against Keycloak's public key set. Protected routes require a valid `Authorization: Bearer <token>` header.

@@ -1,333 +1,282 @@
+//! Handlers of `/api/v2/groups` and `/api/v2/friendships` (Java: `GroupsResource`, `FriendshipResource`).
+//! Errors are `AppError`s, which render the Java `ErrorResponse` body.
+
 use axum::{
-    extract::{Path, State},
+    body::Bytes,
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::groups::models::{
-    CreateGroupRequest, FriendshipResponse, GroupResponse, SendFriendshipRequestRequest,
-    UpdateGroupRequest,
-};
+use crate::appointments::handlers::AppState;
+use crate::error::AppError;
+use crate::groups::models::{GroupDto, UserDto};
 use crate::groups::services::{FriendshipService, GroupService};
 use crate::security::PrincipalContext;
 
-#[derive(Clone)]
-pub struct GroupHandlerState {
-    pub group_service: Arc<GroupService>,
-    pub friendship_service: Arc<FriendshipService>,
+/// Suggestions returned when the search term is missing or too short
+const RECENT_SUGGESTIONS_LIMIT: i64 = 5;
+/// Shortest search term that triggers a search
+const MIN_SEARCH_LENGTH: usize = 2;
+/// Default of the `limit` query parameter
+const DEFAULT_SUGGESTIONS_LIMIT: i64 = 20;
+
+fn group_service(state: &AppState) -> GroupService {
+    GroupService::new(state.db_pool.clone(), state.event_publisher.clone())
 }
 
-// ===== Error Handling Helper =====
+fn friendship_service(state: &AppState) -> FriendshipService {
+    FriendshipService::new(state.db_pool.clone(), state.event_publisher.clone())
+}
 
-/// Convert service error messages to HTTP responses
-fn error_to_response(error_msg: &str) -> (StatusCode, Json<serde_json::Value>) {
-    if error_msg.contains("Not authorized") {
-        (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "Not authorized to perform this action"})),
-        )
-    } else if error_msg.contains("not found") || error_msg.contains("Not found") {
-        (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "Resource not found"})),
-        )
-    } else if error_msg.contains("yourself") {
-        (StatusCode::BAD_REQUEST, Json(json!({"error": error_msg})))
-    } else {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": "Internal server error"})),
-        )
+/// A path or query parameter of type `Long`/`int` that cannot be converted is a 404 (Jakarta REST)
+fn parse_number(raw: &str) -> Result<i64, AppError> {
+    raw.parse().map_err(|_| AppError::RouteNotFound)
+}
+
+/// Parses a `GroupDto` body. A missing body is a `null` DTO; an unreadable one fails like any
+/// unexpected exception in Java (500).
+fn parse_group_body(body: &Bytes) -> Result<Option<GroupDto>, AppError> {
+    if body.is_empty() {
+        return Ok(None);
     }
+    serde_json::from_slice::<Option<GroupDto>>(body).map_err(|e| {
+        tracing::warn!("Unreadable group body: {}", e);
+        AppError::unexpected()
+    })
 }
 
 // ===== Group Handlers =====
 
-/// POST /api/v2/groups - Create a new group
-pub async fn create_group(
-    State(state): State<GroupHandlerState>,
-    principal: PrincipalContext,
-    Json(req): Json<CreateGroupRequest>,
-) -> impl IntoResponse {
-    match state
-        .group_service
-        .create_group(principal.user_id(), req.name)
-        .await
-    {
-        Ok(group) => (StatusCode::CREATED, Json(GroupResponse::from(group))).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to create group: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Failed to create group"})),
-            )
-                .into_response()
-        }
-    }
+#[derive(Debug, Deserialize)]
+pub struct GroupSearchQuery {
+    pub search: Option<String>,
 }
 
-/// GET /api/v2/groups - List user's groups
+/// GET /api/v2/groups - Groups of the user
 pub async fn list_groups(
-    State(state): State<GroupHandlerState>,
+    State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state.group_service.list_groups(principal.user_id()).await {
-        Ok(groups) => {
-            let responses: Vec<GroupResponse> = groups.into_iter().map(|g| g.into()).collect();
-            (StatusCode::OK, Json(responses)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to list groups: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Failed to list groups"})),
-            )
-                .into_response()
-        }
-    }
+    Query(query): Query<GroupSearchQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let groups = group_service(&state)
+        .search_groups(principal.user_id(), query.search.as_deref())
+        .await?;
+    Ok(Json(groups))
 }
 
-/// PUT /api/v2/groups/:id - Update a group
-pub async fn update_group(
-    State(state): State<GroupHandlerState>,
-    Path(group_id): Path<i64>,
+/// POST /api/v2/groups - Create a group
+pub async fn create_group(
+    State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
-    Json(req): Json<UpdateGroupRequest>,
-) -> impl IntoResponse {
-    match state
-        .group_service
-        .update_group(group_id, principal.user_id(), req.name)
-        .await
-    {
-        Ok(Some(group)) => (StatusCode::OK, Json(GroupResponse::from(group))).into_response(),
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "Group not found"})),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("Failed to update group: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+    body: Bytes,
+) -> Result<impl IntoResponse, AppError> {
+    let group = group_service(&state)
+        .create_group(principal.user_id(), parse_group_body(&body)?)
+        .await?;
+    Ok(Json(GroupDto::without_members(group)))
 }
 
-/// DELETE /api/v2/groups/:id - Delete a group
+/// DELETE /api/v2/groups/:group - Delete a group
 pub async fn delete_group(
-    State(state): State<GroupHandlerState>,
-    Path(group_id): Path<i64>,
+    State(state): State<Arc<AppState>>,
+    Path(group_id): Path<String>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .group_service
-        .delete_group(group_id, principal.user_id())
-        .await
-    {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "Group not found"})),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("Failed to delete group: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    group_service(&state)
+        .delete_group(principal.user_id(), parse_number(&group_id)?)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// POST /api/v2/groups/:id/members/:userId - Add a member to a group
+/// PATCH /api/v2/groups/:group - Rename a group
+pub async fn update_group(
+    State(state): State<Arc<AppState>>,
+    Path(group_id): Path<String>,
+    principal: PrincipalContext,
+    body: Bytes,
+) -> Result<impl IntoResponse, AppError> {
+    let group = group_service(&state)
+        .edit_group(
+            principal.user_id(),
+            parse_number(&group_id)?,
+            parse_group_body(&body)?,
+        )
+        .await?;
+    Ok(Json(GroupDto::without_members(group)))
+}
+
+/// GET /api/v2/groups/:group/users - Members of a group
+pub async fn list_group_users(
+    State(state): State<Arc<AppState>>,
+    Path(group_id): Path<String>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppError> {
+    let users: Vec<UserDto> = group_service(&state)
+        .group_users(principal.user_id(), parse_number(&group_id)?)
+        .await?;
+    Ok(Json(users))
+}
+
+/// POST /api/v2/groups/:groupId/user/:userId - Add a member to a group
 pub async fn add_group_member(
-    State(state): State<GroupHandlerState>,
-    Path((group_id, user_id)): Path<(i64, String)>,
+    State(state): State<Arc<AppState>>,
+    Path((group_id, user_id)): Path<(String, String)>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .group_service
-        .add_member(group_id, principal.user_id(), &user_id)
-        .await
-    {
-        Ok(_) => (StatusCode::CREATED, Json(json!({"success": true}))).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to add group member: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    group_service(&state)
+        .add_group_member(principal.user_id(), parse_number(&group_id)?, &user_id)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// DELETE /api/v2/groups/:id/members/:userId - Remove a member from a group
+/// DELETE /api/v2/groups/:groupId/user/:userId - Remove a member from a group
 pub async fn remove_group_member(
-    State(state): State<GroupHandlerState>,
-    Path((group_id, user_id)): Path<(i64, String)>,
+    State(state): State<Arc<AppState>>,
+    Path((group_id, user_id)): Path<(String, String)>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .group_service
-        .remove_member(group_id, principal.user_id(), &user_id)
-        .await
-    {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "Member not found"})),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("Failed to remove group member: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    group_service(&state)
+        .remove_group_member(principal.user_id(), parse_number(&group_id)?, &user_id)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ===== Friendship Handlers =====
 
-/// POST /api/v2/friendships - Send a friendship request
+#[derive(Debug, Deserialize)]
+pub struct SuggestionsQuery {
+    pub search: Option<String>,
+    pub limit: Option<String>,
+}
+
+/// GET /api/v2/friendships/suggestions - Users that are not yet friends
+pub async fn friendship_suggestions(
+    State(state): State<Arc<AppState>>,
+    principal: PrincipalContext,
+    Query(query): Query<SuggestionsQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let limit = match query.limit.as_deref() {
+        Some(raw) => parse_number(raw)?,
+        None => DEFAULT_SUGGESTIONS_LIMIT,
+    };
+    let service = friendship_service(&state);
+    let suggestions = match query.search.as_deref().map(str::trim) {
+        Some(search) if search.chars().count() >= MIN_SEARCH_LENGTH => {
+            service
+                .find_non_friends(principal.user_id(), search, limit)
+                .await?
+        }
+        _ => {
+            service
+                .find_non_friends(principal.user_id(), "", RECENT_SUGGESTIONS_LIMIT)
+                .await?
+        }
+    };
+    Ok(Json(suggestions))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SendRequestQuery {
+    pub email: Option<String>,
+    pub adresse_id: Option<String>,
+}
+
+/// POST /api/v2/friendships/requests - Send a friendship request
 pub async fn send_friendship_request(
-    State(state): State<GroupHandlerState>,
+    State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
-    Json(req): Json<SendFriendshipRequestRequest>,
-) -> impl IntoResponse {
-    match state
-        .friendship_service
-        .send_request(principal.user_id(), &req.recipient_id)
-        .await
-    {
-        Ok(friendship) => (
-            StatusCode::CREATED,
-            Json(FriendshipResponse::from(friendship)),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("Failed to send friendship request: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
-            )
-                .into_response()
-        }
-    }
+    Query(query): Query<SendRequestQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    friendship_service(&state)
+        .send_request(principal.user_id(), query.adresse_id, query.email)
+        .await?;
+    Ok(StatusCode::CREATED)
 }
 
-/// POST /api/v2/friendships/:id/accept - Accept a friendship request
-pub async fn accept_friendship(
-    State(state): State<GroupHandlerState>,
-    Path(friendship_id): Path<i64>,
+/// POST /api/v2/friendships/requests/:requestId/accept - Accept a request
+pub async fn accept_friendship_request(
+    State(state): State<Arc<AppState>>,
+    Path(request_id): Path<String>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .friendship_service
-        .accept_request(friendship_id, principal.user_id())
-        .await
-    {
-        Ok(friendship) => {
-            (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to accept friendship: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    friendship_service(&state)
+        .accept_request(parse_number(&request_id)?, principal.user_id())
+        .await?;
+    Ok(StatusCode::OK)
 }
 
-/// POST /api/v2/friendships/:id/decline - Decline a friendship request
-pub async fn decline_friendship(
-    State(state): State<GroupHandlerState>,
-    Path(friendship_id): Path<i64>,
+/// POST /api/v2/friendships/requests/:requestId/decline - Decline a request
+pub async fn decline_friendship_request(
+    State(state): State<Arc<AppState>>,
+    Path(request_id): Path<String>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .friendship_service
-        .decline_request(friendship_id, principal.user_id())
-        .await
-    {
-        Ok(friendship) => {
-            (StatusCode::OK, Json(FriendshipResponse::from(friendship))).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to decline friendship: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    friendship_service(&state)
+        .decline_request(parse_number(&request_id)?, principal.user_id())
+        .await?;
+    Ok(StatusCode::OK)
 }
 
-/// DELETE /api/v2/friendships/:id - Remove a friendship
-pub async fn delete_friendship(
-    State(state): State<GroupHandlerState>,
-    Path(friendship_id): Path<i64>,
+/// DELETE /api/v2/friendships/requests/:requestId - Withdraw a request
+pub async fn cancel_friendship_request(
+    State(state): State<Arc<AppState>>,
+    Path(request_id): Path<String>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .friendship_service
-        .remove_friendship(friendship_id, principal.user_id())
-        .await
-    {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "Friendship not found"})),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("Failed to delete friendship: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    friendship_service(&state)
+        .cancel_request(parse_number(&request_id)?, principal.user_id())
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-// ===== Additional Endpoints =====
-
-/// GET /api/v2/groups/:id/members - List members of a group (owner only)
-pub async fn list_group_members(
-    State(state): State<GroupHandlerState>,
-    Path(group_id): Path<i64>,
+/// GET /api/v2/friendships/requests/incoming - Pending requests addressed to the user
+pub async fn incoming_friendship_requests(
+    State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .group_service
-        .list_members(group_id, principal.user_id())
-        .await
-    {
-        Ok(members) => {
-            let member_ids: Vec<&str> = members.iter().map(|m| m.user_id.as_str()).collect();
-            (StatusCode::OK, Json(json!({"members": member_ids}))).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to list group members: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    Ok(Json(
+        friendship_service(&state)
+            .incoming_requests(principal.user_id())
+            .await?,
+    ))
 }
 
-/// GET /api/v2/friendships - List pending friendship requests for the user
-pub async fn list_pending_friendships(
-    State(state): State<GroupHandlerState>,
+/// GET /api/v2/friendships/requests/outgoing - Pending requests sent by the user
+pub async fn outgoing_friendship_requests(
+    State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
-) -> impl IntoResponse {
-    match state
-        .friendship_service
-        .list_pending_requests(principal.user_id())
-        .await
-    {
-        Ok(requests) => {
-            let responses: Vec<FriendshipResponse> =
-                requests.into_iter().map(|f| f.into()).collect();
-            (StatusCode::OK, Json(responses)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to list pending friendships: {}", e);
-            let (status, response) = error_to_response(&e.to_string());
-            (status, response).into_response()
-        }
-    }
+) -> Result<impl IntoResponse, AppError> {
+    Ok(Json(
+        friendship_service(&state)
+            .outgoing_requests(principal.user_id())
+            .await?,
+    ))
+}
+
+/// GET /api/v2/friendships/friends - Friends of the user
+pub async fn list_friends(
+    State(state): State<Arc<AppState>>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppError> {
+    Ok(Json(
+        friendship_service(&state)
+            .friends(principal.user_id())
+            .await?,
+    ))
+}
+
+/// DELETE /api/v2/friendships/friends/:friendId - End a friendship
+pub async fn remove_friend(
+    State(state): State<Arc<AppState>>,
+    Path(friend_id): Path<String>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppError> {
+    friendship_service(&state)
+        .remove_friendship(principal.user_id(), &friend_id)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
