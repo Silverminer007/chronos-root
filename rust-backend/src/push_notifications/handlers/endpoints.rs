@@ -1,4 +1,5 @@
 // `/api/v2/push/*` (Java: `PushResource`)
+use crate::error::{AppError, AppJson};
 use crate::push_notifications::models::{PushSubscriptionRequest, PushSubscriptionStatus};
 use crate::push_notifications::repository::PushSubscriptionRepository;
 use crate::push_notifications::services::NotificationDispatcher;
@@ -59,20 +60,20 @@ pub async fn get_public_key(State(state): State<Arc<PushState>>) -> impl IntoRes
 pub async fn subscribe(
     State(state): State<Arc<PushState>>,
     principal: PrincipalContext,
-    Json(request): Json<PushSubscriptionRequest>,
-) -> Result<StatusCode, StatusCode> {
+    AppJson(request): AppJson<PushSubscriptionRequest>,
+) -> Result<StatusCode, AppError> {
     let (Some(endpoint), Some(keys)) = (request.endpoint, request.keys) else {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(AppError::unexpected());
     };
     let (Some(p256dh), Some(auth)) = (keys.p256dh, keys.auth) else {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(AppError::unexpected());
     };
     PushSubscriptionRepository::new(state.db_pool.clone())
         .replace_for_user(principal.user_id(), &endpoint, &p256dh, &auth)
         .await
         .map_err(|e| {
             error!("Failed to save push subscription: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR
+            AppError::unexpected()
         })?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -81,14 +82,14 @@ pub async fn subscribe(
 pub async fn status(
     State(state): State<Arc<PushState>>,
     Query(query): Query<EndpointQuery>,
-) -> Result<impl IntoResponse, StatusCode> {
+) -> Result<impl IntoResponse, AppError> {
     let exists = match query.endpoint {
         Some(endpoint) => PushSubscriptionRepository::new(state.db_pool.clone())
             .exists_by_endpoint(&endpoint)
             .await
             .map_err(|e| {
                 error!("Failed to read push subscription status: {e}");
-                StatusCode::INTERNAL_SERVER_ERROR
+                AppError::unexpected()
             })?,
         None => false,
     };
@@ -99,14 +100,14 @@ pub async fn status(
 pub async fn unsubscribe(
     State(state): State<Arc<PushState>>,
     Query(query): Query<EndpointQuery>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, AppError> {
     if let Some(endpoint) = query.endpoint {
         PushSubscriptionRepository::new(state.db_pool.clone())
             .delete_by_endpoint(&endpoint)
             .await
             .map_err(|e| {
                 error!("Failed to remove push subscription: {e}");
-                StatusCode::INTERNAL_SERVER_ERROR
+                AppError::unexpected()
             })?;
     }
     Ok(StatusCode::NO_CONTENT)

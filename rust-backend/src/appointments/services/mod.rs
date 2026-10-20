@@ -12,6 +12,11 @@ use crate::event_bus::EventPublisher;
 use crate::users::identity::UserIdentity;
 use chrono::{DateTime, Utc};
 
+/// Authorization messages of the Java `AuthorizationService`
+pub const NO_ROLE_MESSAGE: &str = "You have no role at this appointment";
+pub const NOT_ATTENDANT_MESSAGE: &str = "You have to be at least attendant of this appointment";
+pub const NOT_RESPONSIBLE_MESSAGE: &str = "You have to be responsible for this appointment";
+
 /// Custom error type for appointment service operations
 #[derive(Debug, Clone)]
 pub enum ServiceError {
@@ -198,9 +203,7 @@ impl AppointmentService {
             .await
             .map_err(db_error)?;
         if matches!(role, None | Some(UserRole::None)) {
-            return Err(ServiceError::Forbidden(
-                "You have no role at this appointment".to_string(),
-            ));
+            return Err(ServiceError::Forbidden(NO_ROLE_MESSAGE.to_string()));
         }
 
         let rows = self
@@ -694,9 +697,7 @@ impl AppointmentService {
             .await
             .map_err(db_error)?;
         if !self.admin && role != Some(UserRole::Responsible) {
-            return Err(ServiceError::Forbidden(
-                "You have to be responsible for this appointment".to_string(),
-            ));
+            return Err(ServiceError::Forbidden(NOT_RESPONSIBLE_MESSAGE.to_string()));
         }
 
         let removed = self
@@ -869,9 +870,7 @@ impl AppointmentService {
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
         if acting_user_role != Some(UserRole::Responsible) {
-            return Err(ServiceError::Forbidden(
-                "You have to be responsible for this appointment".to_string(),
-            ));
+            return Err(ServiceError::Forbidden(NOT_RESPONSIBLE_MESSAGE.to_string()));
         }
 
         let old_role = self

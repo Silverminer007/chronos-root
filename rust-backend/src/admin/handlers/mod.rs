@@ -50,7 +50,7 @@ const TEST_NOTIFICATION_BODY: &str = "\"Push\" funktioniert!\n";
 pub enum AdminError {
     /// Java `ErrorResponse` body
     App(AppError),
-    /// The plain-text answers of the appointment endpoints (same mapping as `/api/v2/appointments`)
+    /// The answers of the appointment endpoints (same mapping as `/api/v2/appointments`)
     Appointment(AppointmentError),
     /// Status without body, e.g. `Response.status(BAD_REQUEST).build()`
     Status(StatusCode),
