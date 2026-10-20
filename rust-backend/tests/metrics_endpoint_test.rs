@@ -148,3 +148,55 @@ async fn health_endpoints_use_quarkus_json_bodies() -> Result<(), AnyError> {
     assert_eq!(body, "OK");
     Ok(())
 }
+
+/// Live PostgreSQL (Testcontainers): readiness is UP and the pool gauges reflect a real pool.
+#[tokio::test]
+async fn readiness_up_and_pool_metrics_with_live_database() -> Result<(), AnyError> {
+    use testcontainers::runners::AsyncRunner;
+    use testcontainers_modules::postgres::Postgres;
+
+    let container = Postgres::default().start().await?;
+    let port = container.get_host_port_ipv4(5432).await?;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(3)
+        .min_connections(1)
+        .acquire_timeout(Duration::from_secs(5))
+        .connect(&format!(
+            "postgres://postgres:postgres@127.0.0.1:{port}/postgres"
+        ))
+        .await?;
+    sqlx::query("SELECT 1").execute(&pool).await?;
+
+    let app_state = Arc::new(AppState {
+        db_pool: pool,
+        event_publisher: Arc::new(NoopPublisher),
+    });
+    let validator = Arc::new(TokenValidator::new(
+        "http://localhost:8080/realms/chronos".to_string(),
+    ));
+    let mut router = build_router(
+        app_state.clone(),
+        user_state_for_tests(app_state.db_pool.clone()),
+        validator,
+    );
+
+    let (status, body) = get(&mut router, "/q/health/ready").await?;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let json: serde_json::Value = serde_json::from_str(&body)?;
+    assert_eq!(json["status"], "UP");
+    assert_eq!(json["checks"][0]["status"], "UP");
+
+    let (status, body) = get(&mut router, "/metrics").await?;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        body.contains("agroal_max_size{datasource=\"default\"} 3"),
+        "{body}"
+    );
+    let available = body
+        .lines()
+        .find_map(|l| l.strip_prefix("agroal_available_count{datasource=\"default\"} "))
+        .ok_or("agroal_available_count missing")?
+        .parse::<f64>()?;
+    assert!(available > 0.0, "{body}");
+    Ok(())
+}
