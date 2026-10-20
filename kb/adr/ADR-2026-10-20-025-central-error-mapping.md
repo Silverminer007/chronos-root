@@ -1,7 +1,7 @@
 # ADR-2026-10-20-025: One error mapper for all handler errors; unknown appointment is a 403
 
 - Status: accepted
-- Ticket: #157 (found by the parity run of #137). Supersedes point 7 of [ADR-2026-10-20-023](ADR-2026-10-20-023-admin-endpoints.md) ("appointment error bodies are not touched").
+- Ticket: #157 (found by the parity run of #137). Supersedes point 7 of [ADR-2026-10-20-023](ADR-2026-10-20-023-admin-endpoints.md) ("appointment error bodies are not touched") and the statement in [ADR-2026-10-20-019](ADR-2026-10-20-019-groups-friendships-endpoints.md) (`path` paragraph) that appointment endpoints answer with plain-text `AppointmentError`. The test that pinned this, `test_appointment_error_responses_keep_their_plain_text_body`, was replaced by `test_appointment_error_responses_are_json_with_the_request_path` (`groups_integration_test.rs`).
 
 ## Context
 
