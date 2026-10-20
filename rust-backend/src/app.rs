@@ -18,7 +18,7 @@ use crate::groups::handlers::{
     accept_friendship_request, add_group_member, cancel_friendship_request, create_group,
     decline_friendship_request, delete_group, friendship_suggestions, incoming_friendship_requests,
     list_friends, list_group_users, list_groups, outgoing_friendship_requests, remove_friend,
-    remove_group_member, send_friendship_request, update_group,
+    remove_group_member, send_friendship_request, update_group, SuggestionsState,
 };
 use crate::metrics::{metrics_handler, track_requests, Metrics};
 use crate::push_notifications::handlers::endpoints::{
@@ -112,7 +112,10 @@ pub fn build_router(
         )
         .route(
             "/api/v2/friendships/suggestions",
-            get(friendship_suggestions),
+            get(friendship_suggestions).with_state(SuggestionsState {
+                app: app_state.clone(),
+                keycloak: user_state.keycloak.clone(),
+            }),
         )
         .route(
             "/api/v2/friendships/requests",

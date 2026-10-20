@@ -95,7 +95,7 @@ The first full run on `53b4016` (Java: intended routing, see below) had 81 steps
 | 3 | Rust | Error bodies `text/plain` (or empty) instead of the JSON `ErrorResponse`; missing appointment 404 instead of 403 | #157 (fixed on `main`, verified in run 7; its two allowlist entries are removed) |
 | 4 | Rust | Invited participant (PENDING) gets 403 on `GET /appointments/{id}`; a non-friend can be added as participant (Java 403); creator starts `APPROVED` (Java `PENDING`), so the creator's RSVP fails with 400 | #158 |
 | 5 | Rust | No system messages on RSVP/cancel; `DELETE` after `cancel` 404; group members are not turned into participants (admin change status 400); `POST /admin/appointments/message` 500 | #159 |
-| 6 | Rust | `GET /friendships/suggestions` always `[]` (Java returns known users) | #160 |
+| 6 | Rust | `GET /friendships/suggestions` always `[]` (Java returns known users) | #160 (fixed, ADR-2026-10-20-027; allowlist entry removed) |
 | 7 | Rust | `checks[].data` missing in readiness, trailing slash 404, unknown route has no body, malformed settings JSON 500 (Java 400), push subscribe error without body | #161 |
 | 8 | Java | The 8 participation routes of `AppointmentParticipationResource` answer 404 in the packaged app (no class-level `@Path` since #54) | #162 |
 | 9 | Java | 500 instead of 401/400/404 for: request without token, missing/invalid fields and enums, unknown admin user, wrong method, unlinking an unknown provider | #162 |
@@ -127,7 +127,7 @@ Identical on both sides (checked): duplicate friendship request 400, request to 
 
 ## Open at the end of this entry
 
-- **Acceptance criterion 2 is met by run 7**: the harness exits 0, 0 mismatches, 16 allowed differences, every one in `contract-tests/allowlist.json` with a ticket (#156, #158, #159, #160, #161 for Rust; #162 for Java defects). Run 7 was made on `main` at `744a840`. The Rust deviations are not fixed yet: #156, #158, #159 (system messages, group members as participants, admin send message), #160 and #161 are open and their allowlist entries are removed with them. Re-run after they merge to confirm that the allowlist can shrink.
+- **Acceptance criterion 2 is met by run 7**: the harness exits 0, 0 mismatches, 16 allowed differences, every one in `contract-tests/allowlist.json` with a ticket (#156, #158, #159, #160, #161 for Rust; #162 for Java defects). Run 7 was made on `main` at `744a840`. The Rust deviations are not fixed yet: #156, #158, #159 (system messages, group members as participants, admin send message), #160 and #161 were open at that time; #160 is fixed since (ADR-2026-10-20-027) and its allowlist entry is removed, the others are removed with their fixes. Re-run after they merge to confirm that the allowlist can shrink.
 - The Rust image of runs 1-6 was built from `5b6dd8f` (#153 in, #157 not); run 7 uses a build of `git archive origin/main rust-backend` (`744a840`). The Java image is still `chronos-backend:parity-patched` (participation routes patch, #162).
 - The explorative pass (run 4, 43 differing steps) was not repeated on the `744a840` image; its numbers describe the `5b6dd8f` image. #157 items in it are fixed since.
 
@@ -165,7 +165,6 @@ ALLOWED admin list appointments* $.data[[]].* missing_in_rust: Rust appointment 
 ALLOWED rsvp $ status_mismatch: Java creates the owner as PENDING, Rust as APPROVED (#158)
 ALLOWED list messages $ length_mismatch: Rust writes no system messages for RSVP/cancel (#159)
 ALLOWED list messages of missing appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)
-ALLOWED friend suggestions $ length_mismatch: Rust returns no suggestions (#160)
 ALLOWED admin change participation status $ status_mismatch: Rust does not turn group members into participants (#159)
 ALLOWED admin send message $ status_mismatch: Rust answers 500, Java 200 (#159)
 ALLOWED delete admin appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)
@@ -183,9 +182,11 @@ UNCHECKED incoming requests (GET /api/v2/friendships/requests/incoming) $  beide
 UNCHECKED admin push log (GET /api/v2/admin/push/log) $  beide leer, Form ungeprüft
 ```
 
+Historical output of this run: the `friend suggestions` line is the state before #160. With #160 (ADR-2026-10-20-027) Rust searches Keycloak like Java, the step no longer shows `UNCHECKED`, and its allowlist entry is removed.
+
 ### Explorative pass on the final state (run 4 of `explore.py`)
 
-`deployment/parity/reset-databases.sh`, then `deployment/parity/run-contract.sh --explore`: 103 steps, 43 with differences, exit 1. The differing steps are the same groups as in the table above (list shapes #156, error bodies and 404/403 #157, non-friend and PENDING invitee #158, system messages and group members #159, suggestions #160, trailing slash, malformed settings JSON and push errors #161, Java 500s #162; in the shape-only `DIFF` lines with equal status codes the differing part is the body shape). New relative to run 3: none except `us: patch empty names` (Java 500, Rust 200, #162). The raw output is kept on the workstation (`~/hl/explore-run4.txt`, `~/hl/contract-run6.txt`), not in the repository.
+`deployment/parity/reset-databases.sh`, then `deployment/parity/run-contract.sh --explore`: 103 steps, 43 with differences, exit 1. The differing steps are the same groups as in the table above (list shapes #156, error bodies and 404/403 #157, non-friend and PENDING invitee #158, system messages and group members #159, suggestions #160 (state before the fix, now resolved), trailing slash, malformed settings JSON and push errors #161, Java 500s #162; in the shape-only `DIFF` lines with equal status codes the differing part is the body shape). New relative to run 3: none except `us: patch empty names` (Java 500, Rust 200, #162). The raw output is kept on the workstation (`~/hl/explore-run4.txt`, `~/hl/contract-run6.txt`), not in the repository.
 
 ## Final harness run (run 7)
 

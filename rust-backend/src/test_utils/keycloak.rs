@@ -148,6 +148,33 @@ impl KeycloakAdmin for FakeKeycloak {
             .collect())
     }
 
+    async fn search_users(
+        &self,
+        search: &str,
+        max: i64,
+    ) -> Result<Vec<KeycloakUser>, KeycloakError> {
+        self.record(format!("search_users({:?}, {})", search, max))?;
+        let terms: Vec<String> = search.split_whitespace().map(str::to_lowercase).collect();
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .realm_users
+            .iter()
+            .filter(|user| {
+                let haystack = [&user.first_name, &user.last_name, &user.email]
+                    .iter()
+                    .filter_map(|v| v.as_deref())
+                    .collect::<Vec<_>>()
+                    .join("\u{1}")
+                    .to_lowercase();
+                terms.iter().all(|term| haystack.contains(term))
+            })
+            .take(max.max(0) as usize)
+            .cloned()
+            .collect())
+    }
+
     async fn count_users(&self) -> Result<i64, KeycloakError> {
         self.record("count_users()".to_string())?;
         Ok(self.state.lock().unwrap().realm_users.len() as i64)

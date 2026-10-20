@@ -13,7 +13,9 @@ use crate::groups::models::{
     UserDto,
 };
 use crate::groups::repository::{FriendshipRepository, GroupMemberRepository, GroupRepository};
+use crate::keycloak::{KeycloakAdmin, KeycloakUser};
 use crate::users::identity::{IdentityRepository, UserIdentity};
+use crate::users::repository::UserRepository;
 
 /// Fires `payload` as event `event_type`. The change is already stored, so a failing event bus is
 /// logged and does not fail the request (Java: the observers run after the change).
@@ -492,9 +494,12 @@ impl FriendshipService {
         self.request_dtos(requests, false).await
     }
 
-    /// Users matching `search` that are not the user and not (accepted) friends
+    /// Users matching `search` that are not the user and not (accepted) friends.
+    /// Keycloak is authoritative for the search; the hits are cached in `user_profiles` (Java:
+    /// `LocalDbIdentityAdapter#search`).
     pub async fn find_non_friends(
         &self,
+        keycloak: &dyn KeycloakAdmin,
         user_id: &str,
         search: &str,
         limit: i64,
@@ -502,8 +507,20 @@ impl FriendshipService {
         let limit = limit.max(0);
         let friend_ids = FriendshipRepository::friend_ids(&self.pool, user_id).await?;
         // Over-fetch like Java, then drop the user and the friends
-        let candidates =
-            IdentityRepository::search(&self.pool, search, limit.saturating_mul(3)).await?;
+        let candidates = keycloak
+            .search_users(search, limit.saturating_mul(3))
+            .await
+            .map_err(|e| {
+                // Unhandled in Java as well: Keycloak failures become the generic 500
+                tracing::error!("Keycloak search failed: {}", e);
+                AppError::unexpected()
+            })?;
+        let candidates: Vec<UserIdentity> =
+            candidates.into_iter().filter_map(identity_of).collect();
+        let cache = UserRepository::new(self.pool.clone());
+        for candidate in &candidates {
+            cache.upsert_identity(candidate).await?;
+        }
         Ok(candidates
             .into_iter()
             .filter(|u| u.oidc_id != user_id && !friend_ids.contains(&u.oidc_id))
@@ -579,4 +596,15 @@ fn ensure_pending(request: &Friendship) -> Result<(), AppError> {
             "Diese Freundschaftsanfrage wurde bereits bearbeitet",
         ))
     }
+}
+
+/// Java: `repToIdentity`; users without an id cannot be cached or suggested
+fn identity_of(user: KeycloakUser) -> Option<UserIdentity> {
+    Some(UserIdentity {
+        oidc_id: user.id?,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        profile_picture_url: user.picture,
+    })
 }
