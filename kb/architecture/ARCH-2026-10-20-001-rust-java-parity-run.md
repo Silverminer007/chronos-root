@@ -100,7 +100,7 @@ The first full run on `53b4016` (Java: intended routing, see below) had 81 steps
 | 8 | Java | The 8 participation routes of `AppointmentParticipationResource` answer 404 in the packaged app (no class-level `@Path` since #54) | #162 |
 | 9 | Java | 500 instead of 401/400/404 for: request without token, missing/invalid fields and enums, unknown admin user, wrong method, unlinking an unknown provider | #162 |
 
-Mismatches 8 and 9 are Java defects; Rust returns the sensible status. They are allowlisted (9) or worked around (8). Whether Rust should copy them is the decision asked for in #162.
+Mismatches 8 and 9 are Java defects; Rust returns the sensible status. They are allowlisted (9) or worked around (8). Whether Rust should copy them is the decision asked for in #162. Allowlist reasons for the Java defects start with `java-defect (#162)`. The participation 404 (mismatch 8) is not allowlisted on purpose: the harness does not allow `missing_route` diffs, so it stays visible and is only avoided by the local Java patch below. `get missing appointment` and `delete appointment` in the output below are such `missing_route` mismatches (#157, #159), also not allowlistable.
 
 ### The Java participation routes (mismatch 8)
 
@@ -157,9 +157,9 @@ MISMATCH delete appointment (DELETE /api/v2/appointments/{appt})
   status: java 200, rust 404
   $  missing_route  java: 200, rust: 404
 ALLOWED health ready $.checks[[]].data missing_in_rust: Rust omits checks[].data (#161)
-ALLOWED unauthenticated request $ status_mismatch: Java answers 500 for a request without token, Rust 401 (#162; Java defect)
-ALLOWED create appointment without body fields $ status_mismatch: Java answers 500 (NPE) for missing fields, Rust 422 (#162; Java defect)
-ALLOWED rsvp with invalid status $ status_mismatch: Java answers 500 for an unknown enum value, Rust 422 (#162; Java defect)
+ALLOWED unauthenticated request $ status_mismatch: java-defect (#162): Java answers 500 for a request without token, Rust 401
+ALLOWED create appointment without body fields $ status_mismatch: java-defect (#162): Java answers 500 (NPE) for missing fields, Rust 422
+ALLOWED rsvp with invalid status $ status_mismatch: java-defect (#162): Java answers 500 for an unknown enum value, Rust 422
 ALLOWED list appointments $ type_mismatch: Java returns {data, meta}, Rust a bare array (#156)
 ALLOWED patch appointment $.*participants missing_in_rust: Rust response lacks participants/group_participants (#156)
 ALLOWED patch appointment $.messages missing_in_rust: Rust response lacks messages (#156)

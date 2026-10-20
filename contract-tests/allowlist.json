@@ -1,5 +1,5 @@
 {
-  "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted.",
+  "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted. Reasons for deliberate Java defects (#162) start with `java-defect`.",
   "entries": [
     {
       "step": "health ready",
@@ -11,19 +11,19 @@
       "step": "unauthenticated request",
       "kind": "status_mismatch",
       "path": "$",
-      "reason": "Java answers 500 for a request without token, Rust 401 (#162; Java defect)"
+      "reason": "java-defect (#162): Java answers 500 for a request without token, Rust 401"
     },
     {
       "step": "create appointment without body fields",
       "kind": "status_mismatch",
       "path": "$",
-      "reason": "Java answers 500 (NPE) for missing fields, Rust 422 (#162; Java defect)"
+      "reason": "java-defect (#162): Java answers 500 (NPE) for missing fields, Rust 422"
     },
     {
       "step": "rsvp with invalid status",
       "kind": "status_mismatch",
       "path": "$",
-      "reason": "Java answers 500 for an unknown enum value, Rust 422 (#162; Java defect)"
+      "reason": "java-defect (#162): Java answers 500 for an unknown enum value, Rust 422"
     },
     {
       "step": "list appointments",
