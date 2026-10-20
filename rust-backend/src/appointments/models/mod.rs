@@ -370,7 +370,7 @@ pub struct Message {
 pub struct MessageDto {
     pub id: i64,
     pub sender_id: String,
-    pub sender_name: String,
+    pub sender_name: Option<String>,
     pub appointment_id: Option<i64>,
     pub body: Option<String>,
     /// ISO-8601 UTC like Java `Instant.toString()`
@@ -831,7 +831,7 @@ mod tests {
         let dto = MessageDto {
             id: 1,
             sender_id: "user123".to_string(),
-            sender_name: "Max Muster".to_string(),
+            sender_name: Some("Max Muster".to_string()),
             appointment_id: Some(42),
             body: Some("Hello everyone!".to_string()),
             timestamp: None,

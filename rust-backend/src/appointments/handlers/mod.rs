@@ -107,6 +107,7 @@ pub async fn get_appointment(
         participants: flag(&query, "participants"),
         messages: flag(&query, "messages"),
         group_participants: flag(&query, "group_participants"),
+        names: true,
     };
     let mut responses = service
         .with_details(vec![appointment.into()], embed)
@@ -249,7 +250,7 @@ fn message_dto(message: Message, sender_name: String) -> MessageDto {
     MessageDto {
         id: message.id,
         sender_id: message.sender_oidcid,
-        sender_name,
+        sender_name: Some(sender_name),
         appointment_id: message.appointment_id,
         body: message.body,
         timestamp: message
@@ -397,7 +398,7 @@ pub async fn update_appointment(
         .await
         .map_err(AppointmentError::from)?;
     let mut detailed = service
-        .with_details(vec![response], Embed::ALL)
+        .with_details(vec![response], Embed::UNNAMED)
         .await
         .map_err(AppointmentError::from)?;
 

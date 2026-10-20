@@ -242,7 +242,7 @@ pub async fn list_appointments(
     let data = service
         .with_details(
             appointments.into_iter().map(Into::into).collect(),
-            Embed::ALL,
+            Embed::UNNAMED,
         )
         .await?;
     Ok(Json(PagedResponse {

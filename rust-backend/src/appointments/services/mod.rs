@@ -59,14 +59,24 @@ pub struct Embed {
     pub participants: bool,
     pub messages: bool,
     pub group_participants: bool,
+    /// Resolve names (`name`, `via_group_name`, `sender_name`, member names). Java does that only
+    /// in `GET /appointments` and `GET /appointments/{id}` (`enrichAppointmentDtos`)
+    pub names: bool,
 }
 
 impl Embed {
-    /// Everything: what Java's lazily loaded collections amount to in list, PATCH and admin list
+    /// Everything, names resolved: what Java's list and GET amount to
     pub const ALL: Embed = Embed {
         participants: true,
         messages: true,
         group_participants: true,
+        names: true,
+    };
+
+    /// Everything, names left out: PATCH and admin list, where Java does not call the enrichment
+    pub const UNNAMED: Embed = Embed {
+        names: false,
+        ..Embed::ALL
     };
 }
 
@@ -254,11 +264,14 @@ impl AppointmentService {
             .collect();
         user_ids.sort();
         user_ids.dedup();
-        let users = self
-            .repo
-            .find_identities(&user_ids)
-            .await
-            .map_err(db_error)?;
+        let users = if embed.names {
+            self.repo
+                .find_identities(&user_ids)
+                .await
+                .map_err(db_error)?
+        } else {
+            Default::default()
+        };
 
         Ok(responses
             .into_iter()
@@ -279,7 +292,7 @@ impl AppointmentService {
                                     role: row.role,
                                     status: row.status,
                                     via_group_id: row.group_participation_id,
-                                    via_group_name: row.group_name.clone(),
+                                    via_group_name: row.group_name.clone().filter(|_| embed.names),
                                 }
                             })
                             .collect(),
@@ -293,10 +306,7 @@ impl AppointmentService {
                             .map(|m| MessageDto {
                                 id: m.id,
                                 sender_id: m.sender_oidcid.clone(),
-                                sender_name: users
-                                    .get(&m.sender_oidcid)
-                                    .map(UserIdentity::name)
-                                    .unwrap_or_default(),
+                                sender_name: users.get(&m.sender_oidcid).map(UserIdentity::name),
                                 appointment_id: m.appointment_id,
                                 body: m.body.clone(),
                                 timestamp: m
