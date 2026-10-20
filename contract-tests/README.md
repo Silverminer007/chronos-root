@@ -21,6 +21,24 @@ export CONTRACT_OTHER_USER_ID=<oidc id of a second existing user>            # d
 python3 -m parity
 ```
 
+### Seed prerequisites
+
+The harness needs **no SQL seed rows**. Both databases only need the schema from their own migrations
+(Java: Flyway `backend/src/main/resources/db/migration`, run at startup, **without** the test fixtures
+`backend/src/test/resources/db/testdata`; Rust: `rust-backend/migrations`, `001_baseline.sql` and following). The
+databases must be empty (fresh), because the scenario creates groups, appointments, messages, push subscriptions and friendship
+requests through the API and relies on there being no earlier data. There is no `users` table in either backend
+(identity is the Keycloak subject), so the "seed users" live in the shared Keycloak realm, not in the databases:
+
+| Prerequisite | Where | Used by |
+|---|---|---|
+| Test user (token in `CONTRACT_USER_TOKEN`) | Keycloak | all steps except `ROLE_ANON` |
+| Second user whose Keycloak subject is `CONTRACT_OTHER_USER_ID` (default `oidc-user-2`) | Keycloak | group member, participant, role and friendship steps |
+| Admin user with role `ADMIN_API` (token in `CONTRACT_ADMIN_TOKEN`) | Keycloak | `/api/v2/admin/*` steps (without a token they run as the test user and only compare the 403, so the admin endpoints are not verified) |
+| Friendships, groups, appointments | not needed | created by the scenario |
+
+Both backends must be configured for this one realm, so the same token is the same user on both sides.
+
 `CONTRACT_REDIRECT_URI` (option `--redirect-uri`, default `https://chronos.example.org/`) is the redirect URI sent to
 `GET /api/v2/user/link/{provider}`; it only needs to be accepted by both backends.
 
