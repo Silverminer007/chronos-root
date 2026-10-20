@@ -1,68 +1,75 @@
+//! Payloads of the group and friendship events (Java: `application/events/*`).
+//! Fired through the event bus after the change is stored.
+
 use serde::{Deserialize, Serialize};
 
-/// Event fired when a group is created
+/// A group was created
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupCreatedEvent {
     pub group_id: i64,
-    pub name: String,
-    pub owner_id: String,
+    pub acting_user_id: String,
 }
 
-/// Event fired when a group's name or description changes
+/// A group was renamed
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupNameChangedEvent {
     pub group_id: i64,
+    pub old_name: Option<String>,
     pub new_name: String,
+    pub acting_user_id: String,
 }
 
-/// Event fired when a group is deleted
+/// A group was deleted
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupDeletedEvent {
     pub group_id: i64,
+    pub acting_user_id: String,
 }
 
-/// Event fired when a member is added to a group
+/// A member was added to a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupMemberAddedEvent {
     pub group_id: i64,
-    pub user_id: String,
+    pub new_member_id: String,
+    pub acting_user_id: String,
 }
 
-/// Event fired when a member is removed from a group
+/// A member was removed from a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupMemberRemovedEvent {
     pub group_id: i64,
-    pub user_id: String,
+    pub removed_member_id: String,
+    pub acting_user_id: String,
 }
 
-/// Event fired when a friendship request is sent
+/// A friendship request was sent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FriendshipRequestSentEvent {
-    pub friendship_id: i64,
+    pub request_id: i64,
     pub requester_id: String,
-    pub recipient_id: String,
+    pub addressee_id: String,
+    pub requester_name: String,
 }
 
-/// Event fired when a friendship request is accepted
+/// A friendship request was accepted
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FriendshipAcceptedEvent {
-    pub friendship_id: i64,
-    pub user_id_1: String,
-    pub user_id_2: String,
+    pub request_id: i64,
+    pub requester_id: String,
+    pub addressee_id: String,
 }
 
-/// Event fired when a friendship request is declined
+/// A friendship request was declined
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FriendshipDeclinedEvent {
-    pub friendship_id: i64,
+    pub request_id: i64,
     pub requester_id: String,
-    pub recipient_id: String,
+    pub addressee_id: String,
 }
 
-/// Event fired when a friendship is removed
+/// A friendship was ended
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FriendshipRemovedEvent {
-    pub friendship_id: i64,
-    pub user_id_1: String,
-    pub user_id_2: String,
+    pub acting_user_id: String,
+    pub friend_id: String,
 }

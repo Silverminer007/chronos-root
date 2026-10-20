@@ -1,330 +1,506 @@
-// Integration tests for groups and friendships services.
-// These tests use testcontainers to spin up a PostgreSQL database and skip when none is available.
+//! Integration tests for the groups endpoints (`/api/v2/groups`).
+//!
+//! The behaviour mirrors the Java `GroupsResource` / `GroupService` / `AuthorizationService`
+//! (ADR-2026-10-20-019). Requests go through the production router incl. authentication.
 
-use async_trait::async_trait;
-use chronos_date_api::event_bus::{Event, EventPublisher};
-use chronos_date_api::groups::errors::{FriendshipStatus, GroupServiceError};
-use chronos_date_api::groups::helpers::{ensure_friendship_recipient, ensure_group_owner};
-use chronos_date_api::groups::services::{FriendshipService, GroupService};
-use chronos_date_api::test_utils::{TestDb, TestFixtures};
-use std::sync::{Arc, Mutex};
+mod common;
 
-/// Event publisher that records the type of every fired event
-#[derive(Default)]
-struct RecordingPublisher {
-    events: Mutex<Vec<String>>,
+use axum::http::StatusCode;
+use common::TestApp;
+use serde_json::{json, Value};
+
+async fn app_with_users() -> TestApp {
+    let app = TestApp::new().await;
+    app.add_user("alice", "Alice", "Anders", "alice@example.com")
+        .await;
+    app.add_user("bob", "Bob", "Becker", "bob@example.com")
+        .await;
+    app.add_user("carol", "Carol", "Clark", "carol@example.com")
+        .await;
+    app
 }
 
-impl RecordingPublisher {
-    fn count(&self, event_type: &str) -> usize {
-        self.events
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|t| *t == event_type)
-            .count()
+fn assert_error(body: &Value, status: u16, error: &str, code: &str, message: &str, path: &str) {
+    assert_eq!(body["status"], json!(status), "{body}");
+    assert_eq!(body["error"], json!(error), "{body}");
+    assert_eq!(body["errorCode"], json!(code), "{body}");
+    assert_eq!(body["message"], json!(message), "{body}");
+    assert_eq!(body["path"], json!(path), "{body}");
+    assert!(body["timestamp"].is_string(), "{body}");
+}
+
+// ===== authentication =====
+
+#[tokio::test]
+async fn test_group_routes_require_authentication() {
+    let app = app_with_users().await;
+    for (method, uri) in [
+        ("GET", "/api/v2/groups"),
+        ("POST", "/api/v2/groups"),
+        ("DELETE", "/api/v2/groups/1"),
+        ("PATCH", "/api/v2/groups/1"),
+        ("GET", "/api/v2/groups/1/users"),
+        ("POST", "/api/v2/groups/1/user/bob"),
+        ("DELETE", "/api/v2/groups/1/user/bob"),
+    ] {
+        let (status, _) = app.call(None, method, uri, None).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "{method} {uri}");
     }
 }
 
-#[async_trait]
-impl EventPublisher for RecordingPublisher {
-    async fn fire(&self, event: Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.events.lock().unwrap().push(event.event_type);
-        Ok(())
+// ===== GET /groups =====
+
+#[tokio::test]
+async fn test_list_groups_returns_only_groups_the_user_is_member_of_with_member_names() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+    app.add_group("bob", "Bobs Gruppe").await;
+    // Owner without membership row: Java lists by membership only
+    sqlx::query("INSERT INTO groups (id, groupname, owner_oidcid) VALUES (nextval('groups_seq'), 'Verwaist', 'alice')")
+        .execute(app.db.pool())
+        .await
+        .unwrap();
+
+    let (status, body) = app.get("alice", "/api/v2/groups").await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body,
+        json!([{
+            "id": team,
+            "name": "Team",
+            "members": [
+                {"id": "alice", "first_name": "Alice", "last_name": "Anders"},
+                {"id": "bob", "first_name": "Bob", "last_name": "Becker"}
+            ]
+        }])
+    );
+}
+
+#[tokio::test]
+async fn test_list_groups_member_without_profile_has_null_names() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "ghost").await;
+
+    let (_, body) = app.get("alice", "/api/v2/groups").await;
+
+    assert_eq!(
+        body[0]["members"][1],
+        json!({"id": "ghost", "first_name": null, "last_name": null})
+    );
+}
+
+#[tokio::test]
+async fn test_list_groups_search_filters_by_name_case_insensitively() {
+    let app = app_with_users().await;
+    app.add_group("alice", "Jugendleiter").await;
+    app.add_group("alice", "Kochen").await;
+
+    let (_, body) = app.get("alice", "/api/v2/groups?search=LEIT").await;
+
+    let names: Vec<&str> = body
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|g| g["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["Jugendleiter"]);
+
+    let (_, all) = app.get("alice", "/api/v2/groups?search=").await;
+    assert_eq!(all.as_array().unwrap().len(), 2);
+}
+
+// ===== POST /groups =====
+
+#[tokio::test]
+async fn test_create_group_returns_dto_adds_creator_and_fires_event() {
+    let app = app_with_users().await;
+
+    let (status, body) = app
+        .post("alice", "/api/v2/groups", Some(json!({"name": "Neu"})))
+        .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let id = body["id"].as_i64().expect("numeric id");
+    assert_eq!(body, json!({"id": id, "name": "Neu", "members": null}));
+    assert_eq!(app.members_of(id).await, vec!["alice".to_string()]);
+    let events = app.events("GroupCreatedEvent").await;
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0]["group_id"], json!(id));
+    assert_eq!(events[0]["acting_user_id"], json!("alice"));
+}
+
+#[tokio::test]
+async fn test_create_group_with_blank_name_is_a_validation_error() {
+    let app = app_with_users().await;
+
+    for payload in [json!({"name": "  "}), json!({"name": null}), json!({})] {
+        let (status, body) = app.post("alice", "/api/v2/groups", Some(payload)).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_error(
+            &body,
+            400,
+            "Bad Request",
+            "VALIDATION_ERROR",
+            "Group name is required",
+            "/api/v2/groups",
+        );
+        assert_eq!(body["fieldErrors"], json!({}));
     }
 }
 
-struct Setup {
-    _db: TestDb,
-    groups: GroupService,
-    friendships: FriendshipService,
-    publisher: Arc<RecordingPublisher>,
-    owner: String,
-    other: String,
+#[tokio::test]
+async fn test_create_group_without_body_is_an_internal_error() {
+    let app = app_with_users().await;
+
+    let (status, body) = app.post("alice", "/api/v2/groups", None).await;
+
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_error(
+        &body,
+        500,
+        "Internal Server Error",
+        "INTERNAL_ERROR",
+        "Ein interner Fehler ist aufgetreten",
+        "/api/v2/groups",
+    );
 }
 
-async fn setup() -> Option<Setup> {
-    let db = match TestDb::new().await {
-        Ok(db) => db,
-        Err(e) => {
-            eprintln!("Skipping test: {}", e);
-            return None;
-        }
-    };
-    let fixtures = TestFixtures::new(db.pool().clone());
-    let owner = fixtures
-        .create_user("group_owner", "owner@example.com")
-        .await
-        .ok()?;
-    let other = fixtures
-        .create_user("group_other", "other@example.com")
-        .await
-        .ok()?;
-    let pool = Arc::new(db.pool().clone());
-    let publisher = Arc::new(RecordingPublisher::default());
-    Some(Setup {
-        groups: GroupService::new(pool.clone(), publisher.clone()),
-        friendships: FriendshipService::new(pool, publisher.clone()),
-        publisher,
-        _db: db,
-        owner,
-        other,
-    })
+// ===== DELETE /groups/{group} =====
+
+#[tokio::test]
+async fn test_owner_deletes_group_and_event_is_fired() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+
+    let (status, body) = app.delete("alice", &format!("/api/v2/groups/{team}")).await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(body, Value::Null);
+    assert!(app.members_of(team).await.is_empty());
+    let events = app.events("GroupDeletedEvent").await;
+    assert_eq!(events[0]["group_id"], json!(team));
+    assert_eq!(events[0]["acting_user_id"], json!("alice"));
 }
 
 #[tokio::test]
-async fn test_group_lifecycle_fires_events() {
-    let Some(s) = setup().await else { return };
+async fn test_only_owner_may_delete_group() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+    let uri = format!("/api/v2/groups/{team}");
 
-    let group = s
-        .groups
-        .create_group(&s.owner, "Jugend".into())
-        .await
-        .unwrap();
-    assert_eq!(s.publisher.count("GroupCreatedEvent"), 1);
-    assert_eq!(
-        s.groups.get_group(group.id).await.unwrap().unwrap().name,
-        "Jugend"
+    let (status, body) = app.delete("bob", &uri).await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_error(
+        &body,
+        403,
+        "Forbidden",
+        "FORBIDDEN",
+        "Only the group owner can delete a group",
+        &uri,
     );
-
-    let updated = s
-        .groups
-        .update_group(group.id, &s.owner, Some("Neu".into()))
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(updated.name, "Neu");
-    assert_eq!(s.publisher.count("GroupNameChangedEvent"), 1);
-
-    assert!(s.groups.delete_group(group.id, &s.owner).await.unwrap());
-    assert_eq!(s.publisher.count("GroupDeletedEvent"), 1);
-    assert!(s.groups.get_group(group.id).await.unwrap().is_none());
 }
 
 #[tokio::test]
-async fn test_group_members_and_listing() {
-    let Some(s) = setup().await else { return };
-    let group = s.groups.create_group(&s.owner, "G".into()).await.unwrap();
+async fn test_deleting_unknown_group_is_forbidden_as_in_java() {
+    // Java checks ownership first; an unknown group has no owner
+    let app = app_with_users().await;
 
-    let member = s
-        .groups
-        .add_member(group.id, &s.owner, &s.other)
-        .await
-        .unwrap();
-    assert_eq!(member.user_id, s.other);
-    assert_eq!(s.publisher.count("GroupMemberAddedEvent"), 1);
+    let (status, body) = app.delete("alice", "/api/v2/groups/999999").await;
 
-    let members = s.groups.list_members(group.id, &s.owner).await.unwrap();
-    assert_eq!(members.len(), 1);
-
-    // Both owner and member see the group
-    assert_eq!(s.groups.list_groups(&s.owner).await.unwrap().len(), 1);
-    assert_eq!(s.groups.list_groups(&s.other).await.unwrap().len(), 1);
-
-    assert!(s
-        .groups
-        .remove_member(group.id, &s.owner, &s.other)
-        .await
-        .unwrap());
-    assert_eq!(s.publisher.count("GroupMemberRemovedEvent"), 1);
-    assert!(s.groups.list_groups(&s.other).await.unwrap().is_empty());
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        body["message"],
+        json!("Only the group owner can delete a group")
+    );
 }
 
 #[tokio::test]
-async fn test_group_owner_authorization() {
-    let Some(s) = setup().await else { return };
-    let group = s.groups.create_group(&s.owner, "G".into()).await.unwrap();
+async fn test_non_numeric_group_id_is_a_plain_404() {
+    let app = app_with_users().await;
 
-    assert!(s.groups.list_members(group.id, &s.other).await.is_err());
-    assert!(s
-        .groups
-        .update_group(group.id, &s.other, Some("x".into()))
-        .await
-        .is_err());
-    assert!(s.groups.delete_group(group.id, &s.other).await.is_err());
-    assert!(s
-        .groups
-        .add_member(group.id, &s.other, &s.other)
-        .await
-        .is_err());
-    assert!(s
-        .groups
-        .remove_member(group.id, &s.other, &s.owner)
-        .await
-        .is_err());
+    let (status, body) = app.delete("alice", "/api/v2/groups/abc").await;
 
-    // Unknown group
-    let missing = 999_999_i64;
-    assert!(s.groups.list_members(missing, &s.owner).await.is_err());
-    assert!(s.groups.delete_group(missing, &s.owner).await.is_err());
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["status"], json!(404));
+    assert_eq!(body["error"], json!("Not Found"));
+    assert_eq!(body["message"], json!("HTTP 404 Not Found"));
+    assert_eq!(body["path"], json!("/api/v2/groups/abc"));
+    assert!(body.get("errorCode").is_none(), "{body}");
+}
+
+// ===== PATCH /groups/{group} =====
+
+#[tokio::test]
+async fn test_owner_renames_group_and_event_is_fired() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Alt").await;
+
+    let (status, body) = app
+        .patch(
+            "alice",
+            &format!("/api/v2/groups/{team}"),
+            Some(json!({"name": "Neu"})),
+        )
+        .await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!({"id": team, "name": "Neu", "members": null}));
+    let events = app.events("GroupNameChangedEvent").await;
+    assert_eq!(events[0]["group_id"], json!(team));
+    assert_eq!(events[0]["old_name"], json!("Alt"));
+    assert_eq!(events[0]["new_name"], json!("Neu"));
+    assert_eq!(events[0]["acting_user_id"], json!("alice"));
 }
 
 #[tokio::test]
-async fn test_friendship_accept_and_remove() {
-    let Some(s) = setup().await else { return };
+async fn test_only_owner_may_edit_group() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+    let uri = format!("/api/v2/groups/{team}");
 
-    let request = s
-        .friendships
-        .send_request(&s.owner, &s.other)
-        .await
-        .unwrap();
-    assert_eq!(request.status, "PENDING");
-    assert_eq!(s.publisher.count("FriendshipRequestSentEvent"), 1);
-    assert_eq!(
-        s.friendships
-            .list_pending_requests(&s.other)
-            .await
-            .unwrap()
-            .len(),
-        1
+    let (status, body) = app.patch("bob", &uri, Some(json!({"name": "X"}))).await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_error(
+        &body,
+        403,
+        "Forbidden",
+        "FORBIDDEN",
+        "Only the group owner can edit a group",
+        &uri,
     );
-    assert!(s
-        .friendships
-        .list_pending_requests(&s.owner)
-        .await
-        .unwrap()
-        .is_empty());
-
-    // Only the recipient may accept
-    assert!(s
-        .friendships
-        .accept_request(request.id, &s.owner)
-        .await
-        .is_err());
-    let accepted = s
-        .friendships
-        .accept_request(request.id, &s.other)
-        .await
-        .unwrap();
-    assert_eq!(accepted.status, "ACCEPTED");
-    assert_eq!(s.publisher.count("FriendshipAcceptedEvent"), 1);
-
-    assert!(s
-        .friendships
-        .get_friendship(&s.owner, &s.other)
-        .await
-        .unwrap()
-        .is_some());
-    assert_eq!(
-        s.friendships
-            .list_friendships(&s.owner)
-            .await
-            .unwrap()
-            .len(),
-        1
-    );
-
-    assert!(s
-        .friendships
-        .remove_friendship(request.id, &s.owner)
-        .await
-        .unwrap());
-    assert_eq!(s.publisher.count("FriendshipRemovedEvent"), 1);
-    assert!(s
-        .friendships
-        .get_friendship(&s.owner, &s.other)
-        .await
-        .unwrap()
-        .is_none());
 }
 
 #[tokio::test]
-async fn test_friendship_decline_and_validation() {
-    let Some(s) = setup().await else { return };
+async fn test_edit_group_with_blank_name_is_a_validation_error() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
 
-    assert!(s
-        .friendships
-        .send_request(&s.owner, &s.owner)
-        .await
-        .is_err());
+    let (status, body) = app
+        .patch(
+            "alice",
+            &format!("/api/v2/groups/{team}"),
+            Some(json!({"name": ""})),
+        )
+        .await;
 
-    let request = s
-        .friendships
-        .send_request(&s.owner, &s.other)
-        .await
-        .unwrap();
-    assert!(s
-        .friendships
-        .decline_request(request.id, &s.owner)
-        .await
-        .is_err());
-    let declined = s
-        .friendships
-        .decline_request(request.id, &s.other)
-        .await
-        .unwrap();
-    assert_eq!(declined.status, "DECLINED");
-
-    let stranger = "stranger";
-    assert!(s
-        .friendships
-        .remove_friendship(request.id, stranger)
-        .await
-        .is_err());
-    assert!(s
-        .friendships
-        .accept_request(999_999, &s.other)
-        .await
-        .is_err());
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["errorCode"], json!("VALIDATION_ERROR"));
+    assert_eq!(body["message"], json!("Group name is required"));
 }
 
-#[test]
-fn test_ensure_helpers() {
-    let id = "owner-sub";
-    assert!(ensure_friendship_recipient(id, id).is_ok());
-    assert!(ensure_friendship_recipient(id, "someone-else").is_err());
+// ===== GET /groups/{group}/users =====
 
-    let group = chronos_date_api::groups::models::Group {
-        id: 1,
-        name: "g".into(),
-        owner_id: id.to_string(),
-    };
-    assert!(ensure_group_owner(&group, id).is_ok());
-    assert!(ensure_group_owner(&group, "someone-else").is_err());
+#[tokio::test]
+async fn test_member_lists_group_users_with_names() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+    app.add_member(team, "ghost").await;
+
+    let (status, body) = app
+        .get("bob", &format!("/api/v2/groups/{team}/users"))
+        .await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body,
+        json!([
+            {"id": "alice", "first_name": "Alice", "last_name": "Anders"},
+            {"id": "bob", "first_name": "Bob", "last_name": "Becker"},
+            {"id": "ghost", "first_name": null, "last_name": null}
+        ])
+    );
 }
 
-#[test]
-fn test_group_error_display_and_conversions() {
-    assert_eq!(
-        GroupServiceError::NotFound("x".into()).to_string(),
-        "Not found: x"
+#[tokio::test]
+async fn test_non_member_cannot_list_group_users() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    let uri = format!("/api/v2/groups/{team}/users");
+
+    let (status, body) = app.get("carol", &uri).await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_error(
+        &body,
+        403,
+        "Forbidden",
+        "FORBIDDEN",
+        "You are not a member of this group",
+        &uri,
     );
-    assert_eq!(
-        GroupServiceError::NotAuthorized("x".into()).to_string(),
-        "Not authorized: x"
-    );
-    assert_eq!(
-        GroupServiceError::from("bad").to_string(),
-        "Invalid operation: bad"
-    );
-    assert_eq!(
-        GroupServiceError::from(String::from("bad")).to_string(),
-        "Invalid operation: bad"
-    );
-    assert_eq!(
-        GroupServiceError::DatabaseError("db".into()).to_string(),
-        "Database error: db"
-    );
-    assert!(GroupServiceError::from(sqlx::Error::RowNotFound)
-        .to_string()
-        .starts_with("Database error"));
 }
 
-#[test]
-fn test_friendship_status_conversions() {
-    assert_eq!(
-        FriendshipStatus::from("ACCEPTED"),
-        FriendshipStatus::Accepted
+// ===== POST /groups/{groupId}/user/{userId} =====
+
+#[tokio::test]
+async fn test_member_adds_friend_to_group_and_event_is_fired() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_friendship("alice", "carol", "ACCEPTED").await;
+
+    let (status, body) = app
+        .post("alice", &format!("/api/v2/groups/{team}/user/carol"), None)
+        .await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(body, Value::Null);
+    assert_eq!(app.members_of(team).await, vec!["alice", "carol"]);
+    let events = app.events("GroupMemberAddedEvent").await;
+    assert_eq!(events[0]["group_id"], json!(team));
+    assert_eq!(events[0]["new_member_id"], json!("carol"));
+    assert_eq!(events[0]["acting_user_id"], json!("alice"));
+}
+
+#[tokio::test]
+async fn test_non_member_cannot_add_group_member() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_friendship("carol", "bob", "ACCEPTED").await;
+    let uri = format!("/api/v2/groups/{team}/user/bob");
+
+    let (status, body) = app.post("carol", &uri, None).await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_error(
+        &body,
+        403,
+        "Forbidden",
+        "FORBIDDEN",
+        "You can only add members to group you are a member of",
+        &uri,
+    );
+}
+
+#[tokio::test]
+async fn test_can_only_add_friends_to_group() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_friendship("alice", "bob", "PENDING").await;
+
+    let (status, body) = app
+        .post("alice", &format!("/api/v2/groups/{team}/user/bob"), None)
+        .await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["message"], json!("You can only add friends to groups"));
+}
+
+#[tokio::test]
+async fn test_adding_existing_member_is_a_field_validation_error() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+    app.add_friendship("alice", "bob", "ACCEPTED").await;
+    let uri = format!("/api/v2/groups/{team}/user/bob");
+
+    let (status, body) = app.post("alice", &uri, None).await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_error(
+        &body,
+        400,
+        "Bad Request",
+        "VALIDATION_ERROR",
+        "Validierungsfehler bei Feld: user",
+        &uri,
     );
     assert_eq!(
-        FriendshipStatus::from(String::from("DECLINED")),
-        FriendshipStatus::Declined
+        body["fieldErrors"],
+        json!({"user": "This user is already a member of this group"})
     );
+}
+
+// ===== DELETE /groups/{groupId}/user/{userId} =====
+
+#[tokio::test]
+async fn test_owner_removes_member_and_event_is_fired() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+
+    let (status, body) = app
+        .delete("alice", &format!("/api/v2/groups/{team}/user/bob"))
+        .await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(body, Value::Null);
+    assert_eq!(app.members_of(team).await, vec!["alice"]);
+    let events = app.events("GroupMemberRemovedEvent").await;
+    assert_eq!(events[0]["group_id"], json!(team));
+    assert_eq!(events[0]["removed_member_id"], json!("bob"));
+    assert_eq!(events[0]["acting_user_id"], json!("alice"));
+}
+
+#[tokio::test]
+async fn test_owner_cannot_remove_themselves() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+
+    let (status, body) = app
+        .delete("alice", &format!("/api/v2/groups/{team}/user/alice"))
+        .await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(
-        FriendshipStatus::from("whatever"),
-        FriendshipStatus::Pending
+        body["message"],
+        json!("You cannot remove yourself from a group")
     );
-    assert_eq!(FriendshipStatus::Pending.to_string(), "PENDING");
-    assert_eq!(FriendshipStatus::Accepted.to_string(), "ACCEPTED");
-    assert_eq!(FriendshipStatus::Declined.to_string(), "DECLINED");
+}
+
+#[tokio::test]
+async fn test_only_owner_can_remove_members() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+    app.add_member(team, "bob").await;
+    app.add_member(team, "carol").await;
+
+    let (status, body) = app
+        .delete("bob", &format!("/api/v2/groups/{team}/user/carol"))
+        .await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        body["message"],
+        json!("Only the group owner can remove members")
+    );
+}
+
+#[tokio::test]
+async fn test_removing_a_non_member_is_a_validation_error() {
+    let app = app_with_users().await;
+    let team = app.add_group("alice", "Team").await;
+
+    let (status, body) = app
+        .delete("alice", &format!("/api/v2/groups/{team}/user/carol"))
+        .await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["errorCode"], json!("VALIDATION_ERROR"));
+    assert_eq!(
+        body["message"],
+        json!("This user is not member of this group")
+    );
+    assert_eq!(body["fieldErrors"], json!({}));
+}
+
+// ===== regression: appointment errors are not touched by `fill_error_path` =====
+
+#[tokio::test]
+async fn test_appointment_error_responses_keep_their_plain_text_body() {
+    let app = app_with_users().await;
+
+    let (status, body) = app.get_raw("alice", "/api/v2/appointments/987654321").await;
+
+    // `AppointmentError` does not use `AppError`, so the path middleware leaves it as it was
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body, "Appointment not found");
 }

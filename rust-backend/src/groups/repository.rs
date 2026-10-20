@@ -1,87 +1,99 @@
-use crate::groups::models::{Friendship, Group, GroupMember};
-use sqlx::PgPool;
+use crate::groups::models::{Friendship, FriendshipStatus, Group, GroupMember};
+use sqlx::PgExecutor;
+use std::collections::HashSet;
 
 // Columns of the Java-compatible tables, aliased to the field names of the models (ADR-2026-10-12-014).
 // Ids come from the `<table>_seq` sequences, users are OIDC subjects (`*_oidcid`).
+// Every function takes a pool or a transaction as executor.
 const GROUP_COLUMNS: &str = "id, groupname AS name, owner_oidcid AS owner_id";
 const MEMBER_COLUMNS: &str = "id, group_id, user_oidcid AS user_id";
-const FRIENDSHIP_COLUMNS: &str = "id, requester_oidcid AS requester_id, addressee_oidcid AS recipient_id, status, created_at, responded_at";
+const FRIENDSHIP_COLUMNS: &str = "id, requester_oidcid AS requester_id, addressee_oidcid AS addressee_id, status, created_at, responded_at";
 
 /// Repository for group operations
 pub struct GroupRepository;
 
 impl GroupRepository {
     /// Create a new group
-    pub async fn create(pool: &PgPool, name: String, owner_id: &str) -> Result<Group, sqlx::Error> {
+    pub async fn create<'e>(
+        db: impl PgExecutor<'e>,
+        name: &str,
+        owner_id: &str,
+    ) -> Result<Group, sqlx::Error> {
         sqlx::query_as::<_, Group>(&format!(
             "INSERT INTO groups (id, groupname, owner_oidcid)
              VALUES (nextval('groups_seq'), $1, $2)
-             RETURNING {}",
-            GROUP_COLUMNS
+             RETURNING {GROUP_COLUMNS}"
         ))
         .bind(name)
         .bind(owner_id)
-        .fetch_one(pool)
+        .fetch_one(db)
         .await
     }
 
     /// Get a group by ID
-    pub async fn get_by_id(pool: &PgPool, id: i64) -> Result<Option<Group>, sqlx::Error> {
-        sqlx::query_as::<_, Group>(&format!(
-            "SELECT {} FROM groups WHERE id = $1",
-            GROUP_COLUMNS
-        ))
-        .bind(id)
-        .fetch_optional(pool)
-        .await
+    pub async fn find_by_id<'e>(
+        db: impl PgExecutor<'e>,
+        id: i64,
+    ) -> Result<Option<Group>, sqlx::Error> {
+        sqlx::query_as::<_, Group>(&format!("SELECT {GROUP_COLUMNS} FROM groups WHERE id = $1"))
+            .bind(id)
+            .fetch_optional(db)
+            .await
     }
 
-    /// List all groups for a user (both owned and member of)
-    pub async fn list_for_user(pool: &PgPool, user_id: &str) -> Result<Vec<Group>, sqlx::Error> {
+    /// Groups the user is a member of, optionally filtered by a case-insensitive name fragment
+    /// (like Java, `%` and `_` in the fragment keep their LIKE meaning)
+    pub async fn search_for_member<'e>(
+        db: impl PgExecutor<'e>,
+        user_id: &str,
+        search: Option<&str>,
+    ) -> Result<Vec<Group>, sqlx::Error> {
         sqlx::query_as::<_, Group>(&format!(
-            "SELECT {} FROM groups
-             WHERE owner_oidcid = $1
-                OR id IN (SELECT group_id FROM group_member WHERE user_oidcid = $1)
-             ORDER BY id DESC",
-            GROUP_COLUMNS
+            "SELECT {GROUP_COLUMNS} FROM groups
+             WHERE id IN (SELECT group_id FROM group_member WHERE user_oidcid = $1)
+               AND ($2::text IS NULL OR lower(groupname) LIKE lower('%' || $2 || '%'))
+             ORDER BY id"
         ))
         .bind(user_id)
-        .fetch_all(pool)
+        .bind(search)
+        .fetch_all(db)
         .await
     }
 
-    /// List all groups for a user (owned only)
-    pub async fn list_by_owner(pool: &PgPool, owner_id: &str) -> Result<Vec<Group>, sqlx::Error> {
-        sqlx::query_as::<_, Group>(&format!(
-            "SELECT {} FROM groups WHERE owner_oidcid = $1 ORDER BY id DESC",
-            GROUP_COLUMNS
-        ))
-        .bind(owner_id)
-        .fetch_all(pool)
+    /// True if the user owns the group
+    pub async fn is_owner<'e>(
+        db: impl PgExecutor<'e>,
+        group_id: i64,
+        user_id: &str,
+    ) -> Result<bool, sqlx::Error> {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM groups WHERE id = $1 AND owner_oidcid = $2)",
+        )
+        .bind(group_id)
+        .bind(user_id)
+        .fetch_one(db)
         .await
     }
 
-    /// Update a group (only the name can change; without a name the group is returned as is)
-    pub async fn update(
-        pool: &PgPool,
+    /// Rename a group
+    pub async fn rename<'e>(
+        db: impl PgExecutor<'e>,
         id: i64,
-        name: Option<String>,
-    ) -> Result<Option<Group>, sqlx::Error> {
-        sqlx::query_as::<_, Group>(&format!(
-            "UPDATE groups SET groupname = COALESCE($1, groupname) WHERE id = $2 RETURNING {}",
-            GROUP_COLUMNS
-        ))
-        .bind(name)
-        .bind(id)
-        .fetch_optional(pool)
-        .await
+        name: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE groups SET groupname = $1 WHERE id = $2")
+            .bind(name)
+            .bind(id)
+            .execute(db)
+            .await?;
+        Ok(())
     }
 
     /// Delete a group (its members are removed by the ON DELETE CASCADE of `group_member`)
-    pub async fn delete(pool: &PgPool, id: i64) -> Result<bool, sqlx::Error> {
+    pub async fn delete<'e>(db: impl PgExecutor<'e>, id: i64) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("DELETE FROM groups WHERE id = $1")
             .bind(id)
-            .execute(pool)
+            .execute(db)
             .await?;
 
         Ok(result.rows_affected() > 0)
@@ -93,26 +105,25 @@ pub struct GroupMemberRepository;
 
 impl GroupMemberRepository {
     /// Add a member to a group
-    pub async fn add_member(
-        pool: &PgPool,
+    pub async fn add<'e>(
+        db: impl PgExecutor<'e>,
         group_id: i64,
         user_id: &str,
-    ) -> Result<GroupMember, sqlx::Error> {
-        sqlx::query_as::<_, GroupMember>(&format!(
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
             "INSERT INTO group_member (id, group_id, user_oidcid)
-             VALUES (nextval('group_member_seq'), $1, $2)
-             RETURNING {}",
-            MEMBER_COLUMNS
-        ))
+             VALUES (nextval('group_member_seq'), $1, $2)",
+        )
         .bind(group_id)
         .bind(user_id)
-        .fetch_one(pool)
-        .await
+        .execute(db)
+        .await?;
+        Ok(())
     }
 
-    /// Remove a member from a group
-    pub async fn remove_member(
-        pool: &PgPool,
+    /// Remove a member from a group; false if the user was no member
+    pub async fn remove<'e>(
+        db: impl PgExecutor<'e>,
         group_id: i64,
         user_id: &str,
     ) -> Result<bool, sqlx::Error> {
@@ -120,40 +131,38 @@ impl GroupMemberRepository {
             sqlx::query("DELETE FROM group_member WHERE group_id = $1 AND user_oidcid = $2")
                 .bind(group_id)
                 .bind(user_id)
-                .execute(pool)
+                .execute(db)
                 .await?;
 
         Ok(result.rows_affected() > 0)
     }
 
-    /// Get all members of a group
-    pub async fn get_members(
-        pool: &PgPool,
-        group_id: i64,
+    /// Members of the given groups, oldest membership first
+    pub async fn list_for_groups<'e>(
+        db: impl PgExecutor<'e>,
+        group_ids: &[i64],
     ) -> Result<Vec<GroupMember>, sqlx::Error> {
         sqlx::query_as::<_, GroupMember>(&format!(
-            "SELECT {} FROM group_member WHERE group_id = $1 ORDER BY id",
-            MEMBER_COLUMNS
+            "SELECT {MEMBER_COLUMNS} FROM group_member WHERE group_id = ANY($1) ORDER BY id"
         ))
-        .bind(group_id)
-        .fetch_all(pool)
+        .bind(group_ids)
+        .fetch_all(db)
         .await
     }
 
     /// Check if a user is a member of a group
-    pub async fn is_member(
-        pool: &PgPool,
+    pub async fn is_member<'e>(
+        db: impl PgExecutor<'e>,
         group_id: i64,
         user_id: &str,
     ) -> Result<bool, sqlx::Error> {
-        let result =
-            sqlx::query("SELECT 1 FROM group_member WHERE group_id = $1 AND user_oidcid = $2")
-                .bind(group_id)
-                .bind(user_id)
-                .fetch_optional(pool)
-                .await?;
-
-        Ok(result.is_some())
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM group_member WHERE group_id = $1 AND user_oidcid = $2)",
+        )
+        .bind(group_id)
+        .bind(user_id)
+        .fetch_one(db)
+        .await
     }
 }
 
@@ -161,103 +170,171 @@ impl GroupMemberRepository {
 pub struct FriendshipRepository;
 
 impl FriendshipRepository {
-    /// Create a friendship request
-    pub async fn create_request(
-        pool: &PgPool,
+    /// Create a pending friendship request
+    pub async fn create_request<'e>(
+        db: impl PgExecutor<'e>,
         requester_id: &str,
-        recipient_id: &str,
+        addressee_id: &str,
     ) -> Result<Friendship, sqlx::Error> {
         sqlx::query_as::<_, Friendship>(&format!(
             "INSERT INTO friendship_requests (id, requester_oidcid, addressee_oidcid, status, created_at)
-             VALUES (nextval('friendship_requests_seq'), $1, $2, 'PENDING', NOW())
-             RETURNING {}",
-            FRIENDSHIP_COLUMNS
+             VALUES (nextval('friendship_requests_seq'), $1, $2, '{pending}', NOW())
+             RETURNING {FRIENDSHIP_COLUMNS}",
+            pending = FriendshipStatus::Pending.as_str()
         ))
         .bind(requester_id)
-        .bind(recipient_id)
-        .fetch_one(pool)
+        .bind(addressee_id)
+        .fetch_one(db)
         .await
     }
 
-    /// Get a friendship by ID
-    pub async fn get_by_id(pool: &PgPool, id: i64) -> Result<Option<Friendship>, sqlx::Error> {
-        sqlx::query_as::<_, Friendship>(&format!(
-            "SELECT {} FROM friendship_requests WHERE id = $1",
-            FRIENDSHIP_COLUMNS
-        ))
-        .bind(id)
-        .fetch_optional(pool)
-        .await
-    }
-
-    /// Accept a friendship request
-    pub async fn accept(pool: &PgPool, id: i64) -> Result<Option<Friendship>, sqlx::Error> {
-        Self::respond(pool, id, "ACCEPTED").await
-    }
-
-    /// Decline a friendship request
-    pub async fn decline(pool: &PgPool, id: i64) -> Result<Option<Friendship>, sqlx::Error> {
-        Self::respond(pool, id, "DECLINED").await
-    }
-
-    async fn respond(
-        pool: &PgPool,
+    /// Get a friendship request by ID
+    pub async fn find_by_id<'e>(
+        db: impl PgExecutor<'e>,
         id: i64,
-        status: &str,
     ) -> Result<Option<Friendship>, sqlx::Error> {
         sqlx::query_as::<_, Friendship>(&format!(
-            "UPDATE friendship_requests SET status = $1, responded_at = NOW() WHERE id = $2 RETURNING {}",
-            FRIENDSHIP_COLUMNS
+            "SELECT {FRIENDSHIP_COLUMNS} FROM friendship_requests WHERE id = $1"
         ))
-        .bind(status)
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(db)
         .await
     }
 
-    /// Remove a friendship
-    pub async fn delete(pool: &PgPool, id: i64) -> Result<bool, sqlx::Error> {
+    /// Answer a request: set its status and `responded_at`
+    pub async fn respond<'e>(
+        db: impl PgExecutor<'e>,
+        id: i64,
+        status: FriendshipStatus,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE friendship_requests SET status = $1, responded_at = NOW() WHERE id = $2",
+        )
+        .bind(status.as_str())
+        .bind(id)
+        .execute(db)
+        .await?;
+        Ok(())
+    }
+
+    /// Delete a friendship request
+    pub async fn delete<'e>(db: impl PgExecutor<'e>, id: i64) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("DELETE FROM friendship_requests WHERE id = $1")
             .bind(id)
-            .execute(pool)
+            .execute(db)
             .await?;
 
         Ok(result.rows_affected() > 0)
     }
 
-    /// Get friendship between two users
-    pub async fn get_friendship(
-        pool: &PgPool,
+    /// The request between two users, in either direction, with any status
+    pub async fn find_request<'e>(
+        db: impl PgExecutor<'e>,
         user1_id: &str,
         user2_id: &str,
     ) -> Result<Option<Friendship>, sqlx::Error> {
         sqlx::query_as::<_, Friendship>(&format!(
-            "SELECT {} FROM friendship_requests
+            "SELECT {FRIENDSHIP_COLUMNS} FROM friendship_requests
              WHERE (requester_oidcid = $1 AND addressee_oidcid = $2)
                 OR (requester_oidcid = $2 AND addressee_oidcid = $1)
              ORDER BY id
-             LIMIT 1",
-            FRIENDSHIP_COLUMNS
+             LIMIT 1"
         ))
         .bind(user1_id)
         .bind(user2_id)
-        .fetch_optional(pool)
+        .fetch_optional(db)
         .await
     }
 
-    /// List all friendships for a user (pending and accepted)
-    pub async fn list_for_user(
-        pool: &PgPool,
+    /// The accepted request between two users, in either direction
+    pub async fn find_friendship<'e>(
+        db: impl PgExecutor<'e>,
+        user1_id: &str,
+        user2_id: &str,
+    ) -> Result<Option<Friendship>, sqlx::Error> {
+        sqlx::query_as::<_, Friendship>(&format!(
+            "SELECT {FRIENDSHIP_COLUMNS} FROM friendship_requests
+             WHERE status = '{accepted}'
+               AND ((requester_oidcid = $1 AND addressee_oidcid = $2)
+                 OR (requester_oidcid = $2 AND addressee_oidcid = $1))
+             ORDER BY id
+             LIMIT 1",
+            accepted = FriendshipStatus::Accepted.as_str()
+        ))
+        .bind(user1_id)
+        .bind(user2_id)
+        .fetch_optional(db)
+        .await
+    }
+
+    /// True if the two users have an accepted request
+    pub async fn are_friends<'e>(
+        db: impl PgExecutor<'e>,
+        user1_id: &str,
+        user2_id: &str,
+    ) -> Result<bool, sqlx::Error> {
+        Ok(Self::find_friendship(db, user1_id, user2_id)
+            .await?
+            .is_some())
+    }
+
+    /// Accepted requests of a user, oldest first
+    pub async fn list_friendships<'e>(
+        db: impl PgExecutor<'e>,
         user_id: &str,
     ) -> Result<Vec<Friendship>, sqlx::Error> {
         sqlx::query_as::<_, Friendship>(&format!(
-            "SELECT {} FROM friendship_requests
-             WHERE requester_oidcid = $1 OR addressee_oidcid = $1
-             ORDER BY created_at DESC, id DESC",
-            FRIENDSHIP_COLUMNS
+            "SELECT {FRIENDSHIP_COLUMNS} FROM friendship_requests
+             WHERE status = '{accepted}' AND (requester_oidcid = $1 OR addressee_oidcid = $1)
+             ORDER BY id",
+            accepted = FriendshipStatus::Accepted.as_str()
         ))
         .bind(user_id)
-        .fetch_all(pool)
+        .fetch_all(db)
+        .await
+    }
+
+    /// Ids of all friends of a user
+    pub async fn friend_ids<'e>(
+        db: impl PgExecutor<'e>,
+        user_id: &str,
+    ) -> Result<HashSet<String>, sqlx::Error> {
+        Ok(Self::list_friendships(db, user_id)
+            .await?
+            .iter()
+            .map(|f| f.other_party(user_id).to_string())
+            .collect())
+    }
+
+    /// Pending requests addressed to the user
+    pub async fn list_incoming<'e>(
+        db: impl PgExecutor<'e>,
+        user_id: &str,
+    ) -> Result<Vec<Friendship>, sqlx::Error> {
+        Self::list_pending(db, "addressee_oidcid", user_id).await
+    }
+
+    /// Pending requests sent by the user
+    pub async fn list_outgoing<'e>(
+        db: impl PgExecutor<'e>,
+        user_id: &str,
+    ) -> Result<Vec<Friendship>, sqlx::Error> {
+        Self::list_pending(db, "requester_oidcid", user_id).await
+    }
+
+    async fn list_pending<'e>(
+        db: impl PgExecutor<'e>,
+        user_column: &str,
+        user_id: &str,
+    ) -> Result<Vec<Friendship>, sqlx::Error> {
+        sqlx::query_as::<_, Friendship>(&format!(
+            "SELECT {FRIENDSHIP_COLUMNS} FROM friendship_requests
+             WHERE {user_column} = $1 AND status = '{pending}'
+             ORDER BY id",
+            pending = FriendshipStatus::Pending.as_str()
+        ))
+        .bind(user_id)
+        .fetch_all(db)
         .await
     }
 }
