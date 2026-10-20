@@ -25,6 +25,8 @@ const TEST_JWK_EXPONENT: &str = "AQAB";
 pub struct TestApp {
     pub db: TestDb,
     router: Router,
+    /// Profile claims per user id; the auth middleware caches them into `user_profiles` on every request
+    profiles: std::sync::Mutex<std::collections::HashMap<String, Value>>,
 }
 
 impl TestApp {
@@ -45,7 +47,13 @@ impl TestApp {
         Self {
             router: build_router(state, user_state, validator),
             db,
+            profiles: Default::default(),
         }
+    }
+
+    fn token(&self, user_id: &str) -> String {
+        let profile = self.profiles.lock().unwrap().get(user_id).cloned();
+        sign_token(user_id, profile)
     }
 
     /// Sends a request as `user_id` (`None` = no token); returns status and JSON body (`Null` if empty)
@@ -58,7 +66,7 @@ impl TestApp {
     ) -> (StatusCode, Value) {
         let mut builder = http::Request::builder().uri(uri).method(method);
         if let Some(user_id) = user_id {
-            builder = builder.header("authorization", format!("Bearer {}", sign_token(user_id)));
+            builder = builder.header("authorization", format!("Bearer {}", self.token(user_id)));
         }
         let request = match body {
             Some(body) => builder
@@ -97,7 +105,7 @@ impl TestApp {
         let request = http::Request::builder()
             .uri(uri)
             .method("GET")
-            .header("authorization", format!("Bearer {}", sign_token(user_id)))
+            .header("authorization", format!("Bearer {}", self.token(user_id)))
             .body(Body::empty())
             .expect("Failed to build request");
         let response = self
@@ -131,6 +139,10 @@ impl TestApp {
 
     /// Creates a `user_profiles` row
     pub async fn add_user(&self, oidc_id: &str, first: &str, last: &str, email: &str) {
+        self.profiles.lock().unwrap().insert(
+            oidc_id.to_string(),
+            serde_json::json!({ "given_name": first, "family_name": last, "email": email }),
+        );
         sqlx::query(
             "INSERT INTO user_profiles (oidc_id, first_name, last_name, email) VALUES ($1, $2, $3, $4)",
         )
@@ -248,9 +260,12 @@ async fn start_mock_keycloak() -> String {
 }
 
 /// Signs an RS256 access token for `user_id` that the mock JWKS endpoint can verify
-fn sign_token(user_id: &str) -> String {
+fn sign_token(user_id: &str, profile: Option<Value>) -> String {
     let now = chrono::Utc::now().timestamp();
-    let claims = serde_json::json!({ "sub": user_id, "iat": now, "exp": now + 3600 });
+    let mut claims = serde_json::json!({ "sub": user_id, "iat": now, "exp": now + 3600 });
+    if let (Some(Value::Object(extra)), Some(map)) = (profile, claims.as_object_mut()) {
+        map.extend(extra);
+    }
     let mut header = Header::new(Algorithm::RS256);
     header.kid = Some(TEST_JWK_KID.to_string());
     let key = EncodingKey::from_rsa_pem(TEST_PRIVATE_KEY_PEM.as_bytes())
