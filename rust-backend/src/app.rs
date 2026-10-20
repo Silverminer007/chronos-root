@@ -13,7 +13,7 @@ use crate::appointments::handlers::{
     list_appointments, list_messages, list_participants, remove_group_from_appointment,
     remove_participant, rsvp_to_appointment, send_message, update_appointment, AppState,
 };
-use crate::error::fill_error_path;
+use crate::error::{fill_error_path, route_not_found};
 use crate::groups::handlers::{
     accept_friendship_request, add_group_member, cancel_friendship_request, create_group,
     decline_friendship_request, delete_group, friendship_suggestions, incoming_friendship_requests,
@@ -151,6 +151,8 @@ pub fn build_router(
         ))))
         .merge(user_routes(user_state.clone()))
         .merge(push_routes(push_state))
+        // Unmatched paths are authenticated first (as in Quarkus), then answered with the Java 404
+        .fallback(route_not_found)
         // Inner layer: runs after authentication, so the principal is available
         .layer(middleware::from_fn_with_state(
             UserRepository::new(user_state.db_pool.clone()),
