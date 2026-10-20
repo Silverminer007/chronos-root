@@ -1,28 +1,140 @@
 use crate::event_bus::{Event, EventBus, EventPublisher, EventSubscriber};
 use async_trait::async_trait;
+use sqlx::postgres::PgListener;
 use sqlx::PgPool;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::sync::mpsc;
 use tracing::{error, info};
+
+type Callback = Arc<dyn Fn(Event) + Send + Sync>;
+
+/// Delay before the dispatcher retries after losing or failing to open its connection
+const RECONNECT_DELAY: Duration = Duration::from_secs(5);
+
+/// Registers a callback for an event type at the dispatcher task
+struct Subscription {
+    event_type: String,
+    callback: Callback,
+}
 
 /// PostgreSQL-backed event bus using LISTEN/NOTIFY for async side-effects
 /// Designed to be swappable with Kafka/RabbitMQ implementations
+///
+/// All subscriptions share one `PgListener` (one LISTEN connection for every event type), so the
+/// pool footprint of the bus stays constant however many event types exist.
 pub struct PostgresEventBus {
     pool: PgPool,
+    /// Channel to the dispatcher task; the task is spawned by the first `subscribe`
+    dispatcher: Mutex<Option<mpsc::UnboundedSender<Subscription>>>,
 }
 
 impl PostgresEventBus {
     /// Create a new PostgreSQL event bus
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            dispatcher: Mutex::new(None),
+        }
     }
 
-    /// Start listening for events on a specific channel
-    pub async fn create_listener(
-        &self,
-        event_type: &str,
-    ) -> Result<sqlx::postgres::PgListener, sqlx::Error> {
-        let mut listener = sqlx::postgres::PgListener::connect_with(&self.pool).await?;
-        listener.listen(event_type).await?;
-        Ok(listener)
+    fn send_subscription(&self, subscription: Subscription) -> Result<(), String> {
+        let mut dispatcher = self.dispatcher.lock().map_err(|e| e.to_string())?;
+        let sender = dispatcher.get_or_insert_with(|| {
+            let (sender, receiver) = mpsc::unbounded_channel();
+            tokio::spawn(run_dispatcher(self.pool.clone(), receiver));
+            sender
+        });
+        sender
+            .send(subscription)
+            .map_err(|_| "event dispatcher stopped".to_string())
+    }
+}
+
+/// Owns the single LISTEN connection: listens on every subscribed channel and hands each
+/// notification to the callbacks of its event type. Ends when the bus (the sender) is dropped.
+async fn run_dispatcher(pool: PgPool, mut subscriptions: mpsc::UnboundedReceiver<Subscription>) {
+    let mut callbacks: HashMap<String, Vec<Callback>> = HashMap::new();
+    loop {
+        let mut listener = match PgListener::connect_with(&pool).await {
+            Ok(listener) => listener,
+            Err(e) => {
+                error!("Failed to create listener: {}", e);
+                tokio::time::sleep(RECONNECT_DELAY).await;
+                continue;
+            }
+        };
+        if let Err(e) = listener
+            .listen_all(callbacks.keys().map(String::as_str))
+            .await
+        {
+            error!("Failed to listen on channels: {}", e);
+            tokio::time::sleep(RECONNECT_DELAY).await;
+            continue;
+        }
+        info!("Listener started for {} event types", callbacks.len());
+
+        loop {
+            tokio::select! {
+                subscription = subscriptions.recv() => {
+                    let Some(Subscription { event_type, callback }) = subscription else {
+                        return;
+                    };
+                    let is_new_channel = !callbacks.contains_key(&event_type);
+                    callbacks.entry(event_type.clone()).or_default().push(callback);
+                    if is_new_channel {
+                        if let Err(e) = listener.listen(&event_type).await {
+                            error!("Failed to listen on channel {}: {}", event_type, e);
+                            break; // Reconnect; the channel is re-listened with all others
+                        }
+                        info!("Listener started for event type: {}", event_type);
+                    }
+                }
+                notification = listener.recv() => match notification {
+                    Ok(notification) => {
+                        info!("Received notification on channel: {}", notification.channel());
+                        if let Some(handlers) = callbacks.get(notification.channel()) {
+                            dispatch(&pool, notification.payload(), handlers).await;
+                        }
+                    }
+                    Err(e) => {
+                        error!("Listener error: {}", e);
+                        break; // Reconnect
+                    }
+                },
+            }
+        }
+    }
+}
+
+/// Loads the event announced by a notification and passes it to the callbacks
+async fn dispatch(pool: &PgPool, event_id: &str, handlers: &[Callback]) {
+    match sqlx::query_as::<_, (String, String, String)>(
+        "SELECT id, event_type, payload FROM events WHERE id = $1",
+    )
+    .bind(event_id)
+    .fetch_optional(pool)
+    .await
+    {
+        Ok(Some((id, event_type, payload_str))) => {
+            match serde_json::from_str::<serde_json::Value>(&payload_str) {
+                Ok(payload) => {
+                    let timestamp = chrono::Utc::now().timestamp();
+                    for callback in handlers {
+                        callback(Event {
+                            id: id.clone(),
+                            event_type: event_type.clone(),
+                            payload: payload.clone(),
+                            timestamp,
+                        });
+                    }
+                }
+                Err(e) => error!("Failed to parse event payload: {}", e),
+            }
+        }
+        Ok(None) => error!("Event not found in database: {}", event_id),
+        Err(e) => error!("Failed to fetch event from database: {}", e),
     }
 }
 
@@ -73,7 +185,7 @@ impl EventPublisher for PostgresEventBus {
 #[async_trait]
 impl EventSubscriber for PostgresEventBus {
     /// Subscribe to events of a specific type using PostgreSQL LISTEN
-    /// Note: This spawns a background task that will listen indefinitely
+    /// The callback runs on the shared dispatcher task, which listens indefinitely
     async fn subscribe<F>(
         &self,
         event_type: String,
@@ -82,77 +194,10 @@ impl EventSubscriber for PostgresEventBus {
     where
         F: Fn(Event) + Send + Sync + 'static,
     {
-        let pool = self.pool.clone();
-        let event_type_clone = event_type.clone();
-
-        // Spawn a listener task that runs indefinitely
-        tokio::spawn(async move {
-            loop {
-                match sqlx::postgres::PgListener::connect_with(&pool).await {
-                    Ok(mut listener) => {
-                        info!("Listener started for event type: {}", event_type_clone);
-
-                        if let Err(e) = listener.listen(&event_type_clone).await {
-                            error!("Failed to listen on channel {}: {}", event_type_clone, e);
-                            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                            continue;
-                        }
-
-                        // Poll for notifications
-                        loop {
-                            match listener.recv().await {
-                                Ok(notification) => {
-                                    info!("Received notification on channel: {}", event_type_clone);
-                                    let event_id = notification.payload();
-                                    match sqlx::query_as::<_, (String, String, String)>(
-                                        "SELECT id, event_type, payload FROM events WHERE id = $1",
-                                    )
-                                    .bind(event_id)
-                                    .fetch_optional(&pool)
-                                    .await
-                                    {
-                                        Ok(Some((id, event_type, payload_str))) => {
-                                            match serde_json::from_str::<serde_json::Value>(
-                                                &payload_str,
-                                            ) {
-                                                Ok(payload) => {
-                                                    let timestamp = chrono::Utc::now().timestamp();
-                                                    let event = Event {
-                                                        id,
-                                                        event_type,
-                                                        payload,
-                                                        timestamp,
-                                                    };
-                                                    callback(event);
-                                                }
-                                                Err(e) => {
-                                                    error!("Failed to parse event payload: {}", e);
-                                                }
-                                            }
-                                        }
-                                        Ok(None) => {
-                                            error!("Event not found in database: {}", event_id);
-                                        }
-                                        Err(e) => {
-                                            error!("Failed to fetch event from database: {}", e);
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    error!("Listener error: {}", e);
-                                    break; // Break inner loop to reconnect
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        error!("Failed to create listener: {}", e);
-                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                    }
-                }
-            }
-        });
-
+        self.send_subscription(Subscription {
+            event_type,
+            callback: Arc::new(callback),
+        })?;
         Ok(())
     }
 }
@@ -162,7 +207,7 @@ impl EventBus for PostgresEventBus {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::TestDb;
+    use crate::test_utils::{TestDb, TestDbConfig};
 
     /// Each test gets its own migrated database, so the `events` table exists and tests cannot collide
     async fn create_test_pool() -> PgPool {
@@ -214,5 +259,45 @@ mod tests {
         let (id, event_type) = result.unwrap();
         assert_eq!(id, event_id);
         assert_eq!(event_type, "persistence_test");
+    }
+
+    /// Regression #153: every subscription used to hold its own pooled connection, so as many
+    /// event types as pool connections left nothing for queries.
+    #[tokio::test]
+    async fn test_subscriptions_leave_pool_connections_free() {
+        const EVENT_TYPES: usize = 16;
+        let db = TestDb::with_config(TestDbConfig {
+            max_connections: EVENT_TYPES as u32,
+            connection_timeout: Duration::from_secs(3),
+        })
+        .await
+        .expect("Failed to create test database");
+        let bus = PostgresEventBus::new(db.pool().clone());
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        for i in 0..EVENT_TYPES {
+            let tx = tx.clone();
+            bus.subscribe(format!("pool_test_{i}"), move |event| {
+                let _ = tx.send(event.event_type);
+            })
+            .await
+            .expect("subscribe failed");
+        }
+        // Let the listener connect
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        let one: i32 = sqlx::query_scalar("SELECT 1")
+            .fetch_one(db.pool())
+            .await
+            .expect("no free pool connection left for a query");
+        assert_eq!(one, 1);
+
+        bus.fire(Event::new("pool_test_7", serde_json::json!({})))
+            .await
+            .expect("fire failed");
+        let delivered = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+            .await
+            .expect("event not delivered");
+        assert_eq!(delivered.as_deref(), Some("pool_test_7"));
     }
 }
