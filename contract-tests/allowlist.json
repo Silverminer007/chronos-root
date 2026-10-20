@@ -56,28 +56,10 @@
       "reason": "Java creates the owner as PENDING, Rust as APPROVED (#158)"
     },
     {
-      "step": "list messages",
-      "kind": "length_mismatch",
-      "path": "$",
-      "reason": "Rust writes no system messages for RSVP/cancel (#159)"
-    },
-    {
       "step": "friend suggestions",
       "kind": "length_mismatch",
       "path": "$",
       "reason": "Rust returns no suggestions (#160)"
-    },
-    {
-      "step": "admin change participation status",
-      "kind": "status_mismatch",
-      "path": "$",
-      "reason": "Rust does not turn group members into participants (#159)"
-    },
-    {
-      "step": "admin send message",
-      "kind": "status_mismatch",
-      "path": "$",
-      "reason": "Rust answers 500, Java 200 (#159)"
     }
   ],
   "rust_only": [

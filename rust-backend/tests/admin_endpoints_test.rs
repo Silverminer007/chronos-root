@@ -733,11 +733,13 @@ async fn test_admin_statistics_count_rows_and_keycloak_users() {
     app.add_friendship(USER, ADMIN, "PENDING").await;
     app.add_friendship("bob", ADMIN, "DECLINED").await;
     log_entry(&app, "bob", None, true, "2030-01-01T10:00:00Z").await;
-    sqlx::query("INSERT INTO message (id, body, sender_oidcid, appointment_id) VALUES (nextval('message_seq'), 'x', 'bob', $1)")
-        .bind(planned)
-        .execute(app.db.pool())
-        .await
-        .unwrap();
+    sqlx::query(
+        "INSERT INTO message (body, sender_oidcid, appointment_id) VALUES ('x', 'bob', $1)",
+    )
+    .bind(planned)
+    .execute(app.db.pool())
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO pushsubscription (id, user_oidcid, endpoint, p256dh, auth) VALUES (nextval('pushsubscription_seq'), 'bob', 'e', 'p', 'a')")
         .execute(app.db.pool())
         .await
@@ -754,7 +756,8 @@ async fn test_admin_statistics_count_rows_and_keycloak_users() {
             "participations": {"total": 3, "pending": 1, "approved": 1, "rejected": 1},
             "groups": {"total": 1, "totalMembers": 2},
             "friendships": {"total": 3, "pending": 1, "accepted": 1, "declined": 1},
-            "messages": {"total": 1},
+            // the row above and the system message of the cancel
+            "messages": {"total": 2},
             "pushSubscriptions": {"total": 1}
         })
     );

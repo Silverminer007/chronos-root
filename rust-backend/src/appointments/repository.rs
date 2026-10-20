@@ -109,7 +109,8 @@ impl AppointmentRepository {
             .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Store a chat message; returns its id
+    /// Store a chat message; returns its id. The id comes from the column default, the same
+    /// source as `persist_message` (a second sequence would collide on the primary key).
     pub async fn insert_message(
         &self,
         appointment_id: Option<i64>,
@@ -118,8 +119,8 @@ impl AppointmentRepository {
         timestamp: DateTime<Utc>,
     ) -> Result<i64, RepositoryError> {
         sqlx::query_scalar::<_, i64>(
-            "INSERT INTO message (id, appointment_id, body, sender_oidcid, \"timestamp\")
-             VALUES (nextval('message_seq'), $1, $2, $3, $4)
+            "INSERT INTO message (appointment_id, body, sender_oidcid, \"timestamp\")
+             VALUES ($1, $2, $3, $4)
              RETURNING id",
         )
         .bind(appointment_id)
@@ -719,6 +720,31 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
 
         Ok(())
+    }
+
+    /// Makes the members of a group PENDING participants of the appointment with the given role,
+    /// marked as coming in through the group; users that already participate keep their row
+    /// (Java: the loop in `addGroupToAppointment`).
+    pub async fn add_group_members_as_participants(
+        &self,
+        appointment_id: i64,
+        group_id: i64,
+        role: UserRole,
+    ) -> Result<(), RepositoryError> {
+        sqlx::query(
+            "INSERT INTO appointment_participation
+                 (id, appointment_id, user_oidcid, role, status, group_participation_id)
+             SELECT nextval('appointment_participation_seq'), $1, gm.user_oidcid, $3, 'PENDING', $2
+             FROM (SELECT DISTINCT user_oidcid FROM group_member WHERE group_id = $2) gm
+             ON CONFLICT (appointment_id, user_oidcid) DO NOTHING",
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .bind(role)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
     /// Delete the link between a group and an appointment; returns the number of deleted rows
