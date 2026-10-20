@@ -3,7 +3,8 @@ use crate::appointments::events::{
     AppointmentEditedEvent, AppointmentMovedEvent,
 };
 use crate::appointments::models::{
-    Appointment, AppointmentResponse, CreateAppointmentRequest, UpdateAppointmentRequest,
+    Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
+    UpdateAppointmentRequest,
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
@@ -148,6 +149,23 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound)
+    }
+
+    /// Get a user's participation status for an appointment.
+    /// Defaults to PENDING without a participation row (matches Java AppointmentParticipationQueryService).
+    /// Does not check appointment existence or soft-delete state, matching the Java backend.
+    pub async fn get_participation_status(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+    ) -> Result<ParticipationStatus, ServiceError> {
+        let status = self
+            .repo
+            .find_participation_status(appointment_id, user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        Ok(status.unwrap_or(ParticipationStatus::Pending))
     }
 
     /// List appointments visible to a user with pagination and sorting

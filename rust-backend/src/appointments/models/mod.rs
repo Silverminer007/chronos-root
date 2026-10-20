@@ -5,8 +5,10 @@ use sqlx::FromRow;
 use std::str::FromStr;
 
 /// Participation status for an appointment
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "TEXT")]
+#[sqlx(rename_all = "UPPERCASE")]
 pub enum ParticipationStatus {
     Pending,
     Approved,
@@ -56,7 +58,10 @@ impl sqlx::Type<sqlx::Postgres> for AppointmentStatus {
 }
 
 impl<'q> sqlx::Encode<'q, sqlx::Postgres> for AppointmentStatus {
-    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> sqlx::encode::IsNull {
+    fn encode_by_ref(
+        &self,
+        buf: &mut sqlx::postgres::PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <i16 as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.ordinal(), buf)
     }
 }
@@ -319,6 +324,13 @@ pub struct ParticipationResponse {
 /// Request to update participation status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateParticipationStatusRequest {
+    pub status: ParticipationStatus,
+}
+
+/// Response for GET /api/v2/appointments/:id/participation/status
+/// (matches Java AppointmentDto with only `status` set)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParticipationStatusResponse {
     pub status: ParticipationStatus,
 }
 

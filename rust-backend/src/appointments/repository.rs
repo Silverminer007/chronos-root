@@ -1,4 +1,4 @@
-use crate::appointments::models::{Appointment, AppointmentStatus, UserRole};
+use crate::appointments::models::{Appointment, AppointmentStatus, ParticipationStatus, UserRole};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
@@ -295,6 +295,23 @@ impl AppointmentRepository {
     ) -> Result<Option<UserRole>, RepositoryError> {
         sqlx::query_scalar::<_, UserRole>(
             "SELECT role FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Get the participation status of a user for an appointment (None if no participation row)
+    pub async fn find_participation_status(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+    ) -> Result<Option<ParticipationStatus>, RepositoryError> {
+        // The status column is VARCHAR, but ParticipationStatus declares `sqlx(type_name = "TEXT")`, which rejects a VARCHAR column, so it is cast to TEXT
+        sqlx::query_scalar::<_, ParticipationStatus>(
+            "SELECT status::TEXT FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
         )
         .bind(appointment_id)
         .bind(user_id)
