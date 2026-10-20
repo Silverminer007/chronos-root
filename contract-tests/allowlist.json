@@ -62,12 +62,6 @@
       "reason": "Rust writes no system messages for RSVP/cancel (#159)"
     },
     {
-      "step": "list messages of missing appointment",
-      "kind": "content_type_mismatch",
-      "path": "$",
-      "reason": "Rust answers text/plain instead of the JSON error body (#157)"
-    },
-    {
       "step": "friend suggestions",
       "kind": "length_mismatch",
       "path": "$",
@@ -84,12 +78,6 @@
       "kind": "status_mismatch",
       "path": "$",
       "reason": "Rust answers 500, Java 200 (#159)"
-    },
-    {
-      "step": "delete admin appointment",
-      "kind": "content_type_mismatch",
-      "path": "$",
-      "reason": "Rust answers text/plain instead of the JSON error body (#157)"
     }
   ],
   "rust_only": [
