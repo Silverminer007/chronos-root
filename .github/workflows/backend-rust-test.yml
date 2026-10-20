@@ -281,11 +281,23 @@ jobs:
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:develop
           docker push ${{needs.calculate-version.outputs.image}}:develop
 
+  # Opt-in only. The Rust backend must not be deployed before API parity with the Java backend is
+  # proven (#137). The job is skipped (not failed) unless the repository variable
+  # RUST_BACKEND_DEPLOY is set to 'true' (Settings > Secrets and variables > Actions > Variables).
+  # Note: deployment-ci.yml has no `rust-backend` branch in "Override version", so a dispatch
+  # re-runs `helm upgrade` with the unchanged values file and does NOT roll out the Rust image.
+  # See kb/adr/ADR-2026-10-20-018-rust-deploy-opt-in.md.
   deploy:
     needs:
       - build
       - calculate-version
+    if: vars.RUST_BACKEND_DEPLOY == 'true'
     runs-on: ubuntu-latest
+    # Only curl runs here and there is no checkout, so the workflow default
+    # `rust-backend` directory does not exist on the runner.
+    defaults:
+      run:
+        working-directory: .
     concurrency:
       group: deploy-${{ github.ref }}
       cancel-in-progress: false

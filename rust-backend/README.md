@@ -111,7 +111,11 @@ async fn get_user_info(principal: PrincipalContext) -> Json<UserInfo> {
 | Variable | Description | Default |
 |---|---|---|
 | `RUST_LOG` | Logging level | `info` |
-| `KEYCLOAK_URL` | Keycloak realm URL | `http://localhost:8080/realms/chronos` |
+| `KEYCLOAK_URL` | Keycloak realm URL (token validation) | `http://localhost:8080/realms/chronos` |
+| `AUTH_SERVER_BASE_URL` | Keycloak base URL for the admin API and the account-action links (required) | – |
+| `AUTH_SERVER_REALM` | Realm of the admin client | `master` |
+| `AUTH_SERVER_CLIENT_ID` | Confidential client (client-credentials grant, required) | – |
+| `AUTH_SERVER_CLIENT_SECRET` | Secret of that client (required) | – |
 
 ## Development Workflow
 

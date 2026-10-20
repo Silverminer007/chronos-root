@@ -17,7 +17,9 @@ use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::{get_participation_status, AppState};
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::security::{PrincipalContext, TokenValidator};
-use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
+use chronos_date_api::test_utils::{
+    user_state_for_tests, AppointmentFixture, TestDb, TestFixtures,
+};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use std::sync::Arc;
 use tower::Service;
@@ -314,7 +316,11 @@ async fn test_status_route_via_build_router_returns_200_for_authenticated_user()
         event_publisher: Arc::new(PostgresEventBus::new(db.pool().clone())),
     });
     let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
-    let mut router = build_router(state, validator);
+    let mut router = build_router(
+        state.clone(),
+        user_state_for_tests(state.db_pool.clone()),
+        validator,
+    );
 
     let request = http::Request::builder()
         .uri(format!(
@@ -347,7 +353,11 @@ async fn test_status_route_via_build_router_rejects_missing_token() {
         event_publisher: Arc::new(PostgresEventBus::new(db.pool().clone())),
     });
     let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
-    let mut router = build_router(state, validator);
+    let mut router = build_router(
+        state.clone(),
+        user_state_for_tests(state.db_pool.clone()),
+        validator,
+    );
 
     let request = http::Request::builder()
         .uri(format!(
