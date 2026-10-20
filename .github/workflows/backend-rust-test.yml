@@ -131,8 +131,11 @@ jobs:
           path: rust-backend/lcov.info
       - name: Enforce coverage threshold
         run: |
-          # Extract line coverage and enforce ratchet (rounded down to nearest 5, min 40%)
-          COVERAGE=$(cargo llvm-cov report --json --summary-only | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["totals"]["lines"]["percent"])')
+          # Read line coverage from the JSON totals. `--output-path` would send the report to a file,
+          # so the JSON must go to stdout. A parse failure aborts instead of reading as 0%.
+          COVERAGE=$(cargo llvm-cov report --json --summary-only | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
+          if [ -z "$COVERAGE" ]; then echo "::error::Could not read line coverage from llvm-cov report" >&2; exit 1; fi
+          # Ratchet: threshold is the coverage rounded down to the nearest 5, min 40%
           THRESHOLD=$(awk "BEGIN {t = int($COVERAGE / 5) * 5; print (t < 40 ? 40 : t)}")
           echo "Coverage: $COVERAGE%, Threshold: $THRESHOLD%" | tee -a $GITHUB_STEP_SUMMARY
           awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}" || exit 1

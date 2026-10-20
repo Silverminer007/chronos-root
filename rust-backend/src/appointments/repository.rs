@@ -54,6 +54,22 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Find an appointment by its ID without filtering by status
+    /// Used for operations that should work on any appointment regardless of status (e.g., adding participants)
+    pub async fn find_by_id_any_status(
+        &self,
+        id: i64,
+    ) -> Result<Option<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment WHERE id = $1",
+            APPOINTMENT_COLUMNS
+        ))
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Find all appointments
     pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(&format!(
@@ -332,6 +348,36 @@ impl AppointmentRepository {
             "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
              VALUES (nextval('appointment_participation_seq'), $1, $2, $3, $4)
              ON CONFLICT (appointment_id, user_oidcid) DO NOTHING",
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .bind(role)
+        .bind(status)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Add a participant to an appointment, returning error if already exists
+    pub async fn add_participant_strict(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+        role: &str,
+        status: &str,
+    ) -> Result<(), RepositoryError> {
+        // Check if user is already a participant
+        if self.is_participant(appointment_id, user_id).await? {
+            return Err(RepositoryError::InvalidInput(
+                "This user is already a participant of this appointment".to_string(),
+            ));
+        }
+
+        sqlx::query(
+            "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
+             VALUES (nextval('appointment_participation_seq'), $1, $2, $3, $4)",
         )
         .bind(appointment_id)
         .bind(user_id)
