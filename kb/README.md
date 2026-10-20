@@ -279,6 +279,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-024: One shared LISTEN connection for the Postgres event bus](adr/ADR-2026-10-20-024-event-bus-single-listener.md)
 - [ADR-2026-10-20-024: Remove group from appointment (Java parity)](adr/ADR-2026-10-20-024-appointment-remove-group.md)
 - [ADR-2026-10-20-024: Java and Rust backend side by side in the local k3s cluster (parity run)](adr/ADR-2026-10-20-024-parity-deployment-local-k3s.md)
+- [ADR-2026-10-20-025: Test databases are cloned from a template and dropped by a guard](adr/ADR-2026-10-20-025-test-db-template-and-cleanup.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)

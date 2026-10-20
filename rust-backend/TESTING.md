@@ -330,11 +330,24 @@ rust-backend/migrations/
 └── 002_create_events_table.sql    # Event bus table (Rust-only)
 ```
 
-The `TestDb` initializer:
-1. Starts a PostgreSQL container
-2. Waits for it to be ready (max 3 seconds)
-3. Runs all migrations from the `migrations/` directory
-4. Returns a connection pool
+The `TestDb` initializer (ADR-2026-10-20-025):
+1. Drops stale `test_db_<unix seconds>_*` databases older than one hour that have no connection
+   (once per test process, at most 20)
+2. Creates the migrated template database `test_template_<hash>` once per migration set (shared by
+   all test binaries, serialized by an advisory lock)
+3. Clones the template into `test_db_<unix seconds>_<uuid>` with `CREATE DATABASE ... TEMPLATE`
+4. Returns a connection pool. Dropping the `TestDb` (also when the test panics) drops the database;
+   keep the value alive for the whole test, `db.pool().clone()` alone does not.
+
+To check that a run left nothing behind:
+
+```bash
+psql "$TEST_DATABASE_URL" -Atc "SELECT count(*) FROM pg_database WHERE datname ~ '^test_db_[0-9]+_'"   # expect 0
+```
+
+CI runs this check after the integration tests. Databases from a killed test binary stay until
+the next run's janitor removes them. Old `test_db_<uuid>` databases without a timestamp are not
+touched by the janitor and have to be dropped by hand.
 
 ## Parallel Test Execution
 
