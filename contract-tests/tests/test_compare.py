@@ -90,6 +90,15 @@ class CompareResponsesTest(unittest.TestCase):
         diffs = compare_responses(resp(200, {}), resp(405, None))
         self.assertEqual([d.kind for d in diffs], ["missing_route"])
 
+    def test_rust_404_with_application_error_body_is_status_mismatch(self):
+        rust = resp(404, {"errorCode": "NOT_FOUND", "message": "Termin nicht gefunden"})
+        diffs = compare_responses(resp(200, {"a": 1}), rust)
+        self.assertEqual([d.kind for d in diffs], ["status_mismatch"])
+
+    def test_rust_404_with_text_body_is_missing_route(self):
+        diffs = compare_responses(resp(200, {}), resp(404, "Not Found"))
+        self.assertEqual([d.kind for d in diffs], ["missing_route"])
+
     def test_both_404_is_a_plain_match(self):
         self.assertEqual(compare_responses(resp(404, {"m": "x"}), resp(404, {"m": "x"})), [])
 

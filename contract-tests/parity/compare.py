@@ -17,6 +17,9 @@ VOLATILE_ERROR_KEYS = frozenset({"timestamp", "traceId", "trace_id", "requestId"
 
 ROUTE_MISSING_STATUSES = (404, 405)
 
+# Keys of the application's error body (Java ErrorResponse). A framework route-404 has none of them.
+APP_ERROR_KEYS = frozenset({"errorCode", "message", "fieldErrors"})
+
 
 @dataclass(frozen=True)
 class Response:
@@ -131,9 +134,20 @@ def _media_type(content_type: str) -> str:
     return content_type.split(";")[0].strip().lower()
 
 
+def _is_route_miss(java: Response, rust: Response) -> bool:
+    """Rust 404/405 counts as a missing route only if it looks like one.
+
+    A 404 that carries the application's error body means the route exists and the resource
+    is missing, so that stays a (allowlistable) status_mismatch.
+    """
+    if rust.status not in ROUTE_MISSING_STATUSES or java.status == rust.status:
+        return False
+    return not (isinstance(rust.body, dict) and APP_ERROR_KEYS & rust.body.keys())
+
+
 def compare_responses(java: Response, rust: Response) -> "list[Diff]":
     if java.status != rust.status:
-        kind = MISSING_ROUTE if rust.status in ROUTE_MISSING_STATUSES else "status_mismatch"
+        kind = MISSING_ROUTE if _is_route_miss(java, rust) else "status_mismatch"
         return [Diff("$", kind, f"java: {java.status}, rust: {rust.status}")]
 
     if (java.body is None) != (rust.body is None):
