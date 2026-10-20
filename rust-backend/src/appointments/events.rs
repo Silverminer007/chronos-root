@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::models::ParticipationStatus;
+use super::models::{ParticipationStatus, UserRole};
 
 /// Event fired when an appointment is created
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,6 +131,33 @@ impl AppointmentParticipationRemovedEvent {
             appointment_id,
             target_user_id,
             acting_user_id,
+            timestamp: Utc::now().timestamp(),
+        }
+    }
+}
+
+/// Event fired when a participant's role changes (Java: `AppointmentParticipationRoleChangedEvent`)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipationRoleChangedEvent {
+    pub appointment_id: i64,
+    pub target_user_id: String,
+    pub acting_user_id: String,
+    pub old_role: UserRole,
+    pub timestamp: i64,
+}
+
+impl AppointmentParticipationRoleChangedEvent {
+    pub fn new(
+        appointment_id: i64,
+        target_user_id: String,
+        acting_user_id: String,
+        old_role: UserRole,
+    ) -> Self {
+        Self {
+            appointment_id,
+            target_user_id,
+            acting_user_id,
+            old_role,
             timestamp: Utc::now().timestamp(),
         }
     }

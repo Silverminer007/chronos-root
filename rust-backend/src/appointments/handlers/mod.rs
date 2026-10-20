@@ -11,8 +11,8 @@ use std::sync::Arc;
 use crate::appointments::{
     models::{
         AddGroupToAppointmentRequest, AddParticipantRequest, AppointmentResponse,
-        CreateAppointmentRequest, ParticipationStatusResponse, UpdateAppointmentRequest,
-        UpdateParticipationStatusRequest, UserRole,
+        ChangeParticipantRoleRequest, CreateAppointmentRequest, ParticipationStatusResponse,
+        UpdateAppointmentRequest, UpdateParticipationStatusRequest, UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
@@ -336,6 +336,42 @@ pub async fn remove_participant(
     Ok(StatusCode::OK)
 }
 
+/// PUT /api/v2/appointments/:id/participation/:userId/role - Change a participant's role
+///
+/// # Authorization
+/// The acting user must be RESPONSIBLE for the appointment (403 otherwise).
+///
+/// # Request
+/// Body `{"role": "NONE|GUEST|ATTENDANT|HELPER|RESPONSIBLE"}`; an unknown role is a 400.
+///
+/// # Response
+/// 200 OK with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
+/// 404 if the appointment is unknown; 400 if the target is not a participant or already has the role.
+pub async fn change_participant_role(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, target_user_id)): Path<(i64, String)>,
+    principal: PrincipalContext,
+    Json(request): Json<ChangeParticipantRoleRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let new_role = UserRole::from_str(&request.role)
+        .map_err(|_| AppointmentError::ValidationError("invalid role".to_string()))?;
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .change_participant_role(
+            appointment_id,
+            &target_user_id,
+            principal.user_id(),
+            new_role,
+        )
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
@@ -355,6 +391,7 @@ impl From<ServiceError> for AppointmentError {
                 AppointmentError::DatabaseError
             }
             ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::Forbidden(_) => AppointmentError::Unauthorized,
         }
     }
 }
