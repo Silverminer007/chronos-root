@@ -73,11 +73,14 @@ docker build -t chronos-rust-backend:latest .
 
 ## API Endpoints
 
-### Health Checks
+### Health Checks and Metrics
 
-- `GET /q/health/live` - Liveness probe (returns 200 if service is running)
-- `GET /q/health/ready` - Readiness probe (returns 200 if service is ready to handle traffic)
-- `GET /health` - Alternative health check endpoint
+Health and metrics follow the Quarkus contract (see [ADR-2026-10-20-020](../kb/adr/ADR-2026-10-20-020-prometheus-metrics-health-parity.md)). None of these routes require authentication.
+
+- `GET /q/health/live` - Liveness probe. Returns `200` with the SmallRye JSON body `{"status": "UP", "checks": []}`.
+- `GET /q/health/ready` - Readiness probe. Runs `SELECT 1` against the database and returns `{"status": "UP", "checks": [{"name": "Database connections health check", "status": "UP"}]}` with `200`. If the database is unreachable it returns `503` with `"status": "DOWN"` (the check entry is `DOWN` as well).
+- `GET /health` - Alternative health check endpoint, plain text `OK`.
+- `GET /metrics` - Prometheus text format. Contains the Micrometer-compatible HTTP series `http_server_requests_seconds_{count,sum,bucket,max}` (labels `exception`, `method`, `outcome`, `status`, `uri`), process metrics (`process_uptime_seconds`, `process_start_time_seconds`, `system_cpu_count`, `process_resident_memory_bytes` on Linux) and DB pool metrics (`agroal_active_count`, `agroal_available_count`, `agroal_max_size`). `/metrics` itself is not recorded; JVM metrics are not emitted.
 
 ### Appointments
 

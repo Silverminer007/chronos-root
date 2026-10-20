@@ -5,9 +5,19 @@ use tracing::{error, info};
 use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::event_listeners::AppointmentParticipationListener;
 use chronos_date_api::appointments::handlers::AppState;
+use chronos_date_api::appointments::repository::AppointmentRepository;
 use chronos_date_api::database::{init_pool, DatabaseConfig};
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::keycloak::{HttpKeycloakAdmin, KeycloakConfig};
+use chronos_date_api::push_notifications::{
+    NotificationDispatcher, PushEventHandler, PushNotificationEventListener, PushSender, PushState,
+    VapidConfig, WebPushSender,
+};
+use chronos_date_api::reminders::clock::SystemClock;
+use chronos_date_api::reminders::leader::LeaderElection;
+use chronos_date_api::reminders::rules::default_rules;
+use chronos_date_api::reminders::scheduler::ReminderScheduler;
+use chronos_date_api::reminders::services::{BusReminderEventPort, ReminderRuleEngine};
 use chronos_date_api::security::TokenValidator;
 use chronos_date_api::users::UserState;
 
@@ -52,6 +62,54 @@ async fn main() {
         tracing::error!("Failed to subscribe to appointment events: {:?}", e);
     }
 
+    // Push notifications: without VAPID keys no notification is sent (like Java)
+    let vapid = VapidConfig::from_env();
+    let push_sender: Option<Arc<dyn PushSender>> = match &vapid {
+        Some(config) => match WebPushSender::new(config.clone()) {
+            Ok(sender) => Some(Arc::new(sender)),
+            Err(e) => {
+                error!(
+                    "Push notifications disabled, invalid VAPID configuration: {}",
+                    e
+                );
+                None
+            }
+        },
+        None => {
+            tracing::warn!(
+                "VAPID keys are not set. No push notifications will be sent. \
+                 Please set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT"
+            );
+            None
+        }
+    };
+    let push_handler = Arc::new(PushEventHandler::new(
+        pool.clone(),
+        Arc::new(NotificationDispatcher::new(pool.clone(), push_sender)),
+    ));
+    if let Err(e) = PushNotificationEventListener::new(push_handler)
+        .subscribe_all(event_bus.as_ref())
+        .await
+    {
+        error!("Failed to subscribe to push notification events: {:?}", e);
+    }
+    let push_state = Arc::new(PushState::new(
+        pool.clone(),
+        vapid.map(|config| config.public_key).unwrap_or_default(),
+    ));
+
+    // Reminder scheduler: with several replicas only the leader (advisory lock) runs it
+    let scheduler = ReminderScheduler::new(
+        Arc::new(AppointmentRepository::new(pool.clone())),
+        ReminderRuleEngine::new(
+            default_rules(),
+            Arc::new(BusReminderEventPort::new(event_bus.clone())),
+        ),
+        Arc::new(LeaderElection::from_env(pool.clone())),
+        Arc::new(SystemClock),
+    );
+    tokio::spawn(async move { scheduler.run().await });
+
     // Create application state
     let app_state = Arc::new(AppState {
         db_pool: pool.clone(),
@@ -64,7 +122,7 @@ async fn main() {
         keycloak: Arc::new(HttpKeycloakAdmin::new(keycloak_config)),
     });
 
-    let app = build_router(app_state, user_state, validator);
+    let app = build_router(app_state, user_state, push_state, validator);
 
     let port = std::env::var("PORT")
         .ok()

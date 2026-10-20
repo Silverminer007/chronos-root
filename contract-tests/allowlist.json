@@ -1,0 +1,14 @@
+{
+  "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted.",
+  "entries": [],
+  "rust_only": [
+    {
+      "route": "GET /api/v2/me",
+      "reason": "Rust-only route kept with its unchanged answer (ADR-2026-10-20-017, ticket answer 3); the frontend does not use it"
+    },
+    {
+      "route": "GET /health",
+      "reason": "Plain-text liveness probe of the Rust backend; Java only has the SmallRye /q/health/* endpoints"
+    }
+  ]
+}

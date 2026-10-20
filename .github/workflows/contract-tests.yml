@@ -1,0 +1,39 @@
+name: Contract Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'contract-tests/**'
+      - 'backend/src/main/java/**/presentation/**'
+      - 'rust-backend/src/**'
+      - '.github/workflows/contract-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'contract-tests/**'
+      - 'backend/src/main/java/**/presentation/**'
+      - 'rust-backend/src/**'
+      - '.github/workflows/contract-tests.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: contract-tests
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests of the comparison logic
+        run: python3 -m unittest discover -s . -t .
+      # Fails when a Java endpoint has no request definition or a Rust route has no Java counterpart.
+      # The live comparison against both backends needs Keycloak and runs locally / in #137.
+      - name: Endpoint coverage
+        run: python3 -m parity --coverage

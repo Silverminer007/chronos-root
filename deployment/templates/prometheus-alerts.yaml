@@ -109,7 +109,7 @@ spec:
         description: "Rust backend pod {{`{{ $labels.pod }}`}} memory usage is above 50 MiB (current: {{`{{ $value | humanize }}`}})"
 
     - alert: RustBackendHighLatency
-      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="chronos-rust-backend"}[5m])) > 1
+      expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job="chronos-rust-backend"}[5m])) by (le)) > 1
       for: 5m
       labels:
         severity: warning
@@ -119,7 +119,7 @@ spec:
         description: "Rust backend p95 latency is above 1 second (current: {{`{{ $value | humanizeDuration }}`}})"
 
     - alert: RustBackendHighErrorRate
-      expr: rate(http_request_total{job="chronos-rust-backend", status=~"5.."}[5m]) > 0.01
+      expr: sum(rate(http_server_requests_seconds_count{job="chronos-rust-backend", status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{job="chronos-rust-backend"}[5m])) > 0.01
       for: 5m
       labels:
         severity: warning

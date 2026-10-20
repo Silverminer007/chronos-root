@@ -43,6 +43,10 @@ async fn test_readiness_returns_503_when_database_unreachable() -> Result<(), An
     let mut router = build_router(
         app_state.clone(),
         user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     );
 
@@ -91,6 +95,10 @@ async fn test_readiness_returns_200_when_database_available() -> Result<(), AnyE
     let mut router = build_router(
         app_state.clone(),
         user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     );
 
@@ -129,6 +137,10 @@ async fn test_health_live_always_returns_200() -> Result<(), AnyError> {
     let mut router = build_router(
         app_state.clone(),
         user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     );
 

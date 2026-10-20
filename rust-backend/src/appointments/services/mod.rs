@@ -341,6 +341,7 @@ impl AppointmentService {
         &self,
         id: i64,
         request: UpdateAppointmentRequest,
+        acting_user_id: &str,
     ) -> Result<AppointmentResponse, ServiceError> {
         // Get the existing appointment first to check if time changed
         let existing = self
@@ -442,12 +443,17 @@ impl AppointmentService {
 
             // Fire AppointmentMovedEvent if time changed
             if times_changed {
-                let moved_event =
-                    AppointmentMovedEvent::new(id, existing.start_time, existing.end_time);
+                let moved_event = AppointmentMovedEvent::new(
+                    id,
+                    existing.start_time,
+                    existing.end_time,
+                    acting_user_id.to_string(),
+                );
                 let moved_json = serde_json::json!({
                     "appointment_id": moved_event.appointment_id,
                     "old_start": moved_event.old_start,
                     "old_end": moved_event.old_end,
+                    "acting_user_id": moved_event.acting_user_id,
                     "timestamp": moved_event.timestamp,
                 });
                 let event_bus_event =
@@ -487,7 +493,11 @@ impl AppointmentService {
     }
 
     /// Soft cancel an appointment
-    pub async fn cancel_appointment(&self, id: i64) -> Result<(), ServiceError> {
+    pub async fn cancel_appointment(
+        &self,
+        id: i64,
+        acting_user_id: &str,
+    ) -> Result<(), ServiceError> {
         self.repo
             .cancel_soft(id)
             .await
@@ -496,9 +506,10 @@ impl AppointmentService {
 
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
-            let event = AppointmentCancelledEvent::new(id);
+            let event = AppointmentCancelledEvent::new(id, acting_user_id.to_string());
             let event_json = serde_json::json!({
                 "appointment_id": event.appointment_id,
+                "acting_user_id": event.acting_user_id,
                 "timestamp": event.timestamp,
             });
             let event_bus_event =

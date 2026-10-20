@@ -41,17 +41,24 @@ impl AppointmentEditedEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentMovedEvent {
     pub appointment_id: i64,
-    pub old_start: i64,
-    pub old_end: i64,
+    pub old_start: DateTime<Utc>,
+    pub old_end: DateTime<Utc>,
+    pub acting_user_id: String,
     pub timestamp: i64,
 }
 
 impl AppointmentMovedEvent {
-    pub fn new(appointment_id: i64, old_start: DateTime<Utc>, old_end: DateTime<Utc>) -> Self {
+    pub fn new(
+        appointment_id: i64,
+        old_start: DateTime<Utc>,
+        old_end: DateTime<Utc>,
+        acting_user_id: String,
+    ) -> Self {
         Self {
             appointment_id,
-            old_start: old_start.timestamp(),
-            old_end: old_end.timestamp(),
+            old_start,
+            old_end,
+            acting_user_id,
             timestamp: Utc::now().timestamp(),
         }
     }
@@ -77,13 +84,15 @@ impl AppointmentDeletedEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentCancelledEvent {
     pub appointment_id: i64,
+    pub acting_user_id: String,
     pub timestamp: i64,
 }
 
 impl AppointmentCancelledEvent {
-    pub fn new(appointment_id: i64) -> Self {
+    pub fn new(appointment_id: i64, acting_user_id: String) -> Self {
         Self {
             appointment_id,
+            acting_user_id,
             timestamp: Utc::now().timestamp(),
         }
     }
@@ -180,5 +189,25 @@ impl AppointmentParticipationAddedEvent {
             acting_user_id,
             timestamp: Utc::now().timestamp(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_moved_and_cancelled_events_carry_the_acting_user() {
+        let start = Utc::now();
+        let moved = AppointmentMovedEvent::new(1, start, start, "alice".to_string());
+        let json = serde_json::to_value(&moved).unwrap();
+        assert_eq!(json["acting_user_id"], "alice");
+        assert!(json["old_start"].is_string());
+
+        let cancelled = AppointmentCancelledEvent::new(1, "alice".to_string());
+        assert_eq!(
+            serde_json::to_value(&cancelled).unwrap()["acting_user_id"],
+            "alice"
+        );
     }
 }
