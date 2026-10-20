@@ -72,6 +72,8 @@ feature-depth = 1
 ignore = [
     # rsa v0.9.10: Timing side-channel via jwt-simple (web-push auth token signing)
     { id = "RUSTSEC-2023-0071", reason = "Timing side-channel in rsa via jwt-simple (web-push); local-only use; upgrade path in web-push planned" },
+    # webpki-roots v0.26.11 is pinned by sqlx-core 0.8.x (no 0.26.x fix exists); v1.0.x is updated to 1.0.10
+    { id = "RUSTSEC-2026-0381", reason = "webpki-roots 0.26.x is pinned by sqlx-core 0.8; only the emSign root is affected, remove once sqlx moves to webpki-roots >=1.0.10" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.
