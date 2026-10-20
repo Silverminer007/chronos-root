@@ -5,6 +5,7 @@ use axum::{
     Json, Router,
 };
 use std::sync::Arc;
+use tower_http::normalize_path::NormalizePath;
 
 use crate::admin::{admin_routes, AdminState};
 use crate::appointments::handlers::{
@@ -39,6 +40,8 @@ use crate::users::{
 
 /// Name of the readiness check, as Quarkus' Agroal health check reports it.
 const DB_CHECK_NAME: &str = "Database connections health check";
+/// Name Quarkus gives the default datasource; key of the check's `data`.
+const DEFAULT_DATASOURCE: &str = "<default>";
 
 pub fn build_router(
     app_state: Arc<AppState>,
@@ -166,11 +169,15 @@ pub fn build_router(
             crate::security::middleware::auth_middleware,
         ));
 
-    Router::new()
+    let router = Router::new()
         .merge(public_routes)
         .merge(protected_routes)
         .layer(middleware::from_fn(fill_error_path))
-        .layer(middleware::from_fn_with_state(metrics, track_requests))
+        .layer(middleware::from_fn_with_state(metrics, track_requests));
+
+    // Java maps `@Path("/")` on the collection resources: `/groups/` answers like `/groups`.
+    // Routing is done on the path without the trailing slash, so wrap the whole router.
+    Router::new().fallback_service(NormalizePath::trim_trailing_slash(router))
 }
 
 /// `/api/v2/user*` and `/api/v2/settings` (Java: `UserResource`, `SettingsResource`)
@@ -227,8 +234,12 @@ async fn health_ready(
         .fetch_one(&pool)
         .await
         .is_ok();
-    let check =
-        serde_json::json!({ "name": DB_CHECK_NAME, "status": if up { "UP" } else { "DOWN" } });
+    let state = if up { "UP" } else { "DOWN" };
+    let check = serde_json::json!({
+        "name": DB_CHECK_NAME,
+        "status": state,
+        "data": { DEFAULT_DATASOURCE: state },
+    });
     let status = if up {
         axum::http::StatusCode::OK
     } else {
