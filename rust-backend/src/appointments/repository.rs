@@ -1,4 +1,6 @@
-use crate::appointments::models::{Appointment, AppointmentStatus, ParticipationStatus, UserRole};
+use crate::appointments::models::{
+    Appointment, AppointmentStatus, ParticipantRow, ParticipationStatus, UserRole,
+};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
@@ -40,6 +42,11 @@ impl AppointmentRepository {
     /// Create a new AppointmentRepository
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    /// The pool, for reads that belong to other modules (e.g. user identities)
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
     }
 
     /// Find an appointment by its ID
@@ -332,6 +339,27 @@ impl AppointmentRepository {
         .bind(appointment_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// All participations of an appointment (oldest first), with the name of the group they came from.
+    /// Java stores the *group id* in `group_participation_id` and resolves the name via `groups`.
+    pub async fn list_participants(
+        &self,
+        appointment_id: i64,
+    ) -> Result<Vec<ParticipantRow>, RepositoryError> {
+        // status is VARCHAR; see find_participation_status for the TEXT cast
+        sqlx::query_as::<_, ParticipantRow>(
+            "SELECT ap.user_oidcid, ap.role, ap.status::TEXT AS status, ap.group_participation_id,
+                    g.groupname AS group_name
+             FROM appointment_participation ap
+             LEFT JOIN groups g ON g.id = ap.group_participation_id
+             WHERE ap.appointment_id = $1
+             ORDER BY ap.id",
+        )
+        .bind(appointment_id)
+        .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }

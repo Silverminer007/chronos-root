@@ -84,6 +84,8 @@ Health and metrics follow the Quarkus contract (see [ADR-2026-10-20-020](../kb/a
 
 ### Appointments
 
+- `GET /api/v2/appointments/:id/participants` - Participants with roles and status. Requires a valid bearer token and a participation with a role other than `NONE`; otherwise `403` (also for unknown appointments, like Java).
+  - Response: array of `{user_id, name, profile_picture_url, role, status, via_group_id, via_group_name}`; `null` fields are omitted. Removed participants (hard delete) are not listed. See [ADR-2026-10-20-022](../kb/adr/ADR-2026-10-20-022-list-participants-endpoint.md).
 - `GET /api/v2/appointments/:id/participation/status` - Current user's participation status. Requires a valid bearer token. Always `200 OK`; any authenticated user may call it.
   - Response body: `{"status": "PENDING" | "APPROVED" | "REJECTED"}`
   - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-14-016](../kb/adr/ADR-2026-10-14-016-participation-status-endpoint.md)).

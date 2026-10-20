@@ -83,6 +83,24 @@ pub async fn get_participation_status(
     Ok(Json(ParticipationStatusResponse { status }))
 }
 
+/// GET /api/v2/appointments/:id/participants - List the participants with roles and status
+/// 403 unless the caller participates with a role other than NONE (matches Java backend)
+pub async fn list_participants(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    let participants = service
+        .get_participants(id, principal.user_id())
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(Json(participants))
+}
+
 /// POST /api/v2/appointments/:id/participation - RSVP to an appointment
 pub async fn rsvp_to_appointment(
     State(state): State<Arc<AppState>>,
@@ -350,6 +368,7 @@ impl From<ServiceError> for AppointmentError {
         match error {
             ServiceError::NotFound => AppointmentError::NotFound,
             ServiceError::ValidationError(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::Forbidden(_) => AppointmentError::Unauthorized,
             ServiceError::DatabaseError(msg) => {
                 eprintln!("Database error: {}", msg);
                 AppointmentError::DatabaseError

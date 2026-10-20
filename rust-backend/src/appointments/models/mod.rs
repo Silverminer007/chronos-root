@@ -277,14 +277,29 @@ impl From<Appointment> for AppointmentResponse {
 
 /// User participant in an appointment response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Java's `UserParticipantDto` is `@JsonInclude(NON_NULL)`, so `null` fields are omitted
 pub struct UserParticipantDto {
     pub user_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub profile_picture_url: Option<String>,
     pub role: UserRole,
     pub status: ParticipationStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub via_group_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub via_group_name: Option<String>,
+}
+
+/// A participation row joined with the name of the group it came from (`via_group_*`)
+#[derive(Debug, Clone, FromRow)]
+pub struct ParticipantRow {
+    pub user_oidcid: String,
+    pub role: UserRole,
+    pub status: ParticipationStatus,
+    pub group_participation_id: Option<i64>,
+    pub group_name: Option<String>,
 }
 
 /// Message in an appointment
