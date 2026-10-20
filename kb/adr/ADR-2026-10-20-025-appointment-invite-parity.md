@@ -1,0 +1,19 @@
+# ADR-2026-10-20-025: Appointment invite parity (read access, friendship check, creator status)
+
+- Status: accepted
+- Ticket: #158 (found by the parity run in #137; Java is the reference)
+
+## Context
+
+Three differences between Rust and Java around inviting participants: invited users got `403` on `GET /api/v2/appointments/{id}` while the list showed the appointment, non-friends could be added as participants, and the creator was stored as `APPROVED` instead of `PENDING`.
+
+## Decision
+
+- **Read access:** `GET /appointments/{id}` allows every participant whose role is not `NONE` (Java `requireReadAppointment`); same rule as `GET .../messages`. Strangers and the creator-only rule from before are replaced; an unknown appointment is still `404`.
+- **Friendship check:** `add_participant` checks, after the `RESPONSIBLE` check (Java order, `requireAddUserToAppointment`), that an `ACCEPTED` friendship between actor and target exists (`FriendshipRepository::are_friends`, shared with groups). Otherwise `403` "You can only add friends to appointments" and nothing is inserted. Adding group members already checked friendship (`403`), unchanged.
+- **Creator status:** the creator is inserted as `RESPONSIBLE` with status `PENDING` (Java). `POST .../participation {"status":"APPROVED"}` by the creator therefore returns `200`.
+
+## Consequences
+
+- Tests: `rust-backend/tests/appointment_invite_parity_test.rs`; `appointment_mutations_test.rs` and the admin statistics test no longer assume an `APPROVED` creator.
+- Not changed (out of scope): a non-`RESPONSIBLE` actor adding a participant still gets `400` instead of Java's `403`.

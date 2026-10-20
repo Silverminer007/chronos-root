@@ -728,7 +728,7 @@ mod appointment_mutation_tests {
             "Creator should have RESPONSIBLE role"
         );
 
-        // Verify: Creator participation status is APPROVED
+        // Verify: Creator participation status is PENDING (as in Java)
         let participation_status: String = sqlx::query_scalar(
             "SELECT status FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2"
         )
@@ -739,8 +739,8 @@ mod appointment_mutation_tests {
         .expect("Failed to fetch participation status");
 
         assert_eq!(
-            participation_status, "APPROVED",
-            "Creator's participation status should be APPROVED"
+            participation_status, "PENDING",
+            "Creator's participation status should be PENDING"
         );
     }
 }

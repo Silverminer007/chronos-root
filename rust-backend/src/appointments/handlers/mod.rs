@@ -59,10 +59,14 @@ pub async fn get_appointment(
         _ => AppointmentError::DatabaseError,
     })?;
 
-    // Authorization check - the creator (RESPONSIBLE participant) may view the appointment
-    // For now, only allow creators to view their appointments
-    // TODO: Also allow the other participants of the appointment
-    ensure_creator(&state, appointment.id, user_id).await?;
+    // Authorization check - any participant (role other than NONE) may read (Java: `requireReadAppointment`)
+    let role = AppointmentRepository::new(state.db_pool.clone())
+        .get_participant_role(appointment.id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+    if matches!(role, None | Some(UserRole::None)) {
+        return Err(AppointmentError::Unauthorized);
+    }
 
     let response: AppointmentResponse = appointment.into();
     Ok(Json(response))

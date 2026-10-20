@@ -278,6 +278,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-023: Admin endpoints (`/api/v2/admin/*`) in the Rust backend](adr/ADR-2026-10-20-023-admin-endpoints.md)
 - [ADR-2026-10-20-024: One shared LISTEN connection for the Postgres event bus](adr/ADR-2026-10-20-024-event-bus-single-listener.md)
 - [ADR-2026-10-20-024: Remove group from appointment (Java parity)](adr/ADR-2026-10-20-024-appointment-remove-group.md)
+- [ADR-2026-10-20-025: Appointment invite parity (read access, friendship check, creator status)](adr/ADR-2026-10-20-025-appointment-invite-parity.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)
