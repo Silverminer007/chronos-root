@@ -10,8 +10,8 @@ use crate::admin::{admin_routes, AdminState};
 use crate::appointments::handlers::{
     add_group_to_appointment, add_participant, cancel_appointment, change_participant_role,
     create_appointment, delete_appointment, get_appointment, get_participation_status,
-    list_appointments, list_messages, list_participants, remove_participant, rsvp_to_appointment,
-    update_appointment, AppState,
+    list_appointments, list_messages, list_participants, remove_group_from_appointment,
+    remove_participant, rsvp_to_appointment, update_appointment, AppState,
 };
 use crate::error::fill_error_path;
 use crate::groups::handlers::{
@@ -74,7 +74,7 @@ pub fn build_router(
         .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
         .route(
             "/api/v2/appointments/:id/groups/:groupId",
-            post(add_group_to_appointment),
+            post(add_group_to_appointment).delete(remove_group_from_appointment),
         )
         .route(
             "/api/v2/appointments/:id/participants/:userId",

@@ -386,6 +386,27 @@ pub async fn add_group_to_appointment(
     Ok(StatusCode::OK)
 }
 
+/// DELETE /api/v2/appointments/:id/groups/:groupId - Remove a group from an appointment
+///
+/// Requires the RESPONSIBLE role (403 otherwise, also for an unknown appointment). Returns 400 if
+/// the group is not linked to the appointment and 200 with an empty body on success. Participants
+/// that came in through the group are removed, directly added ones stay.
+pub async fn remove_group_from_appointment(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, group_id)): Path<(i64, i64)>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .remove_group_from_appointment(principal.user_id(), appointment_id, group_id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// DELETE /api/v2/appointments/:id/participants/:userId - Remove a participant (hard delete)
 ///
 /// Only a RESPONSIBLE participant may remove participants. Fires an

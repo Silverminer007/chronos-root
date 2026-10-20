@@ -109,6 +109,7 @@ Health and metrics follow the Quarkus contract (see [ADR-2026-10-20-020](../kb/a
   - Response body: array of `{"id", "sender_id", "sender_name", "appointment_id", "body", "timestamp"}`; `timestamp` is ISO-8601 UTC like Java `Instant.toString()`.
   - `sender_name` comes from the `user_profiles` cache; senders without a profile are named `Gelöschter Benutzer`.
   - Sending (`POST`) is not part of this endpoint's ticket and not yet implemented.
+- `DELETE /api/v2/appointments/:id/groups/:groupId` - Removes a group from an appointment (hard delete of the link and of the participants that came in through the group; directly added ones stay). Requires the `RESPONSIBLE` role (`403` otherwise, also for unknown appointments); `400` if the group is not linked; `200` with empty body on success (see [ADR-2026-10-20-024](../kb/adr/ADR-2026-10-20-024-appointment-remove-group.md)).
 
 ### Groups and friendships
 

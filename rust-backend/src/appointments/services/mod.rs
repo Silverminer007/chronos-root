@@ -676,6 +676,67 @@ impl AppointmentService {
         Ok(())
     }
 
+    /// Remove a group from an appointment (Java: `AppointmentParticipationService#removeGroupFromAppointment`).
+    /// Hard delete of the group link and of all participations that came in through the group.
+    /// Authorization comes first: the caller needs the RESPONSIBLE role, so an unknown
+    /// appointment yields `Forbidden` like in Java. A group that is not linked is a validation error.
+    pub async fn remove_group_from_appointment(
+        &self,
+        actor_id: &str,
+        appointment_id: i64,
+        group_id: i64,
+    ) -> Result<(), ServiceError> {
+        let db_error = |e: RepositoryError| ServiceError::DatabaseError(e.to_string());
+
+        let role = self
+            .repo
+            .get_participant_role(appointment_id, actor_id)
+            .await
+            .map_err(db_error)?;
+        if !self.admin && role != Some(UserRole::Responsible) {
+            return Err(ServiceError::Forbidden(
+                "You have to be responsible for this appointment".to_string(),
+            ));
+        }
+
+        let removed = self
+            .repo
+            .remove_group(appointment_id, group_id)
+            .await
+            .map_err(db_error)?;
+        if removed < 1 {
+            return Err(ServiceError::ValidationError(
+                "This group is not a participant of this appointment".to_string(),
+            ));
+        }
+        self.repo
+            .remove_group_participants(appointment_id, group_id)
+            .await
+            .map_err(db_error)?;
+
+        // The removal is persisted, so a publish failure is logged instead of failing the request.
+        if let Some(ref publisher) = self.event_publisher {
+            let event_json = serde_json::json!({
+                "appointment_id": appointment_id,
+                "group_id": group_id,
+                "actor_id": actor_id,
+                "timestamp": chrono::Utc::now().timestamp(),
+            });
+            let event = crate::event_bus::Event::new(
+                "AppointmentGroupParticipationRemovedEvent",
+                event_json,
+            );
+            if let Err(e) = publisher.fire(event).await {
+                tracing::error!(
+                    "Failed to fire AppointmentGroupParticipationRemovedEvent: {:?}",
+                    e
+                );
+            }
+        }
+
+        Ok(())
+    }
+
     /// One page of all appointments of any status, ordered by id, plus the total count (admin listing)
     pub async fn list_page(
         &self,

@@ -275,6 +275,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-022: List participants endpoint (Java parity)](adr/ADR-2026-10-20-022-list-participants-endpoint.md)
 - [ADR-2026-10-20-022: Reminder engine, scheduler and leader election in the Rust backend](adr/ADR-2026-10-20-022-reminder-engine-scheduler-leader-election.md)
 - [ADR-2026-10-20-023: Admin endpoints (`/api/v2/admin/*`) in the Rust backend](adr/ADR-2026-10-20-023-admin-endpoints.md)
+- [ADR-2026-10-20-024: Remove group from appointment (Java parity)](adr/ADR-2026-10-20-024-appointment-remove-group.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)

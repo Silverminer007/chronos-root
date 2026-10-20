@@ -622,4 +622,40 @@ impl AppointmentRepository {
 
         Ok(())
     }
+
+    /// Delete the link between a group and an appointment; returns the number of deleted rows
+    /// (Java: `deleteGroupParticipation`).
+    pub async fn remove_group(
+        &self,
+        appointment_id: i64,
+        group_id: i64,
+    ) -> Result<u64, RepositoryError> {
+        sqlx::query(
+            "DELETE FROM appointment_group_participations WHERE appointment_id = $1 AND group_id = $2",
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .execute(&self.pool)
+        .await
+        .map(|r| r.rows_affected())
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Delete every participation of the appointment that came in through the group; directly
+    /// added participants keep their row (Java: `deleteByGroupAndAppointment`).
+    pub async fn remove_group_participants(
+        &self,
+        appointment_id: i64,
+        group_id: i64,
+    ) -> Result<u64, RepositoryError> {
+        sqlx::query(
+            "DELETE FROM appointment_participation WHERE appointment_id = $1 AND group_participation_id = $2",
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .execute(&self.pool)
+        .await
+        .map(|r| r.rows_affected())
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
 }
