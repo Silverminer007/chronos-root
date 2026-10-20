@@ -1,7 +1,7 @@
 use axum::{
     middleware,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use std::sync::Arc;
@@ -9,6 +9,13 @@ use std::sync::Arc;
 use crate::appointments::handlers::{
     add_participant, cancel_appointment, create_appointment, delete_appointment, get_appointment,
     get_participation_status, list_appointments, rsvp_to_appointment, update_appointment, AppState,
+};
+use crate::error::fill_error_path;
+use crate::groups::handlers::{
+    accept_friendship_request, add_group_member, cancel_friendship_request, create_group,
+    decline_friendship_request, delete_group, friendship_suggestions, incoming_friendship_requests,
+    list_friends, list_group_users, list_groups, outgoing_friendship_requests, remove_friend,
+    remove_group_member, send_friendship_request, update_group,
 };
 use crate::security::TokenValidator;
 
@@ -46,13 +53,59 @@ pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) ->
             "/api/v2/appointments/:id/participation/status",
             get(get_participation_status),
         )
+        .route("/api/v2/groups", get(list_groups).post(create_group))
+        .route(
+            "/api/v2/groups/:group",
+            delete(delete_group).patch(update_group),
+        )
+        .route("/api/v2/groups/:group/users", get(list_group_users))
+        .route(
+            "/api/v2/groups/:group_id/user/:user_id",
+            post(add_group_member).delete(remove_group_member),
+        )
+        .route(
+            "/api/v2/friendships/suggestions",
+            get(friendship_suggestions),
+        )
+        .route(
+            "/api/v2/friendships/requests",
+            post(send_friendship_request),
+        )
+        .route(
+            "/api/v2/friendships/requests/incoming",
+            get(incoming_friendship_requests),
+        )
+        .route(
+            "/api/v2/friendships/requests/outgoing",
+            get(outgoing_friendship_requests),
+        )
+        .route(
+            "/api/v2/friendships/requests/:request_id",
+            delete(cancel_friendship_request),
+        )
+        .route(
+            "/api/v2/friendships/requests/:request_id/accept",
+            post(accept_friendship_request),
+        )
+        .route(
+            "/api/v2/friendships/requests/:request_id/decline",
+            post(decline_friendship_request),
+        )
+        .route("/api/v2/friendships/friends", get(list_friends))
+        .route(
+            "/api/v2/friendships/friends/:friend_id",
+            delete(remove_friend),
+        )
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(
             validator.clone(),
             crate::security::middleware::auth_middleware,
         ));
 
-    Router::new().merge(public_routes).merge(protected_routes)
+    Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
+        .layer(middleware::from_fn(fill_error_path))
 }
 
 async fn health_live() -> &'static str {

@@ -1,5 +1,7 @@
 use axum::{
+    extract::Request,
     http::StatusCode,
+    middleware::Next,
     response::{IntoResponse, Response},
     Json,
 };
@@ -9,7 +11,7 @@ use std::collections::HashMap;
 
 /// Standard error response for all API errors
 /// Matches the Java backend error response format exactly
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorResponse {
     /// ISO 8601 timestamp of the error occurrence
     pub timestamp: String,
@@ -18,7 +20,12 @@ pub struct ErrorResponse {
     /// HTTP status text (e.g., "Not Found", "Forbidden")
     pub error: String,
     /// Machine-readable error code (e.g., "RESOURCE_NOT_FOUND", "FORBIDDEN")
-    #[serde(rename = "errorCode")]
+    /// Omitted when empty (Java: errors that do not come from a `BusinessException` have no code)
+    #[serde(
+        rename = "errorCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub error_code: String,
     /// Human-readable error message in German
     pub message: String,
@@ -159,6 +166,8 @@ pub enum AppError {
     },
     /// Internal server error - 500 Internal Server Error
     InternalError(String),
+    /// Unmatched or malformed path parameter - 404 without error code (Java `NotFoundExceptionMapper`)
+    RouteNotFound,
 }
 
 impl AppError {
@@ -205,6 +214,24 @@ impl AppError {
     pub fn internal_error(message: impl Into<String>) -> Self {
         Self::InternalError(message.into())
     }
+
+    /// The generic 500 of the Java `GenericExceptionMapper` (details are only logged, never sent)
+    pub fn unexpected() -> Self {
+        Self::InternalError(INTERNAL_ERROR_MESSAGE.to_string())
+    }
+}
+
+/// Message of the Java `GenericExceptionMapper`
+pub const INTERNAL_ERROR_MESSAGE: &str = "Ein interner Fehler ist aufgetreten";
+
+/// Message of Jakarta REST's `NotFoundException` for an unmatched resource
+const ROUTE_NOT_FOUND_MESSAGE: &str = "HTTP 404 Not Found";
+
+impl From<sqlx::Error> for AppError {
+    fn from(err: sqlx::Error) -> Self {
+        tracing::error!("Database error: {}", err);
+        AppError::unexpected()
+    }
 }
 
 impl std::fmt::Display for AppError {
@@ -219,6 +246,7 @@ impl std::fmt::Display for AppError {
             AppError::BadRequest(msg) => write!(f, "{}", msg),
             AppError::ValidationError { message, .. } => write!(f, "{}", message),
             AppError::InternalError(msg) => write!(f, "{}", msg),
+            AppError::RouteNotFound => write!(f, "{}", ROUTE_NOT_FOUND_MESSAGE),
         }
     }
 }
@@ -301,9 +329,36 @@ impl IntoResponse for AppError {
                 );
                 (StatusCode::INTERNAL_SERVER_ERROR, response)
             }
+            AppError::RouteNotFound => {
+                let response = ErrorResponse::new(
+                    404,
+                    "Not Found".to_string(),
+                    String::new(),
+                    ROUTE_NOT_FOUND_MESSAGE.to_string(),
+                    "/".to_string(),
+                );
+                (StatusCode::NOT_FOUND, response)
+            }
         };
 
-        (status_code, Json(error_response)).into_response()
+        // The body is rebuilt with the real request path by `fill_error_path`
+        let mut response = (status_code, Json(error_response.clone())).into_response();
+        response.extensions_mut().insert(error_response);
+        response
+    }
+}
+
+/// Middleware that sets `path` of every `AppError` response to the request path
+/// (Java: `uriInfo.getPath()` in every exception mapper)
+pub async fn fill_error_path(request: Request, next: Next) -> Response {
+    let path = request.uri().path().to_string();
+    let mut response = next.run(request).await;
+    match response.extensions_mut().remove::<ErrorResponse>() {
+        Some(mut error_response) => {
+            error_response.path = path;
+            (response.status(), Json(error_response)).into_response()
+        }
+        None => response,
     }
 }
 
