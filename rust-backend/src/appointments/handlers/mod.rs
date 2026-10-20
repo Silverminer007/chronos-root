@@ -453,8 +453,9 @@ pub async fn remove_group_from_appointment(
 /// DELETE /api/v2/appointments/:id/participants/:userId - Remove a participant (hard delete)
 ///
 /// Only a RESPONSIBLE participant may remove participants. Fires an
-/// `AppointmentParticipationRemovedEvent`. Returns 404 if the appointment or participant is
-/// unknown and 403 if the caller is not RESPONSIBLE.
+/// `AppointmentParticipationRemovedEvent`. An unknown appointment is a 403 like in Java, which
+/// authorizes before it looks the appointment up (`missing_is_forbidden`, ADR); an unknown
+/// participant is a 400.
 pub async fn remove_participant(
     State(state): State<Arc<AppState>>,
     AppPath((appointment_id, target_user_id)): AppPath<(i64, String)>,
@@ -483,7 +484,8 @@ pub async fn remove_participant(
 ///
 /// # Response
 /// 200 OK with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
-/// 404 if the appointment is unknown; 400 if the target is not a participant or already has the role.
+/// An unknown appointment is a 403 like in Java (`missing_is_forbidden`, ADR); 400 if the target is
+/// not a participant or already has the role.
 pub async fn change_participant_role(
     State(state): State<Arc<AppState>>,
     AppPath((appointment_id, target_user_id)): AppPath<(i64, String)>,
