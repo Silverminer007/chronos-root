@@ -104,14 +104,12 @@ impl TestFixtures {
         user_id: Uuid,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
         let member_id = Uuid::new_v4();
-        sqlx::query(
-            "INSERT INTO group_members (id, group_id, user_id) VALUES ($1, $2, $3)"
-        )
-        .bind(member_id)
-        .bind(group_id)
-        .bind(user_id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("INSERT INTO group_members (id, group_id, user_id) VALUES ($1, $2, $3)")
+            .bind(member_id)
+            .bind(group_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(member_id)
     }

@@ -319,7 +319,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentCreatedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentCreatedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentCreatedEvent: {:?}", e);
                 // Don't fail the request if event firing fails - this is a side effect
             }
         }
@@ -428,7 +428,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentEditedEvent", edited_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentEditedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentEditedEvent: {:?}", e);
             }
 
             // Fire AppointmentMovedEvent if time changed
@@ -444,7 +444,7 @@ impl AppointmentService {
                 let event_bus_event =
                     crate::event_bus::Event::new("AppointmentMovedEvent", moved_json);
                 if let Err(e) = publisher.fire(event_bus_event).await {
-                    eprintln!("Failed to fire AppointmentMovedEvent: {:?}", e);
+                    tracing::error!("Failed to fire AppointmentMovedEvent: {:?}", e);
                 }
             }
         }
@@ -470,7 +470,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentDeletedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentDeletedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentDeletedEvent: {:?}", e);
             }
         }
 
@@ -495,7 +495,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentCancelledEvent: {:?}", e);
             }
         }
 
@@ -570,7 +570,8 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        // Publish event after successful database commit
+        // Publish event after successful database commit. The group is already persisted, so a
+        // publish failure is logged instead of reported as a failed request (as for the other events).
         if let Some(ref publisher) = self.event_publisher {
             let event_json = serde_json::json!({
                 "appointment_id": appointment_id.to_string(),
@@ -581,7 +582,7 @@ impl AppointmentService {
             let event_bus_event =
                 crate::event_bus::Event::new("AppointmentGroupAddedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
-                eprintln!("Failed to fire AppointmentGroupAddedEvent: {:?}", e);
+                tracing::error!("Failed to fire AppointmentGroupAddedEvent: {:?}", e);
             }
         }
 

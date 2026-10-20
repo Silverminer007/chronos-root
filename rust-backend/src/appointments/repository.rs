@@ -314,7 +314,7 @@ impl AppointmentRepository {
     /// Check if a group exists and is not deleted
     pub async fn group_exists(&self, group_id: Uuid) -> Result<bool, RepositoryError> {
         let result = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1 AND deleted_at IS NULL)"
+            "SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1 AND deleted_at IS NULL)",
         )
         .bind(group_id)
         .fetch_one(&self.pool)
@@ -371,13 +371,12 @@ impl AppointmentRepository {
 
     /// Get all members of a group
     pub async fn get_group_members(&self, group_id: Uuid) -> Result<Vec<Uuid>, RepositoryError> {
-        let members = sqlx::query_scalar::<_, Uuid>(
-            "SELECT user_id FROM group_members WHERE group_id = $1"
-        )
-        .bind(group_id)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+        let members =
+            sqlx::query_scalar::<_, Uuid>("SELECT user_id FROM group_members WHERE group_id = $1")
+                .bind(group_id)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
 
         Ok(members)
     }

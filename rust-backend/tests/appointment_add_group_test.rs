@@ -28,8 +28,7 @@ mod appointment_add_group_tests {
         group_id: Uuid,
         role: &str,
     ) -> Result<(), String> {
-        let user_role = UserRole::from_str(role)
-            .map_err(|e| format!("Invalid role: {}", e))?;
+        let user_role = UserRole::from_str(role).map_err(|e| format!("Invalid role: {}", e))?;
         service
             .add_group_to_appointment(actor_id, appointment_id, group_id, user_role)
             .await
@@ -70,8 +69,14 @@ mod appointment_add_group_tests {
         assert_eq!(initial_count, 0);
 
         // Action: Add group to appointment
-        let result = add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT").await;
-        assert!(result.is_ok(), "Failed to add group: {}", result.err().unwrap_or_default());
+        let result =
+            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+                .await;
+        assert!(
+            result.is_ok(),
+            "Failed to add group: {}",
+            result.err().unwrap_or_default()
+        );
 
         // Verify: Appointment group participation was created
         let participation_exists: bool = sqlx::query_scalar(
@@ -83,7 +88,10 @@ mod appointment_add_group_tests {
         .await
         .expect("Failed to check group participation");
 
-        assert!(participation_exists, "Appointment group participation should exist");
+        assert!(
+            participation_exists,
+            "Appointment group participation should exist"
+        );
 
         // Verify: Event was fired
         let final_count = count_events(db.pool(), "AppointmentGroupAddedEvent").await;
@@ -125,7 +133,14 @@ mod appointment_add_group_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Action: Try to add group as non-creator
-        let result = add_group_to_appointment(&service, other_user_id, appointment_id, group_id, "ATTENDANT").await;
+        let result = add_group_to_appointment(
+            &service,
+            other_user_id,
+            appointment_id,
+            group_id,
+            "ATTENDANT",
+        )
+        .await;
 
         // Verify: Should fail with authorization error
         assert!(result.is_err(), "Should not allow non-creator to add group");
@@ -140,11 +155,17 @@ mod appointment_add_group_tests {
         .await
         .expect("Failed to check group participation");
 
-        assert!(!participation_exists, "No group participation should be created");
+        assert!(
+            !participation_exists,
+            "No group participation should be created"
+        );
 
         // Verify: No event was fired
         let event_count = count_events(db.pool(), "AppointmentGroupAddedEvent").await;
-        assert_eq!(event_count, 0, "No event should be fired on authorization failure");
+        assert_eq!(
+            event_count, 0,
+            "No event should be fired on authorization failure"
+        );
     }
 
     /// NEGATIVE: Cannot add a deleted group
@@ -184,7 +205,9 @@ mod appointment_add_group_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Action: Try to add deleted group
-        let result = add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT").await;
+        let result =
+            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+                .await;
 
         // Verify: Should fail
         assert!(result.is_err(), "Should not allow adding deleted group");
@@ -199,7 +222,10 @@ mod appointment_add_group_tests {
         .await
         .expect("Failed to check group participation");
 
-        assert!(!participation_exists, "No group participation should be created for deleted group");
+        assert!(
+            !participation_exists,
+            "No group participation should be created for deleted group"
+        );
     }
 
     /// NEGATIVE: Cannot add the same group twice
@@ -232,15 +258,24 @@ mod appointment_add_group_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Action: Add group first time (should succeed)
-        let result1 = add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT").await;
+        let result1 =
+            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+                .await;
         assert!(result1.is_ok(), "First add should succeed");
 
         // Action: Try to add same group again
-        let result2 = add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT").await;
+        let result2 =
+            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+                .await;
 
         // Verify: Should fail with duplicate error
-        assert!(result2.is_err(), "Should not allow duplicate group addition");
-        assert!(result2.unwrap_err().to_lowercase().contains("already"),
-                "Error should mention group already exists");
+        assert!(
+            result2.is_err(),
+            "Should not allow duplicate group addition"
+        );
+        assert!(
+            result2.unwrap_err().to_lowercase().contains("already"),
+            "Error should mention group already exists"
+        );
     }
 }
