@@ -14,6 +14,8 @@ pub struct FakeKeycloak {
 #[derive(Default)]
 struct FakeState {
     user: KeycloakUser,
+    /// Realm users for the admin endpoints (`list_users`, `count_users`, lookup by id)
+    realm_users: Vec<KeycloakUser>,
     identities: Vec<FederatedIdentity>,
     credentials: Vec<Credential>,
     failure: Option<KeycloakError>,
@@ -27,6 +29,12 @@ impl FakeKeycloak {
 
     pub fn with_email(self, email: &str) -> Self {
         self.state.lock().unwrap().user.email = Some(email.to_string());
+        self
+    }
+
+    /// The users of the realm; `get_user` then finds them by id and answers `NotFound` for others
+    pub fn with_realm_users(self, users: Vec<KeycloakUser>) -> Self {
+        self.state.lock().unwrap().realm_users = users;
         self
     }
 
@@ -71,7 +79,16 @@ impl FakeKeycloak {
 impl KeycloakAdmin for FakeKeycloak {
     async fn get_user(&self, oidc_id: &str) -> Result<KeycloakUser, KeycloakError> {
         self.record(format!("get_user({})", oidc_id))?;
-        Ok(self.state.lock().unwrap().user.clone())
+        let state = self.state.lock().unwrap();
+        if state.realm_users.is_empty() {
+            return Ok(state.user.clone());
+        }
+        state
+            .realm_users
+            .iter()
+            .find(|user| user.id.as_deref() == Some(oidc_id))
+            .cloned()
+            .ok_or(KeycloakError::NotFound)
     }
 
     async fn update_user(&self, oidc_id: &str, update: &UserUpdate) -> Result<(), KeycloakError> {
@@ -115,6 +132,25 @@ impl KeycloakAdmin for FakeKeycloak {
 
     async fn delete_user(&self, oidc_id: &str) -> Result<(), KeycloakError> {
         self.record(format!("delete_user({})", oidc_id))
+    }
+
+    async fn list_users(&self, first: i64, max: i64) -> Result<Vec<KeycloakUser>, KeycloakError> {
+        self.record(format!("list_users({}, {})", first, max))?;
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .realm_users
+            .iter()
+            .skip(first as usize)
+            .take(max as usize)
+            .cloned()
+            .collect())
+    }
+
+    async fn count_users(&self) -> Result<i64, KeycloakError> {
+        self.record("count_users()".to_string())?;
+        Ok(self.state.lock().unwrap().realm_users.len() as i64)
     }
 }
 

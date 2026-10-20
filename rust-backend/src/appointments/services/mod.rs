@@ -80,6 +80,8 @@ pub struct PagedResponse<T> {
 pub struct AppointmentService {
     repo: AppointmentRepository,
     event_publisher: Option<std::sync::Arc<dyn EventPublisher>>,
+    /// Admin requests skip the participant checks (Java: `PrincipalContext#isAdminRequest`)
+    admin: bool,
 }
 
 impl AppointmentService {
@@ -88,6 +90,7 @@ impl AppointmentService {
         Self {
             repo,
             event_publisher: None,
+            admin: false,
         }
     }
 
@@ -99,7 +102,14 @@ impl AppointmentService {
         Self {
             repo,
             event_publisher: Some(event_publisher),
+            admin: false,
         }
+    }
+
+    /// The service for a request under `/api/v2/admin/*`: authorization checks are skipped
+    pub fn as_admin(mut self) -> Self {
+        self.admin = true;
+        self
     }
 
     /// Parse sort field from string
@@ -542,7 +552,7 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        if actor_role != Some(UserRole::Responsible) {
+        if !self.admin && actor_role != Some(UserRole::Responsible) {
             return Err(ServiceError::ValidationError(
                 "Only the appointment creator can add groups".to_string(),
             ));
@@ -610,6 +620,51 @@ impl AppointmentService {
             }
         }
 
+        Ok(())
+    }
+
+    /// One page of all appointments of any status, ordered by id, plus the total count (admin listing)
+    pub async fn list_page(
+        &self,
+        page: i64,
+        size: i64,
+    ) -> Result<(Vec<Appointment>, i64), RepositoryError> {
+        let appointments = self.repo.find_page(page * size, size).await?;
+        Ok((appointments, self.repo.count().await?))
+    }
+
+    /// Store a chat message and fire `MessageSentEvent` (Java: `MessageService#sendMessage`).
+    /// The sender needs no role at the appointment (only the admin endpoint stores messages so
+    /// far); an unknown appointment stores the message without one, like Java's `findById`
+    /// returning `null`.
+    pub async fn send_message(
+        &self,
+        appointment_id: i64,
+        body: &str,
+        sender_id: &str,
+        timestamp: DateTime<Utc>,
+    ) -> Result<(), ServiceError> {
+        let db_err = |e: RepositoryError| ServiceError::DatabaseError(e.to_string());
+        let appointment_id = self
+            .repo
+            .find_by_id_any_status(appointment_id)
+            .await
+            .map_err(db_err)?
+            .map(|appointment| appointment.id);
+        let message_id = self
+            .repo
+            .insert_message(appointment_id, body, sender_id, timestamp)
+            .await
+            .map_err(db_err)?;
+        if let Some(ref publisher) = self.event_publisher {
+            let event = crate::event_bus::Event::new(
+                crate::push_notifications::events::MESSAGE_SENT,
+                serde_json::json!({ "message_id": message_id }),
+            );
+            if let Err(e) = publisher.fire(event).await {
+                tracing::error!("Failed to fire MessageSentEvent: {:?}", e);
+            }
+        }
         Ok(())
     }
 

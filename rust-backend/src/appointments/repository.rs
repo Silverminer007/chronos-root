@@ -81,6 +81,53 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// A page of all appointments of any status (Java: `findAll().page(..)`), ordered by id
+    pub async fn find_page(
+        &self,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment ORDER BY id LIMIT $1 OFFSET $2",
+            APPOINTMENT_COLUMNS
+        ))
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Number of appointments of any status
+    pub async fn count(&self) -> Result<i64, RepositoryError> {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM appointment")
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Store a chat message; returns its id
+    pub async fn insert_message(
+        &self,
+        appointment_id: Option<i64>,
+        body: &str,
+        sender_id: &str,
+        timestamp: DateTime<Utc>,
+    ) -> Result<i64, RepositoryError> {
+        sqlx::query_scalar::<_, i64>(
+            "INSERT INTO message (id, appointment_id, body, sender_oidcid, \"timestamp\")
+             VALUES (nextval('message_seq'), $1, $2, $3, $4)
+             RETURNING id",
+        )
+        .bind(appointment_id)
+        .bind(body)
+        .bind(sender_id)
+        .bind(timestamp)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Find appointments created by a user (the user is a RESPONSIBLE participant)
     pub async fn find_by_creator(
         &self,
