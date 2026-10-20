@@ -1,6 +1,6 @@
 {
   "env": {
     "ANTHROPIC_BASE_URL": "https://litellm.henzeob.de/anthropic",
-    "ANTHROPIC_CUSTOM_HEADERS": "x-litellm-api-key: Bearer sk-NLWh93WbhFjZgGvKc90dZA\nx-litellm-tags: chronos,ticket-121,phase-pipeline"
+    "ANTHROPIC_CUSTOM_HEADERS": "x-litellm-api-key: Bearer sk-NLWh93WbhFjZgGvKc90dZA\nx-litellm-tags: chronos,ticket-140,phase-implement"
   }
 }
