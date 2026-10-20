@@ -114,6 +114,12 @@ async fn setup() -> Setup {
         .create_appointment(ALICE, &AppointmentFixture::new().with_title("Training"))
         .await
         .unwrap();
+    // The fixture creates the creator PENDING like production; these tests expect ALICE APPROVED
+    sqlx::query("UPDATE appointment_participation SET status = 'APPROVED' WHERE user_oidcid = $1")
+        .bind(ALICE)
+        .execute(db.pool())
+        .await
+        .unwrap();
     for (user, role, status) in [
         (BOB, "ATTENDANT", "PENDING"),
         (CAROL, "GUEST", "PENDING"),
