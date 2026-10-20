@@ -1,4 +1,6 @@
-use crate::appointments::models::{Appointment, AppointmentStatus, ParticipationStatus, UserRole};
+use crate::appointments::models::{
+    Appointment, AppointmentStatus, Message, ParticipationStatus, UserRole,
+};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
@@ -333,6 +335,22 @@ impl AppointmentRepository {
         .bind(appointment_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Messages of an appointment, newest first (Java: `MessageRepository#listByAppointment`).
+    /// Messages are hard-deleted in Java, so there is no soft-delete filter.
+    pub async fn find_messages(
+        &self,
+        appointment_id: i64,
+    ) -> Result<Vec<Message>, RepositoryError> {
+        sqlx::query_as::<_, Message>(
+            "SELECT id, sender_oidcid, appointment_id, body, \"timestamp\" FROM message
+             WHERE appointment_id = $1 ORDER BY \"timestamp\" DESC, id DESC",
+        )
+        .bind(appointment_id)
+        .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
