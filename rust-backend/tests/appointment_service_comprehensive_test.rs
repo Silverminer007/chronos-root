@@ -4,7 +4,7 @@ mod appointment_service_tests {
     use chronos_date_api::appointments::{
         models::{CreateAppointmentRequest, UpdateAppointmentRequest},
         repository::AppointmentRepository,
-        services::{AppointmentService, ListAppointmentsQuery},
+        services::{AppointmentSearch, AppointmentService},
     };
     use chronos_date_api::test_utils::{TestDb, TestFixtures};
 
@@ -45,66 +45,13 @@ mod appointment_service_tests {
         let service = AppointmentService::new(repo);
 
         let result = service
-            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
+            .search_user_appointments(&user_id, &AppointmentSearch::default(), 0, 10)
             .await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().len(), 0);
-    }
-
-    #[tokio::test]
-    async fn test_list_appointments_with_sorting() {
-        let db = setup_test_db!();
-        let pool = db.pool().clone();
-        let fixtures = TestFixtures::new(pool.clone());
-
-        let user_id = fixtures
-            .create_user("user_sort_test", "user@example.com")
-            .await
-            .expect("Failed to create user");
-
-        let repo = AppointmentRepository::new(pool);
-        let service = AppointmentService::new(repo);
-
-        // Create appointments with different titles
-        let request1 = CreateAppointmentRequest {
-            name: "Alpha Meeting".to_string(),
-            description: None,
-            venue: None,
-            start: "2025-12-20T10:00:00Z".to_string(),
-            end: "2025-12-20T11:00:00Z".to_string(),
-            minimal_attendees: None,
-        };
-
-        let request2 = CreateAppointmentRequest {
-            name: "Zebra Meeting".to_string(),
-            description: None,
-            venue: None,
-            start: "2025-12-21T10:00:00Z".to_string(),
-            end: "2025-12-21T11:00:00Z".to_string(),
-            minimal_attendees: None,
-        };
-
-        let _id1 = service
-            .create_appointment(request1, user_id.to_string())
-            .await;
-        let _id2 = service
-            .create_appointment(request2, user_id.to_string())
-            .await;
-
-        // Test sort by title ascending
-        let query = ListAppointmentsQuery {
-            limit: Some(20),
-            offset: Some(0),
-            sort_by: Some("title".to_string()),
-            sort_dir: Some("asc".to_string()),
-        };
-
-        let result = service.list_user_appointments(&user_id, query).await;
-
-        assert!(result.is_ok());
-        let appointments = result.unwrap();
-        assert!(appointments.len() >= 2);
+        let (items, total) = result.unwrap();
+        assert!(items.is_empty());
+        assert_eq!(total, 0);
     }
 
     #[tokio::test]
@@ -121,14 +68,14 @@ mod appointment_service_tests {
         let repo = AppointmentRepository::new(pool);
         let service = AppointmentService::new(repo);
 
-        // Create multiple appointments
+        // Create multiple upcoming appointments
         for i in 0..5 {
             let request = CreateAppointmentRequest {
                 name: format!("Meeting {}", i),
                 description: None,
                 venue: None,
-                start: format!("2025-12-{}T10:00:00Z", 20 + i),
-                end: format!("2025-12-{}T11:00:00Z", 20 + i),
+                start: format!("2030-12-{}T10:00:00Z", 20 + i),
+                end: format!("2030-12-{}T11:00:00Z", 20 + i),
                 minimal_attendees: None,
             };
             let _ = service
@@ -136,18 +83,14 @@ mod appointment_service_tests {
                 .await;
         }
 
-        // Test pagination with limit
-        let query = ListAppointmentsQuery {
-            limit: Some(2),
-            offset: Some(0),
-            sort_by: None,
-            sort_dir: None,
-        };
+        let (items, total) = service
+            .search_user_appointments(&user_id, &AppointmentSearch::default(), 1, 2)
+            .await
+            .expect("Failed to search appointments");
 
-        let result = service.list_user_appointments(&user_id, query).await;
-
-        assert!(result.is_ok());
-        assert!(result.unwrap().len() <= 2);
+        assert_eq!(total, 5);
+        let names: Vec<&str> = items.iter().map(|a| a.name.as_str()).collect();
+        assert_eq!(names, vec!["Meeting 2", "Meeting 3"]);
     }
 
     #[tokio::test]

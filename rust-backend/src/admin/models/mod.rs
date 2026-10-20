@@ -43,20 +43,6 @@ pub struct AdminCreateGroupRequest {
     pub group_name: Option<String>,
 }
 
-/// Page of a listing (Java: `PagedResponse`)
-#[derive(Debug, Serialize)]
-pub struct PagedResponse<T> {
-    pub data: Vec<T>,
-    pub meta: PageMeta,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PageMeta {
-    pub page: i64,
-    pub size: i64,
-    pub total: i64,
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdminUserDto {

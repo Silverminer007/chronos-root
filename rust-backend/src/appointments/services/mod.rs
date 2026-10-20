@@ -4,13 +4,13 @@ use crate::appointments::events::{
     AppointmentParticipationRoleChangedEvent, AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
-    Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
-    UpdateAppointmentRequest, UserParticipantDto, UserRole,
+    Appointment, AppointmentResponse, CreateAppointmentRequest, GroupDto, MessageDto,
+    ParticipationStatus, UpdateAppointmentRequest, UserDto, UserParticipantDto, UserRole,
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
 use crate::users::identity::UserIdentity;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, SecondsFormat, Utc};
 
 /// Authorization messages of the Java `AuthorizationService`
 pub const NO_ROLE_MESSAGE: &str = "You have no role at this appointment";
@@ -41,47 +41,33 @@ impl std::fmt::Display for ServiceError {
 
 impl std::error::Error for ServiceError {}
 
-/// Query parameters for listing appointments
-#[derive(Debug, Clone)]
-pub struct ListAppointmentsQuery {
-    pub limit: Option<u32>,
-    pub offset: Option<u32>,
-    pub sort_by: Option<String>,  // "date" or "title"
-    pub sort_dir: Option<String>, // "asc" or "desc"
+/// Java lists upcoming appointments only: `end` defaults to now plus 1000 years
+const DEFAULT_WINDOW_DAYS: i64 = 365 * 1000;
+
+/// Filters of the appointment list (Java: the `start`, `end` and `search` query parameters);
+/// `start` defaults to now, `end` to now plus 1000 years
+#[derive(Debug, Clone, Default)]
+pub struct AppointmentSearch {
+    pub start: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
+    pub search: Option<String>,
 }
 
-impl Default for ListAppointmentsQuery {
-    fn default() -> Self {
-        Self {
-            limit: Some(20),
-            offset: Some(0),
-            sort_by: Some("date".to_string()),
-            sort_dir: Some("desc".to_string()),
-        }
-    }
+/// Which collections an appointment response embeds
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Embed {
+    pub participants: bool,
+    pub messages: bool,
+    pub group_participants: bool,
 }
 
-/// Sort direction for appointments
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SortDirection {
-    Ascending,
-    Descending,
-}
-
-/// Sort field for appointments
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SortField {
-    Date,
-    Title,
-}
-
-/// Paginated response wrapper
-#[derive(Debug)]
-pub struct PagedResponse<T> {
-    pub data: Vec<T>,
-    pub total: i64,
-    pub limit: u32,
-    pub offset: u32,
+impl Embed {
+    /// Everything: what Java's lazily loaded collections amount to in list, PATCH and admin list
+    pub const ALL: Embed = Embed {
+        participants: true,
+        messages: true,
+        group_participants: true,
+    };
 }
 
 /// AppointmentService handles business logic for appointments
@@ -118,47 +104,6 @@ impl AppointmentService {
     pub fn as_admin(mut self) -> Self {
         self.admin = true;
         self
-    }
-
-    /// Parse sort field from string
-    fn parse_sort_field(field_str: &str) -> SortField {
-        match field_str.to_lowercase().as_str() {
-            "title" => SortField::Title,
-            _ => SortField::Date, // Default to date
-        }
-    }
-
-    /// Parse sort direction from string
-    fn parse_sort_direction(dir_str: &str) -> SortDirection {
-        match dir_str.to_lowercase().as_str() {
-            "asc" | "ascending" => SortDirection::Ascending,
-            _ => SortDirection::Descending, // Default to descending
-        }
-    }
-
-    /// Apply sorting to a list of appointments
-    fn apply_sorting(
-        mut appointments: Vec<Appointment>,
-        sort_field: SortField,
-        sort_direction: SortDirection,
-    ) -> Vec<Appointment> {
-        match sort_field {
-            SortField::Date => {
-                if sort_direction == SortDirection::Ascending {
-                    appointments.sort_by_key(|a| a.start_time);
-                } else {
-                    appointments.sort_by_key(|a| std::cmp::Reverse(a.start_time));
-                }
-            }
-            SortField::Title => {
-                if sort_direction == SortDirection::Ascending {
-                    appointments.sort_by_key(|a| a.name.clone());
-                } else {
-                    appointments.sort_by_key(|a| std::cmp::Reverse(a.name.clone()));
-                }
-            }
-        }
-        appointments
     }
 
     /// Get a single appointment by ID
@@ -235,74 +180,160 @@ impl AppointmentService {
             .collect())
     }
 
-    /// List appointments visible to a user with pagination and sorting
-    pub async fn list_user_appointments(
+    /// One page of the appointments a user participates in (Java: `AppointmentRepository#search`)
+    /// and the total number of matches
+    pub async fn search_user_appointments(
         &self,
         user_id: &str,
-        query: ListAppointmentsQuery,
-    ) -> Result<Vec<Appointment>, RepositoryError> {
-        let appointments = self.repo.find_visible_to_user(user_id).await?;
-
-        // Parse sort parameters
-        let sort_field = query
-            .sort_by
-            .as_ref()
-            .map(|s| Self::parse_sort_field(s))
-            .unwrap_or(SortField::Date);
-
-        let sort_direction = query
-            .sort_dir
-            .as_ref()
-            .map(|d| Self::parse_sort_direction(d))
-            .unwrap_or(SortDirection::Descending);
-
-        // Apply sorting
-        let sorted_appointments = Self::apply_sorting(appointments, sort_field, sort_direction);
-
-        // Apply pagination
-        let offset = query.offset.unwrap_or(0) as usize;
-        let limit = query.limit.unwrap_or(20) as usize;
-
-        let _end = (offset + limit).min(sorted_appointments.len());
-        Ok(sorted_appointments
-            .into_iter()
-            .skip(offset)
-            .take(limit)
-            .collect())
+        filter: &AppointmentSearch,
+        page: i64,
+        size: i64,
+    ) -> Result<(Vec<Appointment>, i64), RepositoryError> {
+        let now = Utc::now();
+        self.repo
+            .search_visible(
+                user_id,
+                filter.search.as_deref(),
+                filter.start.unwrap_or(now),
+                filter
+                    .end
+                    .unwrap_or(now + Duration::days(DEFAULT_WINDOW_DAYS)),
+                page,
+                size,
+            )
+            .await
     }
 
-    /// List all appointments (admin only) with sorting and pagination
-    pub async fn list_all_appointments(
+    /// Fills `participants`, `messages` and `group_participants` into the responses
+    /// (Java: `AppointmentMapper#toDto` plus `AppointmentService#enrichAppointmentDtos`).
+    /// Names come from the `user_profiles` cache; participants are ordered by id, messages
+    /// oldest first (Java hands out unordered sets).
+    pub async fn with_details(
         &self,
-        query: ListAppointmentsQuery,
-    ) -> Result<Vec<Appointment>, RepositoryError> {
-        let appointments = self.repo.find_all().await?;
+        responses: Vec<AppointmentResponse>,
+        embed: Embed,
+    ) -> Result<Vec<AppointmentResponse>, ServiceError> {
+        let db_error = |e: RepositoryError| ServiceError::DatabaseError(e.to_string());
+        let ids: Vec<i64> = responses.iter().map(|a| a.id).collect();
 
-        // Parse sort parameters
-        let sort_field = query
-            .sort_by
-            .as_ref()
-            .map(|s| Self::parse_sort_field(s))
-            .unwrap_or(SortField::Date);
+        let participants = if embed.participants {
+            self.repo
+                .list_participants_of(&ids)
+                .await
+                .map_err(db_error)?
+        } else {
+            Vec::new()
+        };
+        let messages = if embed.messages {
+            self.repo.find_messages_of(&ids).await.map_err(db_error)?
+        } else {
+            Vec::new()
+        };
+        let group_participations = if embed.group_participants {
+            self.repo
+                .list_group_participations(&ids)
+                .await
+                .map_err(db_error)?
+        } else {
+            Vec::new()
+        };
+        let mut group_ids: Vec<i64> = group_participations.iter().map(|g| g.1).collect();
+        group_ids.sort_unstable();
+        group_ids.dedup();
+        let members = self
+            .repo
+            .list_group_members(&group_ids)
+            .await
+            .map_err(db_error)?;
 
-        let sort_direction = query
-            .sort_dir
-            .as_ref()
-            .map(|d| Self::parse_sort_direction(d))
-            .unwrap_or(SortDirection::Descending);
+        let mut user_ids: Vec<String> = participants
+            .iter()
+            .map(|p| p.user_oidcid.clone())
+            .chain(messages.iter().map(|m| m.sender_oidcid.clone()))
+            .chain(members.iter().map(|m| m.1.clone()))
+            .collect();
+        user_ids.sort();
+        user_ids.dedup();
+        let users = self
+            .repo
+            .find_identities(&user_ids)
+            .await
+            .map_err(db_error)?;
 
-        // Apply sorting
-        let sorted_appointments = Self::apply_sorting(appointments, sort_field, sort_direction);
-
-        // Apply pagination
-        let offset = query.offset.unwrap_or(0) as usize;
-        let limit = query.limit.unwrap_or(20) as usize;
-
-        let _end = (offset + limit).min(sorted_appointments.len());
-        Ok(sorted_appointments
+        Ok(responses
             .into_iter()
-            .skip(offset)
-            .take(limit)
+            .map(|mut response| {
+                let id = response.id;
+                if embed.participants {
+                    response.participants = Some(
+                        participants
+                            .iter()
+                            .filter(|p| p.appointment_id == id)
+                            .map(|row| {
+                                let user = users.get(&row.user_oidcid);
+                                UserParticipantDto {
+                                    name: user.map(UserIdentity::name),
+                                    profile_picture_url: user
+                                        .and_then(|u| u.profile_picture_url.clone()),
+                                    user_id: row.user_oidcid.clone(),
+                                    role: row.role,
+                                    status: row.status,
+                                    via_group_id: row.group_participation_id,
+                                    via_group_name: row.group_name.clone(),
+                                }
+                            })
+                            .collect(),
+                    );
+                }
+                if embed.messages {
+                    response.messages = Some(
+                        messages
+                            .iter()
+                            .filter(|m| m.appointment_id == Some(id))
+                            .map(|m| MessageDto {
+                                id: m.id,
+                                sender_id: m.sender_oidcid.clone(),
+                                sender_name: users
+                                    .get(&m.sender_oidcid)
+                                    .map(UserIdentity::name)
+                                    .unwrap_or_default(),
+                                appointment_id: m.appointment_id,
+                                body: m.body.clone(),
+                                timestamp: m
+                                    .timestamp
+                                    .map(|t| t.to_rfc3339_opts(SecondsFormat::AutoSi, true)),
+                            })
+                            .collect(),
+                    );
+                }
+                if embed.group_participants {
+                    response.group_participants = Some(
+                        group_participations
+                            .iter()
+                            .filter(|g| g.0 == id)
+                            .map(|(_, group_id, name)| GroupDto {
+                                id: *group_id,
+                                name: name.clone().unwrap_or_default(),
+                                members: Some(
+                                    members
+                                        .iter()
+                                        .filter(|m| m.0 == *group_id)
+                                        .map(|m| {
+                                            let user = users.get(&m.1);
+                                            UserDto {
+                                                id: m.1.clone(),
+                                                first_name: user.and_then(|u| u.first_name.clone()),
+                                                last_name: user.and_then(|u| u.last_name.clone()),
+                                            }
+                                        })
+                                        .collect(),
+                                ),
+                            })
+                            .collect(),
+                    );
+                }
+                response
+            })
             .collect())
     }
 
@@ -1056,17 +1087,5 @@ impl AppointmentService {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_list_query_default() {
-        let query = ListAppointmentsQuery::default();
-        assert_eq!(query.limit, Some(20));
-        assert_eq!(query.offset, Some(0));
     }
 }
