@@ -23,6 +23,20 @@ class ScenarioDefinitionTest(unittest.TestCase):
             known |= set(step.capture)
 
 
+class ScenarioFriendshipTest(unittest.TestCase):
+    """Java only lets friends be added to groups and appointments (404 "Ihr seid nicht befreundet")."""
+
+    def test_second_user_accepts_the_friendship_before_anyone_is_added(self):
+        names = [s.name for s in SCENARIO]
+        accept = next(s for s in SCENARIO if s.role == "user2" and s.path.endswith("/accept"))
+        self.assertLess(SCENARIO.index(accept), names.index("add group member"))
+        self.assertLess(SCENARIO.index(accept), names.index("add participant"))
+
+    def test_friends_are_listed_while_the_friendship_exists(self):
+        names = [s.name for s in SCENARIO]
+        self.assertLess(names.index("list friends"), names.index("end friendship"))
+
+
 class _Handler(BaseHTTPRequestHandler):
     seen = []
 
@@ -74,6 +88,24 @@ class HttpTargetTest(unittest.TestCase):
     def test_anonymous_sends_no_token(self):
         self.target.send("GET", "/x", None, "anon")
         self.assertIsNone(_Handler.seen[-1][2])
+
+    def test_health_and_metrics_go_to_the_management_url_when_set(self):
+        other = HTTPServer(("127.0.0.1", 0), _Handler)
+        threading.Thread(target=other.serve_forever, daemon=True).start()
+        self.addCleanup(lambda: (other.shutdown(), other.server_close()))
+        target = HttpTarget(f"http://127.0.0.1:{self.server.server_port}", {},
+                            management_url=f"http://127.0.0.1:{other.server_port}")
+        calls = []
+        _Handler.seen = calls
+        for path in ("/q/health/ready", "/metrics", "/api/v2/groups"):
+            target.send("GET", path, None, "anon")
+        self.assertEqual([c[1] for c in calls], ["/q/health/ready", "/metrics", "/api/v2/groups"])
+        # the first two went to the other server: its port is not the API port
+        self.assertEqual(target._base_for("/metrics"), f"http://127.0.0.1:{other.server_port}")
+        self.assertEqual(target._base_for("/api/v2/groups"), f"http://127.0.0.1:{self.server.server_port}")
+
+    def test_management_url_unset_keeps_one_base(self):
+        self.assertEqual(self.target._base_for("/metrics"), self.target.base_url)
 
     def test_unreachable_raises_connection_error(self):
         with self.assertRaises(ConnectionError):

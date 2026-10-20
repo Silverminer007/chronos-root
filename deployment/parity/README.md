@@ -6,7 +6,7 @@ expose the same API contract (ticket #137, KB entry `kb/137-rust-java-parity-run
 
 | Component | What | Database |
 |---|---|---|
-| `chronos-backend` | Java image `ghcr.io/silverminer007/chronos-backend:latest` (Helm chart) | `chronos` |
+| `chronos-backend` | Java image built from the checkout, imported into k3s (Helm chart) | `chronos` |
 | `chronos-rust-backend` | Rust image built from the checkout, imported into k3s (Helm chart, `rustBackend`) | `chronos_rust` |
 | `postgres` | one PostgreSQL 16 instance (chart), two databases, one per backend | |
 | `keycloak` | Keycloak 26.0.7 dev mode, realm `chronos` from `chronos-realm.json` (this directory) | in-container H2 |
@@ -24,7 +24,18 @@ The credentials are throw-away values for this namespace only.
 
 ## Images
 
-- **Java**: pulled by the node from ghcr (public): `sudo k3s ctr -n k8s.io images pull ghcr.io/silverminer007/chronos-backend:latest`.
+- **Java**: the CI image `ghcr.io/silverminer007/chronos-backend:latest` was **older than `main`** on 2026-10-20 (built
+  2026-07-18, without the admin endpoints), so it is not a valid reference. Build it from the checkout. The host has only
+  JDK 17, so Maven runs in a container (tests are skipped: `-Dmaven.test.skip=true`; the quality gates run in `backend-ci.yml`):
+
+  ```bash
+  docker run --rm -v "$PWD/backend":/src -w /src -v maven-repo-parity:/root/.m2 maven:3.9-eclipse-temurin-21 \
+    mvn -q -B package -Dmaven.test.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Dpmd.skip=true
+  docker build -f backend/src/main/docker/Dockerfile.jvm -t chronos-backend:parity backend
+  docker save chronos-backend:parity | sudo k3s ctr -n k8s.io images import -
+  docker rmi chronos-backend:parity; docker volume rm maven-repo-parity; sudo rm -rf backend/target   # target/ is owned by root
+  ```
+
 - **Rust**: the CI image `ghcr.io/silverminer007/chronos-rust-backend:latest` is published from `main`, but may lag behind the
   commit under test. The parity run therefore builds the image from the checkout and imports it into k3s
   (no registry, no second copy of the image on disk besides containerd's):
@@ -35,8 +46,8 @@ The credentials are throw-away values for this namespace only.
   docker rmi chronos-rust-backend:parity      # free the Docker copy
   ```
 
-  `values-parity.yaml` references `chronos-rust-backend:parity` with `pullPolicy: Never`.
-  After a rebuild: `kubectl -n chronos-parity rollout restart deploy/chronos-rust-backend`.
+  `values-parity.yaml` references `chronos-backend:parity` and `chronos-rust-backend:parity` with `pullPolicy: Never`.
+  After a rebuild: `kubectl -n chronos-parity rollout restart deploy/<name>`.
 
 ## Deploy
 
@@ -73,16 +84,16 @@ curl -s -o /dev/null -w '%{http_code}\n' localhost:19000/q/health/ready     # 20
 
 ```bash
 deployment/parity/run-contract.sh              # forwards ports, fetches tokens, runs `python3 -m parity`
+deployment/parity/run-contract.sh --explore    # multi-user flows and error paths (explore.py), same engine
 ```
 
 Both databases must be fresh for a run (the scenario creates groups, appointments etc. and expects no earlier
-data); reset with `helm uninstall` + deleting the PVC, or `DROP`/`CREATE DATABASE` for both databases
-(`kubectl -n chronos-parity exec deploy/postgres -- psql -U postgres`) and restart both backends.
+data); reset with `deployment/parity/reset-databases.sh` (drops and recreates both, restarts both backends).
 
 ## Tear down
 
 ```bash
 helm uninstall chronos -n chronos-parity
 kubectl delete namespace chronos-parity      # also removes Keycloak and the PVC
-sudo k3s ctr -n k8s.io images rm docker.io/library/chronos-rust-backend:parity
+sudo k3s ctr -n k8s.io images rm docker.io/library/chronos-rust-backend:parity docker.io/library/chronos-backend:parity
 ```

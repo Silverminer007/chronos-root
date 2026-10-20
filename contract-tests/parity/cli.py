@@ -14,6 +14,7 @@ from .endpoints import java_endpoints, rust_routes
 from .runner import (
     ROLE_ADMIN,
     ROLE_USER,
+    ROLE_USER2,
     HttpTarget,
     apply_allowlist,
     covered_endpoints,
@@ -37,6 +38,8 @@ def _parser() -> argparse.ArgumentParser:
     env = os.environ.get
     p = argparse.ArgumentParser(prog="parity", description="Contract parity of the Java and Rust backends")
     p.add_argument("--java-url", default=env("CONTRACT_JAVA_URL", "http://localhost:8080"))
+    p.add_argument("--java-management-url", default=env("CONTRACT_JAVA_MANAGEMENT_URL"),
+                   help="management interface of the Java backend (health, metrics), if it is on another port")
     p.add_argument("--rust-url", default=env("CONTRACT_RUST_URL", "http://localhost:8081"))
     p.add_argument("--allowlist", default=str(DEFAULT_ALLOWLIST))
     p.add_argument("--coverage", action="store_true", help="only check the request definitions against the sources")
@@ -63,6 +66,7 @@ def tokens_from_env() -> "dict[str, str]":
     tokens = {}
     for role, token_var, user_var, pass_var in (
         (ROLE_USER, "CONTRACT_USER_TOKEN", "CONTRACT_USER", "CONTRACT_PASSWORD"),
+        (ROLE_USER2, "CONTRACT_USER2_TOKEN", "CONTRACT_USER2", "CONTRACT_USER2_PASSWORD"),
         (ROLE_ADMIN, "CONTRACT_ADMIN_TOKEN", "CONTRACT_ADMIN_USER", "CONTRACT_ADMIN_PASSWORD"),
     ):
         if env(token_var):
@@ -76,6 +80,8 @@ def tokens_from_env() -> "dict[str, str]":
         raise HarnessError("no user token: set CONTRACT_USER_TOKEN or CONTRACT_TOKEN_URL + CONTRACT_USER")
     # without an admin token the admin steps run as the plain user (403 on both sides)
     tokens.setdefault(ROLE_ADMIN, tokens[ROLE_USER])
+    # without a second user the friendship steps of user 2 run as user 1 (same answer on both sides)
+    tokens.setdefault(ROLE_USER2, tokens[ROLE_USER])
     return tokens
 
 
@@ -134,7 +140,8 @@ def main(argv=None, targets=None, steps=None) -> int:
     try:
         if targets is None:
             tokens = tokens_from_env()
-            targets = (HttpTarget(args.java_url, tokens), HttpTarget(args.rust_url, tokens))
+            targets = (HttpTarget(args.java_url, tokens, management_url=args.java_management_url),
+                       HttpTarget(args.rust_url, tokens))
         results = run_scenario(
             steps, *targets, {
                 "other": args.other_user,
