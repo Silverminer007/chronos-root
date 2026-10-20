@@ -41,5 +41,7 @@ Java's `PrincipalContextFilter` upserts the token claims into `user_profiles` on
 
 ## Consequences
 
+- **Pattern change (PATTERN-2025-09-28-001 principal context):** `PrincipalContext` and `TokenClaims` no longer carry only the OIDC subject; they also carry the profile claims first name, last name, email and picture. Services still read the current user from `PrincipalContext`, but the Rust principal is now a small profile object instead of a bare id, as in Java's `PrincipalContextFilter`. The pattern document describes the subject-only variant and is not changed by this ADR; readers of the pattern must take the extra fields into account.
+- **Two separate Keycloak endpoints:** `KEYCLOAK_URL` (realm URL, used only for validating access tokens) stays unchanged and separate from the new `AUTH_SERVER_*` variables (`AUTH_SERVER_BASE_URL`, `AUTH_SERVER_REALM`, `AUTH_SERVER_CLIENT_ID`, `AUTH_SERVER_CLIENT_SECRET`, used only by the `keycloak` admin client with client-credentials). They must not be derived from or substituted for one another; the `rust-backend/README.md` table lists both.
 - `build_router` takes a `UserState` (db pool, `Arc<dyn KeycloakAdmin>`, `KeycloakUrls`) as an additional argument; `test_utils::user_state_for_tests` serves router tests that do not touch the user endpoints.
 - Open assumptions for the contract harness: the `path` field format (leading slash), the exact body of malformed JSON (assumed `500` like every unmapped exception).
