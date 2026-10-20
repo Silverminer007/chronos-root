@@ -12,6 +12,8 @@ Three differences between Rust and Java around inviting participants: invited us
 
 - **Read access:** `GET /appointments/{id}` allows every participant whose role is not `NONE` (Java `requireReadAppointment`); same rule as `GET .../messages`. Strangers and the creator-only rule from before are replaced; an unknown appointment is still `404`.
 - **Friendship check:** `add_participant` checks, after the `RESPONSIBLE` check (Java order, `requireAddUserToAppointment`), that an `ACCEPTED` friendship between actor and target exists (`FriendshipRepository::are_friends`, shared with groups). Otherwise `403` "You can only add friends to appointments" and nothing is inserted. Adding group members already checked friendship (`403`), unchanged.
+- **Module dependency:** `AppointmentRepository::are_friends` only delegates to `FriendshipRepository::are_friends` (`rust-backend/src/groups/repository.rs`), which is the single shared implementation. This adds a dependency from the `appointments` module on the `groups` module; the friendship query is deliberately not duplicated.
+- **Update/delete unchanged:** `ensure_creator` (`appointments/handlers/mod.rs`, update and delete handlers) is still used, so `PUT`/`DELETE` stay creator-only while `GET` opens to all participants with a role other than `NONE`.
 - **Creator status:** the creator is inserted as `RESPONSIBLE` with status `PENDING` (Java). `POST .../participation {"status":"APPROVED"}` by the creator therefore returns `200`.
 
 ## Consequences
