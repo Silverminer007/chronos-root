@@ -13,6 +13,15 @@ pub struct TokenClaims {
     pub iat: i64,
     /// Expires at
     pub exp: i64,
+    /// Profile claims Keycloak puts into the access token (Java: `PrincipalContextFilter`)
+    #[serde(default)]
+    pub given_name: Option<String>,
+    #[serde(default)]
+    pub family_name: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub picture: Option<String>,
 }
 
 /// Keycloak public key information

@@ -5,7 +5,6 @@ use crate::groups::repository::{FriendshipRepository, GroupMemberRepository, Gro
 use serde_json::json;
 use sqlx::PgPool;
 use std::sync::Arc;
-use uuid::Uuid;
 
 /// Service for managing groups
 pub struct GroupService {
@@ -21,15 +20,11 @@ impl GroupService {
     /// Create a new group
     pub async fn create_group(
         &self,
-        owner_id: Uuid,
+        owner_id: &str,
         name: String,
-        description: Option<String>,
     ) -> Result<Group, Box<dyn std::error::Error + Send + Sync>> {
-        let id = Uuid::new_v4();
-
         // Create the group in the database
-        let group =
-            GroupRepository::create(&self.pool, id, name.clone(), description, owner_id).await?;
+        let group = GroupRepository::create(&self.pool, name, owner_id).await?;
 
         // Fire the GroupCreatedEvent
         let event = Event::new(
@@ -37,7 +32,7 @@ impl GroupService {
             json!(GroupCreatedEvent {
                 group_id: group.id,
                 name: group.name.clone(),
-                owner_id: group.owner_id,
+                owner_id: group.owner_id.clone(),
             }),
         );
         self.event_bus.fire(event).await?;
@@ -48,7 +43,7 @@ impl GroupService {
     /// Get a group by ID
     pub async fn get_group(
         &self,
-        id: Uuid,
+        id: i64,
     ) -> Result<Option<Group>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(GroupRepository::get_by_id(&self.pool, id).await?)
     }
@@ -56,7 +51,7 @@ impl GroupService {
     /// List all groups for a user (both owned and member of)
     pub async fn list_groups(
         &self,
-        user_id: Uuid,
+        user_id: &str,
     ) -> Result<Vec<Group>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(GroupRepository::list_for_user(&self.pool, user_id).await?)
     }
@@ -64,8 +59,8 @@ impl GroupService {
     /// List all members of a group (only owner can list)
     pub async fn list_members(
         &self,
-        group_id: Uuid,
-        requester_id: Uuid,
+        group_id: i64,
+        requester_id: &str,
     ) -> Result<Vec<GroupMember>, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization - only owner can list members
         let group = GroupRepository::get_by_id(&self.pool, group_id)
@@ -82,10 +77,9 @@ impl GroupService {
     /// Update a group (only owner can update)
     pub async fn update_group(
         &self,
-        group_id: Uuid,
-        requester_id: Uuid,
+        group_id: i64,
+        requester_id: &str,
         name: Option<String>,
-        description: Option<String>,
     ) -> Result<Option<Group>, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let group = GroupRepository::get_by_id(&self.pool, group_id)
@@ -97,13 +91,11 @@ impl GroupService {
         }
 
         // Update the group
-        let updated =
-            GroupRepository::update(&self.pool, group_id, name.clone(), description.clone())
-                .await?;
+        let updated = GroupRepository::update(&self.pool, group_id, name.clone()).await?;
 
         if let Some(ref updated_group) = updated {
-            // Fire the GroupNameChangedEvent if any field was updated
-            if name.is_some() || description.is_some() {
+            // Fire the GroupNameChangedEvent if the name was updated
+            if name.is_some() {
                 let event = Event::new(
                     "GroupNameChangedEvent",
                     json!(GroupNameChangedEvent {
@@ -121,8 +113,8 @@ impl GroupService {
     /// Delete a group (only owner can delete)
     pub async fn delete_group(
         &self,
-        group_id: Uuid,
-        requester_id: Uuid,
+        group_id: i64,
+        requester_id: &str,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let group = GroupRepository::get_by_id(&self.pool, group_id)
@@ -151,9 +143,9 @@ impl GroupService {
     /// Add a member to a group (only owner can add members)
     pub async fn add_member(
         &self,
-        group_id: Uuid,
-        requester_id: Uuid,
-        user_id: Uuid,
+        group_id: i64,
+        requester_id: &str,
+        user_id: &str,
     ) -> Result<GroupMember, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let group = GroupRepository::get_by_id(&self.pool, group_id)
@@ -164,15 +156,14 @@ impl GroupService {
             return Err("Not authorized to add members to this group".into());
         }
 
-        let id = Uuid::new_v4();
-        let member = GroupMemberRepository::add_member(&self.pool, id, group_id, user_id).await?;
+        let member = GroupMemberRepository::add_member(&self.pool, group_id, user_id).await?;
 
         // Fire the GroupMemberAddedEvent
         let event = Event::new(
             "GroupMemberAddedEvent",
             json!(GroupMemberAddedEvent {
                 group_id: member.group_id,
-                user_id: member.user_id,
+                user_id: member.user_id.clone(),
             }),
         );
         self.event_bus.fire(event).await?;
@@ -183,9 +174,9 @@ impl GroupService {
     /// Remove a member from a group (only owner can remove members)
     pub async fn remove_member(
         &self,
-        group_id: Uuid,
-        requester_id: Uuid,
-        user_id: Uuid,
+        group_id: i64,
+        requester_id: &str,
+        user_id: &str,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let group = GroupRepository::get_by_id(&self.pool, group_id)
@@ -202,7 +193,10 @@ impl GroupService {
             // Fire the GroupMemberRemovedEvent
             let event = Event::new(
                 "GroupMemberRemovedEvent",
-                json!(GroupMemberRemovedEvent { group_id, user_id }),
+                json!(GroupMemberRemovedEvent {
+                    group_id,
+                    user_id: user_id.to_string()
+                }),
             );
             self.event_bus.fire(event).await?;
         }
@@ -225,25 +219,23 @@ impl FriendshipService {
     /// Send a friendship request
     pub async fn send_request(
         &self,
-        requester_id: Uuid,
-        recipient_id: Uuid,
+        requester_id: &str,
+        recipient_id: &str,
     ) -> Result<Friendship, Box<dyn std::error::Error + Send + Sync>> {
         if requester_id == recipient_id {
             return Err("Cannot send friendship request to yourself".into());
         }
 
-        let id = Uuid::new_v4();
         let friendship =
-            FriendshipRepository::create_request(&self.pool, id, requester_id, recipient_id)
-                .await?;
+            FriendshipRepository::create_request(&self.pool, requester_id, recipient_id).await?;
 
         // Fire the FriendshipRequestSentEvent
         let event = Event::new(
             "FriendshipRequestSentEvent",
             json!(FriendshipRequestSentEvent {
                 friendship_id: friendship.id,
-                requester_id: friendship.requester_id,
-                recipient_id: friendship.recipient_id,
+                requester_id: friendship.requester_id.clone(),
+                recipient_id: friendship.recipient_id.clone(),
             }),
         );
         self.event_bus.fire(event).await?;
@@ -254,8 +246,8 @@ impl FriendshipService {
     /// Accept a friendship request
     pub async fn accept_request(
         &self,
-        friendship_id: Uuid,
-        requester_id: Uuid,
+        friendship_id: i64,
+        requester_id: &str,
     ) -> Result<Friendship, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let friendship = FriendshipRepository::get_by_id(&self.pool, friendship_id)
@@ -275,8 +267,8 @@ impl FriendshipService {
             "FriendshipAcceptedEvent",
             json!(FriendshipAcceptedEvent {
                 friendship_id: accepted.id,
-                user_id_1: accepted.requester_id,
-                user_id_2: accepted.recipient_id,
+                user_id_1: accepted.requester_id.clone(),
+                user_id_2: accepted.recipient_id.clone(),
             }),
         );
         self.event_bus.fire(event).await?;
@@ -287,8 +279,8 @@ impl FriendshipService {
     /// Decline a friendship request
     pub async fn decline_request(
         &self,
-        friendship_id: Uuid,
-        requester_id: Uuid,
+        friendship_id: i64,
+        requester_id: &str,
     ) -> Result<Friendship, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let friendship = FriendshipRepository::get_by_id(&self.pool, friendship_id)
@@ -308,8 +300,8 @@ impl FriendshipService {
             "FriendshipDeclinedEvent",
             json!(FriendshipDeclinedEvent {
                 friendship_id: declined.id,
-                requester_id: declined.requester_id,
-                recipient_id: declined.recipient_id,
+                requester_id: declined.requester_id.clone(),
+                recipient_id: declined.recipient_id.clone(),
             }),
         );
         self.event_bus.fire(event).await?;
@@ -320,8 +312,8 @@ impl FriendshipService {
     /// Remove a friendship
     pub async fn remove_friendship(
         &self,
-        friendship_id: Uuid,
-        requester_id: Uuid,
+        friendship_id: i64,
+        requester_id: &str,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         // Check authorization
         let friendship = FriendshipRepository::get_by_id(&self.pool, friendship_id)
@@ -353,8 +345,8 @@ impl FriendshipService {
     /// Get friendship between two users
     pub async fn get_friendship(
         &self,
-        user1_id: Uuid,
-        user2_id: Uuid,
+        user1_id: &str,
+        user2_id: &str,
     ) -> Result<Option<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(FriendshipRepository::get_friendship(&self.pool, user1_id, user2_id).await?)
     }
@@ -362,7 +354,7 @@ impl FriendshipService {
     /// List all friendships for a user
     pub async fn list_friendships(
         &self,
-        user_id: Uuid,
+        user_id: &str,
     ) -> Result<Vec<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(FriendshipRepository::list_for_user(&self.pool, user_id).await?)
     }
@@ -370,7 +362,7 @@ impl FriendshipService {
     /// List pending friendship requests for a user (only as recipient)
     pub async fn list_pending_requests(
         &self,
-        user_id: Uuid,
+        user_id: &str,
     ) -> Result<Vec<Friendship>, Box<dyn std::error::Error + Send + Sync>> {
         let friendships = FriendshipRepository::list_for_user(&self.pool, user_id).await?;
         // Filter to only show pending requests where user is the recipient

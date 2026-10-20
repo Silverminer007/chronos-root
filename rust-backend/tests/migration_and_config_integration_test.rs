@@ -197,8 +197,8 @@ fn test_run_migrations_false_parses() -> Result<(), AnyError> {
 
 #[tokio::test]
 async fn test_run_migrations_false_skips_migrations() -> Result<(), AnyError> {
-    let container = Postgres::default().start().await;
-    let host_port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let host_port = container.get_host_port_ipv4(5432).await?;
     let database_url = format!(
         "postgres://postgres:postgres@127.0.0.1:{}/postgres",
         host_port
@@ -298,8 +298,8 @@ fn test_default_config_structure() -> Result<(), AnyError> {
 #[tokio::test]
 async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
     // Start a fresh PostgreSQL container
-    let container = Postgres::default().start().await;
-    let host_port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let host_port = container.get_host_port_ipv4(5432).await?;
 
     // Build the connection string from the container
     let database_url = format!(
@@ -349,8 +349,8 @@ async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
 #[tokio::test]
 async fn test_concurrent_migrators_on_same_database() -> Result<(), AnyError> {
     // Start a fresh PostgreSQL container
-    let container = Postgres::default().start().await;
-    let host_port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let host_port = container.get_host_port_ipv4(5432).await?;
 
     // Build the connection string from the container
     let database_url = format!(

@@ -79,6 +79,13 @@ docker build -t chronos-rust-backend:latest .
 - `GET /q/health/ready` - Readiness probe (returns 200 if service is ready to handle traffic)
 - `GET /health` - Alternative health check endpoint
 
+### Appointments
+
+- `GET /api/v2/appointments/:id/participation/status` - Current user's participation status. Requires a valid bearer token. Always `200 OK`; any authenticated user may call it.
+  - Response body: `{"status": "PENDING" | "APPROVED" | "REJECTED"}`
+  - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-14-016](../kb/adr/ADR-2026-10-14-016-participation-status-endpoint.md)).
+  - Returns only the caller's own status; there is no way to query another user's status.
+
 ## Authentication
 
 The backend uses **Keycloak OIDC** for authentication. JWT tokens are validated against Keycloak's public key set. Protected routes require a valid `Authorization: Bearer <token>` header.
@@ -104,7 +111,11 @@ async fn get_user_info(principal: PrincipalContext) -> Json<UserInfo> {
 | Variable | Description | Default |
 |---|---|---|
 | `RUST_LOG` | Logging level | `info` |
-| `KEYCLOAK_URL` | Keycloak realm URL | `http://localhost:8080/realms/chronos` |
+| `KEYCLOAK_URL` | Keycloak realm URL (token validation) | `http://localhost:8080/realms/chronos` |
+| `AUTH_SERVER_BASE_URL` | Keycloak base URL for the admin API and the account-action links (required) | – |
+| `AUTH_SERVER_REALM` | Realm of the admin client | `master` |
+| `AUTH_SERVER_CLIENT_ID` | Confidential client (client-credentials grant, required) | – |
+| `AUTH_SERVER_CLIENT_SECRET` | Secret of that client (required) | – |
 
 ## Development Workflow
 

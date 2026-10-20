@@ -61,6 +61,19 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Set up Rust
@@ -72,10 +85,25 @@ jobs:
       - name: Run integration tests
         run: cargo test --test '*' --locked -- --include-ignored
         env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432
           TESTCONTAINERS_RYUK_DISABLED: "true"
 
   coverage:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Set up Rust
@@ -89,6 +117,8 @@ jobs:
       - name: Generate coverage (unit + integration tests)
         run: cargo llvm-cov --all-targets --all-features --workspace --locked --output-path lcov.info -- --include-ignored
         env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432
           TESTCONTAINERS_RYUK_DISABLED: "true"
       - name: Report coverage summary
         run: |
@@ -101,14 +131,14 @@ jobs:
           path: rust-backend/lcov.info
       - name: Enforce coverage threshold
         run: |
-          # Extract line coverage and enforce ratchet (rounded down to nearest 5, min 40%)
-          set +e
-          COVERAGE=$(cargo llvm-cov report --output-path /dev/null 2>&1 | grep -oP 'Lines\s+\K[0-9.]+(?=%)' | head -1)
-          set -e
-          if [ -z "$COVERAGE" ]; then COVERAGE=0; fi
+          # Read line coverage from the JSON totals. `--output-path` would send the report to a file,
+          # so the JSON must go to stdout. A parse failure aborts instead of reading as 0%.
+          COVERAGE=$(cargo llvm-cov report --json --summary-only | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
+          if [ -z "$COVERAGE" ]; then echo "::error::Could not read line coverage from llvm-cov report" >&2; exit 1; fi
+          # Ratchet: threshold is the coverage rounded down to the nearest 5, min 40%
           THRESHOLD=$(awk "BEGIN {t = int($COVERAGE / 5) * 5; print (t < 40 ? 40 : t)}")
           echo "Coverage: $COVERAGE%, Threshold: $THRESHOLD%" | tee -a $GITHUB_STEP_SUMMARY
-          (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )) || exit 1
+          awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}" || exit 1
 
   deny:
     runs-on: ubuntu-latest
@@ -226,6 +256,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust-backend
+      - name: Install musl toolchain for vendored OpenSSL
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends musl-tools perl make
       - name: Build release binary
         run: cargo build --release --target x86_64-unknown-linux-musl --locked
       - name: Log in to GHCR
@@ -249,11 +281,23 @@ jobs:
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:develop
           docker push ${{needs.calculate-version.outputs.image}}:develop
 
+  # Opt-in only. The Rust backend must not be deployed before API parity with the Java backend is
+  # proven (#137). The job is skipped (not failed) unless the repository variable
+  # RUST_BACKEND_DEPLOY is set to 'true' (Settings > Secrets and variables > Actions > Variables).
+  # Note: deployment-ci.yml has no `rust-backend` branch in "Override version", so a dispatch
+  # re-runs `helm upgrade` with the unchanged values file and does NOT roll out the Rust image.
+  # See kb/adr/ADR-2026-10-20-018-rust-deploy-opt-in.md.
   deploy:
     needs:
       - build
       - calculate-version
+    if: vars.RUST_BACKEND_DEPLOY == 'true'
     runs-on: ubuntu-latest
+    # Only curl runs here and there is no checkout, so the workflow default
+    # `rust-backend` directory does not exist on the runner.
+    defaults:
+      run:
+        working-directory: .
     concurrency:
       group: deploy-${{ github.ref }}
       cancel-in-progress: false

@@ -3,27 +3,85 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::str::FromStr;
-use uuid::Uuid;
 
 /// Participation status for an appointment
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "TEXT")]
+#[sqlx(rename_all = "UPPERCASE")]
 pub enum ParticipationStatus {
     Pending,
     Approved,
     Rejected,
 }
 
+impl std::fmt::Display for ParticipationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParticipationStatus::Pending => write!(f, "PENDING"),
+            ParticipationStatus::Approved => write!(f, "APPROVED"),
+            ParticipationStatus::Rejected => write!(f, "REJECTED"),
+        }
+    }
+}
+
 /// Status of an appointment
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+///
+/// Stored as `SMALLINT` holding the ordinal of the Java enum (`appointment.status`, ADR-2026-10-12-014),
+/// serialized as the enum name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "TEXT")]
-#[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AppointmentStatus {
     Planned,
     Cancelled,
     Deleted,
     NotEnoughAttendees,
+}
+
+impl AppointmentStatus {
+    /// Ordinal as stored in `appointment.status` (same order as the Java enum)
+    pub fn ordinal(self) -> i16 {
+        match self {
+            AppointmentStatus::Planned => 0,
+            AppointmentStatus::Cancelled => 1,
+            AppointmentStatus::Deleted => 2,
+            AppointmentStatus::NotEnoughAttendees => 3,
+        }
+    }
+
+    /// Inverse of [`AppointmentStatus::ordinal`]
+    pub fn from_ordinal(ordinal: i16) -> Option<Self> {
+        match ordinal {
+            0 => Some(AppointmentStatus::Planned),
+            1 => Some(AppointmentStatus::Cancelled),
+            2 => Some(AppointmentStatus::Deleted),
+            3 => Some(AppointmentStatus::NotEnoughAttendees),
+            _ => None,
+        }
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for AppointmentStatus {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <i16 as sqlx::Type<sqlx::Postgres>>::type_info()
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for AppointmentStatus {
+    fn encode_by_ref(
+        &self,
+        buf: &mut sqlx::postgres::PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        <i16 as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.ordinal(), buf)
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for AppointmentStatus {
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let ordinal = <i16 as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+        AppointmentStatus::from_ordinal(ordinal)
+            .ok_or_else(|| format!("Unknown appointment status ordinal: {}", ordinal).into())
+    }
 }
 
 impl FromStr for AppointmentStatus {
@@ -54,7 +112,7 @@ impl std::fmt::Display for AppointmentStatus {
 /// Role of a user in an appointment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "UPPERCASE")]
-#[sqlx(type_name = "TEXT")]
+#[sqlx(type_name = "VARCHAR")]
 #[sqlx(rename_all = "UPPERCASE")]
 pub enum UserRole {
     None,
@@ -92,20 +150,20 @@ impl std::fmt::Display for UserRole {
 }
 
 /// Appointment entity - the core domain model for scheduling
-/// Maps directly to the appointments table in the database
+/// Maps to the `appointment` table (see `APPOINTMENT_COLUMNS` in the repository).
+/// There is no creator column: the creator is the participant with role RESPONSIBLE.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Appointment {
-    pub id: Uuid,
-    pub title: String,
+    pub id: i64,
+    pub name: String,
     pub description: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub location: Option<String>,
-    pub creator_id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub venue: Option<String>,
     pub status: AppointmentStatus,
     pub minimal_attendees: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub last_update: Option<DateTime<Utc>>,
 }
 
 /// Participation of a user in an appointment
@@ -119,8 +177,8 @@ pub struct AppointmentParticipation {
     pub group_participation_id: Option<i64>,
 }
 
-/// User profile cached from Keycloak
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// User profile cached from Keycloak (table `user_profiles`; there is no users table)
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct UserProfile {
     pub oidc_id: String,
     pub first_name: Option<String>,
@@ -183,7 +241,7 @@ pub struct UpdateAppointmentRequest {
 /// Response with appointment details (Java-compatible format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentResponse {
-    pub id: Uuid,
+    pub id: i64,
     pub name: String,
     pub description: Option<String>,
     pub start: String,
@@ -203,11 +261,11 @@ impl From<Appointment> for AppointmentResponse {
     fn from(appointment: Appointment) -> Self {
         AppointmentResponse {
             id: appointment.id,
-            name: appointment.title,
+            name: appointment.name,
             description: appointment.description,
             start: appointment.start_time.to_rfc3339(),
             end: appointment.end_time.to_rfc3339(),
-            venue: appointment.location,
+            venue: appointment.venue,
             status: appointment.status,
             minimal_attendees: appointment.minimal_attendees,
             participants: None,
@@ -279,6 +337,13 @@ pub struct UpdateParticipationStatusRequest {
     pub status: ParticipationStatus,
 }
 
+/// Response for GET /api/v2/appointments/:id/participation/status
+/// (matches Java AppointmentDto with only `status` set)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParticipationStatusResponse {
+    pub status: ParticipationStatus,
+}
+
 /// Request to create a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateGroupRequest {
@@ -297,6 +362,12 @@ pub struct GroupResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateMessageRequest {
     pub body: String,
+}
+
+/// Request to add a participant to an appointment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddParticipantRequest {
+    pub user_role: UserRole,
 }
 
 /// Response with message details
@@ -441,55 +512,67 @@ mod tests {
 
     // ===== Entity Struct Tests =====
 
-    #[test]
-    fn test_appointment_serialization() {
+    fn sample_appointment(id: i64) -> Appointment {
         let now = Utc::now();
-        let creator_id = Uuid::new_v4();
-        let appt_id = Uuid::new_v4();
-        let appointment = Appointment {
-            id: appt_id,
-            title: "Team Meeting".to_string(),
+        Appointment {
+            id,
+            name: "Team Meeting".to_string(),
             description: Some("Quarterly planning".to_string()),
-            location: Some("Conference Room A".to_string()),
+            venue: Some("Conference Room A".to_string()),
             start_time: now,
             end_time: now + chrono::Duration::hours(1),
-            creator_id,
-            created_at: now,
-            updated_at: now,
             status: AppointmentStatus::Planned,
             minimal_attendees: Some(5),
-        };
+            created_at: Some(now),
+            last_update: Some(now),
+        }
+    }
 
-        let json = serde_json::to_string(&appointment).unwrap();
-        assert!(json.contains("\"title\":\"Team Meeting\""));
-        assert!(json.contains("\"location\":\"Conference Room A\""));
+    #[test]
+    fn test_appointment_serialization() {
+        let json = serde_json::to_string(&sample_appointment(12)).unwrap();
+        assert!(json.contains("\"id\":12"));
+        assert!(json.contains("\"name\":\"Team Meeting\""));
+        assert!(json.contains("\"venue\":\"Conference Room A\""));
         assert!(json.contains("\"description\":\"Quarterly planning\""));
         assert!(json.contains("\"status\":\"PLANNED\""));
     }
 
     #[test]
     fn test_appointment_response_from_appointment() {
-        let now = Utc::now();
-        let creator_id = Uuid::new_v4();
-        let appt_id = Uuid::new_v4();
-        let appointment = Appointment {
-            id: appt_id,
-            title: "Team Meeting".to_string(),
-            description: Some("Quarterly planning".to_string()),
-            location: Some("Conference Room A".to_string()),
-            start_time: now,
-            end_time: now + chrono::Duration::hours(1),
-            creator_id,
-            created_at: now,
-            updated_at: now,
-            status: AppointmentStatus::Planned,
-            minimal_attendees: Some(5),
-        };
-
-        let response: AppointmentResponse = appointment.into();
-        assert_eq!(response.id, appt_id);
+        let response: AppointmentResponse = sample_appointment(12).into();
+        assert_eq!(response.id, 12);
         assert_eq!(response.name, "Team Meeting");
+        assert_eq!(response.venue.as_deref(), Some("Conference Room A"));
         assert_eq!(response.status, AppointmentStatus::Planned);
+    }
+
+    #[test]
+    fn test_appointment_response_id_is_a_json_number() {
+        let response: AppointmentResponse = sample_appointment(12).into();
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["id"], serde_json::json!(12));
+    }
+
+    #[test]
+    fn test_appointment_status_ordinals_match_java_enum() {
+        // Java: PLANNED, CANCELLED, DELETED, NOT_ENOUGH_ATTENDEES (stored by ordinal)
+        assert_eq!(AppointmentStatus::Planned.ordinal(), 0);
+        assert_eq!(AppointmentStatus::Cancelled.ordinal(), 1);
+        assert_eq!(AppointmentStatus::Deleted.ordinal(), 2);
+        assert_eq!(AppointmentStatus::NotEnoughAttendees.ordinal(), 3);
+        for status in [
+            AppointmentStatus::Planned,
+            AppointmentStatus::Cancelled,
+            AppointmentStatus::Deleted,
+            AppointmentStatus::NotEnoughAttendees,
+        ] {
+            assert_eq!(
+                AppointmentStatus::from_ordinal(status.ordinal()),
+                Some(status)
+            );
+        }
+        assert_eq!(AppointmentStatus::from_ordinal(4), None);
     }
 
     #[test]
@@ -613,9 +696,8 @@ mod tests {
 
     #[test]
     fn test_appointment_response_serialization() {
-        let appt_id = Uuid::new_v4();
         let response = AppointmentResponse {
-            id: appt_id,
+            id: 12,
             name: "Team Meeting".to_string(),
             description: Some("Quarterly planning".to_string()),
             venue: Some("Conference Room A".to_string()),

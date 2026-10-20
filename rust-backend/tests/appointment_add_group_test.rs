@@ -9,7 +9,6 @@ mod appointment_add_group_tests {
     use chronos_date_api::test_utils::{TestDb, TestFixtures};
     use std::str::FromStr;
     use std::sync::Arc;
-    use uuid::Uuid;
 
     /// Helper to count events of a specific type in the events table
     async fn count_events(pool: &sqlx::PgPool, event_type: &str) -> i64 {
@@ -23,9 +22,9 @@ mod appointment_add_group_tests {
     /// Helper to add a group to appointment using the service
     async fn add_group_to_appointment(
         service: &AppointmentService,
-        actor_id: Uuid,
-        appointment_id: Uuid,
-        group_id: Uuid,
+        actor_id: &str,
+        appointment_id: i64,
+        group_id: i64,
         role: &str,
     ) -> Result<(), String> {
         let user_role = UserRole::from_str(role).map_err(|e| format!("Invalid role: {}", e))?;
@@ -50,12 +49,12 @@ mod appointment_add_group_tests {
             .expect("Failed to create creator");
 
         let group_id = fixtures
-            .create_group(creator_id, "Test Group")
+            .create_group(&creator_id, "Test Group")
             .await
             .expect("Failed to create group");
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &Default::default())
+            .create_appointment(&creator_id, &Default::default())
             .await
             .expect("Failed to create appointment");
 
@@ -70,7 +69,7 @@ mod appointment_add_group_tests {
 
         // Action: Add group to appointment
         let result =
-            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+            add_group_to_appointment(&service, &creator_id, appointment_id, group_id, "ATTENDANT")
                 .await;
         assert!(
             result.is_ok(),
@@ -80,7 +79,7 @@ mod appointment_add_group_tests {
 
         // Verify: Appointment group participation was created
         let participation_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM appointment_groups WHERE appointment_id = $1 AND group_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM appointment_group_participations WHERE appointment_id = $1 AND group_id = $2)"
         )
         .bind(appointment_id)
         .bind(group_id)
@@ -118,12 +117,12 @@ mod appointment_add_group_tests {
             .expect("Failed to create other user");
 
         let group_id = fixtures
-            .create_group(creator_id, "Test Group Auth")
+            .create_group(&creator_id, "Test Group Auth")
             .await
             .expect("Failed to create group");
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &Default::default())
+            .create_appointment(&creator_id, &Default::default())
             .await
             .expect("Failed to create appointment");
 
@@ -135,7 +134,7 @@ mod appointment_add_group_tests {
         // Action: Try to add group as non-creator
         let result = add_group_to_appointment(
             &service,
-            other_user_id,
+            &&other_user_id,
             appointment_id,
             group_id,
             "ATTENDANT",
@@ -147,7 +146,7 @@ mod appointment_add_group_tests {
 
         // Verify: No participation was created
         let participation_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM appointment_groups WHERE appointment_id = $1 AND group_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM appointment_group_participations WHERE appointment_id = $1 AND group_id = $2)"
         )
         .bind(appointment_id)
         .bind(group_id)
@@ -168,9 +167,9 @@ mod appointment_add_group_tests {
         );
     }
 
-    /// NEGATIVE: Cannot add a deleted group
+    /// NEGATIVE: Cannot add a group that does not exist
     #[tokio::test]
-    async fn test_add_deleted_group_fails() {
+    async fn test_add_nonexistent_group_fails() {
         let db = TestDb::new()
             .await
             .expect("Failed to initialize test database");
@@ -178,43 +177,36 @@ mod appointment_add_group_tests {
 
         // Setup: Create creator, group, and appointment
         let creator_id = fixtures
-            .create_user("creator_deleted_group", "creator@example.com")
+            .create_user("creator_missing_group", "creator@example.com")
             .await
             .expect("Failed to create creator");
 
-        let group_id = fixtures
-            .create_group(creator_id, "Deleted Group")
-            .await
-            .expect("Failed to create group");
+        let group_id: i64 = 999_999_999;
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &Default::default())
+            .create_appointment(&creator_id, &Default::default())
             .await
             .expect("Failed to create appointment");
-
-        // Soft-delete the group
-        sqlx::query("UPDATE groups SET deleted_at = NOW() WHERE id = $1")
-            .bind(group_id)
-            .execute(db.pool())
-            .await
-            .expect("Failed to delete group");
 
         // Create service
         let repo = AppointmentRepository::new(db.pool().clone());
         let event_bus = Arc::new(PostgresEventBus::new(db.pool().clone()));
         let service = AppointmentService::with_events(repo, event_bus);
 
-        // Action: Try to add deleted group
+        // Action: Try to add nonexistent group
         let result =
-            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+            add_group_to_appointment(&service, &creator_id, appointment_id, group_id, "ATTENDANT")
                 .await;
 
         // Verify: Should fail
-        assert!(result.is_err(), "Should not allow adding deleted group");
+        assert!(
+            result.is_err(),
+            "Should not allow adding a nonexistent group"
+        );
 
         // Verify: No participation was created
         let participation_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM appointment_groups WHERE appointment_id = $1 AND group_id = $2)"
+            "SELECT EXISTS(SELECT 1 FROM appointment_group_participations WHERE appointment_id = $1 AND group_id = $2)"
         )
         .bind(appointment_id)
         .bind(group_id)
@@ -224,7 +216,7 @@ mod appointment_add_group_tests {
 
         assert!(
             !participation_exists,
-            "No group participation should be created for deleted group"
+            "No group participation should be created for nonexistent group"
         );
     }
 
@@ -243,12 +235,12 @@ mod appointment_add_group_tests {
             .expect("Failed to create creator");
 
         let group_id = fixtures
-            .create_group(creator_id, "Duplicate Test Group")
+            .create_group(&creator_id, "Duplicate Test Group")
             .await
             .expect("Failed to create group");
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &Default::default())
+            .create_appointment(&creator_id, &Default::default())
             .await
             .expect("Failed to create appointment");
 
@@ -259,13 +251,13 @@ mod appointment_add_group_tests {
 
         // Action: Add group first time (should succeed)
         let result1 =
-            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+            add_group_to_appointment(&service, &creator_id, appointment_id, group_id, "ATTENDANT")
                 .await;
         assert!(result1.is_ok(), "First add should succeed");
 
         // Action: Try to add same group again
         let result2 =
-            add_group_to_appointment(&service, creator_id, appointment_id, group_id, "ATTENDANT")
+            add_group_to_appointment(&service, &creator_id, appointment_id, group_id, "ATTENDANT")
                 .await;
 
         // Verify: Should fail with duplicate error

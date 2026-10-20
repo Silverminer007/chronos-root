@@ -18,7 +18,11 @@ pub struct ErrorResponse {
     /// HTTP status text (e.g., "Not Found", "Forbidden")
     pub error: String,
     /// Machine-readable error code (e.g., "RESOURCE_NOT_FOUND", "FORBIDDEN")
-    #[serde(rename = "errorCode")]
+    #[serde(
+        rename = "errorCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub error_code: String,
     /// Human-readable error message in German
     pub message: String,

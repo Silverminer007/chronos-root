@@ -3,25 +3,50 @@ use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use std::sync::Arc;
-use uuid::Uuid;
 
 /// Request-scoped principal context holding the current user's OIDC ID
 /// Equivalent to the Java backend's PrincipalContext
 #[derive(Debug, Clone)]
 pub struct PrincipalContext {
-    /// The user's OIDC subject ID as a UUID
-    pub user_id: Uuid,
+    /// The user's OIDC subject (`sub` claim), e.g. a Keycloak user id
+    pub user_id: String,
+    /// Profile claims of the access token (`given_name`, `family_name`, `email`, `picture`)
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: Option<String>,
+    pub profile_picture_url: Option<String>,
 }
 
 impl PrincipalContext {
     /// Create a new principal context with the given user ID
-    pub fn new(user_id: Uuid) -> Self {
-        Self { user_id }
+    pub fn new(user_id: impl Into<String>) -> Self {
+        Self {
+            user_id: user_id.into(),
+            first_name: None,
+            last_name: None,
+            email: None,
+            profile_picture_url: None,
+        }
+    }
+
+    /// Attach the profile claims of the access token
+    pub fn with_profile(
+        mut self,
+        first_name: Option<String>,
+        last_name: Option<String>,
+        email: Option<String>,
+        profile_picture_url: Option<String>,
+    ) -> Self {
+        self.first_name = first_name;
+        self.last_name = last_name;
+        self.email = email;
+        self.profile_picture_url = profile_picture_url;
+        self
     }
 
     /// Get the current user's ID
-    pub fn user_id(&self) -> Uuid {
-        self.user_id
+    pub fn user_id(&self) -> &str {
+        &self.user_id
     }
 }
 
@@ -66,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_principal_context_creation() {
-        let user_id = Uuid::parse_str("12345678-1234-1234-1234-123456789012").unwrap();
+        let user_id = "12345678-1234-1234-1234-123456789012";
         let principal = PrincipalContext::new(user_id);
 
         assert_eq!(principal.user_id(), user_id);
@@ -75,10 +100,31 @@ mod tests {
 
     #[test]
     fn test_principal_context_clone() {
-        let user_id = Uuid::parse_str("87654321-4321-4321-4321-210987654321").unwrap();
-        let principal = PrincipalContext::new(user_id);
+        let principal = PrincipalContext::new("87654321-4321-4321-4321-210987654321");
         let cloned = principal.clone();
 
         assert_eq!(cloned.user_id(), principal.user_id());
+    }
+
+    #[test]
+    fn test_principal_context_carries_profile_claims() {
+        let principal = PrincipalContext::new("sub-1").with_profile(
+            Some("Max".to_string()),
+            Some("Muster".to_string()),
+            Some("max@example.org".to_string()),
+            None,
+        );
+
+        assert_eq!(principal.first_name.as_deref(), Some("Max"));
+        assert_eq!(principal.last_name.as_deref(), Some("Muster"));
+        assert_eq!(principal.email.as_deref(), Some("max@example.org"));
+        assert!(principal.profile_picture_url.is_none());
+    }
+
+    #[test]
+    fn test_principal_context_accepts_non_uuid_subjects() {
+        // OIDC subjects are opaque strings (ADR-2026-10-12-014)
+        let principal = PrincipalContext::new("keycloak|user-42");
+        assert_eq!(principal.user_id(), "keycloak|user-42");
     }
 }

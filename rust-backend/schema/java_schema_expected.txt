@@ -1,0 +1,146 @@
+column appointment.createdat #2 timestamp(6) with time zone
+column appointment.description #3 character varying(255)
+column appointment.end_time #4 timestamp(6) with time zone
+column appointment.id #1 bigint NOT NULL
+column appointment.lastupdate #5 timestamp(6) with time zone
+column appointment.minimalattendees #6 integer
+column appointment.name #7 character varying(255)
+column appointment.start_time #8 timestamp(6) with time zone
+column appointment.status #9 smallint
+column appointment.venue #10 character varying(255)
+column appointment_group_participations.appointment_id #3 bigint NOT NULL
+column appointment_group_participations.group_id #4 bigint NOT NULL
+column appointment_group_participations.id #1 bigint NOT NULL
+column appointment_group_participations.role #2 character varying(255) NOT NULL
+column appointment_participation.appointment_id #5 bigint NOT NULL
+column appointment_participation.group_participation_id #2 bigint
+column appointment_participation.id #1 bigint NOT NULL
+column appointment_participation.role #3 character varying(255) NOT NULL
+column appointment_participation.status #4 character varying(255) NOT NULL
+column appointment_participation.user_oidcid #6 character varying(255) NOT NULL
+column friendship_requests.addressee_oidcid #6 character varying(255) NOT NULL
+column friendship_requests.created_at #2 timestamp(6) with time zone NOT NULL
+column friendship_requests.id #1 bigint NOT NULL
+column friendship_requests.requester_oidcid #5 character varying(255) NOT NULL
+column friendship_requests.responded_at #3 timestamp(6) with time zone
+column friendship_requests.status #4 character varying(255) NOT NULL
+column group_member.group_id #2 bigint NOT NULL
+column group_member.id #1 bigint NOT NULL
+column group_member.user_oidcid #3 character varying(255) NOT NULL
+column groups.groupname #2 character varying(255)
+column groups.id #1 bigint NOT NULL DEFAULT nextval('groups_id_seq'::regclass)
+column groups.owner_oidcid #3 character varying(255) NOT NULL
+column message.appointment_id #4 bigint
+column message.body #3 character varying(255)
+column message.id #1 bigint NOT NULL DEFAULT nextval('message_id_seq'::regclass)
+column message.sender_oidcid #5 character varying(255) NOT NULL
+column message.timestamp #2 timestamp(6) with time zone
+column push_notification_log.created_at #8 timestamp(6) with time zone NOT NULL DEFAULT now()
+column push_notification_log.endpoint #4 character varying(2048) NOT NULL
+column push_notification_log.error_message #7 character varying(1000)
+column push_notification_log.http_status_code #5 integer
+column push_notification_log.id #1 bigint NOT NULL DEFAULT nextval('push_notification_log_id_seq'::regclass)
+column push_notification_log.notification_type #2 character varying(100)
+column push_notification_log.payload #3 text NOT NULL
+column push_notification_log.success #6 boolean NOT NULL
+column push_notification_log.user_oidcid #9 character varying(255) NOT NULL
+column pushsubscription.auth #2 character varying(255) NOT NULL
+column pushsubscription.endpoint #3 character varying(255) NOT NULL
+column pushsubscription.id #1 bigint NOT NULL DEFAULT nextval('pushsubscription_id_seq'::regclass)
+column pushsubscription.p256dh #4 character varying(255) NOT NULL
+column pushsubscription.user_oidcid #5 character varying(255) NOT NULL
+column settings.appointment_cancelled #2 character varying(255) NOT NULL DEFAULT 'ALL'::character varying
+column settings.appointment_message #3 character varying(255) NOT NULL DEFAULT 'ATTENDANT'::character varying
+column settings.appointment_moved #4 character varying(255) NOT NULL DEFAULT 'ALL'::character varying
+column settings.appointment_participant_added #5 character varying(255) NOT NULL DEFAULT 'RESPONSIBLE'::character varying
+column settings.appointment_participation_invalid #6 character varying(255) NOT NULL DEFAULT 'ATTENDANT'::character varying
+column settings.appointment_participation_status_changed #7 character varying(255) NOT NULL DEFAULT 'RESPONSIBLE'::character varying
+column settings.appointment_participation_status_pending #8 character varying(255) NOT NULL DEFAULT 'ATTENDANT'::character varying
+column settings.appointment_reminder #9 character varying(255) NOT NULL DEFAULT 'ALL'::character varying
+column settings.group_member_added #10 character varying(255) NOT NULL DEFAULT 'DISABLED'::character varying
+column settings.id #1 bigint NOT NULL DEFAULT nextval('settings_id_seq'::regclass)
+column settings.user_oidcid #11 character varying(255) NOT NULL
+column user_profiles.email #4 character varying(255)
+column user_profiles.first_name #2 character varying(255)
+column user_profiles.last_name #3 character varying(255)
+column user_profiles.oidc_id #1 character varying(255) NOT NULL
+column user_profiles.profile_picture_url #5 character varying(512)
+column user_profiles.updated_at #6 timestamp with time zone NOT NULL DEFAULT now()
+constraint appointment.appointment_pkey PRIMARY KEY (id)
+constraint appointment_group_participations.appointment_group_participations_pkey PRIMARY KEY (id)
+constraint appointment_group_participations.fk_appointment_group_appointment FOREIGN KEY (appointment_id) REFERENCES appointment(id)
+constraint appointment_group_participations.fk_appointment_group_group FOREIGN KEY (group_id) REFERENCES groups(id)
+constraint appointment_participation.appointment_participation_pkey PRIMARY KEY (id)
+constraint appointment_participation.fk_appointment_participation_appointment FOREIGN KEY (appointment_id) REFERENCES appointment(id)
+constraint appointment_participation.uk_appointment_participation_user UNIQUE (appointment_id, user_oidcid)
+constraint friendship_requests.friendship_requests_pkey PRIMARY KEY (id)
+constraint group_member.fk_group_member_group FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+constraint group_member.group_member_pkey PRIMARY KEY (id)
+constraint groups.groups_pkey PRIMARY KEY (id)
+constraint message.fk_message_appointment FOREIGN KEY (appointment_id) REFERENCES appointment(id)
+constraint message.message_pkey PRIMARY KEY (id)
+constraint push_notification_log.push_notification_log_pkey PRIMARY KEY (id)
+constraint pushsubscription.pushsubscription_pkey PRIMARY KEY (id)
+constraint settings.settings_pkey PRIMARY KEY (id)
+constraint user_profiles.user_profiles_pkey PRIMARY KEY (oidc_id)
+index appointment_group_participations_pkey CREATE UNIQUE INDEX appointment_group_participations_pkey ON public.appointment_group_participations USING btree (id)
+index appointment_participation_pkey CREATE UNIQUE INDEX appointment_participation_pkey ON public.appointment_participation USING btree (id)
+index appointment_pkey CREATE UNIQUE INDEX appointment_pkey ON public.appointment USING btree (id)
+index friendship_requests_pkey CREATE UNIQUE INDEX friendship_requests_pkey ON public.friendship_requests USING btree (id)
+index group_member_pkey CREATE UNIQUE INDEX group_member_pkey ON public.group_member USING btree (id)
+index groups_pkey CREATE UNIQUE INDEX groups_pkey ON public.groups USING btree (id)
+index idx_appointment_end_time CREATE INDEX idx_appointment_end_time ON public.appointment USING btree (end_time)
+index idx_appointment_group_participations_appointment CREATE INDEX idx_appointment_group_participations_appointment ON public.appointment_group_participations USING btree (appointment_id)
+index idx_appointment_group_participations_group CREATE INDEX idx_appointment_group_participations_group ON public.appointment_group_participations USING btree (group_id)
+index idx_appointment_participation_appointment CREATE INDEX idx_appointment_participation_appointment ON public.appointment_participation USING btree (appointment_id)
+index idx_appointment_start_time CREATE INDEX idx_appointment_start_time ON public.appointment USING btree (start_time)
+index idx_appointment_status CREATE INDEX idx_appointment_status ON public.appointment USING btree (status)
+index idx_friendship_addressee CREATE INDEX idx_friendship_addressee ON public.friendship_requests USING btree (addressee_oidcid)
+index idx_friendship_requester CREATE INDEX idx_friendship_requester ON public.friendship_requests USING btree (requester_oidcid)
+index idx_friendship_status CREATE INDEX idx_friendship_status ON public.friendship_requests USING btree (status)
+index idx_friendship_status_requester_addressee CREATE INDEX idx_friendship_status_requester_addressee ON public.friendship_requests USING btree (status, requester_oidcid, addressee_oidcid)
+index idx_group_member_group CREATE INDEX idx_group_member_group ON public.group_member USING btree (group_id)
+index idx_group_member_user CREATE INDEX idx_group_member_user ON public.group_member USING btree (user_oidcid)
+index idx_groups_owner CREATE INDEX idx_groups_owner ON public.groups USING btree (owner_oidcid)
+index idx_message_appointment CREATE INDEX idx_message_appointment ON public.message USING btree (appointment_id)
+index idx_message_sender CREATE INDEX idx_message_sender ON public.message USING btree (sender_oidcid)
+index idx_push_notification_log_created_at CREATE INDEX idx_push_notification_log_created_at ON public.push_notification_log USING btree (created_at DESC)
+index idx_push_notification_log_success CREATE INDEX idx_push_notification_log_success ON public.push_notification_log USING btree (success) WHERE (success = false)
+index idx_push_notification_log_user_oidcid CREATE INDEX idx_push_notification_log_user_oidcid ON public.push_notification_log USING btree (user_oidcid)
+index idx_pushsubscription_user CREATE INDEX idx_pushsubscription_user ON public.pushsubscription USING btree (user_oidcid)
+index idx_settings_user_oidcid CREATE UNIQUE INDEX idx_settings_user_oidcid ON public.settings USING btree (user_oidcid)
+index idx_user_profiles_email CREATE INDEX idx_user_profiles_email ON public.user_profiles USING btree (lower((email)::text))
+index idx_user_profiles_name CREATE INDEX idx_user_profiles_name ON public.user_profiles USING btree (lower((((first_name)::text || ' '::text) || (last_name)::text)))
+index message_pkey CREATE UNIQUE INDEX message_pkey ON public.message USING btree (id)
+index push_notification_log_pkey CREATE UNIQUE INDEX push_notification_log_pkey ON public.push_notification_log USING btree (id)
+index pushsubscription_pkey CREATE UNIQUE INDEX pushsubscription_pkey ON public.pushsubscription USING btree (id)
+index settings_pkey CREATE UNIQUE INDEX settings_pkey ON public.settings USING btree (id)
+index uk_appointment_participation_user CREATE UNIQUE INDEX uk_appointment_participation_user ON public.appointment_participation USING btree (appointment_id, user_oidcid)
+index user_profiles_pkey CREATE UNIQUE INDEX user_profiles_pkey ON public.user_profiles USING btree (oidc_id)
+sequence appointment_group_participations_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence appointment_participation_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence appointment_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence friendship_requests_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence group_member_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence groups_id_seq bigint start=1 increment=1 min=1 max=9223372036854775807 cache=1
+sequence groups_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence message_id_seq bigint start=1 increment=1 min=1 max=9223372036854775807 cache=1
+sequence message_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence push_notification_log_id_seq bigint start=1 increment=1 min=1 max=9223372036854775807 cache=1
+sequence push_notification_log_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence pushsubscription_id_seq bigint start=1 increment=1 min=1 max=9223372036854775807 cache=1
+sequence pushsubscription_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence settings_id_seq bigint start=1 increment=1 min=1 max=9223372036854775807 cache=1
+sequence settings_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+sequence users_seq bigint start=1 increment=50 min=1 max=9223372036854775807 cache=1
+table appointment
+table appointment_group_participations
+table appointment_participation
+table friendship_requests
+table group_member
+table groups
+table message
+table push_notification_log
+table pushsubscription
+table settings
+table user_profiles
