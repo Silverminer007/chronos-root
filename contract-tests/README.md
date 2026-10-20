@@ -21,6 +21,9 @@ export CONTRACT_OTHER_USER_ID=<oidc id of a second existing user>            # d
 python3 -m parity
 ```
 
+`CONTRACT_REDIRECT_URI` (option `--redirect-uri`, default `https://chronos.example.org/`) is the redirect URI sent to
+`GET /api/v2/user/link/{provider}`; it only needs to be accepted by both backends.
+
 Instead of tokens, set `CONTRACT_TOKEN_URL`, `CONTRACT_CLIENT_ID`, optionally `CONTRACT_CLIENT_SECRET`
 and `CONTRACT_USER`/`CONTRACT_PASSWORD` (and `CONTRACT_ADMIN_USER`/`CONTRACT_ADMIN_PASSWORD`) to fetch them.
 
@@ -46,6 +49,16 @@ and Rust routes without a Java counterpart; exit 1 if either is non-empty.
 
 `allowlist.json`: `entries` (`step`, `kind`, `path` as glob patterns, and a mandatory `reason`) and
 `rust_only` (`route`, `reason`) for deliberate Rust-only routes.
+
+Allowlist `step` patterns are `fnmatch` globs on the step names in `parity/scenario.py` (the names are therefore part of
+the allowlist's API: rename a step and its entries together); `path` is a glob on the diff path.
+
+## Fixed constants and authentication
+
+The scenario uses fixed placeholders: `provider=google`, `unknown_provider=does-not-exist`,
+`missing_user=does-not-exist`, `missing_id=999999999`, so that "not found" steps hit the same missing resource on both
+backends. Steps with `ROLE_ANON` (health, metrics, unauthenticated request) are sent without an `Authorization` header;
+all other steps carry the user token (admin steps the admin token).
 
 ## Tests
 
