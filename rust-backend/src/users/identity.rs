@@ -70,6 +70,19 @@ impl UserIdentity {
     }
 }
 
+/// The caller as described by the claims of the access token (Java: the principal is a `UserIdentity`)
+impl From<&PrincipalContext> for UserIdentity {
+    fn from(principal: &PrincipalContext) -> Self {
+        Self {
+            oidc_id: principal.user_id.clone(),
+            first_name: principal.first_name.clone(),
+            last_name: principal.last_name.clone(),
+            email: principal.email.clone(),
+            profile_picture_url: principal.profile_picture_url.clone(),
+        }
+    }
+}
+
 impl From<UserProfile> for UserIdentity {
     fn from(profile: UserProfile) -> Self {
         Self {
@@ -211,6 +224,20 @@ mod tests {
         let deleted = UserIdentity::deleted("sub");
         assert!(deleted.is_deleted());
         assert_eq!(deleted.name(), "Gelöschter Benutzer");
+    }
+
+    #[test]
+    fn test_identity_from_principal_uses_token_claims() {
+        let principal = PrincipalContext::new("sub").with_profile(
+            Some("Erika".into()),
+            Some("Muster".into()),
+            None,
+            None,
+        );
+        let user = UserIdentity::from(&principal);
+        assert_eq!(user.oidc_id, "sub");
+        assert_eq!(user.name(), "Erika Muster");
+        assert!(UserIdentity::from(&PrincipalContext::new("sub")).is_deleted());
     }
 
     #[test]

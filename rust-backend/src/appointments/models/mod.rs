@@ -360,10 +360,12 @@ pub struct GroupResponse {
     pub group_name: String,
 }
 
-/// Request to send a message
+/// Request body of POST /api/v2/appointments/:id/messages (Java: `MessageDto`, only `body` is read).
+/// A missing body is stored as NULL and other fields are ignored, as in Java.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateMessageRequest {
-    pub body: String,
+    #[serde(default)]
+    pub body: Option<String>,
 }
 
 /// Request to add a participant to an appointment
@@ -770,7 +772,14 @@ mod tests {
         }"#;
 
         let request = serde_json::from_str::<CreateMessageRequest>(json).unwrap();
-        assert_eq!(request.body, "Hello everyone!");
+        assert_eq!(request.body.as_deref(), Some("Hello everyone!"));
+    }
+
+    #[test]
+    fn test_create_message_request_ignores_other_dto_fields_and_allows_missing_body() {
+        let request =
+            serde_json::from_str::<CreateMessageRequest>(r#"{"id": 5, "sender_id": "x"}"#).unwrap();
+        assert_eq!(request.body, None);
     }
 
     #[test]
