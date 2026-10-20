@@ -1,4 +1,5 @@
 # postgres-backup-cronjob.yaml
+{{- if .Values.postgresql.backup.enabled }}
 {{- $secretName := include "chronos.secretName" . -}}
 apiVersion: batch/v1
 kind: CronJob
@@ -193,3 +194,4 @@ spec:
     - port: metrics
       path: /metrics
       interval: 300s
+{{- end }}
