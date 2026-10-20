@@ -32,6 +32,17 @@ impl PushSubscriptionRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Whether any user has a subscription for this endpoint
+    pub async fn exists_by_endpoint(&self, endpoint: &str) -> Result<bool, RepositoryError> {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM pushsubscription WHERE endpoint = $1)",
+        )
+        .bind(endpoint)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Find subscription by endpoint
     pub async fn find_by_endpoint(
         &self,
@@ -45,6 +56,52 @@ impl PushSubscriptionRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Delete every subscription with this endpoint (Java: `PushSubscriptionService#deleteByEndpoint`)
+    pub async fn delete_by_endpoint(&self, endpoint: &str) -> Result<u64, RepositoryError> {
+        sqlx::query("DELETE FROM pushsubscription WHERE endpoint = $1")
+            .bind(endpoint)
+            .execute(&self.pool)
+            .await
+            .map(|result| result.rows_affected())
+            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Java: `PushSubscriptionService#saveSubscription`. An endpoint belongs to one browser, so a
+    /// known endpoint (of any user) is replaced. The advisory lock serializes concurrent saves of
+    /// the same endpoint.
+    pub async fn replace_for_user(
+        &self,
+        user_id: &str,
+        endpoint: &str,
+        p256dh: &str,
+        auth: &str,
+    ) -> Result<(), RepositoryError> {
+        let db_error = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+            .bind(format!("pushsubscription-endpoint:{endpoint}"))
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+        sqlx::query("DELETE FROM pushsubscription WHERE endpoint = $1")
+            .bind(endpoint)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+        sqlx::query(
+            "INSERT INTO pushsubscription (id, user_oidcid, endpoint, p256dh, auth)
+             VALUES (nextval('pushsubscription_seq'), $1, $2, $3, $4)",
+        )
+        .bind(user_id)
+        .bind(endpoint)
+        .bind(p256dh)
+        .bind(auth)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_error)?;
+        tx.commit().await.map_err(db_error)
     }
 
     /// Delete subscription by user and endpoint
@@ -62,6 +119,49 @@ impl PushSubscriptionRepository {
                 .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
 
         Ok(result.rows_affected() > 0)
+    }
+}
+
+/// One row of `push_notification_log`: the outcome of a single send attempt
+#[derive(Debug, Clone)]
+pub struct PushNotificationLogEntry<'a> {
+    pub user_id: &'a str,
+    pub notification_type: Option<&'a str>,
+    pub payload: &'a str,
+    pub endpoint: &'a str,
+    pub http_status_code: Option<i32>,
+    pub success: bool,
+    pub error_message: Option<&'a str>,
+}
+
+/// Writes `push_notification_log` (Java: `PushNotificationLogRepository#log`)
+pub struct PushNotificationLogRepository {
+    pool: PgPool,
+}
+
+impl PushNotificationLogRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn log(&self, entry: &PushNotificationLogEntry<'_>) -> Result<(), RepositoryError> {
+        sqlx::query(
+            "INSERT INTO push_notification_log
+                 (id, user_oidcid, notification_type, payload, endpoint, http_status_code,
+                  success, error_message, created_at)
+             VALUES (nextval('push_notification_log_seq'), $1, $2, $3, $4, $5, $6, $7, NOW())",
+        )
+        .bind(entry.user_id)
+        .bind(entry.notification_type)
+        .bind(entry.payload)
+        .bind(entry.endpoint)
+        .bind(entry.http_status_code)
+        .bind(entry.success)
+        .bind(entry.error_message)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 }
 
