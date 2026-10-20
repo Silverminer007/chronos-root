@@ -21,4 +21,4 @@ Ticket #169 (final proof of the Rust port). The rerun after #156-#161 on fresh J
 ## Consequences
 
 - Tests: `tests/appointment_list_test.rs` (names unresolved in PATCH/admin list), `tests/system_messages_parity_test.rs` (move message, PATCH messages from before the move), `tests/user_endpoints_test.rs` (bare 400), `contract-tests/tests/test_compare.py` (Java 5xx).
-- Not fixed here, left red (see ARCH-2026-10-20-002): the error bodies of the appointments module (`VALIDATION_ERROR` code, `fieldErrors`, Java message texts, not-found text with id).
+- The error bodies of the appointments module (`VALIDATION_ERROR` code, `fieldErrors`, Java message texts, not-found text with id) were first left red; review of MR !173 asked for the fix instead of a follow-up ticket, so they are fixed in the same ticket (see ARCH-2026-10-20-002, section "Appointment error bodies"). No Rust deviation is open and no follow-up ticket exists.
