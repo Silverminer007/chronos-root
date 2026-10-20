@@ -88,7 +88,7 @@ docker build -t chronos-rust-backend:latest .
 
 ### Groups and friendships
 
-All routes require a valid bearer token and follow the Java contract (see [ADR-2026-10-20-017](../kb/adr/ADR-2026-10-20-017-groups-friendships-endpoints.md)). Names are resolved from `user_profiles`.
+All routes require a valid bearer token and follow the Java contract (see [ADR-2026-10-20-018](../kb/adr/ADR-2026-10-20-018-groups-friendships-endpoints.md)). Names are resolved from `user_profiles`.
 
 - `GET|POST /api/v2/groups`, `DELETE|PATCH /api/v2/groups/:group`, `GET /api/v2/groups/:group/users`, `POST|DELETE /api/v2/groups/:groupId/user/:userId`
 - `GET /api/v2/friendships/suggestions`, `POST /api/v2/friendships/requests`, `POST /api/v2/friendships/requests/:requestId/accept|decline`, `DELETE /api/v2/friendships/requests/:requestId`, `GET /api/v2/friendships/requests/incoming|outgoing`, `GET /api/v2/friendships/friends`, `DELETE /api/v2/friendships/friends/:friendId`
@@ -118,7 +118,11 @@ async fn get_user_info(principal: PrincipalContext) -> Json<UserInfo> {
 | Variable | Description | Default |
 |---|---|---|
 | `RUST_LOG` | Logging level | `info` |
-| `KEYCLOAK_URL` | Keycloak realm URL | `http://localhost:8080/realms/chronos` |
+| `KEYCLOAK_URL` | Keycloak realm URL (token validation) | `http://localhost:8080/realms/chronos` |
+| `AUTH_SERVER_BASE_URL` | Keycloak base URL for the admin API and the account-action links (required) | – |
+| `AUTH_SERVER_REALM` | Realm of the admin client | `master` |
+| `AUTH_SERVER_CLIENT_ID` | Confidential client (client-credentials grant, required) | – |
+| `AUTH_SERVER_CLIENT_SECRET` | Secret of that client (required) | – |
 
 ## Development Workflow
 

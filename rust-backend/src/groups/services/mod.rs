@@ -285,7 +285,7 @@ impl FriendshipService {
             ));
         }
         // Java's `existsById` falls back to Keycloak, which answers unknown ids with a
-        // "deleted" sentinel, so any id is accepted (ADR-017 section 4).
+        // "deleted" sentinel, so any id is accepted (ADR-018 section 4).
 
         let mut tx = self.pool.begin().await?;
         if let Some(existing) =

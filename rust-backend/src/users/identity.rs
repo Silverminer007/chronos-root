@@ -1,12 +1,25 @@
-//! User identities resolved from the `user_profiles` cache (ADR-2026-10-20-017).
+//! User identities resolved from the `user_profiles` cache (ADR-2026-10-20-018).
 //!
 //! The Java backend reads `user_profiles` first and falls back to the Keycloak Admin API. The Rust
 //! backend has no Keycloak admin client, so `user_profiles` is the only source: a user without a
 //! profile row is treated like a user that Keycloak reports as deleted.
+//!
+//! `cache_identity` keeps the cache fresh on every authenticated request
+//! (Java: `PrincipalContextFilter` + `LocalDbIdentityAdapter#upsert`).
 
-use crate::appointments::models::UserProfile;
+use axum::{
+    extract::{Request, State},
+    middleware::Next,
+    response::Response,
+};
 use sqlx::PgExecutor;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::warn;
+
+use super::repository::UserRepository;
+use crate::appointments::models::UserProfile;
+use crate::security::PrincipalContext;
 
 /// Display name of a user that does not exist (any more)
 const DELETED_USER_NAME: &str = "Gelöschter Benutzer";
@@ -159,6 +172,24 @@ impl IdentityRepository {
         .await?;
         Ok(profiles.into_iter().map(UserIdentity::from).collect())
     }
+}
+
+/// Upserts the principal's profile. A transient DB failure must not abort a valid request (as in Java).
+pub async fn cache_identity(
+    State(repository): State<UserRepository>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if let Some(principal) = request.extensions().get::<Arc<PrincipalContext>>() {
+        if let Err(e) = repository.upsert_profile(principal).await {
+            warn!(
+                "Failed to upsert identity cache for user {}: {}",
+                principal.user_id(),
+                e
+            );
+        }
+    }
+    next.run(request).await
 }
 
 #[cfg(test)]

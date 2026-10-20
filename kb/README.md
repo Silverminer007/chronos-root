@@ -262,7 +262,8 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2025-09-28-010: Server routes as auth proxy](adr/ADR-2025-09-28-010-server-routes-proxy.md)
 - [ADR-2026-10-03-011: Appointment mutations (create/edit/delete/move)](adr/ADR-2026-10-03-011-appointment-mutations.md)
 - [ADR-2026-10-14-016: Participation status endpoint (Java parity)](adr/ADR-2026-10-14-016-participation-status-endpoint.md)
-- [ADR-2026-10-20-017: Groups and friendships endpoints (Java parity)](adr/ADR-2026-10-20-017-groups-friendships-endpoints.md)
+- [ADR-2026-10-20-017: User and settings endpoints with Keycloak anti-corruption layer (Java parity)](adr/ADR-2026-10-20-017-user-settings-keycloak-acl.md)
+- [ADR-2026-10-20-018: Groups and friendships endpoints (Java parity)](adr/ADR-2026-10-20-018-groups-friendships-endpoints.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)

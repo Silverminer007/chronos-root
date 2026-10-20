@@ -6,8 +6,10 @@ use axum::{body::Body, http::StatusCode, routing::get, Json, Router};
 use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
+use chronos_date_api::keycloak::KeycloakUrls;
 use chronos_date_api::security::TokenValidator;
-use chronos_date_api::test_utils::TestDb;
+use chronos_date_api::test_utils::{FakeKeycloak, TestDb};
+use chronos_date_api::users::UserState;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde_json::Value;
 use std::sync::Arc;
@@ -34,9 +36,14 @@ impl TestApp {
             db_pool: db.pool().clone(),
             event_publisher: Arc::new(PostgresEventBus::new(db.pool().clone())),
         });
+        let user_state = Arc::new(UserState {
+            db_pool: db.pool().clone(),
+            keycloak: Arc::new(FakeKeycloak::new()),
+            keycloak_urls: KeycloakUrls::new("https://auth.test", "chronos", "chronos-api"),
+        });
         let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
         Self {
-            router: build_router(state, validator),
+            router: build_router(state, user_state, validator),
             db,
         }
     }

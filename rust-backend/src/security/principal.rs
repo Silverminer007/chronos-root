@@ -10,6 +10,11 @@ use std::sync::Arc;
 pub struct PrincipalContext {
     /// The user's OIDC subject (`sub` claim), e.g. a Keycloak user id
     pub user_id: String,
+    /// Profile claims of the access token (`given_name`, `family_name`, `email`, `picture`)
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: Option<String>,
+    pub profile_picture_url: Option<String>,
 }
 
 impl PrincipalContext {
@@ -17,7 +22,26 @@ impl PrincipalContext {
     pub fn new(user_id: impl Into<String>) -> Self {
         Self {
             user_id: user_id.into(),
+            first_name: None,
+            last_name: None,
+            email: None,
+            profile_picture_url: None,
         }
+    }
+
+    /// Attach the profile claims of the access token
+    pub fn with_profile(
+        mut self,
+        first_name: Option<String>,
+        last_name: Option<String>,
+        email: Option<String>,
+        profile_picture_url: Option<String>,
+    ) -> Self {
+        self.first_name = first_name;
+        self.last_name = last_name;
+        self.email = email;
+        self.profile_picture_url = profile_picture_url;
+        self
     }
 
     /// Get the current user's ID
@@ -80,6 +104,21 @@ mod tests {
         let cloned = principal.clone();
 
         assert_eq!(cloned.user_id(), principal.user_id());
+    }
+
+    #[test]
+    fn test_principal_context_carries_profile_claims() {
+        let principal = PrincipalContext::new("sub-1").with_profile(
+            Some("Max".to_string()),
+            Some("Muster".to_string()),
+            Some("max@example.org".to_string()),
+            None,
+        );
+
+        assert_eq!(principal.first_name.as_deref(), Some("Max"));
+        assert_eq!(principal.last_name.as_deref(), Some("Muster"));
+        assert_eq!(principal.email.as_deref(), Some("max@example.org"));
+        assert!(principal.profile_picture_url.is_none());
     }
 
     #[test]
