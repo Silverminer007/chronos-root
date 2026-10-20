@@ -30,7 +30,7 @@ impl AppointmentParticipationListener {
 
         // Add creator as a RESPONSIBLE participant
         let repo = AppointmentRepository::new(self.pool.clone());
-        repo.add_participant(appointment_id, creator_id, "RESPONSIBLE", "APPROVED")
+        repo.add_participant(appointment_id, creator_id, "RESPONSIBLE", "PENDING")
             .await
             .map_err(|e| format!("Failed to add creator as participant: {}", e))?;
 
