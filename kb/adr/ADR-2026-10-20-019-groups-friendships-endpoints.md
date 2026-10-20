@@ -36,18 +36,18 @@ Java's exception mappers produce `{timestamp, status, error, errorCode, message,
 - A missing or unreadable request body for create/edit group is a Java `NullPointerException`/Jackson error caught by `GenericExceptionMapper` ⇒ `500` (the edit authorization check runs first, as in Java). Unverified for malformed JSON: Quarkus may answer `400` there; revisit when the contract diff shows it.
 - Order of checks is Java's. Visible quirk kept on purpose: `DELETE /groups/{unknown}` is `403` (ownership is checked before existence), not `404`.
 
-### 4. Identity: `user_profiles` only
+### 4. Identity: `user_profiles` for names and email lookup
 
-Java resolves names via `IdentityPort`: `user_profiles` first, Keycloak Admin API as fallback and for search. When this ADR was written the Rust backend had no Keycloak admin client, so `users::identity` read **only** `user_profiles`. **Partly superseded:** since #98 a central Keycloak module exists, and the search part (suggestions, email lookup) now goes through it and searches Keycloak like Java, see [ADR-2026-10-20-027](ADR-2026-10-20-027-friend-suggestions-keycloak-search.md). The name resolution and existence-check bullets below still describe `user_profiles`-only behaviour:
+Java resolves names via `IdentityPort`: `user_profiles` first, Keycloak Admin API as fallback and for search. When this ADR was written the Rust backend had no Keycloak admin client, so `users::identity` read **only** `user_profiles`. **Partly superseded:** since #98 a central Keycloak module exists, and the suggestions search now goes through it and searches Keycloak like Java, see [ADR-2026-10-20-027](ADR-2026-10-20-027-friend-suggestions-keycloak-search.md). Name resolution, the existence check and the email lookup of `POST /friendships/requests` still read the `user_profiles` cache (no Keycloak fallback):
 
 - A user without a profile row behaves like a Keycloak-deleted user: name `Gelöschter Benutzer`, `null` names in `UserDto`, the existence check of `POST /friendships/requests` is not performed: Java's `existsById` falls back to Keycloak, which answers unknown ids with the deleted sentinel (never `null`), so Java accepts any addressee id (`201`). Rust does the same instead of answering `404 Kein Benutzer mit der ID ... gefunden`; `IdentityRepository::exists` is therefore unused by this flow.
-- (Suggestions: superseded by ADR-2026-10-20-027, they search Keycloak.) Suggestions and email lookup search `user_profiles` (first name, last name, email; every whitespace separated term must be contained, case-insensitive, like Keycloak's search), ordered by last name, first name, id. Keycloak orders by username, which the cache does not hold, so the order of "recent" suggestions can differ from Java.
+- (Suggestions: superseded by ADR-2026-10-20-027, they search Keycloak.) The email lookup reads `user_profiles` (email equal ignoring case, see `IdentityRepository::find_by_email`). The former cache search (`IdentityRepository::search`) is removed; the order of suggestions is Keycloak's, see ADR-027.
 - Semantics of `GET /friendships/suggestions` (`FriendshipService.find_non_friends`, Java: `findNonFriends` / `findRecentNonFriends`):
   - Branching as in `FriendshipResource`: `search` null or shorter than 2 characters after trimming ⇒ "recent" variant with search `""` and fixed limit `5` (the `limit` parameter is ignored); otherwise trimmed `search` with `limit` (default `20`). A non-numeric `limit` is rejected before the branching in both backends (`404`).
-  - Oversampling as in Java: `limit * 3` candidates are loaded from the identity search (`saturating_mul` instead of Java's overflowing `int` multiplication), then the requesting user and all friends are removed and the result is cut to `limit`. If many of the first `limit * 3` candidates are friends, fewer than `limit` suggestions are returned; there is no refill, same as in Java.
+  - Oversampling as in Java: `limit * 3` candidates are loaded from the Keycloak search (`saturating_mul` instead of Java's overflowing `int` multiplication), then the requesting user and all friends are removed and the result is cut to `limit`. If many of the first `limit * 3` candidates are friends, fewer than `limit` suggestions are returned; there is no refill, same as in Java.
   - Only `ACCEPTED` friendships are excluded (`friend_ids` ↔ `getFriendOidcIds`). Users with a pending request (incoming or outgoing) or a declined one are still suggested.
   - Edge case negative `limit`: Rust clamps it to `0` and answers `200 []`. Java passes it on unchanged, and `Stream.limit(negative)` throws an `IllegalArgumentException`, i.e. most likely a `500`. This is a known, deliberate difference (not verified against a running Java backend); revisit if the contract diff shows it. `limit=0` gives `[]` in both.
-  - The order of the result is the identity search order (see above), so it can differ from Java for the same reason.
+  - The order of the result is the Keycloak search order (ADR-027).
 - Profiles are filled by the Java backend's per-request upsert today; the Rust auth middleware does not upsert JWT claims yet (out of scope for this ticket). A user who never authenticated against a backend that upserts is not findable.
 
 ### 5. Authorization
@@ -74,5 +74,5 @@ The Java `GroupCreatedEvent` observer adds the creator as member in a second tra
 
 ### Negative
 
-- ❌ Search and name resolution depend on the `user_profiles` cache; users unknown to it are invisible (see 4).
+- ❌ Name resolution and the email lookup depend on the `user_profiles` cache; users unknown to it appear as deleted users or are not found by email (see 4). Suggestions search Keycloak (ADR-027).
 - ❌ No admin override and unverified malformed-JSON status (see 3, 5).
