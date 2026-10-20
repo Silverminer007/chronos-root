@@ -59,3 +59,26 @@ leader election that always won.
   schedulers racing (exactly one runs), disabled election (both run), end to end through the real
   `PostgresEventBus` and push listener (an appointment produces the expected notification, clock advance
   walks through trigger times, cancelled/started/too-far appointments are skipped).
+
+## Consequences
+
+- **Positive**: no cluster API access, no Role for leases and no extra component; a crashed or disconnected leader
+  frees the lock by itself (the session ends), and the Java behaviour "exactly one scheduler" is kept with a
+  single shared resource, the database.
+- **Negative: one pool connection is lost.** The leader holds the lock on a connection taken out of the sqlx pool
+  with `detach()`. The effective pool capacity drops by one on every replica that holds the lock, and the pool
+  metrics (size/idle/in use) no longer count that connection. Size `max_connections` with one extra connection
+  for the leader.
+- **Negative: followers churn connections.** A follower opens a fresh connection on every tick (every 15
+  minutes), tries `pg_try_advisory_lock` and closes it again. The cost is negligible at this rate, but it is a
+  short-lived extra connection per follower and tick.
+- **Trade-off: takeover latency of up to 15 minutes.** Followers only try at a tick. If the leader dies, the
+  next run happens at the next quarter hour at the earliest, when a follower acquires the lock. No run is
+  missed beyond that, because the due window of a trigger is 15 minutes (decision 1); a graceful `resign()`
+  hands over immediately.
+- **Trade-off: brief overlap is possible.** `is_leader()` only notices a dead leader connection when it pings it
+  at the next tick. If the connection dies mid-run (network cut, database failover), PostgreSQL releases the
+  lock at once and a new leader can acquire it at its tick while the old leader still finishes its current run.
+  The two runs can then overlap for a short time and send a reminder twice. Java's lease has the same window
+  between lease expiry and the old leader noticing; a fencing mechanism was not added because reminders are
+  idempotent in effect (a duplicate push) and the window is small.
