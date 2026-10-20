@@ -492,15 +492,16 @@ async fn test_removing_a_non_member_is_a_validation_error() {
     assert_eq!(body["fieldErrors"], json!({}));
 }
 
-// ===== regression: appointment errors are not touched by `fill_error_path` =====
+// ===== regression: appointment errors carry the ErrorResponse body with the real path =====
 
 #[tokio::test]
-async fn test_appointment_error_responses_keep_their_plain_text_body() {
+async fn test_appointment_error_responses_are_json_with_the_request_path() {
     let app = app_with_users().await;
 
-    let (status, body) = app.get_raw("alice", "/api/v2/appointments/987654321").await;
+    let (status, body) = app.get("alice", "/api/v2/appointments/987654321").await;
 
-    // `AppointmentError` does not use `AppError`, so the path middleware leaves it as it was
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body, "Appointment not found");
+    // An unknown appointment is authorized first, like in Java, hence a 403 (ticket #157)
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["errorCode"], "FORBIDDEN");
+    assert_eq!(body["path"], "/api/v2/appointments/987654321");
 }

@@ -1,6 +1,10 @@
 use axum::{
-    extract::Request,
-    http::StatusCode,
+    async_trait,
+    extract::{
+        rejection::{JsonRejection, PathRejection},
+        FromRequest, FromRequestParts, Request,
+    },
+    http::{request::Parts, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
     Json,
@@ -224,6 +228,9 @@ impl AppError {
 /// Message of the Java `GenericExceptionMapper`
 pub const INTERNAL_ERROR_MESSAGE: &str = "Ein interner Fehler ist aufgetreten";
 
+/// Answer to a request body that cannot be read as the expected JSON
+const BAD_BODY_MESSAGE: &str = "Ungültiger Request-Body";
+
 /// Message of Jakarta REST's `NotFoundException` for an unmatched resource
 const ROUTE_NOT_FOUND_MESSAGE: &str = "HTTP 404 Not Found";
 
@@ -360,6 +367,57 @@ pub async fn fill_error_path(request: Request, next: Next) -> Response {
         }
         None => response,
     }
+}
+
+/// `Json` extractor whose rejection is an `AppError`, so an unreadable body gets the JSON
+/// `ErrorResponse` instead of axum's plain-text answer
+pub struct AppJson<T>(pub T);
+
+#[async_trait]
+impl<S, T> FromRequest<S> for AppJson<T>
+where
+    S: Send + Sync,
+    Json<T>: FromRequest<S, Rejection = JsonRejection>,
+{
+    type Rejection = AppError;
+
+    async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
+        match Json::<T>::from_request(request, state).await {
+            Ok(Json(value)) => Ok(Self(value)),
+            Err(rejection) => {
+                tracing::warn!("Unreadable request body: {}", rejection);
+                Err(AppError::bad_request(BAD_BODY_MESSAGE))
+            }
+        }
+    }
+}
+
+/// `Path` extractor whose rejection is `AppError::RouteNotFound`: a path parameter that cannot be
+/// converted is a 404 in Jakarta REST
+pub struct AppPath<T>(pub T);
+
+#[async_trait]
+impl<S, T> FromRequestParts<S> for AppPath<T>
+where
+    S: Send + Sync,
+    axum::extract::Path<T>: FromRequestParts<S, Rejection = PathRejection>,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        axum::extract::Path::<T>::from_request_parts(parts, state)
+            .await
+            .map(|axum::extract::Path(value)| Self(value))
+            .map_err(|rejection| {
+                tracing::warn!("Unusable path parameter: {}", rejection);
+                AppError::RouteNotFound
+            })
+    }
+}
+
+/// Fallback of the router for an unmatched path (Java `NotFoundExceptionMapper`)
+pub async fn route_not_found() -> AppError {
+    AppError::RouteNotFound
 }
 
 #[cfg(test)]

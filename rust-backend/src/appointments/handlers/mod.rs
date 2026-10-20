@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -16,8 +16,12 @@ use crate::appointments::{
         UpdateParticipationStatusRequest, UserRole,
     },
     repository::AppointmentRepository,
-    services::{AppointmentService, ServiceError},
+    services::{
+        AppointmentService, ServiceError, NOT_ATTENDANT_MESSAGE, NOT_RESPONSIBLE_MESSAGE,
+        NO_ROLE_MESSAGE,
+    },
 };
+use crate::error::{AppError, AppJson, AppPath};
 use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
 use crate::users::identity::{IdentityRepository, UserIdentity};
@@ -44,7 +48,7 @@ pub struct ListQuery {
 /// GET /api/v2/appointments/:id - Fetch a single appointment by ID
 pub async fn get_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
@@ -53,20 +57,20 @@ pub async fn get_appointment(
     // The authenticated principal holds the user's OIDC subject
     let user_id = principal.user_id();
 
-    // Fetch the appointment
-    let appointment = service.get_appointment(id).await.map_err(|e| match e {
-        crate::appointments::services::ServiceError::NotFound => AppointmentError::NotFound,
-        _ => AppointmentError::DatabaseError,
-    })?;
-
-    // Authorization check - any participant (role other than NONE) may read (Java: `requireReadAppointment`)
+    // Authorization first, like Java: an unknown appointment has no participants, hence a 403.
+    // Any participant (role other than NONE) may read (Java: `requireReadAppointment`)
     let role = AppointmentRepository::new(state.db_pool.clone())
-        .get_participant_role(appointment.id, user_id)
+        .get_participant_role(id, user_id)
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
     if matches!(role, None | Some(UserRole::None)) {
-        return Err(AppointmentError::Unauthorized);
+        return Err(AppointmentError::Forbidden(NO_ROLE_MESSAGE.to_string()));
     }
+
+    let appointment = service
+        .get_appointment(id)
+        .await
+        .map_err(AppointmentError::from)?;
 
     let response: AppointmentResponse = appointment.into();
     Ok(Json(response))
@@ -76,7 +80,7 @@ pub async fn get_appointment(
 /// Always 200 OK; PENDING when the user has no participation row (matches Java backend)
 pub async fn get_participation_status(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
@@ -94,7 +98,7 @@ pub async fn get_participation_status(
 /// 403 unless the caller participates with a role other than NONE (matches Java backend)
 pub async fn list_participants(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
@@ -115,7 +119,7 @@ pub async fn list_participants(
 /// `user_profiles` cache; senders without a profile are named "Gelöschter Benutzer".
 pub async fn list_messages(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
@@ -125,7 +129,7 @@ pub async fn list_messages(
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
     if matches!(role, None | Some(UserRole::None)) {
-        return Err(AppointmentError::Unauthorized);
+        return Err(AppointmentError::Forbidden(NO_ROLE_MESSAGE.to_string()));
     }
 
     let messages = repo
@@ -163,9 +167,9 @@ pub async fn list_messages(
 /// `MessageSentEvent {message_id}` is fired (Java: `MessageService#sendMessage`).
 pub async fn send_message(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
-    Json(request): Json<CreateMessageRequest>,
+    AppJson(request): AppJson<CreateMessageRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
 
@@ -174,7 +178,7 @@ pub async fn send_message(
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
     if matches!(role, None | Some(UserRole::None)) {
-        return Err(AppointmentError::Unauthorized);
+        return Err(AppointmentError::Forbidden(NO_ROLE_MESSAGE.to_string()));
     }
 
     let message = repo
@@ -218,9 +222,9 @@ fn message_dto(message: Message, sender_name: String) -> MessageDto {
 /// POST /api/v2/appointments/:id/participation - RSVP to an appointment
 pub async fn rsvp_to_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
-    Json(request): Json<UpdateParticipationStatusRequest>,
+    AppJson(request): AppJson<UpdateParticipationStatusRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
 
@@ -233,7 +237,7 @@ pub async fn rsvp_to_appointment(
         .map_err(|_| AppointmentError::DatabaseError)?;
 
     if participant_role == Some(UserRole::None) || participant_role.is_none() {
-        return Err(AppointmentError::Unauthorized);
+        return Err(AppointmentError::Forbidden(NO_ROLE_MESSAGE.to_string()));
     }
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
@@ -280,7 +284,7 @@ pub async fn list_appointments(
 pub async fn create_appointment(
     State(state): State<Arc<AppState>>,
     principal: PrincipalContext,
-    Json(request): Json<CreateAppointmentRequest>,
+    AppJson(request): AppJson<CreateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
@@ -304,24 +308,18 @@ pub async fn create_appointment(
 /// Requires ATTENDANT role or above (any participant can edit)
 pub async fn update_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
-    Json(request): Json<UpdateAppointmentRequest>,
+    AppJson(request): AppJson<UpdateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
 
-    // Check if appointment exists and user is authorized
-    let appointment = repo
-        .find_by_id(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
-
-    // User must be a participant with ATTENDANT role or above (the creator is RESPONSIBLE)
+    // User must be a participant with ATTENDANT role or above (the creator is RESPONSIBLE).
+    // Authorization comes first, like Java: an unknown appointment has no participants, hence a 403.
     let participant_role = repo
-        .get_participant_role(appointment.id, user_id)
+        .get_participant_role(id, user_id)
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
 
@@ -330,7 +328,9 @@ pub async fn update_appointment(
         Some(UserRole::Attendant | UserRole::Helper | UserRole::Responsible)
     );
     if !is_attendant_or_above {
-        return Err(AppointmentError::Unauthorized);
+        return Err(AppointmentError::Forbidden(
+            NOT_ATTENDANT_MESSAGE.to_string(),
+        ));
     }
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
@@ -348,21 +348,15 @@ pub async fn update_appointment(
 /// Requires RESPONSIBLE role (creator only)
 pub async fn delete_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
 
-    // Check if appointment exists and user is the creator
-    let appointment = repo
-        .find_by_id(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
-
-    ensure_creator(&state, appointment.id, user_id).await?;
+    // Authorization first, like Java: an unknown appointment has no participants, hence a 403
+    ensure_creator(&state, id, user_id, NOT_RESPONSIBLE_MESSAGE).await?;
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
@@ -378,21 +372,15 @@ pub async fn delete_appointment(
 /// Requires RESPONSIBLE role (creator only)
 pub async fn cancel_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
+    AppPath(id): AppPath<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
 
-    // Check if appointment exists and user is the creator
-    let appointment = repo
-        .find_by_id(id)
-        .await
-        .map_err(|_| AppointmentError::DatabaseError)?
-        .ok_or(AppointmentError::NotFound)?;
-
-    ensure_creator(&state, appointment.id, user_id).await?;
+    // Authorization first, like Java: an unknown appointment has no participants, hence a 403
+    ensure_creator(&state, id, user_id, NOT_RESPONSIBLE_MESSAGE).await?;
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
@@ -409,6 +397,7 @@ async fn ensure_creator(
     state: &AppState,
     appointment_id: i64,
     user_id: &str,
+    denied_message: &str,
 ) -> Result<(), AppointmentError> {
     let role = AppointmentRepository::new(state.db_pool.clone())
         .get_participant_role(appointment_id, user_id)
@@ -417,7 +406,7 @@ async fn ensure_creator(
 
     match role {
         Some(UserRole::Responsible) => Ok(()),
-        _ => Err(AppointmentError::Unauthorized),
+        _ => Err(AppointmentError::Forbidden(denied_message.to_string())),
     }
 }
 
@@ -425,9 +414,9 @@ async fn ensure_creator(
 /// Requires the RESPONSIBLE role (only the creator can add groups)
 pub async fn add_group_to_appointment(
     State(state): State<Arc<AppState>>,
-    Path((appointment_id, group_id)): Path<(i64, i64)>,
+    AppPath((appointment_id, group_id)): AppPath<(i64, i64)>,
     principal: PrincipalContext,
-    Json(request): Json<AddGroupToAppointmentRequest>,
+    AppJson(request): AppJson<AddGroupToAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
 
@@ -440,7 +429,7 @@ pub async fn add_group_to_appointment(
     service
         .add_group_to_appointment(user_id, appointment_id, group_id, role)
         .await
-        .map_err(AppointmentError::from)?;
+        .map_err(missing_is_forbidden)?;
 
     Ok(StatusCode::OK)
 }
@@ -452,7 +441,7 @@ pub async fn add_group_to_appointment(
 /// that came in through the group are removed, directly added ones stay.
 pub async fn remove_group_from_appointment(
     State(state): State<Arc<AppState>>,
-    Path((appointment_id, group_id)): Path<(i64, i64)>,
+    AppPath((appointment_id, group_id)): AppPath<(i64, i64)>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
@@ -469,11 +458,12 @@ pub async fn remove_group_from_appointment(
 /// DELETE /api/v2/appointments/:id/participants/:userId - Remove a participant (hard delete)
 ///
 /// Only a RESPONSIBLE participant may remove participants. Fires an
-/// `AppointmentParticipationRemovedEvent`. Returns 404 if the appointment or participant is
-/// unknown and 403 if the caller is not RESPONSIBLE.
+/// `AppointmentParticipationRemovedEvent`. An unknown appointment is a 403 like in Java, which
+/// authorizes before it looks the appointment up (`missing_is_forbidden`, ADR); an unknown
+/// participant is a 400.
 pub async fn remove_participant(
     State(state): State<Arc<AppState>>,
-    Path((appointment_id, target_user_id)): Path<(i64, String)>,
+    AppPath((appointment_id, target_user_id)): AppPath<(i64, String)>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let acting_user_id = principal.user_id();
@@ -484,7 +474,7 @@ pub async fn remove_participant(
     service
         .remove_participant(appointment_id, &target_user_id, acting_user_id)
         .await
-        .map_err(AppointmentError::from)?;
+        .map_err(missing_is_forbidden)?;
 
     Ok(StatusCode::OK)
 }
@@ -499,12 +489,13 @@ pub async fn remove_participant(
 ///
 /// # Response
 /// 200 OK with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
-/// 404 if the appointment is unknown; 400 if the target is not a participant or already has the role.
+/// An unknown appointment is a 403 like in Java (`missing_is_forbidden`, ADR); 400 if the target is
+/// not a participant or already has the role.
 pub async fn change_participant_role(
     State(state): State<Arc<AppState>>,
-    Path((appointment_id, target_user_id)): Path<(i64, String)>,
+    AppPath((appointment_id, target_user_id)): AppPath<(i64, String)>,
     principal: PrincipalContext,
-    Json(request): Json<ChangeParticipantRoleRequest>,
+    AppJson(request): AppJson<ChangeParticipantRoleRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let new_role = UserRole::from_str(&request.role)
         .map_err(|_| AppointmentError::ValidationError("invalid role".to_string()))?;
@@ -520,7 +511,7 @@ pub async fn change_participant_role(
             new_role,
         )
         .await
-        .map_err(AppointmentError::from)?;
+        .map_err(missing_is_forbidden)?;
 
     Ok(StatusCode::OK)
 }
@@ -529,7 +520,6 @@ pub async fn change_participant_role(
 #[derive(Debug)]
 pub enum AppointmentError {
     NotFound,
-    Unauthorized,
     Forbidden(String),
     DatabaseError,
     ValidationError(String),
@@ -550,31 +540,39 @@ impl From<ServiceError> for AppointmentError {
     }
 }
 
+/// The `AppointmentError` of a user-facing mutation of the participants of an appointment: Java
+/// authorizes before it looks the appointment up, so an unknown one is a 403 there (the admin
+/// endpoints skip the authorization and keep the 404)
+fn missing_is_forbidden(error: ServiceError) -> AppointmentError {
+    match error {
+        ServiceError::NotFound => AppointmentError::Forbidden(NOT_RESPONSIBLE_MESSAGE.to_string()),
+        other => other.into(),
+    }
+}
+
+impl From<AppointmentError> for AppError {
+    fn from(error: AppointmentError) -> Self {
+        match error {
+            AppointmentError::NotFound => AppError::not_found_message("Appointment not found"),
+            AppointmentError::Forbidden(msg) => AppError::forbidden(msg),
+            AppointmentError::DatabaseError => AppError::unexpected(),
+            AppointmentError::ValidationError(msg) => AppError::bad_request(msg),
+        }
+    }
+}
+
 impl IntoResponse for AppointmentError {
     fn into_response(self) -> axum::response::Response {
-        let (status, error_message) = match self {
-            AppointmentError::NotFound => {
-                (StatusCode::NOT_FOUND, "Appointment not found".to_string())
-            }
-            AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
-            AppointmentError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
-            AppointmentError::DatabaseError => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Database error".to_string(),
-            ),
-            AppointmentError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
-        };
-
-        (status, error_message).into_response()
+        AppError::from(self).into_response()
     }
 }
 
 /// POST /api/v2/appointments/:id/participants/:userId - Add a participant to an appointment
 pub async fn add_participant(
     State(state): State<Arc<AppState>>,
-    Path((appointment_id, target_user_id)): Path<(i64, String)>,
+    AppPath((appointment_id, target_user_id)): AppPath<(i64, String)>,
     principal: PrincipalContext,
-    Json(request): Json<AddParticipantRequest>,
+    AppJson(request): AppJson<AddParticipantRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let acting_user_id = principal.user_id();
 
@@ -589,7 +587,7 @@ pub async fn add_participant(
             &request.user_role.to_string(),
         )
         .await
-        .map_err(AppointmentError::from)?;
+        .map_err(missing_is_forbidden)?;
 
     Ok(StatusCode::OK)
 }
