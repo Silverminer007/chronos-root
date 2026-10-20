@@ -377,6 +377,7 @@ pub async fn change_participant_role(
 pub enum AppointmentError {
     NotFound,
     Unauthorized,
+    Forbidden(String),
     DatabaseError,
     ValidationError(String),
 }
@@ -391,7 +392,7 @@ impl From<ServiceError> for AppointmentError {
                 AppointmentError::DatabaseError
             }
             ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
-            ServiceError::Forbidden(_) => AppointmentError::Unauthorized,
+            ServiceError::Forbidden(msg) => AppointmentError::Forbidden(msg),
         }
     }
 }
@@ -403,6 +404,7 @@ impl IntoResponse for AppointmentError {
                 (StatusCode::NOT_FOUND, "Appointment not found".to_string())
             }
             AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
+            AppointmentError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppointmentError::DatabaseError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),

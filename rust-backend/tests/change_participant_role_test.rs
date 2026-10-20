@@ -360,7 +360,7 @@ mod change_participant_role_http_tests {
     async fn test_route_non_responsible_gets_403() {
         let s = setup().await;
 
-        let (status, _) = put_role(
+        let (status, body) = put_role(
             &s,
             Some(&s.participant_id),
             &s.participant_id,
@@ -369,6 +369,11 @@ mod change_participant_role_http_tests {
         .await;
 
         assert_eq!(status, StatusCode::FORBIDDEN);
+        assert!(
+            String::from_utf8_lossy(&body)
+                .contains("You have to be responsible for this appointment"),
+            "Java message must be passed through"
+        );
         assert_ne!(stored_role(&s, &s.participant_id).await, "RESPONSIBLE");
     }
 
