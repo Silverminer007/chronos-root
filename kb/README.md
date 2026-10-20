@@ -261,6 +261,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2025-09-28-009: Panache for ORM](adr/ADR-2025-09-28-009-panache.md)
 - [ADR-2025-09-28-010: Server routes as auth proxy](adr/ADR-2025-09-28-010-server-routes-proxy.md)
 - [ADR-2026-10-03-011: Appointment mutations (create/edit/delete/move)](adr/ADR-2026-10-03-011-appointment-mutations.md)
+- [ADR-2026-10-14-017: Participant removal with hard delete](adr/ADR-2026-10-14-017-participant-removal.md)
 - [ADR-2026-10-14-016: Participation status endpoint (Java parity)](adr/ADR-2026-10-14-016-participation-status-endpoint.md)
 - [ADR-2026-10-20-017: User and settings endpoints with Keycloak anti-corruption layer (Java parity)](adr/ADR-2026-10-20-017-user-settings-keycloak-acl.md)
 - [ADR-2026-10-20-018: Rust backend deploy dispatch is opt-in via repository variable](adr/ADR-2026-10-20-018-rust-deploy-opt-in.md)

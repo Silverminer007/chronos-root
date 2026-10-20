@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use crate::appointments::handlers::{
     add_participant, cancel_appointment, create_appointment, delete_appointment, get_appointment,
-    get_participation_status, list_appointments, rsvp_to_appointment, update_appointment, AppState,
+    get_participation_status, list_appointments, remove_participant, rsvp_to_appointment,
+    update_appointment, AppState,
 };
 use crate::error::fill_error_path;
 use crate::groups::handlers::{
@@ -57,7 +58,7 @@ pub fn build_router(
         .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
         .route(
             "/api/v2/appointments/:id/participants/:userId",
-            post(add_participant),
+            post(add_participant).delete(remove_participant),
         )
         .route(
             "/api/v2/appointments/:id/participation",

@@ -414,4 +414,26 @@ impl AppointmentRepository {
 
         Ok(())
     }
+
+    /// Remove a participant from an appointment (hard delete)
+    pub async fn remove_participant(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+    ) -> Result<(), RepositoryError> {
+        let result = sqlx::query(
+            "DELETE FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(RepositoryError::NotFound);
+        }
+
+        Ok(())
+    }
 }

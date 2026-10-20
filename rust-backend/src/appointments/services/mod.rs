@@ -1,6 +1,7 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
-    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationStatusChangedEvent,
+    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationRemovedEvent,
+    AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
@@ -636,6 +637,71 @@ impl AppointmentService {
                 crate::event_bus::Event::new("AppointmentParticipationAddedEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!("Failed to fire AppointmentParticipationAddedEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Remove a participant from an appointment (hard delete)
+    /// Requires the acting user to be RESPONSIBLE in the appointment
+    pub async fn remove_participant(
+        &self,
+        appointment_id: i64,
+        target_user_id: &str,
+        acting_user_id: &str,
+    ) -> Result<(), ServiceError> {
+        self.repo
+            .find_by_id_any_status(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        let acting_user_role = self
+            .repo
+            .get_participant_role(appointment_id, acting_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if !matches!(
+            acting_user_role,
+            Some(crate::appointments::models::UserRole::Responsible)
+        ) {
+            return Err(ServiceError::ValidationError(
+                "Only RESPONSIBLE participants can remove participants".to_string(),
+            ));
+        }
+
+        self.repo
+            .remove_participant(appointment_id, target_user_id)
+            .await
+            .map_err(|e| match e {
+                RepositoryError::NotFound => {
+                    ServiceError::ValidationError("Participant not found".to_string())
+                }
+                _ => ServiceError::DatabaseError(e.to_string()),
+            })?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationRemovedEvent::new(
+                appointment_id,
+                target_user_id.to_string(),
+                acting_user_id.to_string(),
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id,
+                "target_user_id": event.target_user_id,
+                "acting_user_id": event.acting_user_id,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event =
+                crate::event_bus::Event::new("AppointmentParticipationRemovedEvent", event_json);
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!(
+                    "Failed to fire AppointmentParticipationRemovedEvent: {:?}",
+                    e
+                );
             }
         }
 
