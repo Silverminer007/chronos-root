@@ -104,7 +104,7 @@ Mismatches 8 and 9 are Java defects; Rust returns the sensible status. They are 
 
 ### The Java participation routes (mismatch 8)
 
-On the unmodified Java build, `POST /api/v2/appointments/{id}/participants/{userId}` and the seven other routes of the class return `404 Unable to find matching target resource method` for every user, so the harness could not compare any participation endpoint (every step "java 404, rust 200"). To still test Rust against the *intended* Java behaviour, the Java image of the final runs (`chronos-backend:parity-patched`) is the same build with one local change that was **not committed**: class-level `@Path("/api/v2/appointments")` on `AppointmentParticipationResource` and the method paths made relative (only that file). The harness results are therefore against "Java as intended"; without the local change all participation steps differ. The fix belongs to the Java owner (#162); "do not change Java code" holds for this repository.
+On the unmodified Java build, `POST /api/v2/appointments/{id}/participants/{userId}` and the seven other routes of the class return `404 Unable to find matching target resource method` for every user, so the harness could not compare any participation endpoint (every step "java 404, rust 200"). To still test Rust against the *intended* Java behaviour, the Java image of the final runs (`chronos-backend:parity-patched`) is the same build with one local change that was **not committed** as a source change; it is stored as `deployment/parity/java-participation-routes.patch` (apply with `git apply`, tag `chronos-backend:parity-patched`, the tag in README and `values-parity.yaml`): class-level `@Path("/api/v2/appointments")` on `AppointmentParticipationResource` and the method paths made relative (only that file). The harness results are therefore against "Java as intended"; without the local change all participation steps differ. The fix belongs to the Java owner (#162); "do not change Java code" holds for this repository.
 
 ## Explorative pass (`deployment/parity/explore.py`)
 
@@ -141,7 +141,7 @@ Identical on both sides (checked): duplicate friendship request 400, request to 
 docker build -t chronos-rust-backend:parity rust-backend && docker save chronos-rust-backend:parity | sudo k3s ctr -n k8s.io images import -
 sudo k3s ctr -n k8s.io images label docker.io/library/chronos-rust-backend:parity io.cri-containerd.pinned=pinned
 helm upgrade --install chronos deployment -n chronos-parity -f deployment/values-local.yaml -f deployment/values-parity.yaml \
-  --set backend.image.tag=parity-patched --set-file secrets.values.vapid_public_key=... --set-file secrets.values.vapid_private_key=...
+  --set-file secrets.values.vapid_public_key=... --set-file secrets.values.vapid_private_key=...
 deployment/parity/reset-databases.sh
 kubectl -n chronos-parity port-forward svc/chronos-rust-backend 18081:80 &  curl localhost:18081/q/health/ready
 deployment/parity/run-contract.sh        # exit 1

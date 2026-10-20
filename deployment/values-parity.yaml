@@ -18,7 +18,7 @@ backend:
   image:
     # Built from the checkout (the ghcr :latest image is older than main), see parity/README.md
     repository: chronos-backend
-    tag: parity
+    tag: parity-patched
     pullPolicy: Never
   resources:
     requests: { memory: "256Mi", cpu: "100m" }

@@ -27,23 +27,29 @@ The credentials are throw-away values for this namespace only.
 
 ## Images
 
-- **Java**: the CI image `ghcr.io/silverminer007/chronos-backend:latest` was **older than `main`** on 2026-10-20 (built
+- **Java** (`chronos-backend:parity-patched`): **the unmodified sources cannot reproduce the recorded results.** Without a class-level
+  `@Path`, all 8 routes of `AppointmentParticipationResource` answer 404 in the packaged app (#162). The recorded runs use a build
+  with the patch `parity/java-participation-routes.patch` (class-level `@Path("/api/v2/appointments")`, relative method paths, only
+  that file; it was never committed, "do not change Java code" holds). Apply it before the Maven step, revert it afterwards:
+  `git apply deployment/parity/java-participation-routes.patch` ... `git apply -R deployment/parity/java-participation-routes.patch`.
+  Without the patch the image still builds and deploys, but every participation step of the harness differs (Java 404). The CI image
+  `ghcr.io/silverminer007/chronos-backend:latest` was **older than `main`** on 2026-10-20 (built
   2026-07-18, without the admin endpoints), so it is not a valid reference. Build it from the checkout. The host has only
   JDK 17, so Maven runs in a container (tests are skipped: `-Dmaven.test.skip=true`; the quality gates run in `backend-ci.yml`):
 
   ```bash
   docker run --rm -v "$PWD/backend":/src -w /src -v maven-repo-parity:/root/.m2 maven:3.9-eclipse-temurin-21 \
     mvn -q -B package -Dmaven.test.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true -Dpmd.skip=true
-  docker build -f backend/src/main/docker/Dockerfile.jvm -t chronos-backend:parity backend
-  docker save chronos-backend:parity | sudo k3s ctr -n k8s.io images import -
-  docker rmi chronos-backend:parity; docker volume rm maven-repo-parity; sudo rm -rf backend/target   # target/ is owned by root
+  docker build -f backend/src/main/docker/Dockerfile.jvm -t chronos-backend:parity-patched backend
+  docker save chronos-backend:parity-patched | sudo k3s ctr -n k8s.io images import -
+  docker rmi chronos-backend:parity-patched; docker volume rm maven-repo-parity; sudo rm -rf backend/target   # target/ is owned by root
   ```
 
 - **Pin the imported images**: images that exist only in containerd are not in any registry. Above ~85 % disk usage the kubelet
   garbage-collects images no pod uses (e.g. while a backend is scaled to 0), and the pod then fails with `ErrImageNeverPull`
   (happened on 2026-10-20). Mark them as pinned after the import:
   `sudo k3s ctr -n k8s.io images label docker.io/library/chronos-rust-backend:parity io.cri-containerd.pinned=pinned`
-  (same for `chronos-backend:parity`).
+  (same for `chronos-backend:parity-patched`).
 - **Rust**: the CI image `ghcr.io/silverminer007/chronos-rust-backend:latest` is published from `main`, but may lag behind the
   commit under test. The parity run therefore builds the image from the checkout and imports it into k3s
   (no registry, no second copy of the image on disk besides containerd's):
@@ -54,7 +60,7 @@ The credentials are throw-away values for this namespace only.
   docker rmi chronos-rust-backend:parity      # free the Docker copy
   ```
 
-  `values-parity.yaml` references `chronos-backend:parity` (the run used a locally patched build tagged `parity-patched`, passed with `--set backend.image.tag=parity-patched`, see the KB entry) and `chronos-rust-backend:parity` with `pullPolicy: Never`.
+  `values-parity.yaml` references `chronos-backend:parity-patched` (see above) and `chronos-rust-backend:parity` with `pullPolicy: Never`.
   After a rebuild: `kubectl -n chronos-parity rollout restart deploy/<name>`.
 
 ## Deploy
@@ -104,5 +110,5 @@ backends; Keycloak keeps user changes of a run otherwise).
 ```bash
 helm uninstall chronos -n chronos-parity
 kubectl delete namespace chronos-parity      # also removes Keycloak and the PVC
-sudo k3s ctr -n k8s.io images rm docker.io/library/chronos-rust-backend:parity docker.io/library/chronos-backend:parity
+sudo k3s ctr -n k8s.io images rm docker.io/library/chronos-rust-backend:parity docker.io/library/chronos-backend:parity-patched
 ```
