@@ -72,6 +72,12 @@
       "kind": "status_mismatch",
       "path": "$",
       "reason": "Rust answers 500, Java 200 (#159)"
+    },
+    {
+      "step": "friend suggestions",
+      "kind": "length_mismatch",
+      "path": "$",
+      "reason": "Rust returns no suggestions (#160)"
     }
   ],
   "rust_only": [

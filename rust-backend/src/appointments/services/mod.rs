@@ -587,6 +587,30 @@ impl AppointmentService {
         Ok(())
     }
 
+    /// Stores a system message (Java: `MessageService#persistMessage` called from the event
+    /// observers) written by `user_id`; `text` receives the display name of that user.
+    async fn persist_system_message(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+        text: impl FnOnce(&str) -> String,
+    ) -> Result<(), ServiceError> {
+        let db_err = |e: RepositoryError| ServiceError::DatabaseError(e.to_string());
+        let name = self
+            .repo
+            .find_identities(&[user_id.to_string()])
+            .await
+            .map_err(db_err)?
+            .remove(user_id)
+            .unwrap_or_else(|| UserIdentity::deleted(user_id))
+            .name();
+        self.repo
+            .persist_message(appointment_id, user_id, Some(&text(&name)))
+            .await
+            .map_err(db_err)?;
+        Ok(())
+    }
+
     /// Soft cancel an appointment
     pub async fn cancel_appointment(
         &self,
@@ -598,6 +622,11 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound)?;
+
+        self.persist_system_message(id, acting_user_id, |name| {
+            format!("{name} hat diesen Termin abgesagt. Er wird nicht stattfinden!")
+        })
+        .await?;
 
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {
@@ -687,7 +716,7 @@ impl AppointmentService {
 
         // Mutate: add group to appointment
         self.repo
-            .add_group(appointment_id, group_id, role)
+            .add_group_with_members(appointment_id, group_id, role)
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
@@ -848,6 +877,16 @@ impl AppointmentService {
             .update_participation_status(appointment_id, user_id, new_status)
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        self.persist_system_message(appointment_id, user_id, |name| {
+            let verb = if new_status == ParticipationStatus::Approved {
+                "zugesagt"
+            } else {
+                "abgesagt"
+            };
+            format!("{name} hat {verb}")
+        })
+        .await?;
 
         // Fire event after successful database commit
         if let Some(ref publisher) = self.event_publisher {

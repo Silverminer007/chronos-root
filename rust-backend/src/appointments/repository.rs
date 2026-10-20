@@ -110,7 +110,8 @@ impl AppointmentRepository {
             .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Store a chat message; returns its id
+    /// Store a chat message; returns its id. The id comes from the column default, the same
+    /// source as `persist_message` (a second sequence would collide on the primary key).
     pub async fn insert_message(
         &self,
         appointment_id: Option<i64>,
@@ -119,8 +120,8 @@ impl AppointmentRepository {
         timestamp: DateTime<Utc>,
     ) -> Result<i64, RepositoryError> {
         sqlx::query_scalar::<_, i64>(
-            "INSERT INTO message (id, appointment_id, body, sender_oidcid, \"timestamp\")
-             VALUES (nextval('message_seq'), $1, $2, $3, $4)
+            "INSERT INTO message (appointment_id, body, sender_oidcid, \"timestamp\")
+             VALUES ($1, $2, $3, $4)
              RETURNING id",
         )
         .bind(appointment_id)
@@ -706,13 +707,18 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Add a group to an appointment
-    pub async fn add_group(
+    /// Adds a group to an appointment and makes its members PENDING participants with the given
+    /// role, marked as coming in through the group (Java: `addGroupToAppointment`). Both writes run
+    /// in one transaction, so a failing member insert leaves no group link behind. Users that
+    /// already participate keep their row.
+    pub async fn add_group_with_members(
         &self,
         appointment_id: i64,
         group_id: i64,
         role: UserRole,
     ) -> Result<(), RepositoryError> {
+        let db_err = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query(
             "INSERT INTO appointment_group_participations (id, appointment_id, group_id, role)
              VALUES (nextval('appointment_group_participations_seq'), $1, $2, $3)",
@@ -720,11 +726,23 @@ impl AppointmentRepository {
         .bind(appointment_id)
         .bind(group_id)
         .bind(role)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
-
-        Ok(())
+        .map_err(db_err)?;
+        sqlx::query(
+            "INSERT INTO appointment_participation
+                 (id, appointment_id, user_oidcid, role, status, group_participation_id)
+             SELECT nextval('appointment_participation_seq'), $1, gm.user_oidcid, $3, 'PENDING', $2
+             FROM (SELECT DISTINCT user_oidcid FROM group_member WHERE group_id = $2) gm
+             ON CONFLICT (appointment_id, user_oidcid) DO NOTHING",
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .bind(role)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)
     }
 
     /// Delete the link between a group and an appointment; returns the number of deleted rows
