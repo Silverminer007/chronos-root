@@ -71,7 +71,7 @@ Java sends web push notifications from `WebPushService` (CDI observers) through 
 | `GroupMemberAddedEvent` | `GroupService` (payload `group_id`, `user_id`) | done |
 | `AppointmentGroupParticipationAddedEvent` | not ported (group participants of appointments) | publisher must fire `{appointment_id, group_id, acting_user_id}` |
 | `AppointmentParticipationInvalidEvent`, `AppointmentParticipationStatusRecheckRequestedEvent` | not ported (participation validity check) | publisher must fire `{appointment_id}` / `{appointment_id, acting_user_id}` |
-| `MessageSentEvent` | messages (#124/#125) | publisher must fire `{message_id}` |
+| `MessageSentEvent` | `send_message` handler (`POST .../messages`, #125) | done |
 | `FriendshipRequestSentEvent` | friendships (#97) | `{request_id, requester_id, addressee_id, requester_name}` |
 | `FriendshipAcceptedEvent`, `FriendshipDeclinedEvent` | friendships (#97) | `{request_id, requester_id, addressee_id}` |
 | `FriendshipRemovedEvent` | friendships (#97) | `{acting_user_id, friend_id}` |

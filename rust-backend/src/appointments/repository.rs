@@ -414,6 +414,27 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Stores a message and returns the stored row (Java: `MessageService#persistMessage`).
+    /// The timestamp is the database time, `timestamptz(6)` like Java's `Instant.now()`.
+    pub async fn persist_message(
+        &self,
+        appointment_id: i64,
+        sender_oidcid: &str,
+        body: Option<&str>,
+    ) -> Result<Message, RepositoryError> {
+        sqlx::query_as::<_, Message>(
+            "INSERT INTO message (appointment_id, sender_oidcid, body, \"timestamp\")
+             VALUES ($1, $2, $3, now())
+             RETURNING id, sender_oidcid, appointment_id, body, \"timestamp\"",
+        )
+        .bind(appointment_id)
+        .bind(sender_oidcid)
+        .bind(body)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Get the participation status of a user for an appointment (None if no participation row)
     pub async fn find_participation_status(
         &self,
