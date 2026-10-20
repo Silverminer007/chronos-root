@@ -1,0 +1,20 @@
+name: Repo Hygiene
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+jobs:
+  no-local-agent-settings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test the check
+        run: scripts/check-no-local-settings.test.sh
+      - name: Fail if local agent settings or a LiteLLM key header are tracked
+        run: scripts/check-no-local-settings.sh

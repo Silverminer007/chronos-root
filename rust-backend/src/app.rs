@@ -7,9 +7,9 @@ use axum::{
 use std::sync::Arc;
 
 use crate::appointments::handlers::{
-    add_participant, cancel_appointment, create_appointment, delete_appointment, get_appointment,
-    get_participation_status, list_appointments, remove_participant, rsvp_to_appointment,
-    update_appointment, AppState,
+    add_group_to_appointment, add_participant, cancel_appointment, create_appointment,
+    delete_appointment, get_appointment, get_participation_status, list_appointments,
+    remove_participant, rsvp_to_appointment, update_appointment, AppState,
 };
 use crate::push_notifications::handlers::endpoints::{
     get_public_key, status as push_status, subscribe, unsubscribe,
@@ -54,6 +54,10 @@ pub fn build_router(
                 .delete(delete_appointment),
         )
         .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
+        .route(
+            "/api/v2/appointments/:id/groups/:groupId",
+            post(add_group_to_appointment),
+        )
         .route(
             "/api/v2/appointments/:id/participants/:userId",
             post(add_participant).delete(remove_participant),

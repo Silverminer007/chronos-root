@@ -436,4 +436,50 @@ impl AppointmentRepository {
 
         Ok(())
     }
+
+    /// Check if a group exists
+    pub async fn group_exists(&self, group_id: i64) -> Result<bool, RepositoryError> {
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1)")
+            .bind(group_id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Check if a group is already a participant in an appointment
+    pub async fn group_participation_exists(
+        &self,
+        appointment_id: i64,
+        group_id: i64,
+    ) -> Result<bool, RepositoryError> {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM appointment_group_participations WHERE appointment_id = $1 AND group_id = $2)",
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Add a group to an appointment
+    pub async fn add_group(
+        &self,
+        appointment_id: i64,
+        group_id: i64,
+        role: UserRole,
+    ) -> Result<(), RepositoryError> {
+        sqlx::query(
+            "INSERT INTO appointment_group_participations (id, appointment_id, group_id, role)
+             VALUES (nextval('appointment_group_participations_seq'), $1, $2, $3)",
+        )
+        .bind(appointment_id)
+        .bind(group_id)
+        .bind(role)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
 }
