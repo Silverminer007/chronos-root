@@ -17,6 +17,10 @@ superceded_by: (none)
 3. **Janitor.** Once per test process, `drop_stale_databases` drops databases named `test_db_<unix seconds>_*` that are older than one hour and have no connection (at most 20 per run, because every `DROP DATABASE` waits for a checkpoint). Names without that shape and all other databases are never touched. The creation time is encoded in the name because PostgreSQL does not store it.
 4. **Check.** CI counts `^test_db_[0-9]+_` databases after the integration tests and fails when any remain; the `tests/test_db_cleanup_test.rs` tests cover the guard, the panic case and the janitor.
 
+5. **Assumptions about the server and the role.** The code relies on both; a change of either breaks the tests and must be checked against this list:
+   - **PostgreSQL 13 or newer.** `DROP DATABASE ... WITH (FORCE)` does not exist before 13. CI uses `postgres:16`, the shared host server runs 15.
+   - **Role privileges.** The test role needs `CREATEDB` (`CREATE DATABASE ... TEMPLATE`, and `ALTER DATABASE ... RENAME` of the template, which also requires that the role owns the database it renames). It must own the test databases it drops, or be a superuser or member of `pg_signal_backend`, because `FORCE` terminates the sessions that still use the database. `pg_advisory_lock` (template build lock) needs no privilege; it is held on the admin connection and is server-wide, so all test processes that share a server serialize on it. The janitor ignores a failed `DROP DATABASE` and moves on, so a role that may not drop a stale database leaves it behind silently.
+
 ## Alternatives considered
 
 | Option | Result |
