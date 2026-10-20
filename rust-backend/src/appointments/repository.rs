@@ -1,8 +1,10 @@
 use crate::appointments::models::{
     Appointment, AppointmentStatus, ParticipantRow, ParticipationStatus, UserRole,
 };
+use crate::users::identity::{IdentityRepository, UserIdentity};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 /// Columns of the Java-compatible `appointment` table, aliased to the field names of `Appointment`.
 /// `status` is the ordinal of the Java enum; a NULL (possible in the Java schema) means PLANNED.
@@ -44,9 +46,14 @@ impl AppointmentRepository {
         Self { pool }
     }
 
-    /// The pool, for reads that belong to other modules (e.g. user identities)
-    pub fn pool(&self) -> &PgPool {
-        &self.pool
+    /// Resolves the identities of the given users (deleted placeholder for users without a profile)
+    pub async fn find_identities(
+        &self,
+        oidc_ids: &[String],
+    ) -> Result<HashMap<String, UserIdentity>, RepositoryError> {
+        IdentityRepository::find_by_ids(&self.pool, oidc_ids)
+            .await
+            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
     /// Find an appointment by its ID

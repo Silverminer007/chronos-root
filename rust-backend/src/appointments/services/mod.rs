@@ -9,7 +9,7 @@ use crate::appointments::models::{
 };
 use crate::appointments::repository::{AppointmentRepository, RepositoryError};
 use crate::event_bus::EventPublisher;
-use crate::users::identity::{IdentityRepository, UserIdentity};
+use crate::users::identity::UserIdentity;
 use chrono::{DateTime, Utc};
 
 /// Custom error type for appointment service operations
@@ -199,9 +199,11 @@ impl AppointmentService {
             .await
             .map_err(db_error)?;
         let user_ids: Vec<String> = rows.iter().map(|r| r.user_oidcid.clone()).collect();
-        let users = IdentityRepository::find_by_ids(self.repo.pool(), &user_ids)
+        let users = self
+            .repo
+            .find_identities(&user_ids)
             .await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+            .map_err(db_error)?;
 
         Ok(rows
             .into_iter()
