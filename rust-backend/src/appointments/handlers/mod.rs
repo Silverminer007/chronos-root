@@ -136,7 +136,8 @@ pub async fn list_messages(
 ///
 /// Any participant (role other than NONE) may post; everybody else, including callers of an
 /// unknown appointment, gets 403 (Java: `requireSendMessage`). Answers 200 (Java `Response.ok`,
-/// the 201 of the first ticket answer was superseded) with the stored message, `sender_name` is the caller's name from the access token. After the insert a
+/// the 201 of the first ticket answer was superseded) with the stored message,
+/// `sender_name` is the caller's name from the access token. After the insert a
 /// `MessageSentEvent {message_id}` is fired (Java: `MessageService#sendMessage`).
 pub async fn send_message(
     State(state): State<Arc<AppState>>,
