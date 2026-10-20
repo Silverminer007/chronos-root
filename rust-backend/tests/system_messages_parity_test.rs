@@ -188,3 +188,37 @@ async fn test_admin_message_after_a_user_message_is_stored() {
         "{bodies:?}"
     );
 }
+
+async fn patch_times(app: &TestApp, id: i64, start: &str, end: &str) {
+    let (status, body) = app
+        .patch(
+            OWNER,
+            &format!("/api/v2/appointments/{id}"),
+            Some(json!({"start": start, "end": end})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+/// Final parity run (#169): Java's `MessageService#onAppointmentMoved` writes a message when the times change
+#[tokio::test]
+async fn test_moving_an_appointment_writes_a_system_message_with_the_hours() {
+    let app = app().await;
+    let id = appointment(&app).await; // 10:00 - 11:00
+
+    patch_times(&app, id, "2030-01-01T11:00:00Z", "2030-01-01T12:00:00Z").await;
+    patch_times(&app, id, "2030-01-01T09:00:00Z", "2030-01-01T10:00:00Z").await;
+    patch_times(&app, id, "2030-01-01T09:00:00Z", "2030-01-01T12:00:00Z").await;
+    patch_times(&app, id, "2030-01-01T09:00:00Z", "2030-01-01T11:00:00Z").await;
+    patch_times(&app, id, "2030-01-01T09:00:00Z", "2030-01-01T11:00:00Z").await; // unchanged
+
+    assert_eq!(
+        bodies(&app, id).await,
+        vec![
+            "Olga Owner hat das Ende dieses Termins um 1 Stunden vor verlegt",
+            "Olga Owner hat das Ende dieses Termins um 2 Stunden verschoben",
+            "Olga Owner hat diesen Termin um 2 Stunden vor verlegt",
+            "Olga Owner hat diesen Termin um 1 Stunden verschoben",
+        ]
+    );
+}

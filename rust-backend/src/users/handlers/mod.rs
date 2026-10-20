@@ -9,7 +9,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 use std::sync::Arc;
 use tracing::error;
 
-use crate::error::{ErrorResponse, BAD_BODY_MESSAGE};
+use crate::error::ErrorResponse;
 use crate::keycloak::KeycloakError;
 use crate::security::PrincipalContext;
 use crate::users::{
@@ -29,6 +29,8 @@ pub struct ApiError {
     error_code: &'static str,
     message: String,
     path: String,
+    /// Quarkus' own exception mappers answer without a body
+    bare: bool,
 }
 
 impl ApiError {
@@ -40,6 +42,19 @@ impl ApiError {
             error_code: "INTERNAL_ERROR",
             message: INTERNAL_ERROR_MESSAGE.to_string(),
             path: path.to_string(),
+            bare: false,
+        }
+    }
+
+    /// Jackson's `JsonParseException` is mapped by Quarkus itself: 400 without a body
+    fn unparsable_body() -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error: "Bad Request",
+            error_code: "BAD_REQUEST",
+            message: String::new(),
+            path: String::new(),
+            bare: true,
         }
     }
 
@@ -51,6 +66,7 @@ impl ApiError {
             error_code: "BAD_REQUEST",
             message,
             path: path.to_string(),
+            bare: false,
         }
     }
 
@@ -72,6 +88,9 @@ impl ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
+        if self.bare {
+            return self.status.into_response();
+        }
         let body = ErrorResponse::new(
             self.status.as_u16(),
             self.error.to_string(),
@@ -117,7 +136,7 @@ fn parse_body_or_bad_request<T: DeserializeOwned>(body: &Bytes, path: &str) -> R
     }
     // Parsed as a plain value first: serde reports a type mismatch before a later syntax error
     let value = serde_json::from_slice::<serde_json::Value>(body)
-        .map_err(|_| ApiError::bad_request(BAD_BODY_MESSAGE.to_string(), path))?;
+        .map_err(|_| ApiError::unparsable_body())?;
     serde_json::from_value::<Option<T>>(value)
         .ok()
         .flatten()

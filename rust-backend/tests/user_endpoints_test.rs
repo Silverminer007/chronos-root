@@ -600,15 +600,14 @@ async fn put_settings_with_missing_blank_or_unknown_values_is_500_and_changes_no
 }
 
 #[tokio::test]
-async fn put_settings_with_malformed_json_is_400() {
+async fn put_settings_with_malformed_json_is_400_without_body() {
     let db = db().await;
     let app = authenticated(&db, Arc::new(FakeKeycloak::new()), max());
     for body in ["[1,", "{\"appointment_reminder\":", "not json"] {
-        let (status, response, _) = call(app.clone(), "PUT", "/api/v2/settings", Some(body)).await;
+        let (status, _, text) = call(app.clone(), "PUT", "/api/v2/settings", Some(body)).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
-        let response = response.unwrap();
-        assert_eq!(response["errorCode"], "BAD_REQUEST");
-        assert_eq!(response["path"], "/api/v2/settings");
+        // Quarkus answers Jackson's JsonParseException with a bare 400 (found by the final parity run, #169)
+        assert!(text.is_empty(), "{body}: {text}");
     }
 }
 

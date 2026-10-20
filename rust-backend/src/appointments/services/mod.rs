@@ -41,6 +41,32 @@ impl std::fmt::Display for ServiceError {
 
 impl std::error::Error for ServiceError {}
 
+/// Text of the system message after the times of an appointment changed (Java:
+/// `MessageService#onAppointmentMoved`): the start decides, the end only if the start stayed
+fn moved_text(
+    name: &str,
+    old: (DateTime<Utc>, DateTime<Utc>),
+    new: (DateTime<Utc>, DateTime<Utc>),
+) -> String {
+    let start_hours = (new.0 - old.0).num_hours();
+    let end_hours = (new.1 - old.1).num_hours();
+    match (start_hours, end_hours) {
+        (hours, _) if hours > 0 => {
+            format!("{name} hat diesen Termin um {hours} Stunden verschoben")
+        }
+        (hours, _) if hours < 0 => {
+            format!("{name} hat diesen Termin um {} Stunden vor verlegt", -hours)
+        }
+        (_, hours) if hours > 0 => {
+            format!("{name} hat das Ende dieses Termins um {hours} Stunden verschoben")
+        }
+        (_, hours) => format!(
+            "{name} hat das Ende dieses Termins um {} Stunden vor verlegt",
+            -hours
+        ),
+    }
+}
+
 /// Java lists upcoming appointments only: `end` defaults to now plus 1000 years
 const DEFAULT_WINDOW_DAYS: i64 = 365 * 1000;
 
@@ -531,6 +557,17 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound)?;
+
+        if times_changed {
+            self.persist_system_message(id, acting_user_id, |name| {
+                moved_text(
+                    name,
+                    (existing.start_time, existing.end_time),
+                    (updated.start_time, updated.end_time),
+                )
+            })
+            .await?;
+        }
 
         // Fire events after successful database commit
         if let Some(ref publisher) = self.event_publisher {

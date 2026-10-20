@@ -1,5 +1,5 @@
 {
-  "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted. Reasons for deliberate Java defects (#162) start with `java-defect`.",
+  "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted. Reasons for deliberate Java defects (#162) start with `java-defect`. Entries of explorative steps (deployment/parity/explore.py) are only used by `run-contract.sh --explore`; the harness lists them as unused.",
   "entries": [
     {
       "step": "unauthenticated request",
@@ -18,6 +18,72 @@
       "kind": "status_mismatch",
       "path": "$",
       "reason": "java-defect (#162): Java answers 500 for an unknown enum value, Rust 422"
+    },
+    {
+      "step": "ap: missing name",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 (NPE) for a missing name, Rust 400"
+    },
+    {
+      "step": "ap: invalid date",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 (DateTimeParseException) for an unparsable date, Rust 400"
+    },
+    {
+      "step": "ap: malformed json",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for a malformed body, Rust 400"
+    },
+    {
+      "step": "ap: add participant invalid role",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for an unknown role, Rust 400"
+    },
+    {
+      "step": "ap: user2 rsvp declined",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for the unknown status DECLINED, Rust 400"
+    },
+    {
+      "step": "ap: user2 rsvp without body",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for a missing body, Rust 400"
+    },
+    {
+      "step": "ap: owner changes role invalid",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for an unknown role, Rust 400"
+    },
+    {
+      "step": "msg: without body",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for a missing body, Rust 400"
+    },
+    {
+      "step": "us: patch empty names",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for empty names, Rust 200"
+    },
+    {
+      "step": "admin: unknown user",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for an unknown user, Rust 404"
+    },
+    {
+      "step": "http: wrong method",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "java-defect (#162): Java answers 500 for a method the route does not serve, Rust 405"
     }
   ],
   "rust_only": [

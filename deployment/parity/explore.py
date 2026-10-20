@@ -2,7 +2,8 @@
 
 Uses the harness engine (`contract-tests/parity`) with a second user (role `user2`). Run through
 `run-contract.sh --explore`, which forwards the ports and fetches the tokens. Prints one line per
-step (`OK`/`DIFF`) and the diff details; exit code 1 on any difference.
+step (`OK`/`DIFF`/`ALLOWED`) and the diff details; exit code 1 on any difference that
+`contract-tests/allowlist.json` does not allow (the Java defects of #162, the same file as the harness).
 """
 
 import os
@@ -11,7 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "contract-tests"))
 
-from parity.runner import ROLE_ADMIN, ROLE_ANON, ROLE_USER, HttpTarget, Step, run_scenario  # noqa: E402
+from parity.allowlist import Allowlist  # noqa: E402
+from parity.cli import DEFAULT_ALLOWLIST  # noqa: E402
+from parity.runner import ROLE_ADMIN, ROLE_ANON, ROLE_USER, HttpTarget, Step, apply_allowlist, run_scenario  # noqa: E402
 
 USER2 = "user2"
 APPT = {
@@ -83,6 +86,9 @@ STEPS = [
     s("ap: add group", "POST", "/api/v2/appointments/{appt}/groups/{group}", body={"user_role": "ATTENDANT"}),
     s("ap: add missing group", "POST", "/api/v2/appointments/{appt}/groups/{missing_id}", body={"user_role": "ATTENDANT"}),
     s("ap: participants with group", "GET", "/api/v2/appointments/{appt}/participants"),
+    s("ap: list embeds participants, messages and group", "GET", "/api/v2/appointments"),
+    s("ap: get embeds participants, messages and group", "GET", "/api/v2/appointments/{appt}?participants=true&messages=true&group_participants=true"),
+    s("ap: user2 get embeds", "GET", "/api/v2/appointments/{appt}?participants=true&messages=true&group_participants=true", role=USER2),
     s("ap: remove group", "DELETE", "/api/v2/appointments/{appt}/groups/{group}"),
     s("ap: patch moves appointment", "PATCH", "/api/v2/appointments/{appt}", body={**APPT, "start": "2030-02-02T18:00:00Z", "end": "2030-02-02T20:00:00Z"}),
     s("ap: patch missing", "PATCH", "/api/v2/appointments/{missing_id}", body=APPT),
@@ -162,7 +168,9 @@ def main() -> int:
         "missing_user": "does-not-exist",
         "missing_id": 999999999,
     }
+    allowlist = Allowlist.load(DEFAULT_ALLOWLIST)
     results = run_scenario(STEPS, java, rust, variables)
+    apply_allowlist(results, allowlist)
     different = 0
     for result in results:
         status = f"java {result.java.status} rust {result.rust.status}"
@@ -173,6 +181,9 @@ def main() -> int:
                 print(f"     {diff.path} {diff.kind} {diff.detail}")
         else:
             print(f"OK   {result.step.name} {status}")
+    for entry in allowlist.entries:
+        if entry.used:
+            print(f"ALLOWED {entry.step} {entry.path} {entry.kind}: {entry.reason}")
     print(f"{len(results)} steps, {different} with differences")
     return 1 if different else 0
 
