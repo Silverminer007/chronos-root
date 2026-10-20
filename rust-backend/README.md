@@ -99,6 +99,14 @@ Health and metrics follow the Quarkus contract (see [ADR-2026-10-20-020](../kb/a
   - Response body: `{"status": "PENDING" | "APPROVED" | "REJECTED"}`
   - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-14-016](../kb/adr/ADR-2026-10-14-016-participation-status-endpoint.md)).
   - Returns only the caller's own status; there is no way to query another user's status.
+- `PUT /api/v2/appointments/:id/participation/:userId/role` - Change a participant's role. Requires a valid bearer token; the caller must be `RESPONSIBLE` for the appointment. `:userId` is the target's OIDC ID.
+  - Request body: `{"role": "NONE" | "GUEST" | "ATTENDANT" | "HELPER" | "RESPONSIBLE"}`
+  - Response: `200 OK` with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
+  - Errors: `400` for an unknown role, a target that is not a participant, or a role the target already has; `403` if the caller is not `RESPONSIBLE`; `404` for an unknown appointment (see [ADR-2026-10-20-020](../kb/adr/ADR-2026-10-20-020-change-participant-role.md)).
+- `GET /api/v2/appointments/:id/messages` - Messages of an appointment, newest first. Requires a valid bearer token and a participation in the appointment (any role except `NONE`, any status); otherwise `403`, also for unknown appointments (see [ADR-2026-10-20-022](../kb/adr/ADR-2026-10-20-022-list-appointment-messages.md)).
+  - Response body: array of `{"id", "sender_id", "sender_name", "appointment_id", "body", "timestamp"}`; `timestamp` is ISO-8601 UTC like Java `Instant.toString()`.
+  - `sender_name` comes from the `user_profiles` cache; senders without a profile are named `Gelöschter Benutzer`.
+  - Sending (`POST`) is not part of this endpoint's ticket and not yet implemented.
 
 ### Groups and friendships
 

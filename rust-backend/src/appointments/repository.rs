@@ -1,4 +1,6 @@
-use crate::appointments::models::{Appointment, AppointmentStatus, ParticipationStatus, UserRole};
+use crate::appointments::models::{
+    Appointment, AppointmentStatus, Message, ParticipationStatus, UserRole,
+};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
@@ -384,6 +386,22 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Messages of an appointment, newest first (Java: `MessageRepository#listByAppointment`).
+    /// Messages are hard-deleted in Java, so there is no soft-delete filter.
+    pub async fn find_messages(
+        &self,
+        appointment_id: i64,
+    ) -> Result<Vec<Message>, RepositoryError> {
+        sqlx::query_as::<_, Message>(
+            "SELECT id, sender_oidcid, appointment_id, body, \"timestamp\" FROM message
+             WHERE appointment_id = $1 ORDER BY \"timestamp\" DESC, id DESC",
+        )
+        .bind(appointment_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Get the participation status of a user for an appointment (None if no participation row)
     pub async fn find_participation_status(
         &self,
@@ -476,6 +494,30 @@ impl AppointmentRepository {
         .execute(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Set the role of an existing participant
+    pub async fn update_participant_role(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+        role: UserRole,
+    ) -> Result<(), RepositoryError> {
+        let result = sqlx::query(
+            "UPDATE appointment_participation SET role = $3 WHERE appointment_id = $1 AND user_oidcid = $2",
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .bind(role)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(RepositoryError::NotFound);
+        }
 
         Ok(())
     }

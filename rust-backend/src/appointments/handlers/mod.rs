@@ -11,14 +11,17 @@ use std::sync::Arc;
 use crate::appointments::{
     models::{
         AddGroupToAppointmentRequest, AddParticipantRequest, AppointmentResponse,
-        CreateAppointmentRequest, ParticipationStatusResponse, UpdateAppointmentRequest,
-        UpdateParticipationStatusRequest, UserRole,
+        ChangeParticipantRoleRequest, CreateAppointmentRequest, MessageDto,
+        ParticipationStatusResponse, UpdateAppointmentRequest, UpdateParticipationStatusRequest,
+        UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
 use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
+use crate::users::identity::IdentityRepository;
+use chrono::SecondsFormat;
 
 /// Shared application state
 #[derive(Clone)]
@@ -81,6 +84,58 @@ pub async fn get_participation_status(
         .map_err(AppointmentError::from)?;
 
     Ok(Json(ParticipationStatusResponse { status }))
+}
+
+/// GET /api/v2/appointments/:id/messages - Messages of an appointment, newest first
+///
+/// Any participant (role other than NONE) may read; everybody else, including callers of an
+/// unknown appointment, gets 403 (Java: `requireReadAppointment`). Sender names come from the
+/// `user_profiles` cache; senders without a profile are named "Gelöschter Benutzer".
+pub async fn list_messages(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    let role = repo
+        .get_participant_role(id, principal.user_id())
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+    if matches!(role, None | Some(UserRole::None)) {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let messages = repo
+        .find_messages(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    let mut sender_ids: Vec<String> = messages.iter().map(|m| m.sender_oidcid.clone()).collect();
+    sender_ids.sort();
+    sender_ids.dedup();
+    let senders = IdentityRepository::find_by_ids(&state.db_pool, &sender_ids)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    let responses: Vec<MessageDto> = messages
+        .into_iter()
+        .map(|m| MessageDto {
+            id: m.id,
+            sender_name: senders
+                .get(&m.sender_oidcid)
+                .map(|s| s.name())
+                .unwrap_or_default(),
+            sender_id: m.sender_oidcid,
+            appointment_id: m.appointment_id,
+            body: m.body,
+            timestamp: m
+                .timestamp
+                .map(|t| t.to_rfc3339_opts(SecondsFormat::AutoSi, true)),
+        })
+        .collect();
+
+    Ok(Json(responses))
 }
 
 /// POST /api/v2/appointments/:id/participation - RSVP to an appointment
@@ -336,11 +391,48 @@ pub async fn remove_participant(
     Ok(StatusCode::OK)
 }
 
+/// PUT /api/v2/appointments/:id/participation/:userId/role - Change a participant's role
+///
+/// # Authorization
+/// The acting user must be RESPONSIBLE for the appointment (403 otherwise).
+///
+/// # Request
+/// Body `{"role": "NONE|GUEST|ATTENDANT|HELPER|RESPONSIBLE"}`; an unknown role is a 400.
+///
+/// # Response
+/// 200 OK with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
+/// 404 if the appointment is unknown; 400 if the target is not a participant or already has the role.
+pub async fn change_participant_role(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, target_user_id)): Path<(i64, String)>,
+    principal: PrincipalContext,
+    Json(request): Json<ChangeParticipantRoleRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let new_role = UserRole::from_str(&request.role)
+        .map_err(|_| AppointmentError::ValidationError("invalid role".to_string()))?;
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .change_participant_role(
+            appointment_id,
+            &target_user_id,
+            principal.user_id(),
+            new_role,
+        )
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
     NotFound,
     Unauthorized,
+    Forbidden(String),
     DatabaseError,
     ValidationError(String),
 }
@@ -355,6 +447,7 @@ impl From<ServiceError> for AppointmentError {
                 AppointmentError::DatabaseError
             }
             ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::Forbidden(msg) => AppointmentError::Forbidden(msg),
         }
     }
 }
@@ -366,6 +459,7 @@ impl IntoResponse for AppointmentError {
                 (StatusCode::NOT_FOUND, "Appointment not found".to_string())
             }
             AppointmentError::Unauthorized => (StatusCode::FORBIDDEN, "Unauthorized".to_string()),
+            AppointmentError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppointmentError::DatabaseError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),

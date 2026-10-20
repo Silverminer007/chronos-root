@@ -204,16 +204,6 @@ pub struct GroupMember {
     pub user_oidc_id: String,
 }
 
-/// Message in an appointment chat
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Message {
-    pub id: i64,
-    pub body: String,
-    pub appointment_id: i64,
-    pub sender_oidc_id: String,
-    pub timestamp: DateTime<Utc>,
-}
-
 // ===== DTOs for API Requests/Responses =====
 
 /// Request to create a new appointment
@@ -287,17 +277,6 @@ pub struct UserParticipantDto {
     pub via_group_name: Option<String>,
 }
 
-/// Message in an appointment
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageDto {
-    pub id: i64,
-    pub sender_id: String,
-    pub sender_name: Option<String>,
-    pub appointment_id: i64,
-    pub body: String,
-    pub timestamp: String,
-}
-
 /// Group with members
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupDto {
@@ -344,6 +323,29 @@ pub struct ParticipationStatusResponse {
     pub status: ParticipationStatus,
 }
 
+/// A row of the Java-compatible `message` table
+#[derive(Debug, Clone, FromRow)]
+pub struct Message {
+    pub id: i64,
+    pub sender_oidcid: String,
+    pub appointment_id: Option<i64>,
+    pub body: Option<String>,
+    pub timestamp: Option<DateTime<Utc>>,
+}
+
+/// Response element of GET /api/v2/appointments/:id/messages (Java `MessageDto`).
+/// Null fields are serialized as `null`, like Java does.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDto {
+    pub id: i64,
+    pub sender_id: String,
+    pub sender_name: String,
+    pub appointment_id: Option<i64>,
+    pub body: Option<String>,
+    /// ISO-8601 UTC like Java `Instant.toString()`
+    pub timestamp: Option<String>,
+}
+
 /// Request to create a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateGroupRequest {
@@ -370,14 +372,10 @@ pub struct AddParticipantRequest {
     pub user_role: UserRole,
 }
 
-/// Response with message details
+/// Request to change a participant's role (Java: `ParticipantRoleDto`)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageResponse {
-    pub id: i64,
-    pub body: String,
-    pub appointment_id: i64,
-    pub sender_oidc_id: String,
-    pub timestamp: DateTime<Utc>,
+pub struct ChangeParticipantRoleRequest {
+    pub role: String,
 }
 
 /// Request to add a group to an appointment
@@ -656,23 +654,6 @@ mod tests {
         assert!(json.contains("\"user_oidc_id\":\"member123\""));
     }
 
-    #[test]
-    fn test_message_serialization() {
-        let now = Utc::now();
-        let message = Message {
-            id: 1,
-            body: "Hello everyone!".to_string(),
-            appointment_id: 42,
-            sender_oidc_id: "user123".to_string(),
-            timestamp: now,
-        };
-
-        let json = serde_json::to_string(&message).unwrap();
-        assert!(json.contains("\"body\":\"Hello everyone!\""));
-        assert!(json.contains("\"appointment_id\":42"));
-        assert!(json.contains("\"sender_oidc_id\":\"user123\""));
-    }
-
     // ===== DTO Tests =====
 
     #[test]
@@ -757,6 +738,13 @@ mod tests {
     }
 
     #[test]
+    fn test_change_participant_role_request_deserialization() {
+        let request =
+            serde_json::from_str::<ChangeParticipantRoleRequest>(r#"{"role": "HELPER"}"#).unwrap();
+        assert_eq!(request.role, "HELPER");
+    }
+
+    #[test]
     fn test_update_participation_status_request_deserialization() {
         let json = r#"{
             "status": "APPROVED"
@@ -799,18 +787,27 @@ mod tests {
     }
 
     #[test]
-    fn test_message_response_serialization() {
-        let now = Utc::now();
-        let response = MessageResponse {
+    fn test_message_dto_serializes_java_field_names() {
+        let dto = MessageDto {
             id: 1,
-            body: "Hello everyone!".to_string(),
-            appointment_id: 42,
-            sender_oidc_id: "user123".to_string(),
-            timestamp: now,
+            sender_id: "user123".to_string(),
+            sender_name: "Max Muster".to_string(),
+            appointment_id: Some(42),
+            body: Some("Hello everyone!".to_string()),
+            timestamp: None,
         };
 
-        let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"body\":\"Hello everyone!\""));
-        assert!(json.contains("\"sender_oidc_id\":\"user123\""));
+        let json = serde_json::to_value(&dto).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "id": 1,
+                "sender_id": "user123",
+                "sender_name": "Max Muster",
+                "appointment_id": 42,
+                "body": "Hello everyone!",
+                "timestamp": null
+            })
+        );
     }
 }
