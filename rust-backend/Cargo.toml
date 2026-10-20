@@ -48,10 +48,11 @@ web-push = "0.11"
 # source so the musl target needs no system OpenSSL. See kb/adr/ADR-2026-10-13-013-vendored-openssl-musl-image.md.
 openssl = { version = "0.10", features = ["vendored"] }
 
+tower-http = { version = "0.5", features = ["normalize-path"] }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 testcontainers = "0.27"
 testcontainers-modules = { version = "0.15", features = ["postgres"] }
 tower = "0.4"
-tower-http = { version = "0.5", features = ["trace"] }
 hyper = "1"

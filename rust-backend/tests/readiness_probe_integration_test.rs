@@ -113,6 +113,10 @@ async fn test_readiness_returns_200_when_database_available() -> Result<(), AnyE
 
     // Should return 200 OK
     assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await?;
+    let body: serde_json::Value = serde_json::from_slice(&body)?;
+    // SmallRye/Agroal: the check carries the state per datasource (`<default>`)
+    assert_eq!(body["checks"][0]["data"]["<default>"], "UP");
 
     Ok(())
 }
@@ -156,5 +160,74 @@ async fn test_health_live_always_returns_200() -> Result<(), AnyError> {
     // Should return 200 OK regardless of database state
     assert_eq!(response.status(), StatusCode::OK);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_readiness_reports_the_datasource_as_down_when_database_unreachable(
+) -> Result<(), AnyError> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .min_connections(0)
+        .acquire_timeout(Duration::from_millis(100))
+        .connect_lazy("postgres://user:pass@127.0.0.1:1/unreachable")?;
+    let app_state = Arc::new(AppState {
+        db_pool: pool,
+        event_publisher: Arc::new(MockEventPublisher),
+    });
+    let mut router = build_router(
+        app_state.clone(),
+        user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
+        Arc::new(TokenValidator::new(
+            "http://localhost:8080/realms/chronos".to_string(),
+        )),
+    );
+    let request = http::Request::builder()
+        .uri("/q/health/ready")
+        .body(axum::body::Body::empty())?;
+    let response = router.call(request).await?;
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await?;
+    let body: serde_json::Value = serde_json::from_slice(&body)?;
+    assert_eq!(body["checks"][0]["data"]["<default>"], "DOWN");
+    Ok(())
+}
+
+/// Java maps `@Path("/")` on the collection resources, so a trailing slash answers like none.
+/// The public health routes are not behind the auth layer, so 200 proves the route matched.
+/// (Authenticated collection routes: `groups_integration_test`.)
+#[tokio::test]
+async fn test_health_routes_answer_with_a_trailing_slash() -> Result<(), AnyError> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .min_connections(0)
+        .acquire_timeout(Duration::from_millis(100))
+        .connect_lazy("postgres://user:pass@127.0.0.1:1/unreachable")?;
+    let app_state = Arc::new(AppState {
+        db_pool: pool,
+        event_publisher: Arc::new(MockEventPublisher),
+    });
+    let mut router = build_router(
+        app_state.clone(),
+        user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
+        Arc::new(TokenValidator::new(
+            "http://localhost:8080/realms/chronos".to_string(),
+        )),
+    );
+    let response = router
+        .call(
+            http::Request::builder()
+                .uri("/q/health/live/")
+                .body(axum::body::Body::empty())?,
+        )
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
     Ok(())
 }

@@ -9,7 +9,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 use std::sync::Arc;
 use tracing::error;
 
-use crate::error::ErrorResponse;
+use crate::error::{ErrorResponse, BAD_BODY_MESSAGE};
 use crate::keycloak::KeycloakError;
 use crate::security::PrincipalContext;
 use crate::users::{
@@ -104,6 +104,21 @@ fn principal_dto(principal: &PrincipalContext) -> PrincipalDto {
 /// A body Jackson cannot turn into the DTO (empty, `null`, malformed) ends in an unhandled exception in Java
 fn parse_body<T: DeserializeOwned>(body: &Bytes, path: &str) -> Result<T, ApiError> {
     serde_json::from_slice::<Option<T>>(body)
+        .ok()
+        .flatten()
+        .ok_or_else(|| ApiError::internal(path))
+}
+
+/// Like `parse_body`, but syntactically broken JSON is a 400 (Quarkus maps Jackson's
+/// `JsonParseException` of `SettingsResource` to a bad request).
+fn parse_body_or_bad_request<T: DeserializeOwned>(body: &Bytes, path: &str) -> Result<T, ApiError> {
+    if body.is_empty() {
+        return Err(ApiError::internal(path));
+    }
+    // Parsed as a plain value first: serde reports a type mismatch before a later syntax error
+    let value = serde_json::from_slice::<serde_json::Value>(body)
+        .map_err(|_| ApiError::bad_request(BAD_BODY_MESSAGE.to_string(), path))?;
+    serde_json::from_value::<Option<T>>(value)
         .ok()
         .flatten()
         .ok_or_else(|| ApiError::internal(path))
@@ -261,7 +276,7 @@ pub async fn update_settings(
     body: Bytes,
 ) -> Result<StatusCode, ApiError> {
     let path = uri.path();
-    let dto: SettingsDto = parse_body(&body, path)?;
+    let dto: SettingsDto = parse_body_or_bad_request(&body, path)?;
     // Java persists nulls into NOT NULL columns for blank/unknown values and fails with a 500
     let settings = Settings::from_dto(&dto).ok_or_else(|| ApiError::internal(path))?;
     UserRepository::new(state.db_pool.clone())

@@ -43,29 +43,16 @@ impl AdminState {
     }
 }
 
-/// Every route is declared with and without the trailing slash: the Java resources use `@Path("/")`
-fn with_trailing_slash(
-    router: Router<Arc<AdminState>>,
-    path: &str,
-    methods: axum::routing::MethodRouter<Arc<AdminState>>,
-) -> Router<Arc<AdminState>> {
-    router
-        .route(path, methods.clone())
-        .route(&format!("{path}/"), methods)
-}
-
 /// `/api/v2/admin/*`. Authorization is enforced by the `AdminPrincipal` extractor of each handler.
 pub fn admin_routes(state: Arc<AdminState>) -> Router {
-    let router = Router::new();
-    let router = with_trailing_slash(
-        router,
-        "/api/v2/admin/appointments",
-        get(list_appointments).post(create_appointment),
-    );
-    let router = with_trailing_slash(router, "/api/v2/admin/groups", post(create_group));
-    let router = with_trailing_slash(router, "/api/v2/admin/stats", get(get_statistics));
-    let router = with_trailing_slash(router, "/api/v2/admin/users", get(list_users));
-    router
+    Router::new()
+        .route(
+            "/api/v2/admin/appointments",
+            get(list_appointments).post(create_appointment),
+        )
+        .route("/api/v2/admin/groups", post(create_group))
+        .route("/api/v2/admin/stats", get(get_statistics))
+        .route("/api/v2/admin/users", get(list_users))
         .route(
             "/api/v2/admin/appointments/:appointment_id/participants/groups",
             post(add_group_participant),

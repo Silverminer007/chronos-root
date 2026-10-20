@@ -229,7 +229,7 @@ impl AppError {
 pub const INTERNAL_ERROR_MESSAGE: &str = "Ein interner Fehler ist aufgetreten";
 
 /// Answer to a request body that cannot be read as the expected JSON
-const BAD_BODY_MESSAGE: &str = "Ungültiger Request-Body";
+pub const BAD_BODY_MESSAGE: &str = "Ungültiger Request-Body";
 
 /// Message of Jakarta REST's `NotFoundException` for an unmatched resource
 const ROUTE_NOT_FOUND_MESSAGE: &str = "HTTP 404 Not Found";

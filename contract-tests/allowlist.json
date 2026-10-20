@@ -2,12 +2,6 @@
   "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted. Reasons for deliberate Java defects (#162) start with `java-defect`.",
   "entries": [
     {
-      "step": "health ready",
-      "kind": "missing_in_rust",
-      "path": "$.checks[[]].data",
-      "reason": "Rust omits checks[].data (#161)"
-    },
-    {
       "step": "unauthenticated request",
       "kind": "status_mismatch",
       "path": "$",
