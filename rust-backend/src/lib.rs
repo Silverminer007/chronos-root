@@ -8,6 +8,7 @@ pub mod event_bus;
 pub mod appointments;
 pub mod groups;
 pub mod keycloak;
+pub mod metrics;
 pub mod push_notifications;
 pub mod reminders;
 pub mod security;
