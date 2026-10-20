@@ -1,4 +1,5 @@
 # postgres-restore-job.yaml
+{{- if .Values.postgresql.backup.enabled }}
 {{- $secretName := include "chronos.secretName" . -}}
   #
   # ⚠️  DIESER JOB STELLT DIE DATENBANK AUS EINEM S3-BACKUP WIEDER HER!
@@ -232,3 +233,4 @@ spec:
           volumes:
             - name: restore-storage
               emptyDir: {}  # Temporärer Speicher, nur für die Laufzeit des Jobs
+{{- end }}

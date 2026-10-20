@@ -132,3 +132,14 @@ class CoverageTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TokensTest(unittest.TestCase):
+    def test_second_user_token_comes_from_env_and_defaults_to_the_first_user(self):
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"CONTRACT_USER_TOKEN": "u1"}, clear=True):
+            tokens = cli.tokens_from_env()
+            self.assertEqual(tokens["user2"], "u1")
+        with mock.patch.dict(os.environ, {"CONTRACT_USER_TOKEN": "u1", "CONTRACT_USER2_TOKEN": "u2"}, clear=True):
+            self.assertEqual(cli.tokens_from_env()["user2"], "u2")

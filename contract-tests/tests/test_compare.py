@@ -156,3 +156,15 @@ class CompareResponsesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ErrorPathTest(unittest.TestCase):
+    def test_request_path_in_error_body_is_compared_without_generated_ids(self):
+        java = resp(500, {"path": "/api/v2/admin/appointments/2/participants/groups", "status": 500})
+        rust = resp(500, {"path": "/api/v2/admin/appointments/51/participants/groups", "status": 500})
+        self.assertEqual(compare_responses(java, rust), [])
+
+    def test_different_request_path_in_error_body_is_still_a_mismatch(self):
+        java = resp(500, {"path": "/api/v2/admin/appointments/2/participants/groups"})
+        rust = resp(500, {"path": "/api/v2/admin/appointments/2/participants"})
+        self.assertEqual([d.kind for d in compare_responses(java, rust)], ["value_mismatch"])

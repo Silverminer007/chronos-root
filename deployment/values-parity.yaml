@@ -1,0 +1,78 @@
+# Overlay for the Java/Rust parity run (ticket #137), applied on top of values-local.yaml:
+#   helm upgrade --install chronos . -n chronos-parity -f values-local.yaml -f values-parity.yaml \
+#     --set-file secrets.values.vapid_public_key=... --set-file secrets.values.vapid_private_key=...
+# See deployment/parity/README.md. Never use these values for staging or production.
+namespace: chronos-parity
+
+ingress:
+  enabled: false
+
+imagePullSecret:
+  name: ""
+  create: false
+
+frontend:
+  replicaCount: 0
+
+backend:
+  image:
+    # Built from the checkout (the ghcr :latest image is older than main), see parity/README.md
+    repository: chronos-backend
+    tag: parity-patched
+    pullPolicy: Never
+  resources:
+    requests: { memory: "256Mi", cpu: "100m" }
+    limits: { memory: "768Mi", cpu: "1" }
+  env:
+    DB_URL: "jdbc:postgresql://postgres:5432/chronos"
+    DB_USER: "postgres"
+    AUTH_SERVER_BASE_URL: "http://keycloak:8080"
+    AUTH_SERVER_REALM: "chronos"
+    QUARKUS_LOG_LEVEL: "INFO"
+  livenessProbe:
+    httpGet: { path: /q/health/live, port: 9000 }
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    failureThreshold: 6
+  readinessProbe:
+    httpGet: { path: /q/health/ready, port: 9000 }
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    failureThreshold: 30
+
+rustBackend:
+  enabled: true
+  image:
+    repository: chronos-rust-backend
+    tag: parity
+    pullPolicy: Never
+  resources:
+    requests: { memory: "64Mi", cpu: "50m" }
+    limits: { memory: "128Mi", cpu: "500m" }
+  env:
+    APP_ENV: production
+    # The Rust backend owns its own database (created by postgresql.extraDatabases)
+    DATABASE_URL: "postgres://postgres:$(DB_PASSWORD)@postgres:5432/chronos_rust"
+    KEYCLOAK_URL: "http://keycloak:8080/realms/chronos"
+    AUTH_SERVER_BASE_URL: "http://keycloak:8080"
+    AUTH_SERVER_REALM: "chronos"
+    RUST_LOG: "chronos_date_api=info"
+  envFromSecrets:
+    - { name: DB_PASSWORD, secretKey: database_password }
+    - { name: AUTH_SERVER_CLIENT_ID, secretKey: backend_client_id }
+    - { name: AUTH_SERVER_CLIENT_SECRET, secretKey: backend_client_secret }
+    - { name: VAPID_PUBLIC_KEY, secretKey: vapid_public_key }
+    - { name: VAPID_PRIVATE_KEY, secretKey: vapid_private_key }
+    - { name: VAPID_SUBJECT, secretKey: vapid_mailto }
+
+postgresql:
+  extraDatabases:
+    - chronos_rust
+  storage:
+    size: 2Gi
+    storageClass: local-path
+  backup:
+    enabled: false
+  resources:
+    requests: { cpu: "50m", memory: "128Mi" }
+    limits: { cpu: "500m", memory: "384Mi" }

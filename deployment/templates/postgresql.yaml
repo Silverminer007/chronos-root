@@ -15,6 +15,21 @@ spec:
   {{- if .Values.postgresql.storage.storageClass }}
   storageClassName: {{ .Values.postgresql.storage.storageClass }}
   {{- end }}
+{{- if .Values.postgresql.extraDatabases }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "chronos.labels" . | nindent 4 }}
+data:
+  10-extra-databases.sql: |
+    {{- range .Values.postgresql.extraDatabases }}
+    CREATE DATABASE {{ . | quote }};
+    {{- end }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,12 +67,21 @@ spec:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
               subPath: postgres
+            {{- if .Values.postgresql.extraDatabases }}
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
           resources:
             {{- toYaml .Values.postgresql.resources | nindent 12 }}
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: postgres-pvc
+        {{- if .Values.postgresql.extraDatabases }}
+        - name: postgres-init
+          configMap:
+            name: postgres-init
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

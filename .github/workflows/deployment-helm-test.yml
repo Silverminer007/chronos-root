@@ -29,3 +29,6 @@ jobs:
       - name: ✅ Test Helm chart (all providers + helpers)
         run: ./test-providers.sh
 
+
+      - name: ✅ Test parity overlay renders (Rust backend, extra database)
+        run: ./test-parity-render.sh

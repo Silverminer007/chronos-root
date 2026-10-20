@@ -5,18 +5,22 @@ import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from .compare import Diff, Response, compare_responses, unchecked_shapes
 from .endpoints import normalize
 
 ROLE_USER = "user"
 ROLE_ADMIN = "admin"
+ROLE_USER2 = "user2"
 ROLE_ANON = "anon"
 
 # Used for a variable that a failed step could not capture. The request still goes out, so a
 # backend that failed to create the resource shows up as a status mismatch and is not skipped.
 UNKNOWN_ID = "0"
+
+# Paths served by the management interface of the Java backend when `--java-management-url` is set
+MANAGEMENT_PATHS = ("/q/health", "/metrics")
 
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 _WHOLE_PLACEHOLDER = re.compile(r"^\{(\w+)\}$")
@@ -50,10 +54,17 @@ class Target:
 
 
 class HttpTarget(Target):
-    def __init__(self, base_url: str, tokens: "dict[str, str]", timeout: float = 30.0):
+    def __init__(self, base_url: str, tokens: "dict[str, str]", timeout: float = 30.0, management_url: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.tokens = tokens
         self.timeout = timeout
+        self.management_url = management_url.rstrip("/") if management_url else None
+
+    def _base_for(self, path: str) -> str:
+        """Quarkus serves health and metrics on a separate management port (`quarkus.management.enabled`)."""
+        if self.management_url and path.startswith(MANAGEMENT_PATHS):
+            return self.management_url
+        return self.base_url
 
     def send(self, method: str, path: str, body: Any, role: str) -> Response:
         headers = {"Accept": "application/json, text/plain"}
@@ -64,14 +75,14 @@ class HttpTarget(Target):
         token = self.tokens.get(role)
         if token:
             headers["Authorization"] = f"Bearer {token}"
-        request = urllib.request.Request(self.base_url + path, data=data, method=method, headers=headers)
+        request = urllib.request.Request(self._base_for(path) + path, data=data, method=method, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as raw:
                 return _to_response(raw.status, raw.headers.get("Content-Type", ""), raw.read())
         except urllib.error.HTTPError as error:
             return _to_response(error.code, error.headers.get("Content-Type", ""), error.read())
         except (urllib.error.URLError, TimeoutError) as error:
-            raise ConnectionError(f"{method} {self.base_url}{path}: {error}") from error
+            raise ConnectionError(f"{method} {self._base_for(path)}{path}: {error}") from error
 
 
 def _to_response(status: int, content_type: str, raw: bytes) -> Response:
