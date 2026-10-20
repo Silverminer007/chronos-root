@@ -305,6 +305,10 @@ mod change_participant_role_http_tests {
         let mut router = build_router(
             state.clone(),
             user_state_for_tests(state.db_pool.clone()),
+            Arc::new(chronos_date_api::push_notifications::PushState::new(
+                state.db_pool.clone(),
+                String::new(),
+            )),
             validator,
         );
         let mut builder = http::Request::builder()
