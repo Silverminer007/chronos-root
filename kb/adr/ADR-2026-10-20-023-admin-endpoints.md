@@ -45,7 +45,7 @@ rest from the database.
      undefined), `success` follows `Boolean.valueOf` (everything but `true` is false).
    - `GET /stats` counts rows with `status = ordinal` for appointments, strings for the other tables, and takes
      the user total from Keycloak.
-   - Every collection route is also served with a trailing slash (`@Path("/")`).
+   - Every collection route is also served with a trailing slash (`@Path("/")`). *Superseded by [ADR-2026-10-20-028](ADR-2026-10-20-028-small-parity-deviations.md): the global `NormalizePath` wrapper does this; the per-route duplicates in `admin/mod.rs` were removed.*
 5. **Keycloak.** `KeycloakAdmin` gets `list_users(first, max)` and `count_users()`, and `KeycloakUser` carries
    id, names, email and `createdTimestamp` (it only had the email). `GET /users/{id}` maps a Keycloak 404 to an
    empty 404; **`DELETE /users/{id}` answers 204 also for an unknown id**, because Java's admin client returns
