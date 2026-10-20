@@ -1,7 +1,7 @@
 //! Integration tests for the friendship endpoints (`/api/v2/friendships`).
 //!
 //! The behaviour mirrors the Java `FriendshipResource` / `FriendshipService`
-//! (ADR-2026-10-20-018). Requests go through the production router incl. authentication.
+//! (ADR-2026-10-20-019). Requests go through the production router incl. authentication.
 
 mod common;
 

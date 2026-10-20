@@ -88,7 +88,7 @@ docker build -t chronos-rust-backend:latest .
 
 ### Groups and friendships
 
-All routes require a valid bearer token and follow the Java contract (see [ADR-2026-10-20-018](../kb/adr/ADR-2026-10-20-018-groups-friendships-endpoints.md)). Names are resolved from `user_profiles`.
+All routes require a valid bearer token and follow the Java contract (see [ADR-2026-10-20-019](../kb/adr/ADR-2026-10-20-019-groups-friendships-endpoints.md)). Names are resolved from `user_profiles`.
 
 - `GET|POST /api/v2/groups`, `DELETE|PATCH /api/v2/groups/:group`, `GET /api/v2/groups/:group/users`, `POST|DELETE /api/v2/groups/:groupId/user/:userId`
 - `GET /api/v2/friendships/suggestions`, `POST /api/v2/friendships/requests`, `POST /api/v2/friendships/requests/:requestId/accept|decline`, `DELETE /api/v2/friendships/requests/:requestId`, `GET /api/v2/friendships/requests/incoming|outgoing`, `GET /api/v2/friendships/friends`, `DELETE /api/v2/friendships/friends/:friendId`

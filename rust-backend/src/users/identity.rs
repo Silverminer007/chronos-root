@@ -1,4 +1,4 @@
-//! User identities resolved from the `user_profiles` cache (ADR-2026-10-20-018).
+//! User identities resolved from the `user_profiles` cache (ADR-2026-10-20-019).
 //!
 //! The Java backend reads `user_profiles` first and falls back to the Keycloak Admin API. The Rust
 //! backend has no Keycloak admin client, so `user_profiles` is the only source: a user without a

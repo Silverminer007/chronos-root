@@ -1,5 +1,5 @@
 //! Group authorization rules (Java: the group methods of `AuthorizationService`).
-//! There is no admin bypass: the Rust principal carries no admin flag (ADR-2026-10-20-018).
+//! There is no admin bypass: the Rust principal carries no admin flag (ADR-2026-10-20-019).
 
 use sqlx::PgPool;
 
