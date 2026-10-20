@@ -1,15 +1,27 @@
 // Handler functions for push_notifications
 pub mod event_listener;
 
-use crate::event_bus::Event;
+use crate::event_bus::{appointment_id_from, Event};
 use crate::push_notifications::models::NotificationPayload;
 use crate::push_notifications::repository::PushSubscriptionRepository;
 use crate::push_notifications::PushNotificationService;
 use std::sync::Arc;
 use tracing::{error, info, warn};
-use uuid::Uuid;
 
 pub use event_listener::{event_types, PushNotificationEventListener};
+
+/// Participant ids are OIDC subjects (strings)
+fn participant_ids_from(payload: &serde_json::Value) -> Vec<String> {
+    payload
+        .get("participant_ids")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|id| id.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
 
 /// Event handler for appointment-related events
 pub struct AppointmentEventHandler {
@@ -36,10 +48,8 @@ impl AppointmentEventHandler {
         info!("Handling appointment created event: {}", event.id);
 
         // Extract appointment data from event payload
-        let appointment_id = event
-            .payload
-            .get("appointment_id")
-            .and_then(|v| v.as_str())
+        let appointment_id = appointment_id_from(&event.payload)
+            .map(|id| id.to_string())
             .ok_or("Missing appointment_id in event payload")?;
 
         let title = event
@@ -48,16 +58,7 @@ impl AppointmentEventHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("Neuer Termin");
 
-        let participant_ids: Vec<Uuid> = event
-            .payload
-            .get("participant_ids")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|id| id.as_str().and_then(|s| Uuid::parse_str(s).ok()))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let participant_ids = participant_ids_from(&event.payload);
 
         // Send notifications to participants
         let payload = NotificationPayload {
@@ -95,7 +96,6 @@ impl AppointmentEventHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
 
-        let user_uuid = Uuid::parse_str(user_id)?;
         let payload = NotificationPayload {
             title: "Teilnahmestatus geändert".to_string(),
             body: format!("Ihr Status wurde auf {} geändert", status),
@@ -105,7 +105,7 @@ impl AppointmentEventHandler {
             })),
         };
 
-        self.send_notification_to_user(&user_uuid, &payload).await;
+        self.send_notification_to_user(user_id, &payload).await;
         Ok(())
     }
 
@@ -116,10 +116,8 @@ impl AppointmentEventHandler {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Handling appointment updated event: {}", event.id);
 
-        let appointment_id = event
-            .payload
-            .get("appointment_id")
-            .and_then(|v| v.as_str())
+        let appointment_id = appointment_id_from(&event.payload)
+            .map(|id| id.to_string())
             .ok_or("Missing appointment_id")?;
 
         let title = event
@@ -128,16 +126,7 @@ impl AppointmentEventHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("Termin");
 
-        let participant_ids: Vec<Uuid> = event
-            .payload
-            .get("participant_ids")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|id| id.as_str().and_then(|s| Uuid::parse_str(s).ok()))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let participant_ids = participant_ids_from(&event.payload);
 
         let payload = NotificationPayload {
             title: format!("Termin aktualisiert: {}", title),
@@ -174,7 +163,6 @@ impl AppointmentEventHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("Jemand");
 
-        let recipient_uuid = Uuid::parse_str(recipient_id)?;
         let payload = NotificationPayload {
             title: "Freundschaftsanfrage".to_string(),
             body: format!("{} möchte dein Freund sein", sender_name),
@@ -183,8 +171,7 @@ impl AppointmentEventHandler {
             })),
         };
 
-        self.send_notification_to_user(&recipient_uuid, &payload)
-            .await;
+        self.send_notification_to_user(recipient_id, &payload).await;
         Ok(())
     }
 
@@ -207,7 +194,6 @@ impl AppointmentEventHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("Termin");
 
-        let user_uuid = Uuid::parse_str(user_id)?;
         let payload = NotificationPayload {
             title: "Erinnerung".to_string(),
             body: format!("Erinnerung für: {}", appointment_title),
@@ -216,13 +202,13 @@ impl AppointmentEventHandler {
             })),
         };
 
-        self.send_notification_to_user(&user_uuid, &payload).await;
+        self.send_notification_to_user(user_id, &payload).await;
         Ok(())
     }
 
     /// Send a notification to a user
-    async fn send_notification_to_user(&self, user_id: &Uuid, payload: &NotificationPayload) {
-        match self.subscription_repo.find_by_user_id(*user_id).await {
+    async fn send_notification_to_user(&self, user_id: &str, payload: &NotificationPayload) {
+        match self.subscription_repo.find_by_user_id(user_id).await {
             Ok(subscriptions) => {
                 if subscriptions.is_empty() {
                     warn!("User {} has no push subscriptions", user_id);
@@ -260,5 +246,11 @@ mod tests {
 
         assert_eq!(payload.title, "Test Termin");
         assert_eq!(payload.body, "Test Beschreibung");
+    }
+
+    #[test]
+    fn test_participant_ids_are_oidc_subjects() {
+        let ids = participant_ids_from(&serde_json::json!({"participant_ids": ["sub-1", "sub-2"]}));
+        assert_eq!(ids, vec!["sub-1".to_string(), "sub-2".to_string()]);
     }
 }

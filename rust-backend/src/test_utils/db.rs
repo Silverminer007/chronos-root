@@ -35,9 +35,11 @@ impl TestDb {
         // ignored: the server is addressed via the `postgres` database to create test databases.
         let base_url = {
             let _env_guard = crate::database::test_env_lock();
-            std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://postgres:postgres@localhost:5432/postgres".to_string()
-            })
+            std::env::var("TEST_DATABASE_URL")
+                .or_else(|_| std::env::var("DATABASE_URL"))
+                .unwrap_or_else(|_| {
+                    "postgres://postgres:postgres@localhost:5432/postgres".to_string()
+                })
         };
         let mut admin_url = url::Url::parse(&base_url)?;
         admin_url.set_path("/postgres");
@@ -104,6 +106,7 @@ impl TestDb {
 
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
+            .acquire_timeout(config.connection_timeout)
             .connect(database_url.as_str())
             .await?;
 
@@ -125,17 +128,9 @@ impl TestDb {
 
     /// Rollback all changes after test (useful for transaction-scoped tests)
     pub async fn rollback_all(&self) -> Result<(), sqlx::Error> {
-        // Clear all tables in reverse dependency order
-        sqlx::query("TRUNCATE TABLE appointment_participants CASCADE")
-            .execute(&self.pool)
-            .await?;
-        sqlx::query("TRUNCATE TABLE appointments CASCADE")
-            .execute(&self.pool)
-            .await?;
-        sqlx::query("TRUNCATE TABLE groups CASCADE")
-            .execute(&self.pool)
-            .await?;
-        sqlx::query("TRUNCATE TABLE users CASCADE")
+        // TRUNCATE ... CASCADE also clears every table that references these (participations,
+        // group members, messages, ...); sequences are not reset.
+        sqlx::query("TRUNCATE TABLE appointment, groups, friendship_requests, pushsubscription, push_notification_log, settings, user_profiles CASCADE")
             .execute(&self.pool)
             .await?;
 
@@ -166,34 +161,27 @@ mod tests {
     async fn test_rollback_all() {
         let db = TestDb::new().await.expect("Failed to create test database");
 
-        // Insert a test user
-        sqlx::query(
-            "INSERT INTO users (id, keycloak_id, email, first_name, last_name) VALUES ($1, $2, $3, $4, $5)"
-        )
-        .bind(uuid::Uuid::new_v4())
-        .bind("keycloak_id_1")
-        .bind("test@example.com")
-        .bind("Test")
-        .bind("User")
-        .execute(db.pool())
-        .await
-        .expect("Failed to insert test user");
+        sqlx::query("INSERT INTO user_profiles (oidc_id, first_name, last_name, email) VALUES ($1, $2, $3, $4)")
+            .bind("keycloak-sub-1")
+            .bind("Test")
+            .bind("User")
+            .bind("test@example.com")
+            .execute(db.pool())
+            .await
+            .expect("Failed to insert test user profile");
 
-        // Verify user exists
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_profiles")
             .fetch_one(db.pool())
             .await
-            .expect("Failed to count users");
+            .expect("Failed to count user profiles");
         assert_eq!(count.0, 1);
 
-        // Rollback
         db.rollback_all().await.expect("Failed to rollback");
 
-        // Verify user is gone
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_profiles")
             .fetch_one(db.pool())
             .await
-            .expect("Failed to count users");
+            .expect("Failed to count user profiles");
         assert_eq!(count.0, 0);
     }
 }

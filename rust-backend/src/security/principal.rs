@@ -3,25 +3,26 @@ use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use std::sync::Arc;
-use uuid::Uuid;
 
 /// Request-scoped principal context holding the current user's OIDC ID
 /// Equivalent to the Java backend's PrincipalContext
 #[derive(Debug, Clone)]
 pub struct PrincipalContext {
-    /// The user's OIDC subject ID as a UUID
-    pub user_id: Uuid,
+    /// The user's OIDC subject (`sub` claim), e.g. a Keycloak user id
+    pub user_id: String,
 }
 
 impl PrincipalContext {
     /// Create a new principal context with the given user ID
-    pub fn new(user_id: Uuid) -> Self {
-        Self { user_id }
+    pub fn new(user_id: impl Into<String>) -> Self {
+        Self {
+            user_id: user_id.into(),
+        }
     }
 
     /// Get the current user's ID
-    pub fn user_id(&self) -> Uuid {
-        self.user_id
+    pub fn user_id(&self) -> &str {
+        &self.user_id
     }
 }
 
@@ -66,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_principal_context_creation() {
-        let user_id = Uuid::parse_str("12345678-1234-1234-1234-123456789012").unwrap();
+        let user_id = "12345678-1234-1234-1234-123456789012";
         let principal = PrincipalContext::new(user_id);
 
         assert_eq!(principal.user_id(), user_id);
@@ -75,10 +76,16 @@ mod tests {
 
     #[test]
     fn test_principal_context_clone() {
-        let user_id = Uuid::parse_str("87654321-4321-4321-4321-210987654321").unwrap();
-        let principal = PrincipalContext::new(user_id);
+        let principal = PrincipalContext::new("87654321-4321-4321-4321-210987654321");
         let cloned = principal.clone();
 
         assert_eq!(cloned.user_id(), principal.user_id());
+    }
+
+    #[test]
+    fn test_principal_context_accepts_non_uuid_subjects() {
+        // OIDC subjects are opaque strings (ADR-2026-10-12-014)
+        let principal = PrincipalContext::new("keycloak|user-42");
+        assert_eq!(principal.user_id(), "keycloak|user-42");
     }
 }

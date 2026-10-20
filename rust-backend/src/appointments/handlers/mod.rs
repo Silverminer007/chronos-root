@@ -6,12 +6,11 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
-use uuid::Uuid;
 
 use crate::appointments::{
     models::{
         AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest,
-        UpdateAppointmentRequest, UserRole,
+        ParticipationStatusResponse, UpdateAppointmentRequest, UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
@@ -40,13 +39,13 @@ pub struct ListQuery {
 /// GET /api/v2/appointments/:id - Fetch a single appointment by ID
 pub async fn get_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
-    // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
+    // The authenticated principal holds the user's OIDC subject
     let user_id = principal.user_id();
 
     // Fetch the appointment
@@ -55,15 +54,31 @@ pub async fn get_appointment(
         _ => AppointmentError::DatabaseError,
     })?;
 
-    // Authorization check - user must be creator or invited participant
+    // Authorization check - the creator (RESPONSIBLE participant) may view the appointment
     // For now, only allow creators to view their appointments
-    // TODO: Also check if user is a participant in the appointment_participants table
-    if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
-    }
+    // TODO: Also allow the other participants of the appointment
+    ensure_creator(&state, appointment.id, user_id).await?;
 
     let response: AppointmentResponse = appointment.into();
     Ok(Json(response))
+}
+
+/// GET /api/v2/appointments/:id/participation/status - Current user's participation status
+/// Always 200 OK; PENDING when the user has no participation row (matches Java backend)
+pub async fn get_participation_status(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    let status = service
+        .get_participation_status(id, principal.user_id())
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(Json(ParticipationStatusResponse { status }))
 }
 
 /// GET /api/v2/appointments - List appointments with pagination
@@ -75,7 +90,6 @@ pub async fn list_appointments(
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
-    // Get user ID from the authenticated principal (already validated as UUID in auth middleware)
     let user_id = principal.user_id();
 
     // List only appointments visible to this user
@@ -125,7 +139,7 @@ pub async fn create_appointment(
 /// Requires ATTENDANT role or above (any participant can edit)
 pub async fn update_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<i64>,
     principal: PrincipalContext,
     Json(request): Json<UpdateAppointmentRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
@@ -140,27 +154,18 @@ pub async fn update_appointment(
         .map_err(|_| AppointmentError::DatabaseError)?
         .ok_or(AppointmentError::NotFound)?;
 
-    // User must be creator or a participant with ATTENDANT role or above
-    if appointment.creator_id != user_id {
-        let participant_role = repo
-            .get_participant_role(id, user_id)
-            .await
-            .map_err(|_| AppointmentError::DatabaseError)?;
+    // User must be a participant with ATTENDANT role or above (the creator is RESPONSIBLE)
+    let participant_role = repo
+        .get_participant_role(appointment.id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
 
-        match participant_role {
-            Some(role) => {
-                let is_attendant_or_above = matches!(
-                    role,
-                    UserRole::Attendant | UserRole::Helper | UserRole::Responsible
-                );
-                if !is_attendant_or_above {
-                    return Err(AppointmentError::Unauthorized);
-                }
-            }
-            None => {
-                return Err(AppointmentError::Unauthorized);
-            }
-        }
+    let is_attendant_or_above = matches!(
+        participant_role,
+        Some(UserRole::Attendant | UserRole::Helper | UserRole::Responsible)
+    );
+    if !is_attendant_or_above {
+        return Err(AppointmentError::Unauthorized);
     }
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
@@ -178,7 +183,7 @@ pub async fn update_appointment(
 /// Requires RESPONSIBLE role (creator only)
 pub async fn delete_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
@@ -192,9 +197,7 @@ pub async fn delete_appointment(
         .map_err(|_| AppointmentError::DatabaseError)?
         .ok_or(AppointmentError::NotFound)?;
 
-    if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
-    }
+    ensure_creator(&state, appointment.id, user_id).await?;
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
@@ -210,7 +213,7 @@ pub async fn delete_appointment(
 /// Requires RESPONSIBLE role (creator only)
 pub async fn cancel_appointment(
     State(state): State<Arc<AppState>>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<i64>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let user_id = principal.user_id();
@@ -224,9 +227,7 @@ pub async fn cancel_appointment(
         .map_err(|_| AppointmentError::DatabaseError)?
         .ok_or(AppointmentError::NotFound)?;
 
-    if appointment.creator_id != user_id {
-        return Err(AppointmentError::Unauthorized);
-    }
+    ensure_creator(&state, appointment.id, user_id).await?;
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
@@ -236,6 +237,23 @@ pub async fn cancel_appointment(
         .map_err(AppointmentError::from)?;
 
     Ok(StatusCode::OK)
+}
+
+/// The creator of an appointment is its RESPONSIBLE participant (the Java schema has no creator column)
+async fn ensure_creator(
+    state: &AppState,
+    appointment_id: i64,
+    user_id: &str,
+) -> Result<(), AppointmentError> {
+    let role = AppointmentRepository::new(state.db_pool.clone())
+        .get_participant_role(appointment_id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    match role {
+        Some(UserRole::Responsible) => Ok(()),
+        _ => Err(AppointmentError::Unauthorized),
+    }
 }
 
 /// Errors that can occur in appointment handlers
@@ -282,7 +300,7 @@ impl IntoResponse for AppointmentError {
 /// POST /api/v2/appointments/:id/participants/:userId - Add a participant to an appointment
 pub async fn add_participant(
     State(state): State<Arc<AppState>>,
-    Path((appointment_id, target_user_id)): Path<(Uuid, Uuid)>,
+    Path((appointment_id, target_user_id)): Path<(i64, String)>,
     principal: PrincipalContext,
     Json(request): Json<AddParticipantRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
@@ -294,7 +312,7 @@ pub async fn add_participant(
     service
         .add_participant(
             appointment_id,
-            target_user_id,
+            &target_user_id,
             acting_user_id,
             &request.user_role.to_string(),
         )

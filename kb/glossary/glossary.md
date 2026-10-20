@@ -98,7 +98,7 @@ User who creates an appointment. Has permission to edit/delete the appointment.
 Quarkus's ORM wrapper around Hibernate. Provides ActiveRecord pattern (simpler than standard Hibernate).
 
 **Participation**
-Domain entity representing a user's involvement in an appointment. Has status (PENDING, ACCEPTED, DECLINED).
+Domain entity representing a user's involvement in an appointment. Has status (PENDING, APPROVED, REJECTED).
 
 **PrincipalContext**
 Request-scoped CDI bean holding the current user's OIDC subject (ID). Injected into services to get the logged-in user.

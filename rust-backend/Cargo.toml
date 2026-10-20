@@ -30,11 +30,11 @@ chrono = { version = "0.4", features = ["serde"] }
 # JWT and security
 jsonwebtoken = "9"
 async-trait = "0.1"
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 http = "1"
 
 # Database
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono"] }
 
 # URL parsing
 url = "2.5"
@@ -44,11 +44,14 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Web Push
 web-push = "0.11"
+# web-push pulls in openssl-sys (via isahc/curl-sys and ece). Build it from
+# source so the musl target needs no system OpenSSL. See kb/adr/ADR-2026-10-13-013-vendored-openssl-musl-image.md.
+openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+testcontainers = "0.27"
+testcontainers-modules = { version = "0.15", features = ["postgres"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace"] }
 hyper = "1"
-testcontainers = "0.16"
-testcontainers-modules = { version = "0.4", features = ["postgres"] }

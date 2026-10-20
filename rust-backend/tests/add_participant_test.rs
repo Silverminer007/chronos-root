@@ -2,24 +2,22 @@
 #[cfg(test)]
 mod add_participant_tests {
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
-    use uuid::Uuid;
 
     /// Helper to add a user as participant with a specific role
     async fn add_participant_with_role(
         pool: &sqlx::PgPool,
-        appointment_id: Uuid,
-        user_id: Uuid,
+        appointment_id: i64,
+        user_id: &str,
         role: &str,
-    ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        let participant_id = Uuid::new_v4();
-        sqlx::query(
-            "INSERT INTO appointment_participants (id, appointment_id, user_id, status, role) VALUES ($1, $2, $3, 'PENDING', $4)"
+    ) -> Result<i64, Box<dyn std::error::Error>> {
+        let participant_id = sqlx::query_scalar::<_, i64>(
+            "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, status, role)
+             VALUES (nextval('appointment_participation_seq'), $1, $2, 'PENDING', $3) RETURNING id",
         )
-        .bind(participant_id)
         .bind(appointment_id)
         .bind(user_id)
         .bind(role)
-        .execute(pool)
+        .fetch_one(pool)
         .await?;
 
         Ok(participant_id)
@@ -47,7 +45,7 @@ mod add_participant_tests {
         // Create appointment with creator as responsible
         let appointment_id = fixtures
             .create_appointment(
-                creator_id,
+                &creator_id,
                 &AppointmentFixture::new().with_title("Team Meeting"),
             )
             .await
@@ -58,10 +56,10 @@ mod add_participant_tests {
 
         // Verify participant can be added
         let participant = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT COUNT(*) FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2"
         )
         .bind(appointment_id)
-        .bind(participant_id)
+        .bind(&participant_id)
         .fetch_one(db.pool())
         .await
         .expect("Failed to query participants");
@@ -91,21 +89,24 @@ mod add_participant_tests {
 
         // Create appointment
         let appointment_id = fixtures
-            .create_appointment(creator_id, &AppointmentFixture::new().with_title("Meeting"))
+            .create_appointment(
+                &creator_id,
+                &AppointmentFixture::new().with_title("Meeting"),
+            )
             .await
             .expect("Failed to create appointment");
 
         // Add participant with specific role
-        add_participant_with_role(db.pool(), appointment_id, participant_id, "ATTENDANT")
+        add_participant_with_role(db.pool(), appointment_id, &participant_id, "ATTENDANT")
             .await
             .expect("Failed to add participant");
 
         // Verify participant was added with PENDING status
         let (status, role): (String, String) = sqlx::query_as(
-            "SELECT status, role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT status, role FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2"
         )
         .bind(appointment_id)
-        .bind(participant_id)
+        .bind(&participant_id)
         .fetch_one(db.pool())
         .await
         .expect("Failed to fetch participant");
@@ -140,22 +141,30 @@ mod add_participant_tests {
 
         // Create appointment
         let appointment_id = fixtures
-            .create_appointment(creator_id, &AppointmentFixture::new().with_title("Meeting"))
+            .create_appointment(
+                &creator_id,
+                &AppointmentFixture::new().with_title("Meeting"),
+            )
             .await
             .expect("Failed to create appointment");
 
         // Add helper to appointment with HELPER role (not RESPONSIBLE)
-        add_participant_with_role(db.pool(), appointment_id, non_responsible_user_id, "HELPER")
-            .await
-            .expect("Failed to add helper");
+        add_participant_with_role(
+            db.pool(),
+            appointment_id,
+            &non_responsible_user_id,
+            "HELPER",
+        )
+        .await
+        .expect("Failed to add helper");
 
         // Helper (with HELPER role) should not be able to add participants
         // This will be verified at the handler level with proper authorization
         let helper_role: String = sqlx::query_scalar(
-            "SELECT role FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2",
+            "SELECT role FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2",
         )
         .bind(appointment_id)
-        .bind(non_responsible_user_id)
+        .bind(&non_responsible_user_id)
         .fetch_one(db.pool())
         .await
         .expect("Failed to fetch helper role");
@@ -185,28 +194,31 @@ mod add_participant_tests {
 
         // Create appointment
         let appointment_id = fixtures
-            .create_appointment(creator_id, &AppointmentFixture::new().with_title("Meeting"))
+            .create_appointment(
+                &creator_id,
+                &AppointmentFixture::new().with_title("Meeting"),
+            )
             .await
             .expect("Failed to create appointment");
 
         // Add participant first time
-        add_participant_with_role(db.pool(), appointment_id, participant_id, "ATTENDANT")
+        add_participant_with_role(db.pool(), appointment_id, &participant_id, "ATTENDANT")
             .await
             .expect("Failed to add participant first time");
 
         // Try to add again - should fail due to UNIQUE constraint
         let result =
-            add_participant_with_role(db.pool(), appointment_id, participant_id, "HELPER").await;
+            add_participant_with_role(db.pool(), appointment_id, &participant_id, "HELPER").await;
 
         // Should fail with database constraint error
         assert!(result.is_err());
 
         // Verify only one entry exists for this user
         let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM appointment_participants WHERE appointment_id = $1 AND user_id = $2"
+            "SELECT COUNT(*) FROM appointment_participation WHERE appointment_id = $1 AND user_oidcid = $2"
         )
         .bind(appointment_id)
-        .bind(participant_id)
+        .bind(&participant_id)
         .fetch_one(db.pool())
         .await
         .expect("Failed to count participants");
