@@ -5,6 +5,7 @@ pub mod database;
 pub mod error;
 pub mod event_bus;
 
+pub mod admin;
 pub mod appointments;
 pub mod groups;
 pub mod keycloak;

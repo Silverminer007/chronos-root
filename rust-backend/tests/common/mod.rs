@@ -7,6 +7,7 @@ use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::keycloak::KeycloakUrls;
+use chronos_date_api::push_notifications::{NotificationDispatcher, PushSender, PushState};
 use chronos_date_api::security::TokenValidator;
 use chronos_date_api::test_utils::{FakeKeycloak, TestDb};
 use chronos_date_api::users::UserState;
@@ -31,6 +32,14 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
+        Self::with_collaborators(FakeKeycloak::new(), None).await
+    }
+
+    /// Like [`TestApp::new`] with scripted Keycloak answers and a fake push service
+    pub async fn with_collaborators(
+        keycloak: FakeKeycloak,
+        push_sender: Option<Arc<dyn PushSender>>,
+    ) -> Self {
         let db = TestDb::new()
             .await
             .expect("Failed to initialize test database");
@@ -40,7 +49,7 @@ impl TestApp {
         });
         let user_state = Arc::new(UserState {
             db_pool: db.pool().clone(),
-            keycloak: Arc::new(FakeKeycloak::new()),
+            keycloak: Arc::new(keycloak),
             keycloak_urls: KeycloakUrls::new("https://auth.test", "chronos", "chronos-api"),
         });
         let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
@@ -48,10 +57,11 @@ impl TestApp {
             router: build_router(
                 state,
                 user_state,
-                Arc::new(chronos_date_api::push_notifications::PushState::new(
-                    db.pool().clone(),
-                    String::new(),
-                )),
+                Arc::new(
+                    PushState::new(db.pool().clone(), String::new()).with_dispatcher(Arc::new(
+                        NotificationDispatcher::new(db.pool().clone(), push_sender),
+                    )),
+                ),
                 validator,
             ),
             db,
@@ -97,13 +107,9 @@ impl TestApp {
         let body = if bytes.is_empty() {
             Value::Null
         } else {
-            serde_json::from_slice(&bytes).unwrap_or_else(|_| {
-                panic!(
-                    "Body is not JSON (status {}): {}",
-                    status,
-                    String::from_utf8_lossy(&bytes)
-                )
-            })
+            // Plain-text answers (the appointment endpoints) come back as a JSON string
+            serde_json::from_slice(&bytes)
+                .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()))
         };
         (status, body)
     }
@@ -161,6 +167,15 @@ impl TestApp {
         .execute(self.db.pool())
         .await
         .expect("Failed to insert user profile");
+    }
+
+    /// Gives `user_id` the realm role `ADMIN_API` in its access tokens
+    pub fn grant_admin(&self, user_id: &str) {
+        let mut profiles = self.profiles.lock().unwrap();
+        let profile = profiles
+            .entry(user_id.to_string())
+            .or_insert_with(|| serde_json::json!({}));
+        profile["realm_access"] = serde_json::json!({ "roles": ["offline_access", "ADMIN_API"] });
     }
 
     /// Creates a group owned by `owner`; the owner is also a member (as the Java backend does on creation)

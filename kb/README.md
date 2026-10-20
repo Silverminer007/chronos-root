@@ -274,6 +274,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-020: Prometheus metrics and health endpoint parity](adr/ADR-2026-10-20-020-prometheus-metrics-health-parity.md)
 - [ADR-2026-10-20-021: Contract parity harness for the Rust port](adr/ADR-2026-10-20-021-contract-parity-harness.md)
 - [ADR-2026-10-20-022: Reminder engine, scheduler and leader election in the Rust backend](adr/ADR-2026-10-20-022-reminder-engine-scheduler-leader-election.md)
+- [ADR-2026-10-20-023: Admin endpoints (`/api/v2/admin/*`) in the Rust backend](adr/ADR-2026-10-20-023-admin-endpoints.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)

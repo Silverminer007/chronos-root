@@ -83,20 +83,21 @@ async fn main() {
             None
         }
     };
-    let push_handler = Arc::new(PushEventHandler::new(
-        pool.clone(),
-        Arc::new(NotificationDispatcher::new(pool.clone(), push_sender)),
-    ));
+    let dispatcher = Arc::new(NotificationDispatcher::new(pool.clone(), push_sender));
+    let push_handler = Arc::new(PushEventHandler::new(pool.clone(), dispatcher.clone()));
     if let Err(e) = PushNotificationEventListener::new(push_handler)
         .subscribe_all(event_bus.as_ref())
         .await
     {
         error!("Failed to subscribe to push notification events: {:?}", e);
     }
-    let push_state = Arc::new(PushState::new(
-        pool.clone(),
-        vapid.map(|config| config.public_key).unwrap_or_default(),
-    ));
+    let push_state = Arc::new(
+        PushState::new(
+            pool.clone(),
+            vapid.map(|config| config.public_key).unwrap_or_default(),
+        )
+        .with_dispatcher(dispatcher),
+    );
 
     // Reminder scheduler: with several replicas only the leader (advisory lock) runs it
     let scheduler = ReminderScheduler::new(

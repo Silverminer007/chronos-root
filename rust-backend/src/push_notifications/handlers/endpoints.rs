@@ -1,6 +1,7 @@
 // `/api/v2/push/*` (Java: `PushResource`)
 use crate::push_notifications::models::{PushSubscriptionRequest, PushSubscriptionStatus};
 use crate::push_notifications::repository::PushSubscriptionRepository;
+use crate::push_notifications::services::NotificationDispatcher;
 use crate::security::PrincipalContext;
 use axum::{
     extract::{Query, State},
@@ -19,14 +20,24 @@ pub struct PushState {
     pub db_pool: PgPool,
     /// VAPID public key handed to browsers; empty when push is not configured (like Java)
     pub vapid_public_key: String,
+    /// Sends the test notifications of the admin endpoint
+    pub dispatcher: Arc<NotificationDispatcher>,
 }
 
 impl PushState {
+    /// Without a sender (see [`PushState::with_dispatcher`]) notifications are omitted
     pub fn new(db_pool: PgPool, vapid_public_key: String) -> Self {
+        let dispatcher = Arc::new(NotificationDispatcher::new(db_pool.clone(), None));
         Self {
             db_pool,
             vapid_public_key,
+            dispatcher,
         }
+    }
+
+    pub fn with_dispatcher(mut self, dispatcher: Arc<NotificationDispatcher>) -> Self {
+        self.dispatcher = dispatcher;
+        self
     }
 }
 

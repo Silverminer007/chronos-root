@@ -168,6 +168,26 @@ impl GroupService {
             target_user_id,
         )
         .await?;
+        self.insert_member(acting_user_id, group_id, target_user_id)
+            .await
+    }
+
+    /// Add a user to a group without the membership and friendship checks of the admin
+    /// endpoint (Java passes `null` as acting user and `isAdminRequest()` skips the checks)
+    pub async fn add_group_member_as_admin(
+        &self,
+        group_id: i64,
+        target_user_id: &str,
+    ) -> Result<(), AppError> {
+        self.insert_member("", group_id, target_user_id).await
+    }
+
+    async fn insert_member(
+        &self,
+        acting_user_id: &str,
+        group_id: i64,
+        target_user_id: &str,
+    ) -> Result<(), AppError> {
         if GroupMemberRepository::is_member(&self.pool, group_id, target_user_id).await? {
             return Err(AppError::validation_error(
                 "Validierungsfehler bei Feld: user",
@@ -321,6 +341,28 @@ impl FriendshipService {
             },
         )
         .await;
+        Ok(())
+    }
+
+    /// Make two users friends without a request (admin endpoint; Java: `AdminFriendshipService`).
+    /// Nothing happens for the same user or an existing request, except a declined one, which
+    /// is replaced by an accepted one. No event is fired.
+    pub async fn befriend(&self, user_id: &str, other_id: &str) -> Result<(), AppError> {
+        if user_id == other_id {
+            return Ok(());
+        }
+        let mut tx = self.pool.begin().await?;
+        if let Some(existing) =
+            FriendshipRepository::find_request(&mut *tx, user_id, other_id).await?
+        {
+            if !existing.has_status(FriendshipStatus::Declined) {
+                return Ok(());
+            }
+            FriendshipRepository::delete(&mut *tx, existing.id).await?;
+        }
+        let request = FriendshipRepository::create_request(&mut *tx, user_id, other_id).await?;
+        FriendshipRepository::respond(&mut *tx, request.id, FriendshipStatus::Accepted).await?;
+        tx.commit().await?;
         Ok(())
     }
 
