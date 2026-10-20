@@ -1,9 +1,10 @@
 use crate::database::repository::{Repository, RepositoryError};
 use crate::push_notifications::models::PushSubscription;
 use async_trait::async_trait;
-use chrono::Utc;
 use sqlx::PgPool;
-use uuid::Uuid;
+
+/// Columns of the Java-compatible `pushsubscription` table (ids from `pushsubscription_seq`)
+const COLUMNS: &str = "id, user_oidcid AS user_id, endpoint, p256dh, auth";
 
 /// PushSubscriptionRepository provides data access for PushSubscription entities
 pub struct PushSubscriptionRepository {
@@ -16,15 +17,15 @@ impl PushSubscriptionRepository {
         Self { pool }
     }
 
-    /// Find subscriptions by user ID
+    /// Find subscriptions by user (OIDC subject)
     pub async fn find_by_user_id(
         &self,
-        user_id: Uuid,
+        user_id: &str,
     ) -> Result<Vec<PushSubscription>, RepositoryError> {
-        sqlx::query_as::<_, PushSubscription>(
-            "SELECT id, user_id, endpoint, p256dh, auth, created_at, updated_at
-             FROM push_subscriptions WHERE user_id = $1",
-        )
+        sqlx::query_as::<_, PushSubscription>(&format!(
+            "SELECT {} FROM pushsubscription WHERE user_oidcid = $1 ORDER BY id",
+            COLUMNS
+        ))
         .bind(user_id)
         .fetch_all(&self.pool)
         .await
@@ -36,24 +37,24 @@ impl PushSubscriptionRepository {
         &self,
         endpoint: &str,
     ) -> Result<Option<PushSubscription>, RepositoryError> {
-        sqlx::query_as::<_, PushSubscription>(
-            "SELECT id, user_id, endpoint, p256dh, auth, created_at, updated_at
-             FROM push_subscriptions WHERE endpoint = $1",
-        )
+        sqlx::query_as::<_, PushSubscription>(&format!(
+            "SELECT {} FROM pushsubscription WHERE endpoint = $1 ORDER BY id LIMIT 1",
+            COLUMNS
+        ))
         .bind(endpoint)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Delete subscription by user ID and endpoint
+    /// Delete subscription by user and endpoint
     pub async fn delete_by_user_and_endpoint(
         &self,
-        user_id: Uuid,
+        user_id: &str,
         endpoint: &str,
     ) -> Result<bool, RepositoryError> {
         let result =
-            sqlx::query("DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2")
+            sqlx::query("DELETE FROM pushsubscription WHERE user_oidcid = $1 AND endpoint = $2")
                 .bind(user_id)
                 .bind(endpoint)
                 .execute(&self.pool)
@@ -67,11 +68,11 @@ impl PushSubscriptionRepository {
 #[async_trait]
 impl Repository<PushSubscription> for PushSubscriptionRepository {
     /// Find a subscription by its ID
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<PushSubscription>, RepositoryError> {
-        sqlx::query_as::<_, PushSubscription>(
-            "SELECT id, user_id, endpoint, p256dh, auth, created_at, updated_at
-             FROM push_subscriptions WHERE id = $1",
-        )
+    async fn find_by_id(&self, id: i64) -> Result<Option<PushSubscription>, RepositoryError> {
+        sqlx::query_as::<_, PushSubscription>(&format!(
+            "SELECT {} FROM pushsubscription WHERE id = $1",
+            COLUMNS
+        ))
         .bind(id)
         .fetch_optional(&self.pool)
         .await
@@ -80,68 +81,81 @@ impl Repository<PushSubscription> for PushSubscriptionRepository {
 
     /// Find all subscriptions
     async fn find_all(&self) -> Result<Vec<PushSubscription>, RepositoryError> {
-        sqlx::query_as::<_, PushSubscription>(
-            "SELECT id, user_id, endpoint, p256dh, auth, created_at, updated_at
-             FROM push_subscriptions",
-        )
+        sqlx::query_as::<_, PushSubscription>(&format!(
+            "SELECT {} FROM pushsubscription ORDER BY id",
+            COLUMNS
+        ))
         .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Create a new subscription
+    /// Create a new subscription. The Java schema has no unique constraint on
+    /// (user, endpoint), so duplicates are rejected here. The check is race-safe: a
+    /// transaction-scoped advisory lock keyed on (user, endpoint) serializes concurrent
+    /// creates for the same pair, and the insert runs in a statement that starts after the
+    /// lock is granted, so it sees the row a concurrent winner has committed. The entity's
+    /// `id` is ignored (the id comes from `pushsubscription_seq`).
     async fn create(&self, entity: PushSubscription) -> Result<PushSubscription, RepositoryError> {
-        let now = Utc::now();
-        let result = sqlx::query_as::<_, PushSubscription>(
-            "INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             RETURNING id, user_id, endpoint, p256dh, auth, created_at, updated_at"
-        )
-        .bind(entity.id)
-        .bind(entity.user_id)
+        let db_error = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
+
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+            .bind(format!(
+                "pushsubscription:{}:{}",
+                entity.user_id, entity.endpoint
+            ))
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+
+        let created = sqlx::query_as::<_, PushSubscription>(&format!(
+            "INSERT INTO pushsubscription (id, user_oidcid, endpoint, p256dh, auth)
+             SELECT nextval('pushsubscription_seq'), $1, $2, $3, $4
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM pushsubscription WHERE user_oidcid = $1 AND endpoint = $2
+             )
+             RETURNING {}",
+            COLUMNS
+        ))
+        .bind(&entity.user_id)
         .bind(&entity.endpoint)
         .bind(&entity.p256dh)
         .bind(&entity.auth)
-        .bind(now)
-        .bind(now)
-        .fetch_one(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| {
-            if e.to_string().contains("unique_subscription") {
-                RepositoryError::ConflictError("Subscription already exists for this user and endpoint".to_string())
-            } else {
-                RepositoryError::DatabaseError(e.to_string())
-            }
+        .map_err(db_error)?
+        .ok_or_else(|| {
+            RepositoryError::ConflictError(
+                "Subscription already exists for this user and endpoint".to_string(),
+            )
         })?;
 
-        Ok(result)
+        tx.commit().await.map_err(db_error)?;
+        Ok(created)
     }
 
     /// Update an existing subscription
     async fn update(
         &self,
-        id: Uuid,
+        id: i64,
         entity: PushSubscription,
     ) -> Result<Option<PushSubscription>, RepositoryError> {
-        let now = Utc::now();
-        sqlx::query_as::<_, PushSubscription>(
-            "UPDATE push_subscriptions
-             SET p256dh = $2, auth = $3, updated_at = $4
-             WHERE id = $1
-             RETURNING id, user_id, endpoint, p256dh, auth, created_at, updated_at",
-        )
+        sqlx::query_as::<_, PushSubscription>(&format!(
+            "UPDATE pushsubscription SET p256dh = $2, auth = $3 WHERE id = $1 RETURNING {}",
+            COLUMNS
+        ))
         .bind(id)
         .bind(&entity.p256dh)
         .bind(&entity.auth)
-        .bind(now)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
     /// Delete a subscription
-    async fn delete(&self, id: Uuid) -> Result<bool, RepositoryError> {
-        let result = sqlx::query("DELETE FROM push_subscriptions WHERE id = $1")
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
+        let result = sqlx::query("DELETE FROM pushsubscription WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await

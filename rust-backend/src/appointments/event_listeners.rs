@@ -1,8 +1,7 @@
 use crate::appointments::repository::AppointmentRepository;
-use crate::event_bus::{Event, EventSubscriber};
+use crate::event_bus::{appointment_id_from, Event, EventSubscriber};
 use sqlx::PgPool;
 use tracing::{error, info};
-use uuid::Uuid;
 
 pub struct AppointmentParticipationListener {
     pool: PgPool,
@@ -20,18 +19,13 @@ impl AppointmentParticipationListener {
         info!("Handling AppointmentCreatedEvent");
 
         // Extract appointment_id and creator_id from event payload
-        let appointment_id = event
-            .payload
-            .get("appointment_id")
-            .and_then(|v| v.as_str())
-            .and_then(|s| Uuid::parse_str(s).ok())
-            .ok_or("Missing or invalid appointment_id")?;
+        let appointment_id =
+            appointment_id_from(&event.payload).ok_or("Missing or invalid appointment_id")?;
 
         let creator_id = event
             .payload
             .get("creator_id")
             .and_then(|v| v.as_str())
-            .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or("Missing or invalid creator_id")?;
 
         // Add creator as a RESPONSIBLE participant

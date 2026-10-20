@@ -159,7 +159,7 @@ mod tests {
     use super::*;
     use crate::test_utils::TestDb;
 
-    /// Returns a pool for a fresh database with migrations applied (the `events` table is required)
+    /// Each test gets its own migrated database, so the `events` table exists and tests cannot collide
     async fn create_test_pool() -> PgPool {
         TestDb::new()
             .await

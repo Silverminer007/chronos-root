@@ -17,18 +17,15 @@ mod tests {
 
         // Example structure:
         // let db_pool = setup_test_db().await;
-        // let user_id = Uuid::new_v4();
-        // let subscription_id = Uuid::new_v4();
+        // let user_id = "keycloak-sub".to_string();
         //
         // Create a test push subscription
         // let subscription = PushSubscription {
-        //     id: subscription_id,
+        //     id: 1,
         //     user_id,
         //     endpoint: "https://example.com/push".to_string(),
         //     p256dh: "test_p256dh".to_string(),
         //     auth: "test_auth".to_string(),
-        //     created_at: Utc::now(),
-        //     updated_at: Utc::now(),
         // };
         //
         // Save the subscription

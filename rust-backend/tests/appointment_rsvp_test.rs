@@ -33,25 +33,25 @@ mod appointment_rsvp_tests {
             .with_description(Some("Monthly team sync"));
 
         let appointment_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
         // Add participant with PENDING status
         fixtures
-            .add_participant(appointment_id, participant_id, "PENDING")
+            .add_participant(appointment_id, &participant_id, "PENDING")
             .await
             .expect("Failed to add participant");
 
         // Verify initial status is PENDING
         let repo = AppointmentRepository::new(db.pool().clone());
         let participant = repo
-            .find_participation(appointment_id, participant_id)
+            .find_participation_status(appointment_id, &participant_id)
             .await
             .expect("Failed to fetch participant")
             .expect("Participant not found");
 
-        assert_eq!(participant.status, ParticipationStatus::Pending);
+        assert_eq!(participant, ParticipationStatus::Pending);
 
         // Create a service and call change_participation_status
         let service = AppointmentService::new(repo);
@@ -60,7 +60,7 @@ mod appointment_rsvp_tests {
         service
             .change_participation_status(
                 appointment_id,
-                participant_id,
+                &participant_id,
                 ParticipationStatus::Approved,
             )
             .await
@@ -69,12 +69,12 @@ mod appointment_rsvp_tests {
         // Verify status is now APPROVED
         let verify_repo = AppointmentRepository::new(db.pool().clone());
         let updated_participant = verify_repo
-            .find_participation(appointment_id, participant_id)
+            .find_participation_status(appointment_id, &participant_id)
             .await
             .expect("Failed to fetch participant")
             .expect("Participant not found");
 
-        assert_eq!(updated_participant.status, ParticipationStatus::Approved);
+        assert_eq!(updated_participant, ParticipationStatus::Approved);
     }
 
     #[tokio::test]
@@ -100,12 +100,12 @@ mod appointment_rsvp_tests {
         // Create appointment and add participant
         let appointment_fixture = AppointmentFixture::new().with_title("Team Meeting 2");
         let appointment_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
         fixtures
-            .add_participant(appointment_id, participant_id, "PENDING")
+            .add_participant(appointment_id, &participant_id, "PENDING")
             .await
             .expect("Failed to add participant");
 
@@ -117,7 +117,7 @@ mod appointment_rsvp_tests {
         service
             .change_participation_status(
                 appointment_id,
-                participant_id,
+                &participant_id,
                 ParticipationStatus::Rejected,
             )
             .await
@@ -126,12 +126,12 @@ mod appointment_rsvp_tests {
         // Verify status is now REJECTED
         let verify_repo = AppointmentRepository::new(db.pool().clone());
         let updated_participant = verify_repo
-            .find_participation(appointment_id, participant_id)
+            .find_participation_status(appointment_id, &participant_id)
             .await
             .expect("Failed to fetch participant")
             .expect("Participant not found");
 
-        assert_eq!(updated_participant.status, ParticipationStatus::Rejected);
+        assert_eq!(updated_participant, ParticipationStatus::Rejected);
     }
 
     #[tokio::test]
@@ -157,7 +157,7 @@ mod appointment_rsvp_tests {
         // Create appointment (no participants)
         let appointment_fixture = AppointmentFixture::new().with_title("Team Meeting 3");
         let appointment_id = fixtures
-            .create_appointment(creator_id, &appointment_fixture)
+            .create_appointment(&creator_id, &appointment_fixture)
             .await
             .expect("Failed to create appointment");
 
@@ -169,7 +169,7 @@ mod appointment_rsvp_tests {
         let result = service
             .change_participation_status(
                 appointment_id,
-                non_participant_id,
+                &non_participant_id,
                 ParticipationStatus::Approved,
             )
             .await;

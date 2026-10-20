@@ -70,21 +70,8 @@ feature-depth = 1
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
-    # h2 v0.3.27: Low severity unbounded empty DATA frames
-    { id = "RUSTSEC-2026-0258", reason = "Low severity h2 in transitive dep (reqwest -> hyper -> h2); upgrade planned" },
-    # paste v1.0.15: Unmaintained crate via sqlx-core (macro code generation only, not runtime)
-    { id = "RUSTSEC-2024-0436", reason = "Unmaintained paste via sqlx (dev-time macro); migration to macro_rules planned" },
     # rsa v0.9.10: Timing side-channel via jwt-simple (web-push auth token signing)
     { id = "RUSTSEC-2023-0071", reason = "Timing side-channel in rsa via jwt-simple (web-push); local-only use; upgrade path in web-push planned" },
-    # rustls-pemfile v1.0.4: Unmaintained; thin wrapper, can migrate directly
-    { id = "RUSTSEC-2025-0134", reason = "Archived but thin wrapper; migration to rustls-pki-types planned" },
-    # rustls-webpki v0.101.7+: Multiple certificate name constraint validation bugs (post-signature verification)
-    { id = "RUSTSEC-2026-0098", reason = "Name constraint validation bug (post-signature); low impact; upgrade testcontainers/sqlx planned" },
-    { id = "RUSTSEC-2026-0099", reason = "Wildcard name constraint bug (post-signature); low impact; upgrade testcontainers/sqlx planned" },
-    { id = "RUSTSEC-2026-0049", reason = "CRL matching bug (post-signature); low impact; upgrade testcontainers/sqlx planned" },
-    { id = "RUSTSEC-2026-0104", reason = "CRL parsing panic via testcontainers (dev-only); upgrade testcontainers planned" },
-    # sqlx v0.7.4: SQL injection via >4GiB encoding overflow; mitigation: input validation + upgrade to 0.8.1+
-    { id = "RUSTSEC-2024-0363", reason = "Requires >4GiB payload to trigger; input validation enforced; upgrade to sqlx 0.8.1+ planned" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.
@@ -110,6 +97,8 @@ allow = [
     "MPL-2.0",
     "BSL-1.0",
     "CC0-1.0",
+    # webpki-roots >= 0.26 (Mozilla CA bundle, used by reqwest's rustls-tls)
+    "CDLA-Permissive-2.0",
     "LGPL-2.1-or-later",
     "Unicode-3.0",
     "Unlicense",

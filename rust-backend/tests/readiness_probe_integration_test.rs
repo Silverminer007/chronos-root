@@ -59,8 +59,8 @@ async fn test_readiness_returns_503_when_database_unreachable() -> Result<(), An
 #[tokio::test]
 async fn test_readiness_returns_200_when_database_available() -> Result<(), AnyError> {
     // Start a fresh PostgreSQL container
-    let container = Postgres::default().start().await;
-    let host_port = container.get_host_port_ipv4(5432).await;
+    let container = Postgres::default().start().await?;
+    let host_port = container.get_host_port_ipv4(5432).await?;
 
     // Create a pool pointing to the test database
     let database_url = format!(

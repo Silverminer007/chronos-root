@@ -7,8 +7,8 @@ use axum::{
 use std::sync::Arc;
 
 use crate::appointments::handlers::{
-    cancel_appointment, create_appointment, delete_appointment, get_appointment, list_appointments,
-    rsvp_to_appointment, update_appointment, AppState,
+    add_participant, cancel_appointment, create_appointment, delete_appointment, get_appointment,
+    get_participation_status, list_appointments, rsvp_to_appointment, update_appointment, AppState,
 };
 use crate::security::TokenValidator;
 
@@ -35,8 +35,16 @@ pub fn build_router(app_state: Arc<AppState>, validator: Arc<TokenValidator>) ->
         )
         .route("/api/v2/appointments/:id/cancel", post(cancel_appointment))
         .route(
+            "/api/v2/appointments/:id/participants/:userId",
+            post(add_participant),
+        )
+        .route(
             "/api/v2/appointments/:id/participation",
             post(rsvp_to_appointment),
+        )
+        .route(
+            "/api/v2/appointments/:id/participation/status",
+            get(get_participation_status),
         )
         .with_state(app_state)
         .layer(middleware::from_fn_with_state(

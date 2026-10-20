@@ -24,7 +24,7 @@ impl DatabaseConfig {
 
         let url = if app_env == "development" {
             std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432".to_string())
+                .unwrap_or_else(|_| "postgres://chronos:chronos@localhost:5432/chronos".to_string())
         } else {
             std::env::var("DATABASE_URL")
                 .map_err(|_| "DATABASE_URL environment variable is required".to_string())?
@@ -80,7 +80,7 @@ impl DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            url: "postgres://postgres:postgres@localhost:5432".to_string(),
+            url: "postgres://chronos:chronos@localhost:5432/chronos".to_string(),
             max_connections: 16, // Conservative for <50 MiB memory target
             min_connections: 2,
             acquire_timeout: Duration::from_secs(5),
@@ -128,41 +128,48 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/// Serialises tests that read or write process-wide environment variables (such as `DATABASE_URL`),
+/// because every test thread shares the same environment. `test_utils` is always compiled, so this is too.
+pub(crate) fn test_env_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, MutexGuard};
 
-    /// Serializes tests that mutate process-wide environment variables,
-    /// because `cargo test` runs tests on parallel threads.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
+    const ENV_VARS: &[&str] = &[
+        "APP_ENV",
+        "DATABASE_URL",
+        "DATABASE_MAX_CONNECTIONS",
+        "DATABASE_MIN_CONNECTIONS",
+        "DATABASE_ACQUIRE_TIMEOUT_SECS",
+        "DATABASE_RUN_MIGRATIONS",
+    ];
 
-    fn lock_env() -> MutexGuard<'static, ()> {
-        ENV_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
+    /// Restores the captured environment variables on drop, so one test cannot leak values into another
+    struct EnvRestore(Vec<(&'static str, Option<std::ffi::OsString>)>);
 
-    struct EnvGuard {
-        vars: Vec<(&'static str, Option<String>)>,
-    }
-
-    impl EnvGuard {
-        fn new(vars: &[&'static str]) -> Self {
-            let saved = vars
-                .iter()
-                .map(|&var| (var, std::env::var(var).ok()))
-                .collect();
-            Self { vars: saved }
+    impl EnvRestore {
+        fn capture() -> Self {
+            Self(
+                ENV_VARS
+                    .iter()
+                    .map(|name| (*name, std::env::var_os(name)))
+                    .collect(),
+            )
         }
     }
 
-    impl Drop for EnvGuard {
+    impl Drop for EnvRestore {
         fn drop(&mut self) {
-            for (var, original) in &self.vars {
-                match original {
-                    Some(val) => std::env::set_var(var, val),
-                    None => std::env::remove_var(var),
+            for (name, value) in &self.0 {
+                match value {
+                    Some(value) => std::env::set_var(name, value),
+                    None => std::env::remove_var(name),
                 }
             }
         }
@@ -186,10 +193,10 @@ mod tests {
 
     #[test]
     fn test_config_from_env_development() {
-        let _env_lock = lock_env();
-        let _guard = EnvGuard::new(&["APP_ENV", "DATABASE_URL"]);
-        std::env::set_var("APP_ENV", "development");
+        let _guard = test_env_lock();
+        let _env = EnvRestore::capture();
         std::env::remove_var("DATABASE_URL");
+        std::env::set_var("APP_ENV", "development");
         // DATABASE_URL not set, should use default
         let config = DatabaseConfig::from_env().expect("Should succeed in dev");
         assert!(config.url.contains("localhost"));
@@ -197,8 +204,8 @@ mod tests {
 
     #[test]
     fn test_config_from_env_production_missing_url() {
-        let _env_lock = lock_env();
-        let _guard = EnvGuard::new(&["APP_ENV", "DATABASE_URL"]);
+        let _guard = test_env_lock();
+        let _env = EnvRestore::capture();
         std::env::remove_var("DATABASE_URL");
         std::env::set_var("APP_ENV", "production");
         let result = DatabaseConfig::from_env();
@@ -207,15 +214,8 @@ mod tests {
 
     #[test]
     fn test_config_from_env_respects_overrides() {
-        let _env_lock = lock_env();
-        let _guard = EnvGuard::new(&[
-            "DATABASE_URL",
-            "DATABASE_MAX_CONNECTIONS",
-            "DATABASE_MIN_CONNECTIONS",
-            "DATABASE_ACQUIRE_TIMEOUT_SECS",
-            "DATABASE_RUN_MIGRATIONS",
-            "APP_ENV",
-        ]);
+        let _guard = test_env_lock();
+        let _env = EnvRestore::capture();
         std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/test");
         std::env::set_var("DATABASE_MAX_CONNECTIONS", "32");
         std::env::set_var("DATABASE_MIN_CONNECTIONS", "4");
@@ -229,5 +229,13 @@ mod tests {
         assert_eq!(config.min_connections, 4);
         assert_eq!(config.acquire_timeout, Duration::from_secs(10));
         assert!(!config.run_migrations);
+
+        // Unset again so the fake credentials do not leak into other tests in this process
+        std::env::remove_var("DATABASE_URL");
+        std::env::remove_var("DATABASE_MAX_CONNECTIONS");
+        std::env::remove_var("DATABASE_MIN_CONNECTIONS");
+        std::env::remove_var("DATABASE_ACQUIRE_TIMEOUT_SECS");
+        std::env::remove_var("DATABASE_RUN_MIGRATIONS");
+        std::env::remove_var("APP_ENV");
     }
 }

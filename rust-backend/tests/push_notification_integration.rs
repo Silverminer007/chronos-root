@@ -1,68 +1,123 @@
 //! Integration tests for push notification service with real PostgreSQL
-//! NOTE: These tests require a running PostgreSQL instance and are currently disabled
-//! due to testcontainers API changes. They can be run locally with a PostgreSQL database.
+//! NOTE: The database tests need a PostgreSQL server (TEST_DATABASE_URL / DATABASE_URL, default
+//! localhost:5432); every test creates and migrates its own database.
 
 #[cfg(test)]
 mod tests {
+    use chronos_date_api::database::repository::{Repository, RepositoryError};
+    use chronos_date_api::push_notifications::models::PushSubscription;
+    use chronos_date_api::push_notifications::repository::PushSubscriptionRepository;
     use chronos_date_api::test_utils::TestDb;
-    use uuid::Uuid;
-    // use testcontainers::clients;
-    // use testcontainers_modules::postgres;
 
-    /// Helper function to set up an isolated test database with migrations applied.
-    /// Each call gets its own database, so concurrently running tests never race on DDL.
-    #[allow(dead_code)]
-    async fn setup_test_db() -> sqlx::PgPool {
+    /// Helper function to set up a migrated test database
+    async fn setup_test_db() -> TestDb {
         TestDb::new()
             .await
-            .expect("Failed to create test database")
-            .pool()
-            .clone()
+            .expect("Failed to initialize test database")
     }
 
-    /// Test creating a push subscription
+    fn subscription(user_id: &str, endpoint: &str) -> PushSubscription {
+        PushSubscription {
+            id: 0, // ignored: the id comes from pushsubscription_seq
+            user_id: user_id.to_string(),
+            endpoint: endpoint.to_string(),
+            p256dh: "test_p256dh_key".to_string(),
+            auth: "test_auth_key".to_string(),
+        }
+    }
+
+    /// Test creating a push subscription for a user identified by OIDC subject
     #[tokio::test]
-    #[ignore] // Requires Docker for testcontainers
+    #[ignore] // Requires a PostgreSQL server (TEST_DATABASE_URL)
     async fn test_create_push_subscription() {
-        let _pool = setup_test_db().await;
+        let db = setup_test_db().await;
+        let repo = PushSubscriptionRepository::new(db.pool().clone());
 
-        // Create a test user
-        let _user_id = Uuid::new_v4();
-        let _keycloak_id = format!("keycloak-{}", Uuid::new_v4());
+        let created = repo
+            .create(subscription("keycloak-sub-1", "https://example.com/push/1"))
+            .await
+            .expect("Failed to create subscription");
 
-        // Create a test push subscription
-        let _subscription_id = Uuid::new_v4();
-        let endpoint = "https://example.com/push/endpoint";
-        let p256dh = "test_p256dh_key";
-        let auth = "test_auth_key";
+        assert!(created.id > 0);
+        assert_eq!(created.user_id, "keycloak-sub-1");
+        assert_eq!(created.endpoint, "https://example.com/push/1");
 
-        // Verify that a subscription can be created and stored
-        assert!(!endpoint.is_empty());
-        assert!(!p256dh.is_empty());
-        assert!(!auth.is_empty());
+        // The same user/endpoint cannot be subscribed twice
+        let duplicate = repo
+            .create(subscription("keycloak-sub-1", "https://example.com/push/1"))
+            .await;
+        assert!(matches!(duplicate, Err(RepositoryError::ConflictError(_))));
+    }
+
+    /// Concurrent creates for the same user/endpoint must insert exactly one row
+    #[tokio::test]
+    #[ignore] // Requires a PostgreSQL server (TEST_DATABASE_URL)
+    async fn test_concurrent_create_same_subscription_inserts_once() {
+        let db = setup_test_db().await;
+        let repo = std::sync::Arc::new(PushSubscriptionRepository::new(db.pool().clone()));
+
+        let handles: Vec<_> = (0..16)
+            .map(|_| {
+                let repo = repo.clone();
+                tokio::spawn(async move {
+                    repo.create(subscription("sub-race", "https://example.com/push/race"))
+                        .await
+                })
+            })
+            .collect();
+
+        let mut created = 0;
+        let mut conflicts = 0;
+        for handle in handles {
+            match handle.await.expect("task panicked") {
+                Ok(_) => created += 1,
+                Err(RepositoryError::ConflictError(_)) => conflicts += 1,
+                Err(other) => panic!("unexpected error: {other:?}"),
+            }
+        }
+
+        assert_eq!(created, 1, "exactly one concurrent create may succeed");
+        assert_eq!(conflicts, 15);
+        let rows = repo
+            .find_by_user_id("sub-race")
+            .await
+            .expect("Failed to list subscriptions");
+        assert_eq!(rows.len(), 1);
     }
 
     /// Test retrieving push subscriptions for a user
     #[tokio::test]
-    #[ignore] // Requires Docker
+    #[ignore] // Requires a PostgreSQL server (TEST_DATABASE_URL)
     async fn test_retrieve_user_subscriptions() {
-        let _pool = setup_test_db().await;
+        let db = setup_test_db().await;
+        let repo = PushSubscriptionRepository::new(db.pool().clone());
 
-        // In a real test:
-        // 1. Insert a user into the database
-        // 2. Insert multiple push subscriptions for that user
-        // 3. Retrieve subscriptions using find_by_user_id()
-        // 4. Verify that all subscriptions are returned
+        repo.create(subscription("sub-a", "https://example.com/push/a1"))
+            .await
+            .unwrap();
+        repo.create(subscription("sub-a", "https://example.com/push/a2"))
+            .await
+            .unwrap();
+        repo.create(subscription("sub-b", "https://example.com/push/b1"))
+            .await
+            .unwrap();
 
-        let user_id = Uuid::new_v4();
-        assert!(!user_id.to_string().is_empty());
+        let subscriptions = repo.find_by_user_id("sub-a").await.unwrap();
+        assert_eq!(subscriptions.len(), 2);
+        assert!(subscriptions.iter().all(|s| s.user_id == "sub-a"));
+
+        assert!(repo
+            .delete_by_user_and_endpoint("sub-a", "https://example.com/push/a1")
+            .await
+            .unwrap());
+        assert_eq!(repo.find_by_user_id("sub-a").await.unwrap().len(), 1);
     }
 
     /// Test that push notification is sent when event is fired
     #[tokio::test]
     #[ignore] // Requires Docker and mocked HTTP endpoint
     async fn test_push_notification_on_event() {
-        let _pool = setup_test_db().await;
+        let _db = setup_test_db().await;
 
         // This test would:
         // 1. Set up a test user with a push subscription
@@ -76,19 +131,19 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires Docker
     async fn test_no_subscriptions_error_handling() {
-        let _pool = setup_test_db().await;
+        let _db = setup_test_db().await;
 
         // A user with no subscriptions should not cause an error
         // The notification service should log a warning and continue
-        let user_id = Uuid::new_v4();
-        assert!(!user_id.to_string().is_empty());
+        let user_id = "user-without-subscriptions";
+        assert!(!user_id.is_empty());
     }
 
     /// Test that push service HTTP errors are handled
     #[tokio::test]
     #[ignore] // Requires Docker and network simulation
     async fn test_push_service_failure_handling() {
-        let _pool = setup_test_db().await;
+        let _db = setup_test_db().await;
 
         // If the push service returns a 5xx error:
         // 1. The error should be logged
@@ -100,7 +155,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires Docker
     async fn test_subscription_410_gone_handling() {
-        let _pool = setup_test_db().await;
+        let _db = setup_test_db().await;
 
         // If the push service returns 410 Gone (subscription expired):
         // 1. The subscription should be deleted from the database
@@ -112,7 +167,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires Docker
     async fn test_concurrent_notifications() {
-        let _pool = setup_test_db().await;
+        let _db = setup_test_db().await;
 
         // If a user has multiple push subscriptions:
         // 1. Notifications should be sent to all subscriptions
@@ -158,7 +213,7 @@ mod tests {
             "title": "Test Termin",
             "body": "Test Body",
             "data": {
-                "appointment_id": "123e4567-e89b-12d3-a456-426614174000",
+                "appointment_id": 12,
                 "type": "appointment_created"
             }
         });
@@ -175,7 +230,7 @@ mod tests {
             "title": "Termin: My Event",
             "body": "Sie wurden zu einem Termin eingeladen",
             "data": {
-                "appointment_id": "123e4567-e89b-12d3-a456-426614174000",
+                "appointment_id": 12,
                 "type": "appointment_created"
             }
         });
