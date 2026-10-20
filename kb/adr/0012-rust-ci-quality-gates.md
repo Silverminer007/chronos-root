@@ -43,6 +43,8 @@ Implement **9 separate CI jobs**, each responsible for one quality gate. Jobs ru
    - Integration tests with Testcontainers/PostgreSQL
    - Runs ignored tests (performance baselines, long-running tests)
    - `TESTCONTAINERS_RYUK_DISABLED=true` for CI environments
+   - Followed by the step **Check that no test databases are left behind**: it counts databases matching `^test_db_[0-9]+_` on the server and fails the job if any remain (see `ADR-2026-10-20-025-test-db-template-and-cleanup.md`)
+   - The check runs only in this job, not in `coverage`. That is intended: both jobs run the same tests against the same kind of fresh service container with the same `DATABASE_URL`, so the cleanup guard is exercised identically and a second gate would only duplicate it (the coverage job's instrumented build is also slower; it stays free of extra steps)
 
 5. **coverage** — `cargo llvm-cov --all-targets --all-features --workspace --locked -- --include-ignored`
    - Measures line coverage over unit + integration tests
