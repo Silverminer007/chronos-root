@@ -19,7 +19,12 @@ default `DATABASE_MAX_CONNECTIONS` of 16 the listeners held every connection, so
 3. **Reconnect keeps all channels.** If `recv` or `LISTEN` fails, the task reconnects and re-listens on all
    registered channels (5 s delay when the connection cannot be opened). The task ends when the bus is dropped.
 4. **Listener stays inside the pool** (instead of a separate connection) so no second connection setting is
-   needed; the footprint is a constant 1. Pools need `DATABASE_MAX_CONNECTIONS >= 2`.
+   needed; the footprint is a constant 1.
+   Minimum pool size together with ADR-2026-10-20-022 (the reminder leader holds one extra, detached connection):
+   bus 1 + leader 1 + at least 1 for requests = `DATABASE_MAX_CONNECTIONS >= 3`; the default of 16 is enough and
+   no longer depends on the number of event types.
 5. **Removed `create_listener`**, an unused public helper that encouraged one connection per channel.
 6. **Test:** `test_subscriptions_leave_pool_connections_free` subscribes 16 event types on a pool of 16 and
    requires a query and an event delivery to still work (red before the change: `PoolTimedOut`).
+7. **Workaround obsolete.** `DATABASE_MAX_CONNECTIONS=40` in `deployment/values-parity.yaml` (parity run of #137)
+   can be dropped; the default configuration becomes Ready.
