@@ -259,7 +259,7 @@ pub async fn update_appointment(
 
     // Validate and update appointment
     let response = service
-        .update_appointment(id, request)
+        .update_appointment(id, request, user_id)
         .await
         .map_err(AppointmentError::from)?;
 
@@ -319,7 +319,7 @@ pub async fn cancel_appointment(
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
-        .cancel_appointment(id)
+        .cancel_appointment(id, user_id)
         .await
         .map_err(AppointmentError::from)?;
 

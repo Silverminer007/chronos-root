@@ -46,6 +46,10 @@ fn router(db: &TestDb, keycloak: Arc<FakeKeycloak>) -> Router {
     build_router(
         app_state,
         user_state(db, keycloak),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            db.pool().clone(),
+            String::new(),
+        )),
         Arc::new(TokenValidator::new(
             "http://127.0.0.1:1/realms/chronos".to_string(),
         )),

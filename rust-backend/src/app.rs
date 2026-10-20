@@ -19,6 +19,10 @@ use crate::groups::handlers::{
     remove_group_member, send_friendship_request, update_group,
 };
 use crate::metrics::{metrics_handler, track_requests, Metrics};
+use crate::push_notifications::handlers::endpoints::{
+    get_public_key, status as push_status, subscribe, unsubscribe,
+};
+use crate::push_notifications::PushState;
 use crate::security::TokenValidator;
 use crate::users::{
     handlers::{
@@ -37,6 +41,7 @@ const DB_CHECK_NAME: &str = "Database connections health check";
 pub fn build_router(
     app_state: Arc<AppState>,
     user_state: Arc<UserState>,
+    push_state: Arc<PushState>,
     validator: Arc<TokenValidator>,
 ) -> Router {
     let metrics = Arc::new(Metrics::default());
@@ -127,6 +132,7 @@ pub fn build_router(
         )
         .with_state(app_state)
         .merge(user_routes(user_state.clone()))
+        .merge(push_routes(push_state))
         // Inner layer: runs after authentication, so the principal is available
         .layer(middleware::from_fn_with_state(
             UserRepository::new(user_state.db_pool.clone()),
@@ -166,6 +172,16 @@ pub fn user_routes(user_state: Arc<UserState>) -> Router {
         .route("/api/v2/user/change-password", get(get_change_password_url))
         .route("/api/v2/settings", get(get_settings).put(update_settings))
         .with_state(user_state)
+}
+
+/// `/api/v2/push/*` (Java: `PushResource`)
+pub fn push_routes(push_state: Arc<PushState>) -> Router {
+    Router::new()
+        .route("/api/v2/push/public-key", get(get_public_key))
+        .route("/api/v2/push/subscribe", post(subscribe))
+        .route("/api/v2/push/status", get(push_status))
+        .route("/api/v2/push/unsubscribe", delete(unsubscribe))
+        .with_state(push_state)
 }
 
 /// Quarkus (SmallRye Health) body of a health group.

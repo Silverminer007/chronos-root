@@ -45,7 +45,15 @@ impl TestApp {
         });
         let validator = Arc::new(TokenValidator::new(start_mock_keycloak().await));
         Self {
-            router: build_router(state, user_state, validator),
+            router: build_router(
+                state,
+                user_state,
+                Arc::new(chronos_date_api::push_notifications::PushState::new(
+                    db.pool().clone(),
+                    String::new(),
+                )),
+                validator,
+            ),
             db,
             profiles: Default::default(),
         }

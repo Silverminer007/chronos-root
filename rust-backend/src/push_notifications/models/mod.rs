@@ -12,27 +12,29 @@ pub struct PushSubscription {
     pub auth: String,
 }
 
-/// Request model for subscribing to push notifications
+/// Request model for subscribing to push notifications (Java: `PushSubscriptionDto`). Every
+/// field is optional so that a missing one is Java's 500 instead of a deserialisation error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PushSubscriptionRequest {
-    pub endpoint: String,
-    pub keys: PushSubscriptionKeys,
+    #[serde(default)]
+    pub endpoint: Option<String>,
+    #[serde(default)]
+    pub keys: Option<PushSubscriptionKeys>,
 }
 
 /// Push subscription keys (p256dh and auth)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PushSubscriptionKeys {
-    pub p256dh: String,
-    pub auth: String,
+    #[serde(default)]
+    pub p256dh: Option<String>,
+    #[serde(default)]
+    pub auth: Option<String>,
 }
 
-/// Notification payload to be sent to the client
+/// Response of `GET /api/v2/push/status` (Java: `PushSubscriptionStatusDto`)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NotificationPayload {
-    pub title: String,
-    pub body: String,
-    #[serde(default)]
-    pub data: Option<serde_json::Value>,
+pub struct PushSubscriptionStatus {
+    pub exists: bool,
 }
 
 #[cfg(test)]
@@ -55,15 +57,19 @@ mod tests {
     }
 
     #[test]
-    fn test_notification_payload_serialization() {
-        let payload = NotificationPayload {
-            title: "Test Title".to_string(),
-            body: "Test Body".to_string(),
-            data: Some(serde_json::json!({ "key": "value" })),
-        };
+    fn test_subscription_request_tolerates_missing_fields() {
+        let request: PushSubscriptionRequest = serde_json::from_str("{}").unwrap();
+        assert!(request.endpoint.is_none() && request.keys.is_none());
 
-        let json = serde_json::to_string(&payload).expect("Failed to serialize");
-        assert!(json.contains("Test Title"));
-        assert!(json.contains("Test Body"));
+        let request: PushSubscriptionRequest =
+            serde_json::from_str(r#"{"endpoint":"https://e","keys":{"p256dh":"p","auth":"a"}}"#)
+                .unwrap();
+        assert_eq!(request.keys.unwrap().auth.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn test_status_serialization() {
+        let json = serde_json::to_string(&PushSubscriptionStatus { exists: true }).unwrap();
+        assert_eq!(json, r#"{"exists":true}"#);
     }
 }
