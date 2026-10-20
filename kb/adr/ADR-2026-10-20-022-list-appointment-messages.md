@@ -22,7 +22,7 @@ Issue #124 requires `GET /api/v2/appointments/{id}/messages` in the Rust backend
 
 ## Events
 
-A read emits no event. Nothing from #99 is needed here. The `MessageSentEvent` publisher belongs to the future `POST` endpoint.
+A read emits no event. Nothing from #99 is needed here. The `MessageSentEvent` publisher is done in `send_message` of the `POST` endpoint, see ADR-2026-10-20-023.
 
 ## Tests
 
