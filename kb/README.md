@@ -265,6 +265,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-05-012: Appointment Groups: Add group endpoint](adr/ADR-2026-10-05-012-appointment-groups-add-group.md)
 - [ADR-2026-10-14-017: Participant removal with hard delete](adr/ADR-2026-10-14-017-participant-removal.md)
 - [ADR-2026-10-14-016: Participation status endpoint (Java parity)](adr/ADR-2026-10-14-016-participation-status-endpoint.md)
+- [ADR-2026-10-20-022: List appointment messages (Java parity)](adr/ADR-2026-10-20-022-list-appointment-messages.md)
 - [ADR-2026-10-20-017: User and settings endpoints with Keycloak anti-corruption layer (Java parity)](adr/ADR-2026-10-20-017-user-settings-keycloak-acl.md)
 - [ADR-2026-10-20-018: Rust backend deploy dispatch is opt-in via repository variable](adr/ADR-2026-10-20-018-rust-deploy-opt-in.md)
 - [ADR-2026-10-20-019: Groups and friendships endpoints (Java parity)](adr/ADR-2026-10-20-019-groups-friendships-endpoints.md)
