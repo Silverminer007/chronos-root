@@ -239,3 +239,63 @@ async fn invalid_push_subscription_is_a_json_server_error() {
     assert_eq!(body["errorCode"], json!("INTERNAL_ERROR"), "{body}");
     assert_eq!(body["path"], json!("/api/v2/push/subscribe"), "{body}");
 }
+
+const ADMIN: &str = "admin";
+
+fn assert_json_content_type(content_type: Option<String>) {
+    let content_type = content_type.expect("Content-Type header");
+    assert!(
+        content_type.starts_with("application/json"),
+        "{content_type}"
+    );
+}
+
+#[tokio::test]
+async fn admin_endpoint_for_missing_appointment_is_a_json_not_found() {
+    let app = TestApp::new().await;
+    app.grant_admin(ADMIN);
+    let group = app.add_group(ADMIN, "Gruppe").await;
+    let path = format!("/api/v2/admin/appointments/{MISSING_ID}/participants/groups");
+
+    let (status, content_type, body) = app
+        .call_typed(
+            Some(ADMIN),
+            "POST",
+            &path,
+            Some(json!({"group_id": group, "user_role": "GUEST"})),
+        )
+        .await;
+
+    assert_json_content_type(content_type);
+    assert_error(
+        (status, body),
+        StatusCode::NOT_FOUND,
+        "RESOURCE_NOT_FOUND",
+        "Appointment not found",
+        &path,
+    );
+}
+
+#[tokio::test]
+async fn admin_participation_status_change_of_non_participant_is_a_json_bad_request() {
+    let app = TestApp::new().await;
+    app.grant_admin(ADMIN);
+    let id = appointment(&app, "alice").await;
+    let path = "/api/v2/admin/appointments/participants/status";
+
+    let (status, content_type, body) = app
+        .call_typed(
+            Some(ADMIN),
+            "POST",
+            path,
+            Some(json!({"userId": "bob", "appointmentId": id, "participationStatus": "APPROVED"})),
+        )
+        .await;
+
+    assert_json_content_type(content_type);
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["status"], json!(400), "{body}");
+    assert_eq!(body["errorCode"], json!("BAD_REQUEST"), "{body}");
+    assert_eq!(body["path"], json!(path), "{body}");
+    assert!(body["message"].is_string(), "{body}");
+}

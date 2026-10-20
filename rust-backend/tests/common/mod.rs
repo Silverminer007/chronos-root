@@ -82,6 +82,18 @@ impl TestApp {
         uri: &str,
         body: Option<Value>,
     ) -> (StatusCode, Value) {
+        let (status, _, body) = self.call_typed(user_id, method, uri, body).await;
+        (status, body)
+    }
+
+    /// Like [`Self::call`], but also returns the `Content-Type` header of the answer
+    pub async fn call_typed(
+        &self,
+        user_id: Option<&str>,
+        method: &str,
+        uri: &str,
+        body: Option<Value>,
+    ) -> (StatusCode, Option<String>, Value) {
         let mut builder = http::Request::builder().uri(uri).method(method);
         if let Some(user_id) = user_id {
             builder = builder.header("authorization", format!("Bearer {}", self.token(user_id)));
@@ -101,6 +113,10 @@ impl TestApp {
             .await
             .expect("Router call failed");
         let status = response.status();
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .map(|v| v.to_str().unwrap().to_string());
         let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("Failed to read body");
@@ -111,7 +127,7 @@ impl TestApp {
             serde_json::from_slice(&bytes)
                 .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()))
         };
-        (status, body)
+        (status, content_type, body)
     }
 
     /// Sends a GET as `user_id`; returns status and the raw body (for non-JSON responses)
