@@ -21,8 +21,6 @@ use crate::users::{
 
 /// Body of Java's `GenericExceptionMapper` (unhandled exception → 500)
 const INTERNAL_ERROR_MESSAGE: &str = "Ein interner Fehler ist aufgetreten";
-/// Message of the `jakarta.ws.rs.NotFoundException` Java's Keycloak admin client throws on a 404
-const KEYCLOAK_NOT_FOUND_MESSAGE: &str = "HTTP 404 Not Found";
 
 /// Error response in the format of Java's exception mappers
 pub struct ApiError {
@@ -45,17 +43,6 @@ impl ApiError {
         }
     }
 
-    /// Java `NotFoundExceptionMapper`: no `errorCode`
-    fn not_found(path: &str) -> Self {
-        Self {
-            status: StatusCode::NOT_FOUND,
-            error: "Not Found",
-            error_code: "",
-            message: KEYCLOAK_NOT_FOUND_MESSAGE.to_string(),
-            path: path.to_string(),
-        }
-    }
-
     /// Java `BadRequestExceptionMapper`
     fn bad_request(message: String, path: &str) -> Self {
         Self {
@@ -68,13 +55,9 @@ impl ApiError {
     }
 
     fn from_keycloak(error: KeycloakError, path: &str) -> Self {
-        match error {
-            KeycloakError::NotFound => Self::not_found(path),
-            KeycloakError::Failed(reason) => {
-                error!("Keycloak call failed for {}: {}", path, reason);
-                Self::internal(path)
-            }
-        }
+        // Ticket answer 5: Keycloak 404, 5xx and network errors are all unhandled → 500
+        error!("Keycloak call failed for {}: {}", path, error);
+        Self::internal(path)
     }
 
     fn from_profile(error: ProfileError, path: &str) -> Self {

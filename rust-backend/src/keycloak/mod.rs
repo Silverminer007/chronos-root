@@ -23,8 +23,7 @@ const DEFAULT_REALM: &str = "master";
 /// Failure of a Keycloak admin call
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeycloakError {
-    /// Keycloak answered 404. Java's admin client throws `jakarta.ws.rs.NotFoundException`,
-    /// which `NotFoundExceptionMapper` turns into a 404.
+    /// Keycloak answered 404 (e.g. user missing). The API still answers 500 (ticket answer 5)
     NotFound,
     /// Any other failure (other status, network, malformed answer)
     Failed(String),

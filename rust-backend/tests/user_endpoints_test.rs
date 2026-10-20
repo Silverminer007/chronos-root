@@ -289,7 +289,7 @@ async fn patch_user_with_an_unreadable_body_is_500() {
 // ---------------------------------------------------------------- Keycloak failures
 
 #[tokio::test]
-async fn keycloak_404_maps_to_java_not_found_and_other_failures_to_500() {
+async fn keycloak_404_and_other_failures_map_to_500() {
     let db = db().await;
     let app = authenticated(
         &db,
@@ -297,16 +297,12 @@ async fn keycloak_404_maps_to_java_not_found_and_other_failures_to_500() {
         max(),
     );
     let (status, body, _) = call(app, "GET", "/api/v2/user/linked", None).await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     let body = body.unwrap();
-    assert_eq!(body["status"], 404);
-    assert_eq!(body["error"], "Not Found");
-    assert_eq!(body["message"], "HTTP 404 Not Found");
+    assert_eq!(body["status"], 500);
+    assert_eq!(body["errorCode"], "INTERNAL_ERROR");
+    assert_eq!(body["message"], "Ein interner Fehler ist aufgetreten");
     assert_eq!(body["path"], "/api/v2/user/linked");
-    assert!(
-        body.get("errorCode").is_none(),
-        "NotFoundExceptionMapper sets no errorCode"
-    );
 
     let app = authenticated(
         &db,

@@ -31,8 +31,8 @@ Issue #98 ports `UserResource` and `SettingsResource` to the Rust backend and in
 ### 3. Errors – unhandled Java exceptions are `500`
 
 - Java's `GenericExceptionMapper` turns every unmapped exception into `500` with `{timestamp, status, error: "Internal Server Error", errorCode: "INTERNAL_ERROR", message: "Ein interner Fehler ist aufgetreten", path}`. Rust copies this body (`ApiError::internal`) with the request path (`/api/v2/…`, leading slash).
-- Cases that are unhandled exceptions in Java and therefore `500` in Rust (ticket answers 4 and 5): a missing `redirectUri` on the four URL endpoints and on `PATCH` when the email is unchanged (Java's `URLEncoder.encode(null)`; the Keycloak update has already happened), an empty/`null`/malformed JSON body, `PUT /settings` with a missing, blank or unknown value (Java maps it to `null` and fails on the NOT NULL column; nothing is persisted), Keycloak failures other than 404 (5xx, network, token errors).
-- **One deliberate reading of "Java is the reference":** a Keycloak `404` (user missing in Keycloak) is *not* a 500. Java's admin client throws `jakarta.ws.rs.NotFoundException`, which the existing `NotFoundExceptionMapper` turns into `404 {timestamp, status: 404, error: "Not Found", message: "HTTP 404 Not Found", path}` (no `errorCode`). Rust does the same. The ticket answer assumed "no explicit mapping"; if the contract diff shows a mismatch here, the `message` text is the part to verify against a live Keycloak.
+- Cases that are unhandled exceptions in Java and therefore `500` in Rust (ticket answers 4 and 5): a missing `redirectUri` on the four URL endpoints and on `PATCH` when the email is unchanged (Java's `URLEncoder.encode(null)`; the Keycloak update has already happened), an empty/`null`/malformed JSON body, `PUT /settings` with a missing, blank or unknown value (Java maps it to `null` and fails on the NOT NULL column; nothing is persisted), Keycloak failures including 404 (5xx, network, token errors).
+- A Keycloak `404` (user missing in Keycloak) is a `500 INTERNAL_ERROR` with the generic body like every other Keycloak failure, as the ticket owner answered (answer 5: 404, 5xx and network errors all become 500). Java would answer `404` via `NotFoundExceptionMapper` for the admin client's `NotFoundException`; this is a deliberate deviation and gets an allowlist entry with this reason in the contract harness (#136).
 - `ErrorResponse.error_code` is omitted from the JSON when empty so the 404 body has no `errorCode`, like Jackson's `NON_NULL`. All existing errors set a code, so they are unchanged.
 
 ### 4. Identity cache (`user_profiles`)
@@ -42,4 +42,4 @@ Java's `PrincipalContextFilter` upserts the token claims into `user_profiles` on
 ## Consequences
 
 - `build_router` takes a `UserState` (db pool, `Arc<dyn KeycloakAdmin>`, `KeycloakUrls`) as an additional argument; `test_utils::user_state_for_tests` serves router tests that do not touch the user endpoints.
-- Open assumptions for the contract harness: the `path` field format (leading slash), the exact body of malformed JSON (assumed `500` like every unmapped exception), and the Keycloak 404 message.
+- Open assumptions for the contract harness: the `path` field format (leading slash), the exact body of malformed JSON (assumed `500` like every unmapped exception).
