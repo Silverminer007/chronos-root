@@ -1,8 +1,8 @@
----
-title: ADR-2026-10-20-029: Final parity run fixes (names, move message, PATCH messages, bare settings 400) and explorative allowlist
-date: 2026-10-20
-status: Accepted
----
+# ADR-2026-10-20-029: Final parity run fixes (names, move message, PATCH messages, bare settings 400) and explorative allowlist
+
+- Status: accepted
+- Ticket: #169 (final proof of the Rust port; map #21)
+- Amends: [ADR-2026-10-20-026](ADR-2026-10-20-026-appointment-list-and-embedded-details.md) (names are resolved only where Java resolves them)
 
 ## Context
 
