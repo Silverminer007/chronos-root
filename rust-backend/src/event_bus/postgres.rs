@@ -211,15 +211,8 @@ mod tests {
     use super::*;
     use crate::test_utils::{TestDb, TestDbConfig};
 
-    /// Each test gets its own migrated database, so the `events` table exists and tests cannot collide
-    async fn create_test_pool() -> PgPool {
-        TestDb::new()
-            .await
-            .expect("Failed to create test database")
-            .pool()
-            .clone()
-    }
-
+    /// Each test gets its own migrated database, so the `events` table exists and tests cannot collide.
+    /// The returned guard drops the database; keep it alive for the whole test.
     async fn create_test_db() -> TestDb {
         TestDb::new().await.expect("Failed to create test database")
     }
@@ -227,8 +220,8 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_event_bus_creation() {
-        let pool = create_test_pool().await;
-        let bus = PostgresEventBus::new(pool);
+        let db = create_test_db().await;
+        let bus = PostgresEventBus::new(db.pool().clone());
         // Event bus created successfully with valid pool
         assert!(!bus.pool.is_closed());
     }
@@ -236,8 +229,8 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_fire_event() {
-        let pool = create_test_pool().await;
-        let bus = PostgresEventBus::new(pool);
+        let db = create_test_db().await;
+        let bus = PostgresEventBus::new(db.pool().clone());
         let event = Event::new("test_event", serde_json::json!({"data": "test"}));
         let result = bus.fire(event).await;
         assert!(result.is_ok(), "Failed to fire event: {:?}", result);
@@ -246,7 +239,8 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_event_persistence() {
-        let pool = create_test_pool().await;
+        let db = create_test_db().await;
+        let pool = db.pool().clone();
         let bus = PostgresEventBus::new(pool.clone());
         let event = Event::new("persistence_test", serde_json::json!({"id": 123}));
         let event_id = event.id.clone();

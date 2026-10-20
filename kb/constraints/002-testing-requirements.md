@@ -114,6 +114,8 @@ public class AppointmentServiceTest {
 - Isolated per test
 - Reproducible environment
 
+**Rust backend (`rust-backend/`)**: tests use `TestDb`, which clones a database from a template and drops it in `Drop`. Keep the `TestDb` guard alive for the whole test; `db.pool().clone()` alone does not keep the database (see ADR-2026-10-20-025).
+
 ## Test Naming Convention
 
 Use `test<Feature><Condition><Expected>`:
