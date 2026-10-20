@@ -88,9 +88,14 @@ pub async fn get_appointment(
     let user_id = principal.user_id();
 
     // Authorization first, like Java: an unknown appointment has no participants, hence a 403.
-    // For now, only allow creators (RESPONSIBLE participants) to view their appointments
-    // TODO: Also allow the other participants of the appointment
-    ensure_creator(&state, id, user_id, NO_ROLE_MESSAGE).await?;
+    // Any participant (role other than NONE) may read (Java: `requireReadAppointment`)
+    let role = AppointmentRepository::new(state.db_pool.clone())
+        .get_participant_role(id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+    if matches!(role, None | Some(UserRole::None)) {
+        return Err(AppointmentError::Forbidden(NO_ROLE_MESSAGE.to_string()));
+    }
 
     let appointment = service
         .get_appointment(id)

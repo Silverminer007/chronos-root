@@ -719,7 +719,11 @@ async fn test_admin_statistics_count_rows_and_keycloak_users() {
     .await;
     app.delete(USER, &format!("/api/v2/appointments/{deleted}"))
         .await;
-    for (appointment_id, status) in [(planned, "PENDING"), (cancelled, "REJECTED")] {
+    for (appointment_id, status) in [
+        (planned, "PENDING"),
+        (cancelled, "REJECTED"),
+        (deleted, "APPROVED"),
+    ] {
         sqlx::query("UPDATE appointment_participation SET status = $1 WHERE appointment_id = $2")
             .bind(status)
             .bind(appointment_id)

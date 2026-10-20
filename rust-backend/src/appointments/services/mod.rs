@@ -1029,6 +1029,18 @@ impl AppointmentService {
             }
         }
 
+        // Only friends can be invited (Java: `requireAddUserToAppointment`)
+        let friends = self
+            .repo
+            .are_friends(acting_user_id, target_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+        if !friends {
+            return Err(ServiceError::Forbidden(
+                "You can only add friends to appointments".to_string(),
+            ));
+        }
+
         // Add the participant with PENDING status
         self.repo
             .add_participant_strict(appointment_id, target_user_id, user_role, "PENDING")

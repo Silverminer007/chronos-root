@@ -68,6 +68,7 @@ async fn test_list_is_paged_with_java_meta_and_defaults() {
 async fn test_list_embeds_participants_messages_and_group_participants() {
     let app = app().await;
     let id = create_future(&app, "Eins").await;
+    app.add_friendship(OWNER, GUEST, "ACCEPTED").await;
     app.post(
         OWNER,
         &format!("/api/v2/appointments/{id}/participants/{GUEST}"),

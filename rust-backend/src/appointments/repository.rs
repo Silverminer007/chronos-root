@@ -1,6 +1,7 @@
 use crate::appointments::models::{
     Appointment, AppointmentStatus, Message, ParticipantRow, ParticipationStatus, UserRole,
 };
+use crate::groups::repository::FriendshipRepository;
 use crate::users::identity::{IdentityRepository, UserIdentity};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -236,6 +237,11 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Whether an accepted friendship exists between two users
+    pub async fn are_friends(&self, user1_id: &str, user2_id: &str) -> Result<bool, sqlx::Error> {
+        FriendshipRepository::are_friends(&self.pool, user1_id, user2_id).await
+    }
+
     /// Create a new appointment; the creator becomes its RESPONSIBLE participant in the same
     /// transaction (the Java schema has no creator column).
     #[allow(clippy::too_many_arguments)]
@@ -274,7 +280,7 @@ impl AppointmentRepository {
 
         sqlx::query(
             "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
-             VALUES (nextval('appointment_participation_seq'), $1, $2, 'RESPONSIBLE', 'APPROVED')",
+             VALUES (nextval('appointment_participation_seq'), $1, $2, 'RESPONSIBLE', 'PENDING')",
         )
         .bind(appointment.id)
         .bind(creator_id)
