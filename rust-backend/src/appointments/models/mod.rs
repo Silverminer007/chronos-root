@@ -372,6 +372,12 @@ pub struct AddParticipantRequest {
     pub user_role: UserRole,
 }
 
+/// Request to change a participant's role (Java: `ParticipantRoleDto`)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangeParticipantRoleRequest {
+    pub role: String,
+}
+
 /// Request to add a group to an appointment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddGroupToAppointmentRequest {
@@ -729,6 +735,13 @@ mod tests {
 
         let request = serde_json::from_str::<CreateParticipationRequest>(json).unwrap();
         assert_eq!(request.role, UserRole::Helper);
+    }
+
+    #[test]
+    fn test_change_participant_role_request_deserialization() {
+        let request =
+            serde_json::from_str::<ChangeParticipantRoleRequest>(r#"{"role": "HELPER"}"#).unwrap();
+        assert_eq!(request.role, "HELPER");
     }
 
     #[test]
