@@ -51,9 +51,9 @@
     {
       "id": "parity-user-1",
       "username": "parity-user-1",
-      "email": "parity-user-1@parity.local",
+      "email": "parity@example.org",
       "firstName": "Parity",
-      "lastName": "parity-user-1",
+      "lastName": "Test",
       "enabled": true,
       "emailVerified": true,
       "credentials": [

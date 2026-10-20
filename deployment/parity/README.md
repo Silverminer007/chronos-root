@@ -14,6 +14,9 @@ expose the same API contract (ticket #137, KB entry `kb/137-rust-java-parity-run
 Both backends use the realm `chronos`, client `chronos-backend` (secret `backend-secret`, the value of
 `values-local.yaml`). Test users (password = user name): `parity-user-1`, `parity-user-2`, `parity-admin`
 (role `ADMIN_API`). The client's service account has `manage-users`/`view-users` for the user and admin endpoints.
+`parity-user-1` already has the name and e-mail the contract scenario patches the user to (`Parity Test`,
+`parity@example.org`): Java sends a verification mail when the e-mail changes, and Keycloak here has no SMTP server, so a
+real change would make Java answer 500 while Rust answers 200 (environment, not a parity finding).
 The credentials are throw-away values for this namespace only.
 
 ## Prerequisites
@@ -36,6 +39,11 @@ The credentials are throw-away values for this namespace only.
   docker rmi chronos-backend:parity; docker volume rm maven-repo-parity; sudo rm -rf backend/target   # target/ is owned by root
   ```
 
+- **Pin the imported images**: images that exist only in containerd are not in any registry. Above ~85 % disk usage the kubelet
+  garbage-collects images no pod uses (e.g. while a backend is scaled to 0), and the pod then fails with `ErrImageNeverPull`
+  (happened on 2026-10-20). Mark them as pinned after the import:
+  `sudo k3s ctr -n k8s.io images label docker.io/library/chronos-rust-backend:parity io.cri-containerd.pinned=pinned`
+  (same for `chronos-backend:parity`).
 - **Rust**: the CI image `ghcr.io/silverminer007/chronos-rust-backend:latest` is published from `main`, but may lag behind the
   commit under test. The parity run therefore builds the image from the checkout and imports it into k3s
   (no registry, no second copy of the image on disk besides containerd's):
@@ -88,7 +96,8 @@ deployment/parity/run-contract.sh --explore    # multi-user flows and error path
 ```
 
 Both databases must be fresh for a run (the scenario creates groups, appointments etc. and expects no earlier
-data); reset with `deployment/parity/reset-databases.sh` (drops and recreates both, restarts both backends).
+data); reset with `deployment/parity/reset-databases.sh` (drops and recreates both databases, restarts Keycloak and both
+backends; Keycloak keeps user changes of a run otherwise).
 
 ## Tear down
 

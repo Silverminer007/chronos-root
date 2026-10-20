@@ -1,6 +1,97 @@
 {
   "_comment": "Deliberate differences between Java and Rust. Every entry needs a reason. A route that Rust does not serve yet (missing_route) cannot be allowlisted.",
-  "entries": [],
+  "entries": [
+    {
+      "step": "health ready",
+      "kind": "missing_in_rust",
+      "path": "$.checks[[]].data",
+      "reason": "Rust omits checks[].data (#161)"
+    },
+    {
+      "step": "unauthenticated request",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "Java answers 500 for a request without token, Rust 401 (#162; Java defect)"
+    },
+    {
+      "step": "create appointment without body fields",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "Java answers 500 (NPE) for missing fields, Rust 422 (#162; Java defect)"
+    },
+    {
+      "step": "rsvp with invalid status",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "Java answers 500 for an unknown enum value, Rust 422 (#162; Java defect)"
+    },
+    {
+      "step": "list appointments",
+      "kind": "type_mismatch",
+      "path": "$",
+      "reason": "Java returns {data, meta}, Rust a bare array (#156)"
+    },
+    {
+      "step": "patch appointment",
+      "kind": "missing_in_rust",
+      "path": "$.*participants",
+      "reason": "Rust response lacks participants/group_participants (#156)"
+    },
+    {
+      "step": "patch appointment",
+      "kind": "missing_in_rust",
+      "path": "$.messages",
+      "reason": "Rust response lacks messages (#156)"
+    },
+    {
+      "step": "admin list appointments*",
+      "kind": "missing_in_rust",
+      "path": "$.data[[]].*",
+      "reason": "Rust appointment objects lack participants/group_participants/messages (#156)"
+    },
+    {
+      "step": "rsvp",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "Java creates the owner as PENDING, Rust as APPROVED (#158)"
+    },
+    {
+      "step": "list messages",
+      "kind": "length_mismatch",
+      "path": "$",
+      "reason": "Rust writes no system messages for RSVP/cancel (#159)"
+    },
+    {
+      "step": "list messages of missing appointment",
+      "kind": "content_type_mismatch",
+      "path": "$",
+      "reason": "Rust answers text/plain instead of the JSON error body (#157)"
+    },
+    {
+      "step": "friend suggestions",
+      "kind": "length_mismatch",
+      "path": "$",
+      "reason": "Rust returns no suggestions (#160)"
+    },
+    {
+      "step": "admin change participation status",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "Rust does not turn group members into participants (#159)"
+    },
+    {
+      "step": "admin send message",
+      "kind": "status_mismatch",
+      "path": "$",
+      "reason": "Rust answers 500, Java 200 (#159)"
+    },
+    {
+      "step": "delete admin appointment",
+      "kind": "content_type_mismatch",
+      "path": "$",
+      "reason": "Rust answers text/plain instead of the JSON error body (#157)"
+    }
+  ],
   "rust_only": [
     {
       "route": "GET /api/v2/me",
