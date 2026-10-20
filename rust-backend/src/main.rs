@@ -7,7 +7,9 @@ use chronos_date_api::appointments::event_listeners::AppointmentParticipationLis
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::database::{init_pool, DatabaseConfig};
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
+use chronos_date_api::keycloak::{HttpKeycloakAdmin, KeycloakConfig};
 use chronos_date_api::security::TokenValidator;
+use chronos_date_api::users::UserState;
 
 #[tokio::main]
 async fn main() {
@@ -25,6 +27,14 @@ async fn main() {
         Ok(p) => p,
         Err(e) => {
             error!("Failed to initialize database pool: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let keycloak_config = match KeycloakConfig::from_env() {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            error!("Keycloak configuration error: {}", e);
             std::process::exit(1);
         }
     };
@@ -48,7 +58,13 @@ async fn main() {
         event_publisher: event_bus,
     });
 
-    let app = build_router(app_state, validator);
+    let user_state = Arc::new(UserState {
+        db_pool: pool.clone(),
+        keycloak_urls: keycloak_config.urls(),
+        keycloak: Arc::new(HttpKeycloakAdmin::new(keycloak_config)),
+    });
+
+    let app = build_router(app_state, user_state, validator);
 
     let port = std::env::var("PORT")
         .ok()

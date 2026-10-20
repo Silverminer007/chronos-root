@@ -3,6 +3,7 @@ use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::event_bus::{Event, EventPublisher};
 use chronos_date_api::security::TokenValidator;
+use chronos_date_api::test_utils::user_state_for_tests;
 use http::StatusCode;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,7 +40,11 @@ async fn test_readiness_returns_503_when_database_unreachable() -> Result<(), An
         "http://localhost:8080/realms/chronos".to_string(),
     ));
 
-    let mut router = build_router(app_state, validator);
+    let mut router = build_router(
+        app_state.clone(),
+        user_state_for_tests(app_state.db_pool.clone()),
+        validator,
+    );
 
     // Create a request to /q/health/ready
     let request = http::Request::builder()
@@ -83,7 +88,11 @@ async fn test_readiness_returns_200_when_database_available() -> Result<(), AnyE
         "http://localhost:8080/realms/chronos".to_string(),
     ));
 
-    let mut router = build_router(app_state, validator);
+    let mut router = build_router(
+        app_state.clone(),
+        user_state_for_tests(app_state.db_pool.clone()),
+        validator,
+    );
 
     // Create a request to /q/health/ready
     let request = http::Request::builder()
@@ -117,7 +126,11 @@ async fn test_health_live_always_returns_200() -> Result<(), AnyError> {
         "http://localhost:8080/realms/chronos".to_string(),
     ));
 
-    let mut router = build_router(app_state, validator);
+    let mut router = build_router(
+        app_state.clone(),
+        user_state_for_tests(app_state.db_pool.clone()),
+        validator,
+    );
 
     // Create a request to /q/health/live
     let request = http::Request::builder()
