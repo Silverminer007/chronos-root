@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use chronos_date_api::appointments::repository::AppointmentRepository;
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
-use chronos_date_api::event_bus::EventPublisher;
+use chronos_date_api::event_bus::{Event, EventPublisher, EventSubscriber};
 use chronos_date_api::push_notifications::models::PushSubscription;
 use chronos_date_api::push_notifications::services::{NotificationDispatcher, PushSender};
 use chronos_date_api::push_notifications::{PushEventHandler, PushNotificationEventListener};
@@ -152,6 +152,8 @@ async fn disabled_election_runs_every_instance() {
 
 struct Setup {
     db: TestDb,
+    /// The dispatcher listens only as long as the bus lives
+    _bus: PostgresEventBus,
     sender: Arc<FakePushSender>,
     clock: Arc<FakeClock>,
     scheduler: ReminderScheduler,
@@ -192,25 +194,35 @@ async fn setup(now: &str) -> Setup {
         .subscribe_all(&bus)
         .await
         .expect("subscribed");
-    // Subscriptions listen on background tasks; an event fired earlier would be missed
-    for _ in 0..300 {
-        let listening: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM pg_stat_activity
-             WHERE datname = current_database() AND query ILIKE 'LISTEN%'",
-        )
-        .fetch_one(db.pool())
-        .await
-        .unwrap();
-        if listening >= 15 {
-            break;
+    // Subscriptions are applied by one dispatcher task in order. Once a probe subscribed after the
+    // push listener receives its event, every earlier channel is listened on too; an event fired
+    // before that would be missed.
+    let (probe_tx, mut probe_rx) = tokio::sync::mpsc::unbounded_channel();
+    bus.subscribe("subscription_probe".to_string(), move |_| {
+        let _ = probe_tx.send(());
+    })
+    .await
+    .expect("probe subscribed");
+    tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            bus.fire(Event::new("subscription_probe", serde_json::json!({})))
+                .await
+                .expect("probe fired");
+            if let Ok(Some(())) =
+                tokio::time::timeout(Duration::from_millis(300), probe_rx.recv()).await
+            {
+                break;
+            }
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
+    })
+    .await
+    .expect("dispatcher listening");
 
     let clock = Arc::new(FakeClock::new(at(now)));
     let scheduler = scheduler(db.pool(), LeaderElection::disabled(), clock.clone());
     Setup {
         db,
+        _bus: bus,
         sender,
         clock,
         scheduler,
