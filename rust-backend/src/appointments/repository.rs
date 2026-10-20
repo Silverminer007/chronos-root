@@ -357,7 +357,7 @@ impl AppointmentRepository {
 
     /// Stores a message and returns the stored row (Java: `MessageService#persistMessage`).
     /// The timestamp is the database time, `timestamptz(6)` like Java's `Instant.now()`.
-    pub async fn insert_message(
+    pub async fn persist_message(
         &self,
         appointment_id: i64,
         sender_oidcid: &str,

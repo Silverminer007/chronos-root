@@ -156,7 +156,7 @@ pub async fn send_message(
     }
 
     let message = repo
-        .insert_message(id, principal.user_id(), request.body.as_deref())
+        .persist_message(id, principal.user_id(), request.body.as_deref())
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
 
