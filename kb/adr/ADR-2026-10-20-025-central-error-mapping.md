@@ -11,7 +11,7 @@ Java also authorizes before it looks an appointment up (`AuthorizationService`),
 
 ## Decision
 
-- **`AppError` is the only mapper.** `AppointmentError` stays as the handlers' error type but converts into `AppError` (`From<AppointmentError> for AppError`) and answers through it. `fill_error_path` sets the real `path`. The `Unauthorized` variant is gone; every denial is `Forbidden(<Java message>)`.
+- **`AppError` is the only mapper for handler errors** (scope of the extractor rejections: see "Not changed"). `AppointmentError` stays as the handlers' error type but converts into `AppError` (`From<AppointmentError> for AppError`) and answers through it. `fill_error_path` sets the real `path`. The `Unauthorized` variant is gone; every denial is `Forbidden(<Java message>)`.
 - **Authorization messages are constants** (`NO_ROLE_MESSAGE`, `NOT_ATTENDANT_MESSAGE`, `NOT_RESPONSIBLE_MESSAGE` in `appointments/services`), used by services and handlers alike.
 - **Unknown appointment = 403** for `GET`, `PATCH`, `DELETE`, `cancel` (role check before the lookup, message of the respective Java `require*`), and for add group / add participant / change role / remove participant (`missing_is_forbidden` in the handlers). The admin endpoints share the services but skip authorization in Java, so they keep `404 RESOURCE_NOT_FOUND`; therefore the mapping is done in the user handlers, not in the services.
 - **Extractor rejections** go through `AppError` as well: `AppJson<T>` (unreadable body -> `400 BAD_REQUEST`, "Ungültiger Request-Body") and `AppPath<T>` (path parameter not convertible -> `AppError::RouteNotFound`, as for Jakarta REST). The push handlers return `AppError::unexpected()` (Java's generic 500 JSON) instead of bare `StatusCode`s.
@@ -22,6 +22,7 @@ Java also authorizes before it looks an appointment up (`AuthorizationService`),
 - Empty `401`/`403` from the security layer (missing token, `@RolesAllowed`): Quarkus answers them without body in Java too.
 - Admin `Response.status(BAD_REQUEST).build()` answers stay empty (`AdminError::Status`).
 - `405` (e.g. `DELETE /api/v2/user`) stays empty as documented in [ADR-2026-10-20-017](ADR-2026-10-20-017-user-settings-keycloak-acl.md); an unsupported method on a known path is not mapped.
+- `AppPath`/`AppJson` are used only by the appointment and push handlers. The groups, users and admin handlers keep plain `Path<String>` (e.g. `groups/handlers/mod.rs`, `users/handlers/mod.rs`, `admin/handlers/mod.rs`) and take no JSON body. A `String` path parameter converts always, so the only possible rejection is a malformed percent-encoding, which still answers with axum's plain-text body; Java has no verified behaviour for it. Switching them to `AppPath` is possible later and was left out to keep #157 focused.
 - `Query<T>` rejections and a wrong `Content-Type` (Java: 415) still use axum's answer; no Java behaviour was verified for them.
 
 ## Consequences
