@@ -321,7 +321,42 @@ async fn test_admin_list_embeds_participants_messages_and_group_participants() {
     assert_eq!(status, StatusCode::OK, "{body}");
     let appointment = &body["data"][0];
     assert_eq!(appointment["participants"][0]["user_id"], json!(OWNER));
-    assert_eq!(appointment["participants"][0]["name"], json!("Olga Owner"));
     assert_eq!(appointment["messages"], json!([]));
     assert_eq!(appointment["group_participants"], json!([]));
+}
+
+/// Java enriches names only in `GET /appointments` and `GET /appointments/{id}`; PATCH and the admin
+/// list use the bare mapper: no `name`, `via_group_name`, `sender_name: null`, member names `null`
+/// (found by the final parity run, #169).
+#[tokio::test]
+async fn test_admin_list_and_patch_leave_names_unresolved_like_java() {
+    let app = app().await;
+    let id = create_future(&app, "Eins").await;
+    let (status, _) = app
+        .post(
+            OWNER,
+            &format!("/api/v2/appointments/{id}/messages"),
+            Some(json!({"body": "Hallo"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, listed) = app
+        .get("admin", "/api/v2/admin/appointments?page=0&size=5")
+        .await;
+    let (_, patched) = app
+        .patch(
+            OWNER,
+            &format!("/api/v2/appointments/{id}"),
+            Some(json!({"venue": "Heim"})),
+        )
+        .await;
+
+    for appointment in [&listed["data"][0], &patched] {
+        let owner = &appointment["participants"][0];
+        assert_eq!(owner["user_id"], json!(OWNER));
+        assert!(owner.get("name").is_none(), "{owner}");
+        assert!(owner.get("via_group_name").is_none(), "{owner}");
+        assert_eq!(appointment["messages"][0]["sender_name"], json!(null));
+    }
 }

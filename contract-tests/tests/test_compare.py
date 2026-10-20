@@ -99,6 +99,12 @@ class CompareResponsesTest(unittest.TestCase):
         diffs = compare_responses(resp(200, {}), resp(404, "Not Found"))
         self.assertEqual([d.kind for d in diffs], ["missing_route"])
 
+    def test_java_500_is_a_defect_not_a_route_Rust_lacks(self):
+        # Java crashes (#162), Rust answers 404/405: the route exists, so this stays allowlistable
+        for rust in (resp(404, None), resp(405, None)):
+            diffs = compare_responses(resp(500, {"errorCode": "INTERNAL_ERROR"}), rust)
+            self.assertEqual([d.kind for d in diffs], ["status_mismatch"])
+
     def test_both_404_is_a_plain_match(self):
         self.assertEqual(compare_responses(resp(404, {"m": "x"}), resp(404, {"m": "x"})), [])
 

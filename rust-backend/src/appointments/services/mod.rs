@@ -20,7 +20,16 @@ pub const NOT_RESPONSIBLE_MESSAGE: &str = "You have to be responsible for this a
 /// Custom error type for appointment service operations
 #[derive(Debug, Clone)]
 pub enum ServiceError {
+    /// Java `ValidationException(message)` (400, `VALIDATION_ERROR`, empty `fieldErrors`)
     ValidationError(String),
+    /// Java `ValidationException(field, message)` (400, `VALIDATION_ERROR`, message
+    /// `Validierungsfehler bei Feld: <field>`, `fieldErrors` `{field: message}`)
+    FieldValidation {
+        field: String,
+        message: String,
+    },
+    /// Java `BadRequestException` (400, `BAD_REQUEST`)
+    BadRequest(String),
     NotFound,
     DatabaseError(String),
     InvalidFormat(String),
@@ -31,6 +40,10 @@ impl std::fmt::Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ServiceError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+            ServiceError::FieldValidation { field, message } => {
+                write!(f, "Validation error: {}: {}", field, message)
+            }
+            ServiceError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
             ServiceError::NotFound => write!(f, "Appointment not found"),
             ServiceError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             ServiceError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
@@ -40,6 +53,32 @@ impl std::fmt::Display for ServiceError {
 }
 
 impl std::error::Error for ServiceError {}
+
+/// Text of the system message after the times of an appointment changed (Java:
+/// `MessageService#onAppointmentMoved`): the start decides, the end only if the start stayed
+fn moved_text(
+    name: &str,
+    old: (DateTime<Utc>, DateTime<Utc>),
+    new: (DateTime<Utc>, DateTime<Utc>),
+) -> String {
+    let start_hours = (new.0 - old.0).num_hours();
+    let end_hours = (new.1 - old.1).num_hours();
+    match (start_hours, end_hours) {
+        (hours, _) if hours > 0 => {
+            format!("{name} hat diesen Termin um {hours} Stunden verschoben")
+        }
+        (hours, _) if hours < 0 => {
+            format!("{name} hat diesen Termin um {} Stunden vor verlegt", -hours)
+        }
+        (_, hours) if hours > 0 => {
+            format!("{name} hat das Ende dieses Termins um {hours} Stunden verschoben")
+        }
+        (_, hours) => format!(
+            "{name} hat das Ende dieses Termins um {} Stunden vor verlegt",
+            -hours
+        ),
+    }
+}
 
 /// Java lists upcoming appointments only: `end` defaults to now plus 1000 years
 const DEFAULT_WINDOW_DAYS: i64 = 365 * 1000;
@@ -59,14 +98,24 @@ pub struct Embed {
     pub participants: bool,
     pub messages: bool,
     pub group_participants: bool,
+    /// Resolve names (`name`, `via_group_name`, `sender_name`, member names). Java does that only
+    /// in `GET /appointments` and `GET /appointments/{id}` (`enrichAppointmentDtos`)
+    pub names: bool,
 }
 
 impl Embed {
-    /// Everything: what Java's lazily loaded collections amount to in list, PATCH and admin list
+    /// Everything, names resolved: what Java's list and GET amount to
     pub const ALL: Embed = Embed {
         participants: true,
         messages: true,
         group_participants: true,
+        names: true,
+    };
+
+    /// Everything, names left out: PATCH and admin list, where Java does not call the enrichment
+    pub const UNNAMED: Embed = Embed {
+        names: false,
+        ..Embed::ALL
     };
 }
 
@@ -254,11 +303,14 @@ impl AppointmentService {
             .collect();
         user_ids.sort();
         user_ids.dedup();
-        let users = self
-            .repo
-            .find_identities(&user_ids)
-            .await
-            .map_err(db_error)?;
+        let users = if embed.names {
+            self.repo
+                .find_identities(&user_ids)
+                .await
+                .map_err(db_error)?
+        } else {
+            Default::default()
+        };
 
         Ok(responses
             .into_iter()
@@ -279,7 +331,7 @@ impl AppointmentService {
                                     role: row.role,
                                     status: row.status,
                                     via_group_id: row.group_participation_id,
-                                    via_group_name: row.group_name.clone(),
+                                    via_group_name: row.group_name.clone().filter(|_| embed.names),
                                 }
                             })
                             .collect(),
@@ -293,10 +345,7 @@ impl AppointmentService {
                             .map(|m| MessageDto {
                                 id: m.id,
                                 sender_id: m.sender_oidcid.clone(),
-                                sender_name: users
-                                    .get(&m.sender_oidcid)
-                                    .map(UserIdentity::name)
-                                    .unwrap_or_default(),
+                                sender_name: users.get(&m.sender_oidcid).map(UserIdentity::name),
                                 appointment_id: m.appointment_id,
                                 body: m.body.clone(),
                                 timestamp: m
@@ -362,9 +411,10 @@ impl AppointmentService {
     ) -> Result<AppointmentResponse, ServiceError> {
         // Validation: name cannot be blank
         if request.name.trim().is_empty() {
-            return Err(ServiceError::ValidationError(
-                "name cannot be blank".to_string(),
-            ));
+            return Err(ServiceError::FieldValidation {
+                field: "name".to_string(),
+                message: "Name cannot be blank".to_string(),
+            });
         }
 
         // Validation: start and end times must be valid ISO-8601 strings
@@ -382,17 +432,19 @@ impl AppointmentService {
 
         // Validation: end time must be >= start time
         if end_time < start_time {
-            return Err(ServiceError::ValidationError(
-                "end time cannot be before start time".to_string(),
-            ));
+            return Err(ServiceError::FieldValidation {
+                field: "end".to_string(),
+                message: "End date cannot be before start date".to_string(),
+            });
         }
 
         // Validation: minimal_attendees must be non-negative if provided
         if let Some(ma) = request.minimal_attendees {
             if ma < 0 {
-                return Err(ServiceError::ValidationError(
-                    "minimal_attendees must be non-negative".to_string(),
-                ));
+                return Err(ServiceError::FieldValidation {
+                    field: "minimal_attendees".to_string(),
+                    message: "Minimal attendees must be positive".to_string(),
+                });
             }
         }
 
@@ -449,9 +501,10 @@ impl AppointmentService {
         // Validation: if name is provided, it cannot be blank
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
-                return Err(ServiceError::ValidationError(
-                    "name cannot be blank".to_string(),
-                ));
+                return Err(ServiceError::FieldValidation {
+                    field: "name".to_string(),
+                    message: "Name cannot be blank".to_string(),
+                });
             }
         }
 
@@ -487,18 +540,20 @@ impl AppointmentService {
         // Validation: if both start and end are provided, end must be >= start
         if let (Some(st), Some(et)) = (start_time, end_time) {
             if et < st {
-                return Err(ServiceError::ValidationError(
-                    "end time cannot be before start time".to_string(),
-                ));
+                return Err(ServiceError::FieldValidation {
+                    field: "end".to_string(),
+                    message: "Start date cannot be after end date".to_string(),
+                });
             }
         }
 
         // Validation: minimal_attendees must be non-negative if provided
         if let Some(ma) = request.minimal_attendees {
             if ma < 0 {
-                return Err(ServiceError::ValidationError(
-                    "minimal_attendees must be non-negative".to_string(),
-                ));
+                return Err(ServiceError::FieldValidation {
+                    field: "minimal_attendees".to_string(),
+                    message: "Minimal attendees must be positive".to_string(),
+                });
             }
         }
 
@@ -521,6 +576,17 @@ impl AppointmentService {
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound)?;
+
+        if times_changed {
+            self.persist_system_message(id, acting_user_id, |name| {
+                moved_text(
+                    name,
+                    (existing.start_time, existing.end_time),
+                    (updated.start_time, updated.end_time),
+                )
+            })
+            .await?;
+        }
 
         // Fire events after successful database commit
         if let Some(ref publisher) = self.event_publisher {
@@ -669,9 +735,21 @@ impl AppointmentService {
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
         if !self.admin && actor_role != Some(UserRole::Responsible) {
-            return Err(ServiceError::ValidationError(
-                "Only the appointment creator can add groups".to_string(),
-            ));
+            return Err(ServiceError::Forbidden(NOT_RESPONSIBLE_MESSAGE.to_string()));
+        }
+
+        // Java: only groups the actor is a member of (the admin endpoints skip this check)
+        if !self.admin {
+            let is_member = self
+                .repo
+                .is_group_member(group_id, actor_id)
+                .await
+                .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+            if !is_member {
+                return Err(ServiceError::Forbidden(
+                    "You can only add groups, you're a member of".to_string(),
+                ));
+            }
         }
 
         // Check if group exists
@@ -851,7 +929,7 @@ impl AppointmentService {
         new_status: ParticipationStatus,
     ) -> Result<(), ServiceError> {
         if new_status == ParticipationStatus::Pending {
-            return Err(ServiceError::ValidationError(
+            return Err(ServiceError::BadRequest(
                 "you cannot set your participation status back to pending".to_string(),
             ));
         }
@@ -1023,9 +1101,7 @@ impl AppointmentService {
                 // User has permission to add participants
             }
             _ => {
-                return Err(ServiceError::ValidationError(
-                    "Only RESPONSIBLE participants can add participants".to_string(),
-                ));
+                return Err(ServiceError::Forbidden(NOT_RESPONSIBLE_MESSAGE.to_string()));
             }
         }
 
@@ -1099,18 +1175,16 @@ impl AppointmentService {
             acting_user_role,
             Some(crate::appointments::models::UserRole::Responsible)
         ) {
-            return Err(ServiceError::ValidationError(
-                "Only RESPONSIBLE participants can remove participants".to_string(),
-            ));
+            return Err(ServiceError::Forbidden(NOT_RESPONSIBLE_MESSAGE.to_string()));
         }
 
         self.repo
             .remove_participant(appointment_id, target_user_id)
             .await
             .map_err(|e| match e {
-                RepositoryError::NotFound => {
-                    ServiceError::ValidationError("Participant not found".to_string())
-                }
+                RepositoryError::NotFound => ServiceError::ValidationError(
+                    "This user is not a participant of this event".to_string(),
+                ),
                 _ => ServiceError::DatabaseError(e.to_string()),
             })?;
 

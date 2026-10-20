@@ -6,7 +6,7 @@ variables per backend (ids are generated, so each backend uses its own).
 
 Variables supplied by the caller: `other` (oidc id of a second user), `redirect` (redirect URI),
 `provider`, `unknown_provider`, `missing_user`, `missing_id` (see `cli.main`).
-Captured: `me`, `settings`, `group`, `appt`, `req`, `agroup`, `aappt`.
+Captured: `me`, `settings`, `group`, `appt`, `req`, `rreq`, `agroup`, `aappt`.
 """
 
 from .runner import ROLE_ADMIN, ROLE_ANON, ROLE_USER2, Step
@@ -76,17 +76,24 @@ SCENARIO = [
     Step("rsvp with invalid status", "POST", "/api/v2/appointments/{appt}/participation", body={"status": "MAYBE"}),
     Step("participation status", "GET", "/api/v2/appointments/{appt}/participation/status"),
     Step("remove participant", "DELETE", "/api/v2/appointments/{appt}/participants/{other}"),
+    # group member, group and message first, so that list/get/patch embed non-empty `group_participants` and `messages`
+    Step("re-add group member", "POST", "/api/v2/groups/{group}/user/{other}"),
     Step("add group to appointment", "POST", "/api/v2/appointments/{appt}/groups/{group}", body={"user_role": "ATTENDANT"}),
-    Step("remove group from appointment", "DELETE", "/api/v2/appointments/{appt}/groups/{group}"),
-    # messages
     Step("send message", "POST", "/api/v2/appointments/{appt}/messages", body={"body": "Hallo zusammen"}),
     Step("list messages", "GET", "/api/v2/appointments/{appt}/messages"),
     Step("list messages of missing appointment", "GET", "/api/v2/appointments/{missing_id}/messages"),
+    Step("list appointments with embedded data", "GET", "/api/v2/appointments"),
+    Step("get appointment with embedded data", "GET", "/api/v2/appointments/{appt}?participants=true&messages=true&group_participants=true"),
+    Step("patch appointment with embedded data", "PATCH", "/api/v2/appointments/{appt}", body={**APPOINTMENT, "venue": "Kapelle"}),
+    Step("remove group from appointment", "DELETE", "/api/v2/appointments/{appt}/groups/{group}"),
     # friendships
     Step("friend suggestions", "GET", "/api/v2/friendships/suggestions"),
     Step("list friends", "GET", "/api/v2/friendships/friends"),
     Step("end friendship", "DELETE", "/api/v2/friendships/friends/{other}"),
     Step("end friendship twice", "DELETE", "/api/v2/friendships/friends/{other}"),
+    Step("befriend: reverse request", "POST", "/api/v2/friendships/requests?adresse_id={me}", role=ROLE_USER2),
+    Step("incoming requests with data", "GET", "/api/v2/friendships/requests/incoming", capture={"rreq": "0.requestId"}),
+    Step("decline incoming request", "POST", "/api/v2/friendships/requests/{rreq}/decline"),
     Step("send friendship request", "POST", "/api/v2/friendships/requests?adresse_id={other}"),
     Step("outgoing requests", "GET", "/api/v2/friendships/requests/outgoing", capture={"req": "0.requestId"}),
     Step("incoming requests", "GET", "/api/v2/friendships/requests/incoming"),
@@ -113,8 +120,10 @@ SCENARIO = [
     _admin("admin change participation status", "POST", "/api/v2/admin/appointments/participants/status", {"userId": "{me}", "appointmentId": "{aappt}", "participationStatus": "APPROVED"}),
     _admin("admin send message", "POST", "/api/v2/admin/appointments/message", {"appointment_id": "{aappt}", "sender_id": "{me}", "body": "Admin Nachricht", "timestamp": "2030-01-01T00:00:00Z"}),
     _admin("admin list appointments", "GET", "/api/v2/admin/appointments?page=0&size=5"),
+    Step("push subscribe for the admin push test", "POST", "/api/v2/push/subscribe", body=PUSH_SUBSCRIPTION),
     _admin("admin push test", "POST", "/api/v2/admin/push/test/{me}", "Test"),
     _admin("admin push log", "GET", "/api/v2/admin/push/log"),
+    Step("push unsubscribe after the admin push test", "DELETE", f"/api/v2/push/unsubscribe?endpoint={PUSH_ENDPOINT}"),
     # cleanup (also exercises the delete/cancel endpoints)
     Step("cancel appointment", "POST", "/api/v2/appointments/{appt}/cancel"),
     Step("delete appointment", "DELETE", "/api/v2/appointments/{appt}"),

@@ -150,9 +150,10 @@ def _is_route_miss(java: Response, rust: Response) -> bool:
     """Rust 404/405 counts as a missing route only if it looks like one.
 
     A 404 that carries the application's error body means the route exists and the resource
-    is missing, so that stays a (allowlistable) status_mismatch.
+    is missing, so that stays a (allowlistable) status_mismatch. The same holds if Java itself
+    fails with a 5xx: that is no deliberate answer of a route Rust lacks, but a Java defect.
     """
-    if rust.status not in ROUTE_MISSING_STATUSES or java.status == rust.status:
+    if rust.status not in ROUTE_MISSING_STATUSES or java.status == rust.status or java.status >= 500:
         return False
     return not (isinstance(rust.body, dict) and APP_ERROR_KEYS & rust.body.keys())
 

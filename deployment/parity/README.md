@@ -101,6 +101,9 @@ deployment/parity/run-contract.sh              # forwards ports, fetches tokens,
 deployment/parity/run-contract.sh --explore    # multi-user flows and error paths (explore.py), same engine
 ```
 
+Both modes apply `contract-tests/allowlist.json`; only Java defects (`java-defect (#162)`) may be in it. Entries of explorative steps
+are reported as `NOTE unused allowlist entry` by the plain harness run and vice versa. Result of the final run: `kb/architecture/ARCH-2026-10-20-002-rust-port-final-proof.md`.
+
 Both databases must be fresh for a run (the scenario creates groups, appointments etc. and expects no earlier
 data); reset with `deployment/parity/reset-databases.sh` (drops and recreates both databases, restarts Keycloak and both
 backends; Keycloak keeps user changes of a run otherwise).

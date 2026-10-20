@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Ticket: #156 (found by the parity run of #137; map #21: Java is the reference, Java defects go to #162)
+- Amended by: [ADR-2026-10-20-029](ADR-2026-10-20-029-final-parity-run-fixes.md) (decision 1: names are resolved only in `GET /appointments` and `GET /appointments/{id}`, not in `PATCH` and the admin list; `sender_name` is `null` when unresolved)
 
 ## Context
 

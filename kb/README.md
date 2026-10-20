@@ -285,6 +285,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-026: Appointment list paged, embedded participants/messages/group_participants (Java parity)](adr/ADR-2026-10-20-026-appointment-list-and-embedded-details.md)
 - [ADR-2026-10-20-027: Friend suggestions search Keycloak (Java parity)](adr/ADR-2026-10-20-027-friend-suggestions-keycloak-search.md)
 - [ADR-2026-10-20-028: Small parity deviations (health data, trailing slash, settings 400)](adr/ADR-2026-10-20-028-small-parity-deviations.md)
+- [ADR-2026-10-20-029: Final parity run fixes (names, move message, PATCH messages, bare settings 400) and explorative allowlist](adr/ADR-2026-10-20-029-final-parity-run-fixes.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)
@@ -304,6 +305,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ARCH-2025-09-28-005: Push notification pipeline](architecture/ARCH-2025-09-28-005-notifications.md)
 - [ARCH-2025-09-28-006: Authorization and security](architecture/ARCH-2025-09-28-006-authorization.md)
 - [ARCH-2026-10-20-001: Parity run of the Rust backend against the Java reference in the local k3s cluster](architecture/ARCH-2026-10-20-001-rust-java-parity-run.md)
+- [ARCH-2026-10-20-002: Final proof run of the Rust port (harness and explorative pass, local k3s)](architecture/ARCH-2026-10-20-002-rust-port-final-proof.md)
 
 ### Patterns
 - [PATTERN-2025-09-28-001: Principal context pattern](patterns/PATTERN-2025-09-28-001-principal-context.md)

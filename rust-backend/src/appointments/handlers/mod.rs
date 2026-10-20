@@ -100,13 +100,14 @@ pub async fn get_appointment(
     let appointment = service
         .get_appointment(id)
         .await
-        .map_err(AppointmentError::from)?;
+        .map_err(|e| not_found_with_id(e, id))?;
 
     // Java embeds what the flags ask for; unlike the list, the group flag is `group_participants`
     let embed = Embed {
         participants: flag(&query, "participants"),
         messages: flag(&query, "messages"),
         group_participants: flag(&query, "group_participants"),
+        names: true,
     };
     let mut responses = service
         .with_details(vec![appointment.into()], embed)
@@ -249,7 +250,7 @@ fn message_dto(message: Message, sender_name: String) -> MessageDto {
     MessageDto {
         id: message.id,
         sender_id: message.sender_oidcid,
-        sender_name,
+        sender_name: Some(sender_name),
         appointment_id: message.appointment_id,
         body: message.body,
         timestamp: message
@@ -391,17 +392,44 @@ pub async fn update_appointment(
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
+    // Java reads the appointment (and with it the messages) before the update; the system message
+    // of a move is written afterwards in its own transaction and is not part of the response
+    let messages_before = service
+        .with_details(
+            vec![service
+                .get_appointment(id)
+                .await
+                .map_err(|e| not_found_with_id(e, id))?
+                .into()],
+            Embed {
+                participants: false,
+                group_participants: false,
+                ..Embed::UNNAMED
+            },
+        )
+        .await?
+        .remove(0)
+        .messages;
+
     // Validate and update appointment
     let response = service
         .update_appointment(id, request, user_id)
         .await
         .map_err(AppointmentError::from)?;
     let mut detailed = service
-        .with_details(vec![response], Embed::ALL)
+        .with_details(
+            vec![response],
+            Embed {
+                messages: false,
+                ..Embed::UNNAMED
+            },
+        )
         .await
         .map_err(AppointmentError::from)?;
+    let mut detailed = detailed.remove(0);
+    detailed.messages = messages_before;
 
-    Ok(Json(detailed.remove(0)))
+    Ok(Json(detailed))
 }
 
 /// DELETE /api/v2/appointments/:id - Delete an appointment (soft delete)
@@ -484,7 +512,7 @@ pub async fn add_group_to_appointment(
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     let role = UserRole::from_str(&request.role)
-        .map_err(|_| AppointmentError::ValidationError("Invalid role".to_string()))?;
+        .map_err(|_| AppointmentError::BadRequest("Invalid role".to_string()))?;
 
     service
         .add_group_to_appointment(user_id, appointment_id, group_id, role)
@@ -558,7 +586,7 @@ pub async fn change_participant_role(
     AppJson(request): AppJson<ChangeParticipantRoleRequest>,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let new_role = UserRole::from_str(&request.role)
-        .map_err(|_| AppointmentError::ValidationError("invalid role".to_string()))?;
+        .map_err(|_| AppointmentError::BadRequest("invalid role".to_string()))?;
 
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
@@ -580,9 +608,16 @@ pub async fn change_participant_role(
 #[derive(Debug)]
 pub enum AppointmentError {
     NotFound,
+    /// Appointment of a known id that is gone (Java `ResourceNotFoundException("appointment", id)`)
+    NotFoundId(i64),
     Forbidden(String),
     DatabaseError,
     ValidationError(String),
+    FieldValidation {
+        field: String,
+        message: String,
+    },
+    BadRequest(String),
 }
 
 impl From<ServiceError> for AppointmentError {
@@ -590,13 +625,26 @@ impl From<ServiceError> for AppointmentError {
         match error {
             ServiceError::NotFound => AppointmentError::NotFound,
             ServiceError::ValidationError(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::FieldValidation { field, message } => {
+                AppointmentError::FieldValidation { field, message }
+            }
+            ServiceError::BadRequest(msg) => AppointmentError::BadRequest(msg),
             ServiceError::DatabaseError(msg) => {
                 eprintln!("Database error: {}", msg);
                 AppointmentError::DatabaseError
             }
-            ServiceError::InvalidFormat(msg) => AppointmentError::ValidationError(msg),
+            ServiceError::InvalidFormat(msg) => AppointmentError::BadRequest(msg),
             ServiceError::Forbidden(msg) => AppointmentError::Forbidden(msg),
         }
+    }
+}
+
+/// The `AppointmentError` of a read of an appointment that is gone after the authorization passed:
+/// Java names the appointment (`ResourceNotFoundException("appointment", id)`)
+fn not_found_with_id(error: ServiceError, id: i64) -> AppointmentError {
+    match error {
+        ServiceError::NotFound => AppointmentError::NotFoundId(id),
+        other => other.into(),
     }
 }
 
@@ -616,7 +664,15 @@ impl From<AppointmentError> for AppError {
             AppointmentError::NotFound => AppError::not_found_message("Appointment not found"),
             AppointmentError::Forbidden(msg) => AppError::forbidden(msg),
             AppointmentError::DatabaseError => AppError::unexpected(),
-            AppointmentError::ValidationError(msg) => AppError::bad_request(msg),
+            AppointmentError::NotFoundId(id) => AppError::not_found("appointment", id.to_string()),
+            AppointmentError::ValidationError(msg) => {
+                AppError::validation_error(msg, HashMap::new())
+            }
+            AppointmentError::FieldValidation { field, message } => AppError::validation_error(
+                format!("Validierungsfehler bei Feld: {field}"),
+                HashMap::from([(field, message)]),
+            ),
+            AppointmentError::BadRequest(msg) => AppError::bad_request(msg),
         }
     }
 }

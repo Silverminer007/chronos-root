@@ -19,6 +19,18 @@ mod appointment_add_group_tests {
             .unwrap_or(0)
     }
 
+    /// Java adds the owner as a member when a group is created; only members may add the group
+    async fn add_owner_as_member(pool: &sqlx::PgPool, group_id: i64, owner_id: &str) {
+        sqlx::query(
+            "INSERT INTO group_member (id, group_id, user_oidcid) VALUES (nextval('group_member_seq'), $1, $2)",
+        )
+        .bind(group_id)
+        .bind(owner_id)
+        .execute(pool)
+        .await
+        .expect("Failed to add the owner as member");
+    }
+
     /// Helper to add a group to appointment using the service
     async fn add_group_to_appointment(
         service: &AppointmentService,
@@ -52,6 +64,7 @@ mod appointment_add_group_tests {
             .create_group(&creator_id, "Test Group")
             .await
             .expect("Failed to create group");
+        add_owner_as_member(db.pool(), group_id, &creator_id).await;
 
         let appointment_id = fixtures
             .create_appointment(&creator_id, &Default::default())
@@ -238,6 +251,7 @@ mod appointment_add_group_tests {
             .create_group(&creator_id, "Duplicate Test Group")
             .await
             .expect("Failed to create group");
+        add_owner_as_member(db.pool(), group_id, &creator_id).await;
 
         let appointment_id = fixtures
             .create_appointment(&creator_id, &Default::default())
