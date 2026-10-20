@@ -19,6 +19,8 @@ async fn app() -> TestApp {
     app.add_user(GUEST, "Gustav", "Guest", "gustav@example.com")
         .await;
     app.grant_admin(ADMIN);
+    // inviting a user requires an accepted friendship (#158)
+    app.add_friendship(OWNER, GUEST, "ACCEPTED").await;
     app
 }
 
@@ -142,7 +144,7 @@ async fn test_group_members_become_pending_participants_via_the_group() {
                 "PENDING".into(),
                 Some(group)
             ),
-            (OWNER.into(), "RESPONSIBLE".into(), "APPROVED".into(), None),
+            (OWNER.into(), "RESPONSIBLE".into(), "PENDING".into(), None),
         ]
     );
 
