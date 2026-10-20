@@ -244,6 +244,16 @@ impl Setup {
             )
             .await
             .unwrap();
+        // The fixture creator starts as PENDING (as in the API); alice has already accepted
+        sqlx::query(
+            "UPDATE appointment_participation SET status = 'APPROVED'
+             WHERE appointment_id = $1 AND user_oidcid = $2",
+        )
+        .bind(id)
+        .bind(ALICE)
+        .execute(self.db.pool())
+        .await
+        .unwrap();
         self.fixtures
             .add_participant(id, BOB, "PENDING")
             .await

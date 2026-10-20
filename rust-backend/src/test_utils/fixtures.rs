@@ -80,7 +80,7 @@ impl TestFixtures {
 
         sqlx::query(
             "INSERT INTO appointment_participation (id, appointment_id, user_oidcid, role, status)
-             VALUES (nextval('appointment_participation_seq'), $1, $2, 'RESPONSIBLE', 'APPROVED')",
+             VALUES (nextval('appointment_participation_seq'), $1, $2, 'RESPONSIBLE', 'PENDING')",
         )
         .bind(appointment_id)
         .bind(creator_id)
