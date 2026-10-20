@@ -274,6 +274,8 @@ grep -r "relates_to.*backend" kb/constraints/
 - [C2025-09-28-003: Web Push VAPID requirement](constraints/C2025-09-28-003-vapid.md)
 - [C2025-09-28-004: Database migrations are forward-only](constraints/C2025-09-28-004-forward-migrations.md)
 - [C2025-09-28-005: No direct backend calls from frontend](constraints/C2025-09-28-005-no-direct-backend-calls.md)
+- [C2026-10-20-001: Local agent settings must not be tracked in git](constraints/C2026-10-20-001-no-local-agent-settings-in-git.md)
+- [C2026-10-20-002: LiteLLM key in git history is leaked and must be rotated](constraints/C2026-10-20-002-leaked-litellm-key-in-history.md)
 - [C2025-09-28-006: SSR disabled (SPA only)](constraints/C2025-09-28-006-spa-only.md)
 
 ### Architecture
