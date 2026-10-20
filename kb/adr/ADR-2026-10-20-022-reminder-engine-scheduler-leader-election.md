@@ -44,6 +44,9 @@ leader election that always won.
    hand-over. `LEADER_ELECTION_ENABLED` (default `true`; `true/1/yes/y/on` enable, anything else disables)
    switches it off: the instance is then always leader and needs no database lock.
    Consequence: the Rust Helm values need no Role for leases (`backend-role.yaml` is Java only).
+   The variable has the same name as in Java but different mechanics (Kubernetes lease vs. advisory lock). With
+   `false` on several replicas every replica fires reminders and users get duplicate notifications
+   (see `kb/constraints/003-deployment-rules.md`).
 7. **Errors**: a failing delivery for one appointment is logged and the other appointments are still
    evaluated (Java would abort the run on an exception). A failing run is logged and retried at the next tick.
 8. Old unused types (`ReminderTriggerTimes`, `AppointmentReminderEvent` model with `scheduled_time`) were

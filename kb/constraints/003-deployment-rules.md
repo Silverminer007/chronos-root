@@ -134,6 +134,13 @@ Operating rule: all three must be set per backend (Helm `envFromSecrets`, see
 warning, sends no push notifications and `GET /api/v2/push/public-key` returns an empty body.
 Rust reasoning: see ADR-2026-10-20-019, decision 8.
 
+**Scheduler leader election (`LEADER_ELECTION_ENABLED`)**: same variable name and default (`true`) in Java and
+Rust, but different mechanics. Java uses a Kubernetes lease and needs the Role from
+`deployment/templates/backend-role.yaml`; Rust uses a PostgreSQL advisory lock and needs no RBAC, so
+`backend-role.yaml` is not needed for Rust. Setting it to `false` on more than one replica makes every replica
+fire the reminders, which produces duplicate push notifications; use `false` only for a single replica.
+See ADR-2026-10-20-022, decision 6.
+
 **Example `.env.local`**:
 ```
 DB_PASSWORD=secret123
