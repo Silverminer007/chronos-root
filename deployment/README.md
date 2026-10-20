@@ -208,9 +208,9 @@ The chart expects the following keys in `chronos-secret`:
 | `frontend_client_id` | Keycloak OAuth client ID | Nuxt frontend |
 | `frontend_sentry_auth_token` | Sentry authentication token | Nuxt frontend |
 | `frontend_sentry_dsn` | Sentry DSN | Nuxt frontend |
-| `vapid_public_key` | Web Push VAPID public key | Quarkus backend |
-| `vapid_private_key` | Web Push VAPID private key | Quarkus backend |
-| `vapid_mailto` | Web Push VAPID mailto | Quarkus backend |
+| `vapid_public_key` | Web Push VAPID public key | Quarkus backend (`VAPID_PUBLIC`), Rust backend (`VAPID_PUBLIC_KEY`) |
+| `vapid_private_key` | Web Push VAPID private key | Quarkus backend (`VAPID_PRIVATE`), Rust backend (`VAPID_PRIVATE_KEY`) |
+| `vapid_mailto` | Web Push VAPID mailto / subject (e.g. `mailto:admin@example.com`) | Quarkus backend (`VAPID_MAILTO`), Rust backend (`VAPID_SUBJECT`) |
 | `backup_bucket` | S3 bucket name | PostgreSQL backup |
 | `backup_access_key_id` | S3 access key ID | PostgreSQL backup |
 | `backup_secret_access_key` | S3 secret access key | PostgreSQL backup |

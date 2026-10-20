@@ -38,6 +38,10 @@ fn router() -> Result<axum::Router, AnyError> {
     Ok(build_router(
         app_state.clone(),
         user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     ))
 }
@@ -177,6 +181,10 @@ async fn readiness_up_and_pool_metrics_with_live_database() -> Result<(), AnyErr
     let mut router = build_router(
         app_state.clone(),
         user_state_for_tests(app_state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            app_state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     );
 

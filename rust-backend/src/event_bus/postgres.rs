@@ -55,10 +55,15 @@ impl EventPublisher for PostgresEventBus {
         .execute(&self.pool)
         .await?;
 
-        // NOTIFY all subscribers listening on this channel
+        // NOTIFY all subscribers listening on this channel. `pg_notify` keeps the channel name
+        // case-sensitive, like the quoted `LISTEN` of `PgListener` (a plain `NOTIFY Name` folds it
+        // to lower case, so CamelCase event types were never delivered).
         // Include the event ID in the payload so subscribers can fetch the full event
-        let notify_query = format!("NOTIFY {}, '{}'", event.event_type, event.id);
-        sqlx::query(&notify_query).execute(&self.pool).await?;
+        sqlx::query("SELECT pg_notify($1, $2)")
+            .bind(&event.event_type)
+            .bind(&event.id)
+            .execute(&self.pool)
+            .await?;
 
         info!("Event fired: {} (id: {})", event.event_type, event.id);
         Ok(())

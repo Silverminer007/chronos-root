@@ -121,6 +121,19 @@ Kubernetes ensures zero-downtime:
 - Kubernetes Secrets (runtime)
 - `.env.local` (development, never committed)
 
+**VAPID (Web Push)**: Java and Rust read the same Kubernetes secret keys
+(`vapid_public_key`, `vapid_private_key`, `vapid_mailto`) but under different variable names:
+
+| Backend | Public key | Private key | Subject |
+|---|---|---|---|
+| Java (Quarkus) | `VAPID_PUBLIC` | `VAPID_PRIVATE` | `VAPID_MAILTO` |
+| Rust | `VAPID_PUBLIC_KEY` | `VAPID_PRIVATE_KEY` | `VAPID_SUBJECT` |
+
+Operating rule: all three must be set per backend (Helm `envFromSecrets`, see
+`deployment/values-staging.yaml`). If one is missing or empty the backend starts anyway, logs a
+warning, sends no push notifications and `GET /api/v2/push/public-key` returns an empty body.
+Rust reasoning: see ADR-2026-10-20-019, decision 8.
+
 **Example `.env.local`**:
 ```
 DB_PASSWORD=secret123
