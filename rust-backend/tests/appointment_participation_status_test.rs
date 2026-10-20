@@ -319,6 +319,10 @@ async fn test_status_route_via_build_router_returns_200_for_authenticated_user()
     let mut router = build_router(
         state.clone(),
         user_state_for_tests(state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     );
 
@@ -356,6 +360,10 @@ async fn test_status_route_via_build_router_rejects_missing_token() {
     let mut router = build_router(
         state.clone(),
         user_state_for_tests(state.db_pool.clone()),
+        Arc::new(chronos_date_api::push_notifications::PushState::new(
+            state.db_pool.clone(),
+            String::new(),
+        )),
         validator,
     );
 

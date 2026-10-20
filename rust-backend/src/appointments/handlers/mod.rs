@@ -11,14 +11,16 @@ use std::sync::Arc;
 use crate::appointments::{
     models::{
         AddGroupToAppointmentRequest, AddParticipantRequest, AppointmentResponse,
-        CreateAppointmentRequest, ParticipationStatusResponse, UpdateAppointmentRequest,
-        UpdateParticipationStatusRequest, UserRole,
+        CreateAppointmentRequest, MessageDto, ParticipationStatusResponse,
+        UpdateAppointmentRequest, UpdateParticipationStatusRequest, UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
 use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
+use crate::users::identity::IdentityRepository;
+use chrono::SecondsFormat;
 
 /// Shared application state
 #[derive(Clone)]
@@ -99,6 +101,58 @@ pub async fn list_participants(
         .map_err(AppointmentError::from)?;
 
     Ok(Json(participants))
+}
+
+/// GET /api/v2/appointments/:id/messages - Messages of an appointment, newest first
+///
+/// Any participant (role other than NONE) may read; everybody else, including callers of an
+/// unknown appointment, gets 403 (Java: `requireReadAppointment`). Sender names come from the
+/// `user_profiles` cache; senders without a profile are named "Gelöschter Benutzer".
+pub async fn list_messages(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    let role = repo
+        .get_participant_role(id, principal.user_id())
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+    if matches!(role, None | Some(UserRole::None)) {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let messages = repo
+        .find_messages(id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    let mut sender_ids: Vec<String> = messages.iter().map(|m| m.sender_oidcid.clone()).collect();
+    sender_ids.sort();
+    sender_ids.dedup();
+    let senders = IdentityRepository::find_by_ids(&state.db_pool, &sender_ids)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    let responses: Vec<MessageDto> = messages
+        .into_iter()
+        .map(|m| MessageDto {
+            id: m.id,
+            sender_name: senders
+                .get(&m.sender_oidcid)
+                .map(|s| s.name())
+                .unwrap_or_default(),
+            sender_id: m.sender_oidcid,
+            appointment_id: m.appointment_id,
+            body: m.body,
+            timestamp: m
+                .timestamp
+                .map(|t| t.to_rfc3339_opts(SecondsFormat::AutoSi, true)),
+        })
+        .collect();
+
+    Ok(Json(responses))
 }
 
 /// POST /api/v2/appointments/:id/participation - RSVP to an appointment
@@ -223,7 +277,7 @@ pub async fn update_appointment(
 
     // Validate and update appointment
     let response = service
-        .update_appointment(id, request)
+        .update_appointment(id, request, user_id)
         .await
         .map_err(AppointmentError::from)?;
 
@@ -283,7 +337,7 @@ pub async fn cancel_appointment(
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
     service
-        .cancel_appointment(id)
+        .cancel_appointment(id, user_id)
         .await
         .map_err(AppointmentError::from)?;
 

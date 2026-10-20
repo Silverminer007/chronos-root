@@ -188,7 +188,7 @@ mod appointment_service_tests {
         };
 
         let result = service
-            .update_appointment(response.id, update_request)
+            .update_appointment(response.id, update_request, "test-user")
             .await;
 
         assert!(result.is_ok());
@@ -255,7 +255,7 @@ mod appointment_service_tests {
             .await
             .expect("Failed to create");
 
-        let result = service.cancel_appointment(response.id).await;
+        let result = service.cancel_appointment(response.id, "test-user").await;
 
         assert!(result.is_ok());
     }
@@ -278,7 +278,7 @@ mod appointment_service_tests {
         };
 
         let result = service
-            .update_appointment(999_999_i64, update_request)
+            .update_appointment(999_999_i64, update_request, "test-user")
             .await;
 
         assert!(result.is_err());
@@ -305,7 +305,7 @@ mod appointment_service_tests {
         let repo = AppointmentRepository::new(pool);
         let service = AppointmentService::new(repo);
 
-        let result = service.cancel_appointment(999_999_i64).await;
+        let result = service.cancel_appointment(999_999_i64, "test-user").await;
 
         assert!(result.is_err());
     }

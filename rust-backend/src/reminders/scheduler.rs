@@ -1,88 +1,99 @@
-use crate::appointments::repository::AppointmentRepository;
-use crate::event_bus::EventPublisher;
-use crate::reminders::rules::{
-    AppointmentReminderRule, LongAppointmentRSVPRule, ShortWeekdayRSVPRule, ShortWeekendRSVPRule,
-};
+//! Reminder scheduler (Java `AppointmentReminderScheduler`: cron `0 */15 * * * ?` on the leader).
+
+use crate::appointments::repository::{AppointmentRepository, RepositoryError};
+use crate::reminders::clock::Clock;
+use crate::reminders::leader::LeaderElection;
 use crate::reminders::services::ReminderRuleEngine;
-use chrono::Utc;
+use chrono::{DateTime, Duration, DurationRound, Utc};
 use std::sync::Arc;
-use tokio::sync::Mutex;
-use uuid::Uuid;
+use tracing::{debug, error};
+
+/// Run interval; ticks happen at minutes 0, 15, 30, 45
+const TICK_MINUTES: i64 = 15;
+/// Appointments are considered up to 20 weeks ahead (Java: `20 * 7` days)
+const LOOKAHEAD_DAYS: i64 = 20 * 7;
 
 pub struct ReminderScheduler {
-    #[allow(dead_code)]
-    event_bus: Arc<dyn EventPublisher>,
-    appointment_repo: Arc<AppointmentRepository>,
-    engine: Arc<ReminderRuleEngine>,
-    is_leader: Arc<Mutex<bool>>,
-    node_id: String,
+    appointments: Arc<AppointmentRepository>,
+    engine: ReminderRuleEngine,
+    election: Arc<LeaderElection>,
+    clock: Arc<dyn Clock>,
 }
 
 impl ReminderScheduler {
     pub fn new(
-        event_bus: Arc<dyn EventPublisher>,
-        appointment_repo: Arc<AppointmentRepository>,
+        appointments: Arc<AppointmentRepository>,
+        engine: ReminderRuleEngine,
+        election: Arc<LeaderElection>,
+        clock: Arc<dyn Clock>,
     ) -> Self {
-        let rules = vec![
-            Box::new(AppointmentReminderRule) as Box<dyn crate::reminders::rules::ReminderRule>,
-            Box::new(LongAppointmentRSVPRule),
-            Box::new(ShortWeekdayRSVPRule),
-            Box::new(ShortWeekendRSVPRule),
-        ];
-        let engine = Arc::new(ReminderRuleEngine::new(event_bus.clone(), rules));
-
         Self {
-            event_bus,
-            appointment_repo,
+            appointments,
             engine,
-            is_leader: Arc::new(Mutex::new(false)),
-            node_id: Uuid::new_v4().to_string(),
+            election,
+            clock,
         }
     }
 
-    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.attempt_leader_election().await?;
-        let is_leader = *self.is_leader.lock().await;
-        if !is_leader {
-            tracing::debug!("Not leader, skipping reminder evaluation");
-            return Ok(());
+    /// One scheduler run (Java `sendPendingReminders`). Returns `None` when this instance is not
+    /// the leader, else the number of fired reminders.
+    pub async fn run_once(&self) -> Result<Option<usize>, RepositoryError> {
+        if !self.election.is_leader().await {
+            debug!("Not the scheduler leader, skipping reminder run");
+            return Ok(None);
         }
-
+        let now = self.clock.now();
         let appointments = self
-            .appointment_repo
-            .find_all()
-            .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            .appointments
+            .find_non_cancelled_between(now, now + Duration::days(LOOKAHEAD_DAYS))
+            .await?;
+        Ok(Some(self.engine.evaluate(&appointments, now).await))
+    }
 
-        for appointment in appointments {
-            if appointment.end_time < Utc::now() {
-                continue;
-            }
-            let reminder_events = self.engine.evaluate_appointment(&appointment).await;
-            for event in reminder_events {
-                self.engine.fire_reminder_event(event).await?;
+    /// Runs forever, once per quarter hour
+    pub async fn run(&self) {
+        loop {
+            let now = self.clock.now();
+            let wait = (next_tick_after(now) - now)
+                .to_std()
+                .unwrap_or(std::time::Duration::ZERO);
+            tokio::time::sleep(wait).await;
+            if let Err(e) = self.run_once().await {
+                error!("Reminder run failed: {}", e);
             }
         }
+    }
+}
 
-        Ok(())
+/// The next quarter-hour boundary strictly after `now`
+pub fn next_tick_after(now: DateTime<Utc>) -> DateTime<Utc> {
+    let tick = Duration::minutes(TICK_MINUTES);
+    now.duration_trunc(tick).expect("quarter hours fit") + tick
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn at(date: &str) -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339(date)
+            .unwrap()
+            .with_timezone(&Utc)
     }
 
-    async fn attempt_leader_election(
-        &self,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let mut is_leader = self.is_leader.lock().await;
-        if !*is_leader {
-            *is_leader = true;
-            tracing::info!("Node {} acquired leadership", self.node_id);
-        }
-        Ok(())
-    }
-
-    pub fn node_id(&self) -> &str {
-        &self.node_id
-    }
-
-    pub async fn is_leader(&self) -> bool {
-        *self.is_leader.lock().await
+    #[test]
+    fn next_tick_is_the_next_quarter_hour() {
+        assert_eq!(
+            next_tick_after(at("2026-01-01T10:07:30Z")),
+            at("2026-01-01T10:15:00Z")
+        );
+        assert_eq!(
+            next_tick_after(at("2026-01-01T10:45:00Z")),
+            at("2026-01-01T11:00:00Z")
+        );
+        assert_eq!(
+            next_tick_after(at("2026-01-01T23:59:59Z")),
+            at("2026-01-02T00:00:00Z")
+        );
     }
 }

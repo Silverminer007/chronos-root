@@ -1,5 +1,5 @@
 use crate::appointments::models::{
-    Appointment, AppointmentStatus, ParticipantRow, ParticipationStatus, UserRole,
+    Appointment, AppointmentStatus, Message, ParticipantRow, ParticipationStatus, UserRole,
 };
 use crate::users::identity::{IdentityRepository, UserIdentity};
 use chrono::{DateTime, Utc};
@@ -127,6 +127,24 @@ impl AppointmentRepository {
             APPOINTMENT_COLUMNS_ALIASED, ACTIVE_ALIASED
         ))
         .bind(user_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Appointments starting strictly between `after` and `before` that are neither CANCELLED nor
+    /// DELETED (Java `findNonCancelledBetween`); the reminder scheduler's input.
+    pub async fn find_non_cancelled_between(
+        &self,
+        after: DateTime<Utc>,
+        before: DateTime<Utc>,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment WHERE start_time > $1 AND start_time < $2 AND {} ORDER BY start_time ASC",
+            APPOINTMENT_COLUMNS, ACTIVE
+        ))
+        .bind(after)
+        .bind(before)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
@@ -329,6 +347,22 @@ impl AppointmentRepository {
         .bind(appointment_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// Messages of an appointment, newest first (Java: `MessageRepository#listByAppointment`).
+    /// Messages are hard-deleted in Java, so there is no soft-delete filter.
+    pub async fn find_messages(
+        &self,
+        appointment_id: i64,
+    ) -> Result<Vec<Message>, RepositoryError> {
+        sqlx::query_as::<_, Message>(
+            "SELECT id, sender_oidcid, appointment_id, body, \"timestamp\" FROM message
+             WHERE appointment_id = $1 ORDER BY \"timestamp\" DESC, id DESC",
+        )
+        .bind(appointment_id)
+        .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }

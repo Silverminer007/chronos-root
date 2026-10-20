@@ -136,7 +136,9 @@ mod appointment_mutation_tests {
             minimal_attendees: None,
         };
 
-        let result = service.update_appointment(appt_id, request).await;
+        let result = service
+            .update_appointment(appt_id, request, "test-user")
+            .await;
         assert!(result.is_ok(), "Failed to update appointment");
 
         // Verify: AppointmentEditedEvent was fired
@@ -191,7 +193,9 @@ mod appointment_mutation_tests {
             minimal_attendees: None,
         };
 
-        let result = service.update_appointment(appt_id, request).await;
+        let result = service
+            .update_appointment(appt_id, request, "test-user")
+            .await;
         assert!(result.is_ok(), "Failed to update appointment");
 
         // Verify: AppointmentMovedEvent was fired
@@ -283,7 +287,7 @@ mod appointment_mutation_tests {
 
         // Cancel appointment
         let service = AppointmentService::with_events(repo, event_bus);
-        let result = service.cancel_appointment(appt_id).await;
+        let result = service.cancel_appointment(appt_id, "test-user").await;
         assert!(result.is_ok(), "Failed to cancel appointment");
 
         // Verify: AppointmentCancelledEvent was fired
@@ -314,7 +318,9 @@ mod appointment_mutation_tests {
             minimal_attendees: None,
         };
 
-        let result = service.update_appointment(fake_id, request).await;
+        let result = service
+            .update_appointment(fake_id, request, "test-user")
+            .await;
         assert!(
             result.is_err(),
             "Update should fail for non-existent appointment"
@@ -364,7 +370,7 @@ mod appointment_mutation_tests {
 
         // Attempt to cancel non-existent appointment
         let fake_id: i64 = 987_654_321;
-        let result = service.cancel_appointment(fake_id).await;
+        let result = service.cancel_appointment(fake_id, "test-user").await;
         assert!(
             result.is_err(),
             "Cancel should fail for non-existent appointment"
@@ -608,7 +614,7 @@ mod appointment_mutation_tests {
 
         // Cancel the appointment
         service
-            .cancel_appointment(appt_id)
+            .cancel_appointment(appt_id, "test-user")
             .await
             .expect("Failed to cancel appointment");
 
