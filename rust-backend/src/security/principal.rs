@@ -15,6 +15,8 @@ pub struct PrincipalContext {
     pub last_name: Option<String>,
     pub email: Option<String>,
     pub profile_picture_url: Option<String>,
+    /// Realm roles of the access token (`realm_access/roles`)
+    pub roles: Vec<String>,
 }
 
 impl PrincipalContext {
@@ -26,7 +28,19 @@ impl PrincipalContext {
             last_name: None,
             email: None,
             profile_picture_url: None,
+            roles: Vec::new(),
         }
+    }
+
+    /// Attach the realm roles of the access token
+    pub fn with_roles(mut self, roles: Vec<String>) -> Self {
+        self.roles = roles;
+        self
+    }
+
+    /// Whether the token carries the given realm role
+    pub fn has_role(&self, role: &str) -> bool {
+        self.roles.iter().any(|r| r == role)
     }
 
     /// Attach the profile claims of the access token

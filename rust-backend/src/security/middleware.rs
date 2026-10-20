@@ -24,12 +24,22 @@ fn principal_from_claims(claims: &TokenClaims) -> Option<PrincipalContext> {
     if claims.sub.trim().is_empty() {
         None
     } else {
-        Some(PrincipalContext::new(claims.sub.as_str()).with_profile(
-            claims.given_name.clone(),
-            claims.family_name.clone(),
-            claims.email.clone(),
-            claims.picture.clone(),
-        ))
+        Some(
+            PrincipalContext::new(claims.sub.as_str())
+                .with_profile(
+                    claims.given_name.clone(),
+                    claims.family_name.clone(),
+                    claims.email.clone(),
+                    claims.picture.clone(),
+                )
+                .with_roles(
+                    claims
+                        .realm_access
+                        .as_ref()
+                        .map(|access| access.roles.clone())
+                        .unwrap_or_default(),
+                ),
+        )
     }
 }
 
@@ -91,6 +101,7 @@ pub async fn auth_middleware(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::security::token::RealmAccess;
 
     #[test]
     fn test_extract_bearer_token() {
@@ -119,6 +130,7 @@ mod tests {
             family_name: None,
             email: Some("max@example.org".to_string()),
             picture: None,
+            realm_access: None,
         }
     }
 
@@ -143,6 +155,19 @@ mod tests {
         assert_eq!(principal.first_name.as_deref(), Some("Max"));
         assert_eq!(principal.last_name, None);
         assert_eq!(principal.email.as_deref(), Some("max@example.org"));
+    }
+
+    #[test]
+    fn test_principal_from_claims_copies_realm_roles() {
+        let mut with_roles = claims("sub-1");
+        with_roles.realm_access = Some(RealmAccess {
+            roles: vec!["ADMIN_API".to_string()],
+        });
+        let principal = principal_from_claims(&with_roles).unwrap();
+        assert!(principal.has_role("ADMIN_API"));
+        assert!(!principal_from_claims(&claims("sub-2"))
+            .unwrap()
+            .has_role("ADMIN_API"));
     }
 
     #[test]

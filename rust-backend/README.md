@@ -82,6 +82,17 @@ Health and metrics follow the Quarkus contract (see [ADR-2026-10-20-020](../kb/a
 - `GET /health` - Alternative health check endpoint, plain text `OK`.
 - `GET /metrics` - Prometheus text format. Contains the Micrometer-compatible HTTP series `http_server_requests_seconds_{count,sum,bucket,max}` (labels `exception`, `method`, `outcome`, `status`, `uri`), process metrics (`process_uptime_seconds`, `process_start_time_seconds`, `system_cpu_count`, `process_resident_memory_bytes` on Linux) and DB pool metrics (`agroal_active_count`, `agroal_available_count`, `agroal_max_size`). `/metrics` itself is not recorded; JVM metrics are not emitted.
 
+### Admin
+
+`/api/v2/admin/*` requires the realm role `ADMIN_API` (claim `realm_access.roles`); a token without it gets an empty `403` (see [ADR-2026-10-20-023](../kb/adr/ADR-2026-10-20-023-admin-endpoints.md)).
+
+- `POST /api/v2/admin/appointments`, `GET /api/v2/admin/appointments?page&size`, `POST /api/v2/admin/appointments/{id}/participants/groups`, `POST /api/v2/admin/appointments/participants/status`, `POST /api/v2/admin/appointments/message`
+- `POST /api/v2/admin/friendship/befriend`
+- `POST /api/v2/admin/groups`, `POST /api/v2/admin/groups/{groupId}/users/{userId}`
+- `POST /api/v2/admin/push/test/{userId}`, `GET /api/v2/admin/push/log`
+- `GET /api/v2/admin/stats`
+- `GET /api/v2/admin/users`, `GET /api/v2/admin/users/{id}`, `DELETE /api/v2/admin/users/{id}` (Keycloak)
+
 ### Appointments
 
 - `GET /api/v2/appointments/:id/participants` - Participants with roles and status. Requires a valid bearer token and a participation with a role other than `NONE`; otherwise `403` (also for unknown appointments, like Java).
