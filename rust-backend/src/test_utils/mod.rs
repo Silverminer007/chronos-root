@@ -3,6 +3,7 @@ pub mod auth;
 pub mod db;
 pub mod fixtures;
 pub mod http_client;
+pub mod janitor;
 pub mod keycloak;
 
 pub use auth::TestAuthHelper;

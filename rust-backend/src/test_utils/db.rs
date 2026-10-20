@@ -1,4 +1,5 @@
-use sqlx::{PgPool, Postgres, Transaction};
+use super::janitor;
+use sqlx::{Connection, PgPool, Postgres, Transaction};
 use std::time::Duration;
 use tracing::info;
 
@@ -18,9 +19,167 @@ impl Default for TestDbConfig {
     }
 }
 
-/// Test database container and connection pool
+/// Prefix of every per-test database; the janitor only ever touches names with this prefix
+pub const TEST_DB_PREFIX: &str = "test_db_";
+
+/// Prefix of the migrated template the per-test databases are cloned from
+const TEMPLATE_PREFIX: &str = "test_template_";
+
+/// Serializes template creation across test binaries and processes
+const TEMPLATE_LOCK_KEY: i64 = 0x0063_6872_6f6e_6f73;
+
+/// `CREATE DATABASE ... TEMPLATE` fails with this SQLSTATE while another session uses the template
+const OBJECT_IN_USE: &str = "55006";
+const CLONE_MAX_ATTEMPTS: u32 = 100;
+const CLONE_RETRY_DELAY: Duration = Duration::from_millis(50);
+
+/// Test database container and connection pool. The database is dropped together with the value,
+/// also when the test panics.
 pub struct TestDb {
     pool: PgPool,
+    name: String,
+    admin_url: url::Url,
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+fn is_object_in_use(e: &sqlx::Error) -> bool {
+    e.as_database_error()
+        .and_then(|d| d.code())
+        .is_some_and(|c| c == OBJECT_IN_USE)
+}
+
+/// Name of the template for the current migrations: changes whenever a migration changes
+fn template_name() -> String {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for m in sqlx::migrate!("./migrations").iter() {
+        m.version.hash(&mut hasher);
+        m.checksum.hash(&mut hasher);
+    }
+    format!("{TEMPLATE_PREFIX}{:016x}", hasher.finish())
+}
+
+async fn database_exists(admin: &mut sqlx::PgConnection, name: &str) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1)")
+        .bind(name)
+        .fetch_one(admin)
+        .await
+}
+
+/// Make sure the migrated template exists. Built once per migration set and reused by every
+/// test binary; concurrent builders are serialized with an advisory lock.
+async fn ensure_template(
+    admin_pool: &PgPool,
+    admin_url: &url::Url,
+    config: &TestDbConfig,
+    template: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut conn = admin_pool.acquire().await?;
+    if database_exists(&mut conn, template).await? {
+        return Ok(());
+    }
+    sqlx::query("SELECT pg_advisory_lock($1)")
+        .bind(TEMPLATE_LOCK_KEY)
+        .execute(&mut *conn)
+        .await?;
+    let built = build_template(&mut conn, admin_url, config, template).await;
+    sqlx::query("SELECT pg_advisory_unlock($1)")
+        .bind(TEMPLATE_LOCK_KEY)
+        .execute(&mut *conn)
+        .await?;
+    built
+}
+
+async fn build_template(
+    conn: &mut sqlx::PgConnection,
+    admin_url: &url::Url,
+    config: &TestDbConfig,
+    template: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if database_exists(conn, template).await? {
+        return Ok(());
+    }
+    // Built under a janitor-visible name and renamed at the end, so a crashed build is never
+    // mistaken for a complete template and gets cleaned up
+    let building = new_db_name();
+    sqlx::query(&format!("CREATE DATABASE \"{building}\""))
+        .execute(&mut *conn)
+        .await?;
+    let mut url = admin_url.clone();
+    url.set_path(&format!("/{building}"));
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .acquire_timeout(config.connection_timeout)
+        .connect(url.as_str())
+        .await?;
+    info!("Running migrations on test template {}", template);
+    let migrated = sqlx::migrate!("./migrations").run(&pool).await;
+    pool.close().await;
+    migrated?;
+    sqlx::query(&format!(
+        "ALTER DATABASE \"{building}\" RENAME TO \"{template}\""
+    ))
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+fn new_db_name() -> String {
+    format!(
+        "{TEST_DB_PREFIX}{}_{}",
+        unix_now(),
+        uuid::Uuid::new_v4().simple()
+    )
+}
+
+async fn clone_template(
+    admin_pool: &PgPool,
+    template: &str,
+    name: &str,
+) -> Result<(), sqlx::Error> {
+    let mut attempt = 1;
+    loop {
+        match sqlx::query(&format!(
+            "CREATE DATABASE \"{name}\" TEMPLATE \"{template}\""
+        ))
+        .execute(admin_pool)
+        .await
+        {
+            Err(e) if is_object_in_use(&e) && attempt < CLONE_MAX_ATTEMPTS => {
+                attempt += 1;
+                tokio::time::sleep(CLONE_RETRY_DELAY).await;
+            }
+            other => return other.map(|_| ()),
+        }
+    }
+}
+
+/// Drop stale databases of earlier aborted runs, once per test process
+async fn run_janitor_once(admin_pool: &PgPool) {
+    static DONE: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+    DONE.get_or_init(|| async {
+        match janitor::drop_stale_databases(
+            admin_pool,
+            TEST_DB_PREFIX,
+            unix_now(),
+            janitor::STALE_AFTER,
+            janitor::MAX_DROPS_PER_RUN,
+        )
+        .await
+        {
+            Ok(dropped) if !dropped.is_empty() => {
+                info!("Dropped {} stale test databases", dropped.len())
+            }
+            Ok(_) => {}
+            Err(e) => tracing::warn!("Test database janitor failed: {}", e),
+        }
+    })
+    .await;
 }
 
 impl TestDb {
@@ -45,10 +204,7 @@ impl TestDb {
         admin_url.set_path("/postgres");
 
         // Each test gets its own database so parallel tests cannot collide on unique keys
-        let test_db_name = format!(
-            "test_db_{}",
-            uuid::Uuid::new_v4().to_string().replace('-', "")
-        );
+        let test_db_name = new_db_name();
         let mut database_url = admin_url.clone();
         database_url.set_path(&format!("/{}", test_db_name));
 
@@ -98,22 +254,36 @@ impl TestDb {
             }
         };
 
+        run_janitor_once(&admin_pool).await;
+        let template = template_name();
+        ensure_template(&admin_pool, &admin_url, &config, &template).await?;
+
         info!("Creating test database: {}", test_db_name);
-        sqlx::query(&format!("CREATE DATABASE {}", test_db_name))
-            .execute(&admin_pool)
-            .await?;
+        clone_template(&admin_pool, &template, &test_db_name).await?;
         admin_pool.close().await;
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = match sqlx::postgres::PgPoolOptions::new()
             .max_connections(config.max_connections)
             .acquire_timeout(config.connection_timeout)
             .connect(database_url.as_str())
-            .await?;
+            .await
+        {
+            Ok(pool) => pool,
+            Err(e) => {
+                drop_database_blocking(&admin_url, &test_db_name);
+                return Err(e.into());
+            }
+        };
+        Ok(TestDb {
+            pool,
+            name: test_db_name,
+            admin_url,
+        })
+    }
 
-        info!("Running migrations on test database");
-        sqlx::migrate!("./migrations").run(&pool).await?;
-
-        Ok(TestDb { pool })
+    /// Name of this test's database
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Get the connection pool
@@ -135,6 +305,41 @@ impl TestDb {
             .await?;
 
         Ok(())
+    }
+}
+
+/// Drops the database, terminating sessions that clones of the pool still hold. This is called
+/// from `Drop`, which is synchronous and may run inside a runtime (or during a panic), so the work
+/// happens on its own thread with its own runtime. Leftovers are collected by the next run's janitor.
+fn drop_database_blocking(admin_url: &url::Url, name: &str) {
+    let (admin_url, owned_name) = (admin_url.to_string(), name.to_string());
+    let dropped = std::thread::spawn(move || {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| e.to_string())?
+            .block_on(async {
+                let mut conn = sqlx::PgConnection::connect(&admin_url)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                sqlx::query(&format!(
+                    "DROP DATABASE IF EXISTS \"{owned_name}\" WITH (FORCE)"
+                ))
+                .execute(&mut conn)
+                .await
+                .map_err(|e| e.to_string())?;
+                Ok::<(), String>(())
+            })
+    })
+    .join();
+    if !matches!(dropped, Ok(Ok(()))) {
+        eprintln!("Could not drop test database {name}: {dropped:?}");
+    }
+}
+
+impl Drop for TestDb {
+    fn drop(&mut self) {
+        drop_database_blocking(&self.admin_url, &self.name);
     }
 }
 
