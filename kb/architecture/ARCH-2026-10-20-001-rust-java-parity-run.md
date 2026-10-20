@@ -129,3 +129,49 @@ Identical on both sides (checked): duplicate friendship request 400, request to 
 
 - Re-run on a Rust image built after #153 without `DATABASE_MAX_CONNECTIONS` (the run above used the workaround at `53b4016`).
 - The mismatches #156-#162 are open; the allowlist entries are removed with their tickets, the two `missing_route` steps turn green with #157 and #159.
+
+## Last complete harness output
+
+Run 5, `main` at `53b4016`, Java with the local routing change, Rust built from `53b4016` with `DATABASE_MAX_CONNECTIONS=40`, fresh databases, Keycloak **not** reset (so `parity-user-1` still had the e-mail from the previous run; the first line `patch user` is the SMTP effect of environment finding 4 and is fixed by the realm change made afterwards, it is not a parity finding). `UNCHECKED` lines are listed after the output.
+
+```
+MISMATCH patch user (PATCH /api/v2/user?redirectUri={redirect})
+  status: java 500, rust 200
+  $  status_mismatch  java: 500, rust: 200
+MISMATCH get missing appointment (GET /api/v2/appointments/{missing_id})
+  status: java 403, rust 404
+  $  missing_route  java: 403, rust: 404
+MISMATCH delete appointment (DELETE /api/v2/appointments/{appt})
+  status: java 200, rust 404
+  $  missing_route  java: 200, rust: 404
+ALLOWED health ready $.checks[[]].data missing_in_rust: Rust omits checks[].data (#161)
+ALLOWED unauthenticated request $ status_mismatch: Java answers 500 for a request without token, Rust 401 (#162; Java defect)
+ALLOWED create appointment without body fields $ status_mismatch: Java answers 500 (NPE) for missing fields, Rust 422 (#162; Java defect)
+ALLOWED rsvp with invalid status $ status_mismatch: Java answers 500 for an unknown enum value, Rust 422 (#162; Java defect)
+ALLOWED list appointments $ type_mismatch: Java returns {data, meta}, Rust a bare array (#156)
+ALLOWED patch appointment $.*participants missing_in_rust: Rust response lacks participants/group_participants/messages (#156)
+ALLOWED patch appointment $.messages missing_in_rust: Rust response lacks participants/group_participants/messages (#156)
+ALLOWED admin list appointments* $.data[[]].* missing_in_rust: Rust appointment objects lack participants/group_participants/messages (#156)
+ALLOWED rsvp $ status_mismatch: Java creates the owner as PENDING, Rust as APPROVED (#158)
+ALLOWED list messages $ length_mismatch: Rust writes no system messages for RSVP/cancel (#159)
+ALLOWED list messages of missing appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)
+ALLOWED friend suggestions $ length_mismatch: Rust returns no suggestions (#160)
+ALLOWED admin change participation status $ status_mismatch: Rust does not turn group members into participants (#159)
+ALLOWED admin send message $ status_mismatch: Rust answers 500, Java 200 (#159)
+ALLOWED delete admin appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)
+81 steps, 3 mismatches, 18 allowed differences, 6 arrays with unchecked element shape
+exit 1
+```
+
+UNCHECKED lines:
+
+```
+UNCHECKED health live (GET /q/health/live) $.checks  beide leer, Form ungeprüft
+UNCHECKED linked accounts (GET /api/v2/user/linked) $  beide leer, Form ungeprüft
+UNCHECKED passkeys (GET /api/v2/user/passkeys) $  beide leer, Form ungeprüft
+UNCHECKED friend suggestions (GET /api/v2/friendships/suggestions) $  Rust leer, Form ungeprüft
+UNCHECKED incoming requests (GET /api/v2/friendships/requests/incoming) $  beide leer, Form ungeprüft
+UNCHECKED admin push log (GET /api/v2/admin/push/log) $  beide leer, Form ungeprüft
+```
+
+A run after the realm change (Keycloak reset between runs) and on a Rust image built at or after `5b6dd8f` could not be completed: during the run the k3s node went into DiskPressure (/ at 92 %, mostly the host PostgreSQL with thousands of `test_db_*` databases and other agents' cargo `target/` directories), which evicted the Keycloak and PostgreSQL pods of the namespace, and the ticket worktrees were replaced twice by the orchestrator. The expected result of that run is the same output without the `patch user` mismatch. The explorative output (42 of 103 steps differing) was produced against the same state and is summarised above.

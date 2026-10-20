@@ -57,7 +57,8 @@ rustBackend:
     AUTH_SERVER_BASE_URL: "http://keycloak:8080"
     AUTH_SERVER_REALM: "chronos"
     RUST_LOG: "chronos_date_api=info"
-    # Workaround for #153: the 16 event-bus listeners hold the whole default pool of 16 connections
+    # Workaround for #153 (fixed on main in 5b6dd8f): the 16 event-bus listeners held the whole default pool of 16
+    # connections. Remove once the Rust image is built from a commit that contains the fix.
     DATABASE_MAX_CONNECTIONS: "40"
   envFromSecrets:
     - { name: DB_PASSWORD, secretKey: database_password }
