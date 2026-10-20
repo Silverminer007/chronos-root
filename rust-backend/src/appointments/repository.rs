@@ -118,6 +118,24 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Appointments starting strictly between `after` and `before` that are neither CANCELLED nor
+    /// DELETED (Java `findNonCancelledBetween`); the reminder scheduler's input.
+    pub async fn find_non_cancelled_between(
+        &self,
+        after: DateTime<Utc>,
+        before: DateTime<Utc>,
+    ) -> Result<Vec<Appointment>, RepositoryError> {
+        sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {} FROM appointment WHERE start_time > $1 AND start_time < $2 AND {} ORDER BY start_time ASC",
+            APPOINTMENT_COLUMNS, ACTIVE
+        ))
+        .bind(after)
+        .bind(before)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Find appointments by date range
     pub async fn find_by_date_range(
         &self,

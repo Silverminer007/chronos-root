@@ -5,6 +5,7 @@ use tracing::{error, info};
 use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::event_listeners::AppointmentParticipationListener;
 use chronos_date_api::appointments::handlers::AppState;
+use chronos_date_api::appointments::repository::AppointmentRepository;
 use chronos_date_api::database::{init_pool, DatabaseConfig};
 use chronos_date_api::event_bus::postgres::PostgresEventBus;
 use chronos_date_api::keycloak::{HttpKeycloakAdmin, KeycloakConfig};
@@ -12,6 +13,11 @@ use chronos_date_api::push_notifications::{
     NotificationDispatcher, PushEventHandler, PushNotificationEventListener, PushSender, PushState,
     VapidConfig, WebPushSender,
 };
+use chronos_date_api::reminders::clock::SystemClock;
+use chronos_date_api::reminders::leader::LeaderElection;
+use chronos_date_api::reminders::rules::default_rules;
+use chronos_date_api::reminders::scheduler::ReminderScheduler;
+use chronos_date_api::reminders::services::{BusReminderEventPort, ReminderRuleEngine};
 use chronos_date_api::security::TokenValidator;
 use chronos_date_api::users::UserState;
 
@@ -91,6 +97,18 @@ async fn main() {
         pool.clone(),
         vapid.map(|config| config.public_key).unwrap_or_default(),
     ));
+
+    // Reminder scheduler: with several replicas only the leader (advisory lock) runs it
+    let scheduler = ReminderScheduler::new(
+        Arc::new(AppointmentRepository::new(pool.clone())),
+        ReminderRuleEngine::new(
+            default_rules(),
+            Arc::new(BusReminderEventPort::new(event_bus.clone())),
+        ),
+        Arc::new(LeaderElection::from_env(pool.clone())),
+        Arc::new(SystemClock),
+    );
+    tokio::spawn(async move { scheduler.run().await });
 
     // Create application state
     let app_state = Arc::new(AppState {
