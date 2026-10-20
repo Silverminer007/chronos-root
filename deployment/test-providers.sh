@@ -29,16 +29,13 @@ test_provider() {
         return 1
     fi
 
-    # Create test values
-    cat > "$TEMP_DIR/test-values.yaml" <<EOF
-$(cat "$CHART_DIR/$values_file")
-secrets:
-  provider: $provider
-EOF
+    # Override the provider via --set; appending a second top-level `secrets:` key
+    # to the values file would replace the whole map (dropping organisationId etc.)
+    local set_args=(--set "secrets.provider=$provider")
 
     # Test helm lint
     echo "Running helm lint..."
-    if ! helm lint "$CHART_DIR" -f "$TEMP_DIR/test-values.yaml" > "$TEMP_DIR/lint-$provider.log" 2>&1; then
+    if ! helm lint "$CHART_DIR" -f "$CHART_DIR/$values_file" "${set_args[@]}" > "$TEMP_DIR/lint-$provider.log" 2>&1; then
         echo "❌ helm lint failed:"
         cat "$TEMP_DIR/lint-$provider.log"
         return 1
@@ -48,7 +45,7 @@ EOF
 
     # Test helm template
     echo "Running helm template..."
-    if ! helm template chronos "$CHART_DIR" -f "$TEMP_DIR/test-values.yaml" > "$TEMP_DIR/template-$provider.yaml" 2>&1; then
+    if ! helm template chronos "$CHART_DIR" -f "$CHART_DIR/$values_file" "${set_args[@]}" > "$TEMP_DIR/template-$provider.yaml" 2>&1; then
         echo "❌ helm template failed:"
         cat "$TEMP_DIR/template-$provider.yaml"
         return 1
