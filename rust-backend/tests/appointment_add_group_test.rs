@@ -134,7 +134,7 @@ mod appointment_add_group_tests {
         // Action: Try to add group as non-creator
         let result = add_group_to_appointment(
             &service,
-            &&other_user_id,
+            &other_user_id,
             appointment_id,
             group_id,
             "ATTENDANT",
