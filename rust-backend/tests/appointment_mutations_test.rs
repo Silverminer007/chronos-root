@@ -2,11 +2,12 @@
 /// Tests verify both positive cases (events fire) and negative cases (events don't fire on auth failure)
 #[cfg(test)]
 mod appointment_mutation_tests {
+    use chrono::{Duration, Utc};
     use chronos_date_api::appointments::models::{
-        CreateAppointmentRequest, UpdateAppointmentRequest,
+        Appointment, CreateAppointmentRequest, UpdateAppointmentRequest,
     };
     use chronos_date_api::appointments::repository::AppointmentRepository;
-    use chronos_date_api::appointments::services::{AppointmentService, ListAppointmentsQuery};
+    use chronos_date_api::appointments::services::{AppointmentSearch, AppointmentService};
     use chronos_date_api::event_bus::postgres::PostgresEventBus;
     use chronos_date_api::test_utils::{TestDb, TestFixtures};
     use std::sync::Arc;
@@ -21,6 +22,19 @@ mod appointment_mutation_tests {
                 }
             }
         };
+    }
+
+    /// Everything the user participates in that is not deleted, whenever it starts
+    async fn list_for(service: &AppointmentService, user_id: &str) -> Vec<Appointment> {
+        let filter = AppointmentSearch {
+            start: Some(Utc::now() - Duration::days(3650)),
+            ..AppointmentSearch::default()
+        };
+        service
+            .search_user_appointments(user_id, &filter, 0, 100)
+            .await
+            .expect("Failed to list appointments")
+            .0
     }
 
     /// Helper to count events of a specific type in the events table
@@ -496,20 +510,14 @@ mod appointment_mutation_tests {
         let service = AppointmentService::with_events(repo, event_bus);
 
         // Creator can view their own appointment
-        let visible_to_creator = service
-            .list_user_appointments(&creator_id, ListAppointmentsQuery::default())
-            .await
-            .expect("Failed to list creator appointments");
+        let visible_to_creator = list_for(&service, &creator_id).await;
         assert!(
             visible_to_creator.iter().any(|a| a.id == appt_id),
             "Creator should see their own appointment"
         );
 
         // Other user cannot view creator's appointment (not a participant)
-        let visible_to_other = service
-            .list_user_appointments(&other_user_id, ListAppointmentsQuery::default())
-            .await
-            .expect("Failed to list other user appointments");
+        let visible_to_other = list_for(&service, &other_user_id).await;
         assert!(
             !visible_to_other.iter().any(|a| a.id == appt_id),
             "Non-participant should not see the appointment"
@@ -541,10 +549,7 @@ mod appointment_mutation_tests {
 
         // Verify appointment appears in list before deletion
         let service = AppointmentService::with_events(repo, event_bus.clone());
-        let list_before = service
-            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
-            .await
-            .expect("Failed to list appointments");
+        let list_before = list_for(&service, &user_id).await;
         assert!(
             list_before.iter().any(|a| a.id == appt_id),
             "Appointment should appear in list before deletion"
@@ -559,10 +564,7 @@ mod appointment_mutation_tests {
         // Verify deleted appointment does NOT appear in list after deletion
         let repo2 = AppointmentRepository::new(db.pool().clone());
         let service2 = AppointmentService::with_events(repo2, event_bus);
-        let list_after = service2
-            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
-            .await
-            .expect("Failed to list appointments");
+        let list_after = list_for(&service2, &user_id).await;
         assert!(
             !list_after.iter().any(|a| a.id == appt_id),
             "Deleted appointment should NOT appear in list"
@@ -578,7 +580,7 @@ mod appointment_mutation_tests {
         assert_eq!(status, 2, "Appointment status should be DELETED");
     }
 
-    /// SOFT-DELETE FILTERING: Cancelled appointments do not appear in list queries
+    /// SOFT-DELETE FILTERING: Cancelled appointments stay in list queries (Java hides DELETED only)
     #[tokio::test]
     async fn test_cancelled_appointments_filtered_from_list() {
         let db = setup_test_db!();
@@ -603,10 +605,7 @@ mod appointment_mutation_tests {
 
         // Verify appointment appears in list before cancellation
         let service = AppointmentService::with_events(repo, event_bus.clone());
-        let list_before = service
-            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
-            .await
-            .expect("Failed to list appointments");
+        let list_before = list_for(&service, &user_id).await;
         assert!(
             list_before.iter().any(|a| a.id == appt_id),
             "Appointment should appear in list before cancellation"
@@ -621,13 +620,11 @@ mod appointment_mutation_tests {
         // Verify cancelled appointment does NOT appear in list after cancellation
         let repo2 = AppointmentRepository::new(db.pool().clone());
         let service2 = AppointmentService::with_events(repo2, event_bus);
-        let list_after = service2
-            .list_user_appointments(&user_id, ListAppointmentsQuery::default())
-            .await
-            .expect("Failed to list appointments");
+        let list_after = list_for(&service2, &user_id).await;
+        // Java only hides DELETED appointments; a CANCELLED one stays in the list
         assert!(
-            !list_after.iter().any(|a| a.id == appt_id),
-            "Cancelled appointment should NOT appear in list"
+            list_after.iter().any(|a| a.id == appt_id),
+            "Cancelled appointment stays in the list (Java hides DELETED only)"
         );
 
         // Verify status is CANCELLED in database

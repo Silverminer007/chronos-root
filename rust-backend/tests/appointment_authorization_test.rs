@@ -4,6 +4,7 @@
 /// RESPONSIBLE participant (ADR-2026-10-12-014).
 #[cfg(test)]
 mod appointment_auth_tests {
+    use chrono::{Duration, Utc};
     use chronos_date_api::appointments::repository::AppointmentRepository;
     use chronos_date_api::test_utils::{AppointmentFixture, TestDb, TestFixtures};
 
@@ -138,7 +139,18 @@ mod appointment_auth_tests {
             .unwrap();
 
         let repo = AppointmentRepository::new(db.pool().clone());
-        assert_eq!(repo.find_visible_to_user(&guest).await.unwrap().len(), 1);
+        let (visible, total) = repo
+            .search_visible(
+                &guest,
+                None,
+                Utc::now() - Duration::days(1),
+                Utc::now() + Duration::days(365),
+                0,
+                10,
+            )
+            .await
+            .unwrap();
+        assert_eq!((visible.len(), total), (1, 1));
         assert!(repo.find_by_creator(&guest).await.unwrap().is_empty());
     }
 }

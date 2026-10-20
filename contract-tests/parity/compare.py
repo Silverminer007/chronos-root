@@ -6,6 +6,7 @@ Field order, generated ids and timestamps do not matter, so success bodies are
 compared by shape and not by value.
 """
 
+import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -14,6 +15,9 @@ MISSING_ROUTE = "missing_route"
 
 # Keys of error bodies that change on every request.
 VOLATILE_ERROR_KEYS = frozenset({"timestamp", "traceId", "trace_id", "requestId"})
+
+# Keys whose value is the request path: generated ids in it differ per backend, so digits are ignored.
+PATH_KEYS = frozenset({"path"})
 
 ROUTE_MISSING_STATUSES = (404, 405)
 
@@ -117,8 +121,12 @@ def _value_diffs(java: Any, rust: Any, path: str = "$") -> "list[Diff]":
     if isinstance(java, dict) and isinstance(rust, dict):
         diffs = []
         for key in sorted(java.keys() & rust.keys()):
-            if key not in VOLATILE_ERROR_KEYS:
-                diffs.extend(_value_diffs(java[key], rust[key], f"{path}.{key}"))
+            if key in VOLATILE_ERROR_KEYS:
+                continue
+            if key in PATH_KEYS and isinstance(java[key], str) and isinstance(rust[key], str):
+                diffs.extend(_value_diffs(_without_ids(java[key]), _without_ids(rust[key]), f"{path}.{key}"))
+                continue
+            diffs.extend(_value_diffs(java[key], rust[key], f"{path}.{key}"))
         return diffs
     if isinstance(java, list) and isinstance(rust, list):
         diffs = []
@@ -128,6 +136,10 @@ def _value_diffs(java: Any, rust: Any, path: str = "$") -> "list[Diff]":
     if json_type(java) == json_type(rust) and java != rust:
         return [Diff(path, "value_mismatch", f"java: {java!r}, rust: {rust!r}")]
     return []
+
+
+def _without_ids(request_path: str) -> str:
+    return re.sub(r"\d+", "{id}", request_path)
 
 
 def _media_type(content_type: str) -> str:

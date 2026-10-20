@@ -9,7 +9,7 @@ Variables supplied by the caller: `other` (oidc id of a second user), `redirect`
 Captured: `me`, `settings`, `group`, `appt`, `req`, `agroup`, `aappt`.
 """
 
-from .runner import ROLE_ADMIN, ROLE_ANON, Step
+from .runner import ROLE_ADMIN, ROLE_ANON, ROLE_USER2, Step
 
 APPOINTMENT = {
     "name": "Parity Termin",
@@ -48,6 +48,10 @@ SCENARIO = [
     Step("change password url", "GET", "/api/v2/user/change-password?redirectUri={redirect}"),
     Step("get settings", "GET", "/api/v2/settings", capture={"settings": "$"}),
     Step("put settings", "PUT", "/api/v2/settings", body="{settings}"),
+    # befriend the second user: Java only adds friends to groups and appointments ("Ihr seid nicht befreundet")
+    Step("befriend: send request", "POST", "/api/v2/friendships/requests?adresse_id={other}"),
+    Step("befriend: second user lists incoming", "GET", "/api/v2/friendships/requests/incoming", role=ROLE_USER2, capture={"freq": "0.requestId"}),
+    Step("befriend: second user accepts", "POST", "/api/v2/friendships/requests/{freq}/accept", role=ROLE_USER2),
     # groups
     Step("create group", "POST", "/api/v2/groups", body={"name": "Parity Gruppe"}, capture={"group": "id"}),
     Step("list groups", "GET", "/api/v2/groups"),
@@ -80,6 +84,9 @@ SCENARIO = [
     Step("list messages of missing appointment", "GET", "/api/v2/appointments/{missing_id}/messages"),
     # friendships
     Step("friend suggestions", "GET", "/api/v2/friendships/suggestions"),
+    Step("list friends", "GET", "/api/v2/friendships/friends"),
+    Step("end friendship", "DELETE", "/api/v2/friendships/friends/{other}"),
+    Step("end friendship twice", "DELETE", "/api/v2/friendships/friends/{other}"),
     Step("send friendship request", "POST", "/api/v2/friendships/requests?adresse_id={other}"),
     Step("outgoing requests", "GET", "/api/v2/friendships/requests/outgoing", capture={"req": "0.requestId"}),
     Step("incoming requests", "GET", "/api/v2/friendships/requests/incoming"),
@@ -87,8 +94,6 @@ SCENARIO = [
     Step("decline own request", "POST", "/api/v2/friendships/requests/{req}/decline"),
     Step("cancel request", "DELETE", "/api/v2/friendships/requests/{req}"),
     Step("accept missing request", "POST", "/api/v2/friendships/requests/{missing_id}/accept"),
-    Step("list friends", "GET", "/api/v2/friendships/friends"),
-    Step("end friendship with non-friend", "DELETE", "/api/v2/friendships/friends/{other}"),
     # push
     Step("push public key", "GET", "/api/v2/push/public-key"),
     Step("push subscribe", "POST", "/api/v2/push/subscribe", body=PUSH_SUBSCRIPTION),
@@ -100,13 +105,13 @@ SCENARIO = [
     _admin("admin list users", "GET", "/api/v2/admin/users?page=0&size=5"),
     _admin("admin get user", "GET", "/api/v2/admin/users/{me}"),
     _admin("admin delete missing user", "DELETE", "/api/v2/admin/users/{missing_user}"),
-    _admin("admin create group", "POST", "/api/v2/admin/groups", {"ownerId": "{me}", "groupName": "Admin Gruppe"}, {"agroup": "id"}),
+    _admin("admin create group", "POST", "/api/v2/admin/groups", {"ownerId": "{me}", "groupName": "Admin Gruppe"}, {"agroup": "$"}),
     _admin("admin add group member", "POST", "/api/v2/admin/groups/{agroup}/users/{other}"),
     _admin("admin befriend", "POST", "/api/v2/admin/friendship/befriend", {"userIds": ["{me}", "{other}"]}),
     _admin("admin create appointment", "POST", "/api/v2/admin/appointments", APPOINTMENT, {"aappt": "id"}),
     _admin("admin add group participant", "POST", "/api/v2/admin/appointments/{aappt}/participants/groups", {"group_id": "{agroup}", "user_role": "ATTENDANT"}),
     _admin("admin change participation status", "POST", "/api/v2/admin/appointments/participants/status", {"userId": "{me}", "appointmentId": "{aappt}", "participationStatus": "APPROVED"}),
-    _admin("admin send message", "POST", "/api/v2/admin/appointments/message", {"appointment_id": "{aappt}", "sender_id": "{me}", "body": "Admin Nachricht"}),
+    _admin("admin send message", "POST", "/api/v2/admin/appointments/message", {"appointment_id": "{aappt}", "sender_id": "{me}", "body": "Admin Nachricht", "timestamp": "2030-01-01T00:00:00Z"}),
     _admin("admin list appointments", "GET", "/api/v2/admin/appointments?page=0&size=5"),
     _admin("admin push test", "POST", "/api/v2/admin/push/test/{me}", "Test"),
     _admin("admin push log", "GET", "/api/v2/admin/push/log"),

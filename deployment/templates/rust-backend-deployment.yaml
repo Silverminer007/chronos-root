@@ -30,16 +30,17 @@ spec:
           ports:
             - containerPort: {{ .Values.rustBackend.containerPort }}
           env:
-            {{- range $key, $value := .Values.rustBackend.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
+            # Secrets first: plain values may reference them as $(NAME)
             {{- range .Values.rustBackend.envFromSecrets }}
             - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
                   name: {{ include "chronos.secretName" $ }}
                   key: {{ .secretKey }}
+            {{- end }}
+            {{- range $key, $value := .Values.rustBackend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
             {{- end }}
           resources:
             {{- toYaml .Values.rustBackend.resources | nindent 12 }}

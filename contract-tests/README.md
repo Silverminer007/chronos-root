@@ -16,7 +16,9 @@ both configured for the same Keycloak, then from this directory:
 export CONTRACT_JAVA_URL=http://localhost:8080
 export CONTRACT_RUST_URL=http://localhost:8081
 export CONTRACT_USER_TOKEN=<access token of the test user>
+export CONTRACT_USER2_TOKEN=<access token of the second user>                # optional, defaults to the test user
 export CONTRACT_ADMIN_TOKEN=<access token of a user with role ADMIN_API>   # optional
+export CONTRACT_JAVA_MANAGEMENT_URL=http://localhost:9000                    # only if Java serves health/metrics on a management port
 export CONTRACT_OTHER_USER_ID=<oidc id of a second existing user>            # default oidc-user-2
 python3 -m parity
 ```
@@ -33,9 +35,9 @@ requests through the API and relies on there being no earlier data. There is no 
 | Prerequisite | Where | Used by |
 |---|---|---|
 | Test user (token in `CONTRACT_USER_TOKEN`) | Keycloak | all steps except `ROLE_ANON` |
-| Second user whose Keycloak subject is `CONTRACT_OTHER_USER_ID` (default `oidc-user-2`) | Keycloak | group member, participant, role and friendship steps |
+| Second user whose Keycloak subject is `CONTRACT_OTHER_USER_ID` (default `oidc-user-2`), with a token in `CONTRACT_USER2_TOKEN` | Keycloak | group member, participant, role and friendship steps; user 2 accepts the friendship request (Java only lets friends be added to groups and appointments). Without the token, accepting runs as the test user and the later steps fail on both sides |
 | Admin user with role `ADMIN_API` (token in `CONTRACT_ADMIN_TOKEN`) | Keycloak | `/api/v2/admin/*` steps (without a token they run as the test user and only compare the 403, so the admin endpoints are not verified) |
-| Friendships, groups, appointments | not needed | created by the scenario |
+| Friendships, groups, appointments | not needed | created by the scenario (the `befriend:` steps make the two users friends) |
 
 Both backends must be configured for this one realm, so the same token is the same user on both sides.
 

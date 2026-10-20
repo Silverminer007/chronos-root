@@ -213,7 +213,10 @@ postgresql:
   passwordSecret:
     name: chronos-secret
     key: database_password
+  # Extra databases created on first start of the volume (one per backend that must own its data)
+  extraDatabases: []
   backup:
+    enabled: true
     s3_path: ""
     host: ""
   resources:

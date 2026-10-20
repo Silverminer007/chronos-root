@@ -1,0 +1,59 @@
+# Throwaway Keycloak for the Java/Rust parity run (ticket #137). Not part of the Helm chart:
+# dev mode, in-container H2 database, realm imported from the ConfigMap created by the README steps.
+# KC_HOSTNAME pins the issuer, so tokens fetched through `kubectl port-forward` carry the same `iss`
+# (http://keycloak:8080/realms/chronos) that both backends validate against.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: chronos-parity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0.7
+          args: ["start-dev", "--import-realm"]
+          env:
+            - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin }
+            - { name: KC_BOOTSTRAP_ADMIN_PASSWORD, value: admin }
+            - { name: KC_HOSTNAME, value: "http://keycloak:8080" }
+            - { name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC, value: "true" }
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            - { name: KC_HEALTH_ENABLED, value: "true" }
+            - { name: JAVA_OPTS_KC_HEAP, value: "-Xms256m -Xmx512m" }
+          ports:
+            - containerPort: 8080
+            - containerPort: 9000
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 30
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          volumeMounts:
+            - { name: realm, mountPath: /opt/keycloak/data/import }
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: chronos-parity
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }

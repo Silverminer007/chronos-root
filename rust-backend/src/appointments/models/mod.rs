@@ -286,11 +286,26 @@ pub struct UserParticipantDto {
 /// A participation row joined with the name of the group it came from (`via_group_*`)
 #[derive(Debug, Clone, FromRow)]
 pub struct ParticipantRow {
+    pub appointment_id: i64,
     pub user_oidcid: String,
     pub role: UserRole,
     pub status: ParticipationStatus,
     pub group_participation_id: Option<i64>,
     pub group_name: Option<String>,
+}
+
+/// Page of a listing (Java: `PagedResponse`)
+#[derive(Debug, Serialize)]
+pub struct PagedResponse<T> {
+    pub data: Vec<T>,
+    pub meta: PageMeta,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PageMeta {
+    pub page: i64,
+    pub size: i64,
+    pub total: i64,
 }
 
 /// Group with members

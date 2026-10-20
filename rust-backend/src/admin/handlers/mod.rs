@@ -19,16 +19,17 @@ use std::sync::Arc;
 use crate::admin::models::{
     AdminAddGroupParticipantRequest, AdminChangeParticipationStatusRequest,
     AdminCreateGroupRequest, AdminMessageRequest, AdminStatisticsDto, AdminUserDto,
-    AdminUserListResponse, FriendGroupRequest, PageMeta, PagedResponse, Total,
+    AdminUserListResponse, FriendGroupRequest, Total,
 };
 use crate::admin::repository::{self, PushLogFilter};
 use crate::admin::AdminState;
 use crate::appointments::handlers::AppointmentError;
 use crate::appointments::models::{
-    AppointmentResponse, CreateAppointmentRequest, ParticipationStatus, UserRole,
+    AppointmentResponse, CreateAppointmentRequest, PageMeta, PagedResponse, ParticipationStatus,
+    UserRole,
 };
 use crate::appointments::repository::AppointmentRepository;
-use crate::appointments::services::AppointmentService;
+use crate::appointments::services::{AppointmentService, Embed};
 use crate::error::AppError;
 use crate::groups::models::{format_instant, GroupDto};
 use crate::groups::services::{FriendshipService, GroupService};
@@ -236,9 +237,16 @@ pub async fn list_appointments(
     let page = query_number(&query, "page", 0)?;
     let size = query_number(&query, "size", DEFAULT_PAGE_SIZE)?;
     let (page, size) = panache_page(page, size)?;
-    let (appointments, total) = appointment_service(&state).list_page(page, size).await?;
+    let service = appointment_service(&state);
+    let (appointments, total) = service.list_page(page, size).await?;
+    let data = service
+        .with_details(
+            appointments.into_iter().map(Into::into).collect(),
+            Embed::ALL,
+        )
+        .await?;
     Ok(Json(PagedResponse {
-        data: appointments.into_iter().map(Into::into).collect(),
+        data,
         meta: PageMeta { page, size, total },
     }))
 }

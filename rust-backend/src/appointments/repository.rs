@@ -85,17 +85,6 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Find all appointments
-    pub async fn find_all(&self) -> Result<Vec<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(&format!(
-            "SELECT {} FROM appointment WHERE {} ORDER BY start_time DESC",
-            APPOINTMENT_COLUMNS, ACTIVE
-        ))
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
-    }
-
     /// A page of all appointments of any status (Java: `findAll().page(..)`), ordered by id
     pub async fn find_page(
         &self,
@@ -161,23 +150,55 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Find appointments visible to a user (the user is a participant)
-    pub async fn find_visible_to_user(
+    /// One page of the appointments a user participates in (Java: `AppointmentRepository#search`):
+    /// not DELETED, ending after `after` and starting before `before`, optionally matching
+    /// `search` in name, description or venue (case-insensitive substring), ordered by start.
+    /// Returns the page and the total number of matches.
+    pub async fn search_visible(
         &self,
         user_id: &str,
-    ) -> Result<Vec<Appointment>, RepositoryError> {
-        sqlx::query_as::<_, Appointment>(&format!(
-            "SELECT {} FROM appointment a
-             WHERE EXISTS (SELECT 1 FROM appointment_participation ap
-                           WHERE ap.appointment_id = a.id AND ap.user_oidcid = $1)
-               AND {}
-             ORDER BY a.start_time DESC",
-            APPOINTMENT_COLUMNS_ALIASED, ACTIVE_ALIASED
+        search: Option<&str>,
+        after: DateTime<Utc>,
+        before: DateTime<Utc>,
+        page: i64,
+        size: i64,
+    ) -> Result<(Vec<Appointment>, i64), RepositoryError> {
+        let db_error = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
+        let pattern = search.map(|query| format!("%{query}%"));
+        let deleted = AppointmentStatus::Deleted.ordinal();
+        let filter = format!(
+            "EXISTS (SELECT 1 FROM appointment_participation ap
+                     WHERE ap.appointment_id = a.id AND ap.user_oidcid = $1)
+             AND a.end_time > $2 AND a.start_time < $3 AND COALESCE(a.status, 0) <> {deleted}
+             AND ($4::TEXT IS NULL OR lower(a.name) LIKE lower($4)
+                  OR lower(a.description) LIKE lower($4) OR lower(a.venue) LIKE lower($4))"
+        );
+
+        let total = sqlx::query_scalar::<_, i64>(&format!(
+            "SELECT COUNT(*) FROM appointment a WHERE {filter}"
         ))
         .bind(user_id)
+        .bind(after)
+        .bind(before)
+        .bind(&pattern)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(db_error)?;
+
+        let items = sqlx::query_as::<_, Appointment>(&format!(
+            "SELECT {APPOINTMENT_COLUMNS_ALIASED} FROM appointment a WHERE {filter}
+             ORDER BY a.start_time, a.id LIMIT $5 OFFSET $6"
+        ))
+        .bind(user_id)
+        .bind(after)
+        .bind(before)
+        .bind(&pattern)
+        .bind(size)
+        .bind(page.saturating_mul(size))
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+        .map_err(db_error)?;
+        Ok((items, total))
     }
 
     /// Appointments starting strictly between `after` and `before` that are neither CANCELLED nor
@@ -464,16 +485,72 @@ impl AppointmentRepository {
         &self,
         appointment_id: i64,
     ) -> Result<Vec<ParticipantRow>, RepositoryError> {
+        self.list_participants_of(&[appointment_id]).await
+    }
+
+    /// The participations of several appointments (by appointment, then oldest first)
+    pub async fn list_participants_of(
+        &self,
+        appointment_ids: &[i64],
+    ) -> Result<Vec<ParticipantRow>, RepositoryError> {
         // status is VARCHAR; see find_participation_status for the TEXT cast
         sqlx::query_as::<_, ParticipantRow>(
-            "SELECT ap.user_oidcid, ap.role, ap.status::TEXT AS status, ap.group_participation_id,
-                    g.groupname AS group_name
+            "SELECT ap.appointment_id, ap.user_oidcid, ap.role, ap.status::TEXT AS status,
+                    ap.group_participation_id, g.groupname AS group_name
              FROM appointment_participation ap
              LEFT JOIN groups g ON g.id = ap.group_participation_id
-             WHERE ap.appointment_id = $1
-             ORDER BY ap.id",
+             WHERE ap.appointment_id = ANY($1)
+             ORDER BY ap.appointment_id, ap.id",
         )
-        .bind(appointment_id)
+        .bind(appointment_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// The messages of several appointments, oldest first (no soft-delete filter, see `find_messages`)
+    pub async fn find_messages_of(
+        &self,
+        appointment_ids: &[i64],
+    ) -> Result<Vec<Message>, RepositoryError> {
+        sqlx::query_as::<_, Message>(
+            "SELECT id, sender_oidcid, appointment_id, body, \"timestamp\" FROM message
+             WHERE appointment_id = ANY($1) ORDER BY \"timestamp\", id",
+        )
+        .bind(appointment_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// The groups of several appointments as `(appointment_id, group_id, group name)`
+    pub async fn list_group_participations(
+        &self,
+        appointment_ids: &[i64],
+    ) -> Result<Vec<(i64, i64, Option<String>)>, RepositoryError> {
+        sqlx::query_as::<_, (i64, i64, Option<String>)>(
+            "SELECT agp.appointment_id, agp.group_id, g.groupname
+             FROM appointment_group_participations agp
+             JOIN groups g ON g.id = agp.group_id
+             WHERE agp.appointment_id = ANY($1)
+             ORDER BY agp.appointment_id, agp.id",
+        )
+        .bind(appointment_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
+    /// The members of several groups as `(group_id, user_oidcid)`
+    pub async fn list_group_members(
+        &self,
+        group_ids: &[i64],
+    ) -> Result<Vec<(i64, String)>, RepositoryError> {
+        sqlx::query_as::<_, (i64, String)>(
+            "SELECT group_id, user_oidcid FROM group_member
+             WHERE group_id = ANY($1) ORDER BY group_id, id",
+        )
+        .bind(group_ids)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))

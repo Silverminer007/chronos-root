@@ -4,28 +4,28 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::Deserialize;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::appointments::{
     models::{
-        AddGroupToAppointmentRequest, AddParticipantRequest, AppointmentResponse,
-        ChangeParticipantRoleRequest, CreateAppointmentRequest, CreateMessageRequest, Message,
-        MessageDto, ParticipationStatusResponse, UpdateAppointmentRequest,
+        AddGroupToAppointmentRequest, AddParticipantRequest, ChangeParticipantRoleRequest,
+        CreateAppointmentRequest, CreateMessageRequest, Message, MessageDto, PageMeta,
+        PagedResponse, ParticipationStatusResponse, UpdateAppointmentRequest,
         UpdateParticipationStatusRequest, UserRole,
     },
     repository::AppointmentRepository,
     services::{
-        AppointmentService, ServiceError, NOT_ATTENDANT_MESSAGE, NOT_RESPONSIBLE_MESSAGE,
-        NO_ROLE_MESSAGE,
+        AppointmentSearch, AppointmentService, Embed, ServiceError, NOT_ATTENDANT_MESSAGE,
+        NOT_RESPONSIBLE_MESSAGE, NO_ROLE_MESSAGE,
     },
 };
 use crate::error::{AppError, AppJson, AppPath};
 use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
 use crate::users::identity::{IdentityRepository, UserIdentity};
-use chrono::SecondsFormat;
+use chrono::{DateTime, SecondsFormat, Utc};
 
 /// Shared application state
 #[derive(Clone)]
@@ -34,21 +34,51 @@ pub struct AppState {
     pub event_publisher: Arc<dyn EventPublisher>,
 }
 
-/// Query parameters for listing appointments
-#[derive(Debug, Deserialize)]
-pub struct ListQuery {
-    pub limit: Option<u32>,
-    pub offset: Option<u32>,
-    /// Sort by field: "date" (start_time, default) or "title"
-    pub sort_by: Option<String>,
-    /// Sort direction: "asc" or "desc" (default is "desc" for date, "asc" for title)
-    pub sort_dir: Option<String>,
+/// Default of the `page` query parameter of `GET /appointments` (Java `getAgenda`)
+const DEFAULT_PAGE: i64 = 0;
+/// Default of the `size` query parameter of `GET /appointments` (Java `getAgenda`)
+const DEFAULT_PAGE_SIZE: i64 = 10;
+
+/// A `Boolean` query parameter: only `true` switches it on (Java `Boolean.parseBoolean`)
+fn flag(query: &HashMap<String, String>, name: &str) -> bool {
+    query
+        .get(name)
+        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
+}
+
+/// An `Integer` query parameter: absent means `default`, unparsable is a 404 (Jakarta REST)
+fn int_param(query: &HashMap<String, String>, name: &str, default: i64) -> Result<i64, AppError> {
+    match query.get(name) {
+        None => Ok(default),
+        Some(raw) => raw
+            .parse::<i32>()
+            .map(i64::from)
+            .map_err(|_| AppError::RouteNotFound),
+    }
+}
+
+/// An optional ISO-8601 instant (Java `Instant.parse`); unparsable is a 400 here, Java answers 500
+fn instant_param(
+    query: &HashMap<String, String>,
+    name: &str,
+) -> Result<Option<DateTime<Utc>>, AppError> {
+    query
+        .get(name)
+        .map(|raw| {
+            DateTime::parse_from_rfc3339(raw)
+                .map(|time| time.with_timezone(&Utc))
+                .map_err(|_| {
+                    AppError::bad_request(format!("{name} must be a valid ISO-8601 instant"))
+                })
+        })
+        .transpose()
 }
 
 /// GET /api/v2/appointments/:id - Fetch a single appointment by ID
 pub async fn get_appointment(
     State(state): State<Arc<AppState>>,
     AppPath(id): AppPath<i64>,
+    Query(query): Query<HashMap<String, String>>,
     principal: PrincipalContext,
 ) -> Result<impl IntoResponse, AppointmentError> {
     let repo = AppointmentRepository::new(state.db_pool.clone());
@@ -72,8 +102,17 @@ pub async fn get_appointment(
         .await
         .map_err(AppointmentError::from)?;
 
-    let response: AppointmentResponse = appointment.into();
-    Ok(Json(response))
+    // Java embeds what the flags ask for; unlike the list, the group flag is `group_participants`
+    let embed = Embed {
+        participants: flag(&query, "participants"),
+        messages: flag(&query, "messages"),
+        group_participants: flag(&query, "group_participants"),
+    };
+    let mut responses = service
+        .with_details(vec![appointment.into()], embed)
+        .await
+        .map_err(AppointmentError::from)?;
+    Ok(Json(responses.remove(0)))
 }
 
 /// GET /api/v2/appointments/:id/participation/status - Current user's participation status
@@ -250,34 +289,51 @@ pub async fn rsvp_to_appointment(
     Ok(StatusCode::OK)
 }
 
-/// GET /api/v2/appointments - List appointments with pagination
+/// GET /api/v2/appointments - The caller's upcoming appointments, paged (Java: `getAgenda`)
+///
+/// `page` (default 0), `size` (default 10), `start` (default now), `end` (default now + 1000
+/// years), `search`. The objects carry `participants`, `messages` and `group_participants`:
+/// Java's flags of the same names only decide how the collections are fetched, the lazily
+/// loaded ones are serialized anyway. A `page`/`size` that is no int is a 404 (Jakarta REST);
+/// a negative `page`, a `size` below 1 or an unparsable `start`/`end` is a 500 in Java and a
+/// 400 here (ticket #156 answer 5, ADR-2026-10-20-026).
 pub async fn list_appointments(
     State(state): State<Arc<AppState>>,
-    Query(query): Query<ListQuery>,
+    Query(query): Query<HashMap<String, String>>,
     principal: PrincipalContext,
-) -> Result<impl IntoResponse, AppointmentError> {
+) -> Result<impl IntoResponse, AppError> {
+    let page = int_param(&query, "page", DEFAULT_PAGE)?;
+    let size = int_param(&query, "size", DEFAULT_PAGE_SIZE)?;
+    if page < 0 || size < 1 {
+        return Err(AppError::bad_request(
+            "page must not be negative and size must be positive",
+        ));
+    }
+    let filter = AppointmentSearch {
+        start: instant_param(&query, "start")?,
+        end: instant_param(&query, "end")?,
+        search: query.get("search").cloned(),
+    };
+
     let repo = AppointmentRepository::new(state.db_pool.clone());
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
-    let user_id = principal.user_id();
-
-    // List only appointments visible to this user
-    let appointments = service
-        .list_user_appointments(
-            user_id,
-            crate::appointments::services::ListAppointmentsQuery {
-                limit: query.limit.or(Some(20)),
-                offset: query.offset.or(Some(0)),
-                sort_by: query.sort_by.clone(),
-                sort_dir: query.sort_dir.clone(),
-            },
-        )
+    let (appointments, total) = service
+        .search_user_appointments(principal.user_id(), &filter, page, size)
         .await
         .map_err(|_| AppointmentError::DatabaseError)?;
+    let data = service
+        .with_details(
+            appointments.into_iter().map(Into::into).collect(),
+            Embed::ALL,
+        )
+        .await
+        .map_err(AppointmentError::from)?;
 
-    let responses: Vec<AppointmentResponse> = appointments.into_iter().map(|a| a.into()).collect();
-
-    Ok(Json(responses))
+    Ok(Json(PagedResponse {
+        data,
+        meta: PageMeta { page, size, total },
+    }))
 }
 
 /// POST /api/v2/appointments - Create a new appointment
@@ -340,8 +396,12 @@ pub async fn update_appointment(
         .update_appointment(id, request, user_id)
         .await
         .map_err(AppointmentError::from)?;
+    let mut detailed = service
+        .with_details(vec![response], Embed::ALL)
+        .await
+        .map_err(AppointmentError::from)?;
 
-    Ok(Json(response))
+    Ok(Json(detailed.remove(0)))
 }
 
 /// DELETE /api/v2/appointments/:id - Delete an appointment (soft delete)

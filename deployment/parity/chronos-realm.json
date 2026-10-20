@@ -1,0 +1,123 @@
+{
+  "id": "chronos",
+  "realm": "chronos",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      {
+        "name": "user"
+      },
+      {
+        "name": "ADMIN_API"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "chronos-backend",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "backend-secret",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "parity-user-1",
+      "username": "parity-user-1",
+      "email": "parity@example.org",
+      "firstName": "Parity",
+      "lastName": "Test",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "parity-user-1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "id": "parity-user-2",
+      "username": "parity-user-2",
+      "email": "parity-user-2@parity.local",
+      "firstName": "Parity",
+      "lastName": "parity-user-2",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "parity-user-2",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "id": "parity-admin",
+      "username": "parity-admin",
+      "email": "parity-admin@parity.local",
+      "firstName": "Parity",
+      "lastName": "parity-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "parity-admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user",
+        "ADMIN_API"
+      ]
+    },
+    {
+      "username": "service-account-chronos-backend",
+      "enabled": true,
+      "serviceAccountClientId": "chronos-backend",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users",
+          "view-realm"
+        ]
+      }
+    }
+  ]
+}
