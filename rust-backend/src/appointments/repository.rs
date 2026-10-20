@@ -691,6 +691,22 @@ impl AppointmentRepository {
             .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Check if a user is a member of a group
+    pub async fn is_group_member(
+        &self,
+        group_id: i64,
+        user_id: &str,
+    ) -> Result<bool, RepositoryError> {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM group_member WHERE group_id = $1 AND user_oidcid = $2)",
+        )
+        .bind(group_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+    }
+
     /// Check if a group is already a participant in an appointment
     pub async fn group_participation_exists(
         &self,

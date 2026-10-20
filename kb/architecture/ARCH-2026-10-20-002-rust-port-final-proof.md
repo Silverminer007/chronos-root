@@ -15,7 +15,7 @@ Ticket #169. After the fixes of #156, #158, #159, #160 and #161 both backends we
 
 - **Contract harness: exit 0, 90 steps, 0 mismatches, 3 allowed differences, all `java-defect (#162)`.**
 - **The allowlist has no entry that refers to a Rust ticket.** All 14 entries are `java-defect (#162)` (table below).
-- **Explorative pass: not clean.** 106 steps, 99 identical or allowed Java defects, **7 steps still differ, all in the error bodies of the appointments module** (below). They are real Rust deviations, not allowlisted, the explorative pass stays red. They need a follow-up ticket (see "Open"); the fixes touch about 20 error sites with mixed Java semantics and are not a small fix.
+- **Explorative pass: exit 0, 106 steps, 0 differences, 11 allowed differences, all `java-defect (#162)`.** The first run on the image of `2b7bb9b` was red with 7 steps (error bodies of the appointments module); review of MR !173 asked for the fix instead of a follow-up ticket, it is done in `rust-backend/` (section "Appointment error bodies") and the pass was repeated on the rebuilt image.
 - Rust `GET /q/health/ready` answers 200 `{"checks":[{"data":{"<default>":"UP"},"name":"Database connections health check","status":"UP"}],"status":"UP"}`; all four pods Ready.
 - Nothing was deployed outside the namespace `chronos-parity`; the Rust backend is not in staging or production (#140).
 
@@ -26,12 +26,12 @@ The first rerun (images from `main` `f7ab930`) found real deviations that the ea
 | Item | Value |
 |---|---|
 | Date | 2026-10-20, 19:15-20:35 UTC |
-| Commit under test | `main` `f7ab930` (all of #156-#161 merged) plus this change up to `2b7bb9b` (Rust fixes of ADR-2026-10-20-029) |
-| Rust image | `chronos-rust-backend:parity`, built from `2b7bb9b`, docker image id `sha256:7ec2d6ad094e754c0c6d242cf0db1ea24c066a0dd9a8fdd1e2b0cdb213884111` (imageID in the pod), containerd manifest `sha256:c81f1b84907c8f04ce320a8832afeb1b87d34e3a9465177975261a994329e859`, pinned |
+| Commit under test | `main` `f7ab930` (all of #156-#161 merged) plus this change: `2b7bb9b` (Rust fixes of ADR-2026-10-20-029) and the appointment error body fixes on top of `1e9106b` (review of !173) |
+| Rust image | `chronos-rust-backend:parity`, built from `1e9106b` plus the error body fixes (working tree, 2026-10-20 ~21:05 UTC), docker image id `sha256:683a8e3bc804ef4cb56c3e35bfd870f5b4648dd0d422c154a473e16233f7d266` (imageID in the pod), containerd manifest `sha256:63d453c9291f8acf0ff5555ab97617c76dcb77e840bfeda70c7f007e32e8903f`, pinned. The earlier image (`2b7bb9b`, id `sha256:7ec2d6ad...`) produced the red explorative pass of 7 steps |
 | Java image | `chronos-backend:parity-patched`, built from the same checkout (`backend/` unchanged) with `deployment/parity/java-participation-routes.patch` applied for the build and reverted afterwards, docker image id `sha256:fd3b6a7fb2567ee0381e8e21c4d173925f512fc03066c2752571af54d7fa6cc0`, containerd manifest `sha256:fd24d2a1020db626e9b82bb27e4342adfdb193c316e2ad566127b139748b7638`, pinned |
 | Cluster | k3s single node, namespace `chronos-parity` (Helm release `chronos`, unchanged; Keycloak 26.0.7 dev mode, PostgreSQL 16) |
 
-Intermediate runs on earlier Rust images (`f7ab930`: harness 2 mismatches; `0a882de`: harness exit 0 with 90 steps, explore 23 differing steps; `03ac501`: explore 8 differing steps) led to the fixes; the numbers above are from the final image.
+Intermediate runs on earlier Rust images (`f7ab930`: harness 2 mismatches; `0a882de`: harness exit 0 with 90 steps, explore 23 differing steps; `03ac501`: explore 8 differing steps; `2b7bb9b`: explore 7 differing steps) led to the fixes; the numbers above are from the final image. The Java image is unchanged.
 
 ## Commands
 
@@ -54,7 +54,11 @@ deployment/parity/reset-databases.sh
 curl localhost:18091/q/health/ready                 # port-forward svc/chronos-rust-backend: 200
 deployment/parity/run-contract.sh                   # exit 0
 deployment/parity/reset-databases.sh
-deployment/parity/run-contract.sh --explore         # exit 1, 7 steps
+deployment/parity/run-contract.sh --explore         # exit 0, 106 steps, 0 differences
+# repeated on the final image (error body fixes), same commands: fresh databases, explore, fresh databases, harness
+deployment/parity/reset-databases.sh && deployment/parity/run-contract.sh --explore   # exit 0
+deployment/parity/reset-databases.sh && deployment/parity/run-contract.sh             # exit 0, 90 steps, 0 mismatches
+(cd rust-backend && cargo fmt --check && cargo clippy --all-targets && cargo test --no-fail-fast)   # all green
 ```
 
 ## Harness output (exit 0)
@@ -97,45 +101,28 @@ ALLOWED rsvp with invalid status $ status_mismatch: java-defect (#162): Java ans
 
 `rust_only`: `GET /api/v2/me` (ADR-2026-10-20-017) and `GET /health` (plain-text liveness probe of Rust). Entries 1-3 are used by the harness, entries 4-14 by the explorative pass. The Java defects belong to #162 (Java answers 500 where Rust answers 401/400/404/405/422 or succeeds); the Java move message that always says 0 hours (ADR-2026-10-20-029 §2) is a further one for #162 that does not show in the run.
 
-## Explorative pass (106 steps, exit 1)
+## Explorative pass (106 steps, exit 0)
 
-`explore.py` now applies the allowlist, has 3 more steps with data (`list/get embeds participants, messages and group`, `user2 get embeds`) and 103 + 3 = 106 steps. 99 steps are identical or an allowed Java defect (11 entries). Remaining differences:
+`explore.py` applies the allowlist, has 3 steps with data (`list/get embeds participants, messages and group`, `user2 get embeds`) and 103 + 3 = 106 steps. On the final image all 106 steps are identical or an allowed Java defect (11 entries):
 
 ```
-DIFF ap: end before start (POST /api/v2/appointments) java 400 rust 400
-     $.fieldErrors missing_in_rust java: object
-     $.errorCode value_mismatch java: 'VALIDATION_ERROR', rust: 'BAD_REQUEST'
-     $.message value_mismatch java: 'Validierungsfehler bei Feld: end', rust: 'end time cannot be before start time'
-DIFF ap: negative minimal_attendees (POST /api/v2/appointments) java 400 rust 400
-     $.fieldErrors missing_in_rust java: object
-     $.errorCode value_mismatch java: 'VALIDATION_ERROR', rust: 'BAD_REQUEST'
-     $.message value_mismatch java: 'Validierungsfehler bei Feld: minimal_attendees', rust: 'minimal_attendees must be non-negative'
-DIFF ap: add participant twice (POST /api/v2/appointments/{appt}/participants/{other}) java 400 rust 400
-     $.fieldErrors missing_in_rust java: object
-     $.errorCode value_mismatch java: 'VALIDATION_ERROR', rust: 'BAD_REQUEST'
-DIFF ap: owner changes role of non-participant (PUT /api/v2/appointments/{appt}/participation/{missing_user}/role) java 400 rust 400
-     $.fieldErrors missing_in_rust java: object
-     $.errorCode value_mismatch java: 'VALIDATION_ERROR', rust: 'BAD_REQUEST'
-DIFF ap: add missing group (POST /api/v2/appointments/{appt}/groups/{missing_id}) java 403 rust 403
-     $.message value_mismatch java: "You can only add groups, you're a member of", rust: 'You have to be responsible for this appointment'
-DIFF ap: remove participant again (DELETE /api/v2/appointments/{appt}/participants/{other}) java 400 rust 400
-     $.fieldErrors missing_in_rust java: object
-     $.errorCode value_mismatch java: 'VALIDATION_ERROR', rust: 'BAD_REQUEST'
-     $.message value_mismatch java: 'This user is not a participant of this event', rust: 'Participant not found'
-DIFF ap: get deleted (GET /api/v2/appointments/{appt}) java 404 rust 404
-     $.message value_mismatch java: 'appointment mit ID 1 wurde nicht gefunden', rust: 'Appointment not found'
-106 steps, 7 with differences
+ALLOWED ap: missing name ... http: wrong method   (11 lines, all java-defect (#162), see the table above)
+106 steps, 0 with differences
 ```
 
-Groups:
+### Appointment error bodies (fixed after review of !173)
 
-1. **`VALIDATION_ERROR` instead of `BAD_REQUEST` and no `fieldErrors`** (5 steps): Java throws `ValidationException` (code `VALIDATION_ERROR`, body field `fieldErrors`, for field errors the message `Validierungsfehler bei Feld: <field>`); the appointments module of Rust maps all `ServiceError::ValidationError` to `BAD_REQUEST`. Several Rust sites correspond to Java's `BadRequestException` (`invalid role`, `you cannot set your participation status back to pending`) or to a 403, so the mapping needs a per-site review.
-2. **Message texts** (3 steps): `This user is not a participant of this event` (remove participant), `You can only add groups, you're a member of` (Java checks the group membership first and answers 403 with that text), `appointment mit ID <id> wurde nicht gefunden` (get of a deleted appointment).
+The run on the image of `2b7bb9b` had 7 steps that differed, all in the appointments module. They had two causes, both fixed in `rust-backend/src/appointments/` (the Java `ValidationException` / `BadRequestException` / `ForbiddenException` distinction was collapsed into `BAD_REQUEST` / a wrong 403 text):
+
+1. **`VALIDATION_ERROR` instead of `BAD_REQUEST`, no `fieldErrors`** (`ap: end before start`, `negative minimal_attendees`, `add participant twice`, `owner changes role of non-participant`, `remove participant again`). `ServiceError` now keeps the three Java kinds apart: `ValidationError(msg)` (Java `ValidationException(message)`: `VALIDATION_ERROR`, `fieldErrors: {}`), `FieldValidation{field,message}` (Java `ValidationException(field, error)`: message `Validierungsfehler bei Feld: <field>`, `fieldErrors {field: message}`) and `BadRequest(msg)` (Java `BadRequestException`: `BAD_REQUEST`). Every site of the module was reviewed against Java: name/start-end/minimal_attendees of create and update are `FieldValidation` with the Java texts (`Name cannot be blank`, `End date cannot be before start date` on create, `Start date cannot be after end date` on update, `Minimal attendees must be positive`); "already a participant", "not a participant", "already your status/role", group not linked are `ValidationError`; `invalid role`, `back to pending` and unparsable instants are `BadRequest`; the three "only RESPONSIBLE may add groups / add / remove participants" checks were 400 in Rust but are `ForbiddenException` (403, `You have to be responsible for this appointment`) in Java and are fixed as well.
+2. **Message texts** (`remove participant again`: `This user is not a participant of this event` instead of `Participant not found`; `get deleted`: `appointment mit ID <id> wurde nicht gefunden` for GET and PATCH of a participant's deleted appointment via `AppointmentError::NotFoundId`; `add missing group`: Java checks that the actor is a member of the group (`You can only add groups, you're a member of`, 403) before anything else about the group; Rust looked the group up first and answered with the responsibility text. New `AppointmentRepository::is_group_member`, skipped for the admin endpoints like in Java).
+
+New tests in `rust-backend/tests/error_mapping_test.rs` cover the group membership 403, the create validation field errors, the remove-participant text and the not-found text with id; the existing expectations of the participant error code were changed from `BAD_REQUEST` to `VALIDATION_ERROR`, and the group tests make the owner a member of the group like `GroupService#createGroup` does.
 
 ## Open
 
-- **Follow-up ticket needed (could not be created from this run, the ticket helper was not available):** "Rust: appointment error bodies (VALIDATION_ERROR/fieldErrors, Java message texts, not-found text)" with the seven steps above. Until it is done `run-contract.sh --explore` stays red; do not allowlist these.
 - #162 (Java): the 500 responses of the allowlist, the participation routes without class-level `@Path`, and the move message that always reports 0 hours.
+- Not verified against Java (not part of any step of the run): the 404 text of appointment endpoints other than GET and PATCH (delete, cancel, participation status) still says `Appointment not found`.
 
 ## Not covered by the contract proof
 

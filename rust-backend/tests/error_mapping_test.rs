@@ -185,7 +185,7 @@ async fn role_change_of_non_participant_is_a_json_bad_request() {
     assert_error(
         answer,
         StatusCode::BAD_REQUEST,
-        "BAD_REQUEST",
+        "VALIDATION_ERROR",
         "This user is not a participant of this event",
         &path,
     );
@@ -295,7 +295,105 @@ async fn admin_participation_status_change_of_non_participant_is_a_json_bad_requ
     assert_json_content_type(content_type);
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert_eq!(body["status"], json!(400), "{body}");
-    assert_eq!(body["errorCode"], json!("BAD_REQUEST"), "{body}");
+    assert_eq!(body["errorCode"], json!("VALIDATION_ERROR"), "{body}");
     assert_eq!(body["path"], json!(path), "{body}");
     assert!(body["message"].is_string(), "{body}");
+}
+
+#[tokio::test]
+async fn adding_a_group_the_actor_is_not_a_member_of_is_forbidden() {
+    let app = TestApp::new().await;
+    let id = appointment(&app, "alice").await;
+    let path = format!("/api/v2/appointments/{id}/groups/{MISSING_ID}");
+
+    let answer = app
+        .post("alice", &path, Some(json!({"role": "ATTENDANT"})))
+        .await;
+
+    assert_error(
+        answer,
+        StatusCode::FORBIDDEN,
+        "FORBIDDEN",
+        "You can only add groups, you're a member of",
+        &path,
+    );
+}
+
+#[tokio::test]
+async fn invalid_appointment_fields_are_validation_errors_with_field_errors() {
+    let app = TestApp::new().await;
+    let path = "/api/v2/appointments";
+
+    let (status, body) = app
+        .post(
+            "alice",
+            path,
+            Some(json!({"name": "T", "start": "2026-10-20T10:00:00Z", "end": "2026-10-20T09:00:00Z"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["errorCode"], json!("VALIDATION_ERROR"), "{body}");
+    assert_eq!(
+        body["message"],
+        json!("Validierungsfehler bei Feld: end"),
+        "{body}"
+    );
+    assert_eq!(
+        body["fieldErrors"],
+        json!({"end": "End date cannot be before start date"}),
+        "{body}"
+    );
+
+    let (status, body) = app
+        .post(
+            "alice",
+            path,
+            Some(json!({"name": "T", "start": "2026-10-20T09:00:00Z", "end": "2026-10-20T10:00:00Z", "minimal_attendees": -1})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(
+        body["fieldErrors"],
+        json!({"minimal_attendees": "Minimal attendees must be positive"}),
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn removing_a_non_participant_is_a_validation_error_with_the_java_text() {
+    let app = TestApp::new().await;
+    let id = appointment(&app, "alice").await;
+    let path = format!("/api/v2/appointments/{id}/participants/bob");
+
+    let answer = app.delete("alice", &path).await;
+
+    assert_error(
+        answer,
+        StatusCode::BAD_REQUEST,
+        "VALIDATION_ERROR",
+        "This user is not a participant of this event",
+        &path,
+    );
+}
+
+#[tokio::test]
+async fn deleted_appointment_is_a_not_found_naming_the_id() {
+    let app = TestApp::new().await;
+    let id = appointment(&app, "alice").await;
+    sqlx::query("UPDATE appointment SET status = 2 WHERE id = $1")
+        .bind(id)
+        .execute(app.db.pool())
+        .await
+        .unwrap();
+    let path = format!("/api/v2/appointments/{id}");
+
+    let answer = app.get("alice", &path).await;
+
+    assert_error(
+        answer,
+        StatusCode::NOT_FOUND,
+        "RESOURCE_NOT_FOUND",
+        &format!("appointment mit ID {id} wurde nicht gefunden"),
+        &path,
+    );
 }
