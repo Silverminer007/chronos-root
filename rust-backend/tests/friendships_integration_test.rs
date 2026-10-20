@@ -6,6 +6,8 @@
 mod common;
 
 use axum::http::StatusCode;
+use chronos_date_api::keycloak::{KeycloakError, KeycloakUser};
+use chronos_date_api::test_utils::FakeKeycloak;
 use common::TestApp;
 use serde_json::{json, Value};
 
@@ -51,9 +53,55 @@ async fn test_friendship_routes_require_authentication() {
 
 // ===== GET /suggestions =====
 
+fn realm_user(id: &str, first: &str, last: &str, email: &str) -> KeycloakUser {
+    KeycloakUser {
+        id: Some(id.to_string()),
+        first_name: Some(first.to_string()),
+        last_name: Some(last.to_string()),
+        email: Some(email.to_string()),
+        ..Default::default()
+    }
+}
+
+/// alice, bob and carol have a profile; `parity-admin` and `zoe` exist only in Keycloak
+/// (ADR-2026-10-20-027). Keycloak lists them by username.
+fn realm() -> FakeKeycloak {
+    FakeKeycloak::new().with_realm_users(vec![
+        realm_user("alice", "Alice", "Anders", "alice@example.com"),
+        realm_user("bob", "Bob", "Becker", "bob@example.com"),
+        realm_user("carol", "Carol", "Clark", "carol@example.com"),
+        realm_user(
+            "parity-admin",
+            "Parity",
+            "parity-admin",
+            "admin@example.org",
+        ),
+        realm_user("zoe", "Zoe", "Becker", "zoe@example.org"),
+    ])
+}
+
+async fn app_with_realm(keycloak: FakeKeycloak) -> TestApp {
+    let app = TestApp::with_collaborators(keycloak, None).await;
+    app.add_user("alice", "Alice", "Anders", "alice@example.com")
+        .await;
+    app.add_user("bob", "Bob", "Becker", "bob@example.com")
+        .await;
+    app.add_user("carol", "Carol", "Clark", "carol@example.com")
+        .await;
+    app
+}
+
+fn ids(body: &Value) -> Vec<&str> {
+    body.as_array()
+        .unwrap()
+        .iter()
+        .map(|u| u["id"].as_str().unwrap())
+        .collect()
+}
+
 #[tokio::test]
-async fn test_suggestions_without_search_return_recent_non_friends_excluding_self() {
-    let app = app_with_users().await;
+async fn test_suggestions_without_search_return_keycloak_users_excluding_self_and_friends() {
+    let app = app_with_realm(realm()).await;
     app.add_friendship("alice", "bob", "ACCEPTED").await;
 
     let (status, body) = app.get("alice", "/api/v2/friendships/suggestions").await;
@@ -61,31 +109,47 @@ async fn test_suggestions_without_search_return_recent_non_friends_excluding_sel
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         body,
-        json!([{"id": "carol", "first_name": "Carol", "last_name": "Clark"}])
+        json!([
+            {"id": "carol", "first_name": "Carol", "last_name": "Clark"},
+            {"id": "parity-admin", "first_name": "Parity", "last_name": "parity-admin"},
+            {"id": "zoe", "first_name": "Zoe", "last_name": "Becker"},
+        ])
     );
 }
 
 #[tokio::test]
+async fn test_suggestions_without_search_are_limited_to_five_in_keycloak_order() {
+    let users = (0..8)
+        .map(|i| realm_user(&format!("u{i}"), "User", &format!("N{i}"), "u@example.org"))
+        .collect();
+    let app = app_with_realm(FakeKeycloak::new().with_realm_users(users)).await;
+
+    let (_, body) = app
+        .get("alice", "/api/v2/friendships/suggestions?limit=2")
+        .await;
+
+    assert_eq!(ids(&body), ["u0", "u1", "u2", "u3", "u4"]);
+}
+
+#[tokio::test]
 async fn test_suggestions_with_one_character_search_behave_like_no_search() {
-    let app = app_with_users().await;
+    let app = app_with_realm(realm()).await;
 
     let (_, body) = app
         .get("alice", "/api/v2/friendships/suggestions?search=%20b%20")
         .await;
 
-    assert_eq!(body.as_array().unwrap().len(), 2);
+    assert_eq!(ids(&body), ["bob", "carol", "parity-admin", "zoe"]);
 }
 
 #[tokio::test]
 async fn test_suggestions_search_matches_names_and_email_and_honours_limit() {
-    let app = app_with_users().await;
-    app.add_user("dave", "Dave", "Becker", "dave@example.com")
-        .await;
+    let app = app_with_realm(realm()).await;
 
     let (_, by_name) = app
         .get("alice", "/api/v2/friendships/suggestions?search=becker")
         .await;
-    assert_eq!(by_name.as_array().unwrap().len(), 2);
+    assert_eq!(ids(&by_name), ["bob", "zoe"]);
 
     let (_, limited) = app
         .get(
@@ -93,17 +157,17 @@ async fn test_suggestions_search_matches_names_and_email_and_honours_limit() {
             "/api/v2/friendships/suggestions?search=becker&limit=1",
         )
         .await;
-    assert_eq!(limited.as_array().unwrap().len(), 1);
+    assert_eq!(ids(&limited), ["bob"]);
 
     let (_, by_email) = app
         .get("alice", "/api/v2/friendships/suggestions?search=carol@")
         .await;
-    assert_eq!(by_email[0]["id"], json!("carol"));
+    assert_eq!(ids(&by_email), ["carol"]);
 }
 
 #[tokio::test]
 async fn test_suggestions_exclude_accepted_friends_but_not_pending_ones() {
-    let app = app_with_users().await;
+    let app = app_with_realm(realm()).await;
     app.add_friendship("alice", "bob", "ACCEPTED").await;
     app.add_friendship("alice", "carol", "PENDING").await;
 
@@ -111,8 +175,65 @@ async fn test_suggestions_exclude_accepted_friends_but_not_pending_ones() {
         .get("alice", "/api/v2/friendships/suggestions?search=example")
         .await;
 
-    assert_eq!(body.as_array().unwrap().len(), 1);
-    assert_eq!(body[0]["id"], json!("carol"));
+    assert_eq!(ids(&body), ["carol", "parity-admin", "zoe"]);
+}
+
+#[tokio::test]
+async fn test_suggestions_oversample_three_times_the_limit_without_refill() {
+    let app = app_with_realm(realm()).await;
+    // limit 1 loads 3 candidates (alice, bob, carol); alice and bob are removed, one remains
+    app.add_friendship("alice", "bob", "ACCEPTED").await;
+
+    let (_, body) = app
+        .get(
+            "alice",
+            "/api/v2/friendships/suggestions?search=example&limit=1",
+        )
+        .await;
+    assert_eq!(ids(&body), ["carol"]);
+
+    // with bob and carol friends, the 3 candidates leave nothing: no refill, like Java
+    app.add_friendship("alice", "carol", "ACCEPTED").await;
+    let (_, body) = app
+        .get(
+            "alice",
+            "/api/v2/friendships/suggestions?search=example&limit=1",
+        )
+        .await;
+    assert_eq!(body, json!([]));
+}
+
+#[tokio::test]
+async fn test_suggestions_cache_found_users_in_user_profiles() {
+    let app = app_with_realm(realm()).await;
+
+    app.get("alice", "/api/v2/friendships/suggestions?search=zoe")
+        .await;
+
+    let cached: (Option<String>, Option<String>, Option<String>) = sqlx::query_as(
+        "SELECT first_name, last_name, email FROM user_profiles WHERE oidc_id = 'zoe'",
+    )
+    .fetch_one(app.db.pool())
+    .await
+    .expect("the Keycloak-only user is cached");
+    assert_eq!(
+        cached,
+        (
+            Some("Zoe".into()),
+            Some("Becker".into()),
+            Some("zoe@example.org".into())
+        )
+    );
+}
+
+#[tokio::test]
+async fn test_suggestions_answer_500_when_keycloak_fails() {
+    let app = app_with_realm(realm().failing_with(KeycloakError::Failed("down".into()))).await;
+
+    let (status, body) = app.get("alice", "/api/v2/friendships/suggestions").await;
+
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(body["errorCode"], json!("INTERNAL_ERROR"));
 }
 
 // ===== POST /requests =====

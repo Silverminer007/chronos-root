@@ -1,5 +1,6 @@
 use sqlx::PgPool;
 
+use super::identity::UserIdentity;
 use super::models::{Settings, SettingsDto};
 use crate::security::PrincipalContext;
 
@@ -76,6 +77,11 @@ impl UserRepository {
 
     /// Java: `LocalDbIdentityAdapter#upsert` – the token claims are the source of the cached profile
     pub async fn upsert_profile(&self, principal: &PrincipalContext) -> Result<(), sqlx::Error> {
+        self.upsert_identity(&UserIdentity::from(principal)).await
+    }
+
+    /// Java: `LocalDbIdentityAdapter#upsert`
+    pub async fn upsert_identity(&self, identity: &UserIdentity) -> Result<(), sqlx::Error> {
         sqlx::query(
             "INSERT INTO user_profiles (oidc_id, first_name, last_name, email, profile_picture_url, updated_at) \
              VALUES ($1, $2, $3, $4, $5, NOW()) \
@@ -84,11 +90,11 @@ impl UserRepository {
              email = EXCLUDED.email, profile_picture_url = EXCLUDED.profile_picture_url, \
              updated_at = EXCLUDED.updated_at",
         )
-        .bind(principal.user_id())
-        .bind(&principal.first_name)
-        .bind(&principal.last_name)
-        .bind(&principal.email)
-        .bind(&principal.profile_picture_url)
+        .bind(&identity.oidc_id)
+        .bind(&identity.first_name)
+        .bind(&identity.last_name)
+        .bind(&identity.email)
+        .bind(&identity.profile_picture_url)
         .execute(&self.pool)
         .await?;
         Ok(())

@@ -774,6 +774,7 @@ fn keycloak_users() -> FakeKeycloak {
             last_name: Some("Uhl".into()),
             email: Some("ulla@example.com".into()),
             created_timestamp: Some(1_700_000_000_123),
+            ..Default::default()
         },
         KeycloakUser {
             id: Some("u2".into()),

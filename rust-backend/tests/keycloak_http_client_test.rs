@@ -77,7 +77,7 @@ async fn start_mock() -> (String, Shared) {
                     let mut q: Vec<_> = q.into_iter().collect();
                     q.sort();
                     record(&rec, &h, format!("GET users {q:?}"), None).await;
-                    Json(json!([{"id": "u1", "firstName": "Max", "lastName": "Muster", "email": "max@example.org", "createdTimestamp": 1700000000123i64}, {"id": "u2"}]))
+                    Json(json!([{"id": "u1", "firstName": "Max", "lastName": "Muster", "email": "max@example.org", "createdTimestamp": 1700000000123i64, "attributes": {"picture": ["https://pics.example/max.png"]}}, {"id": "u2"}]))
                 },
             ),
         )
@@ -255,4 +255,25 @@ async fn lists_and_counts_the_users_of_the_realm() {
     let calls = rec.lock().unwrap().admin_calls.clone();
     assert_eq!(calls[0].0, r#"GET users [("first", "40"), ("max", "20")]"#);
     assert_eq!(calls[1].0, "GET users count");
+}
+
+#[tokio::test]
+async fn searches_users_with_the_first_page_of_max_results() {
+    let (base, rec) = start_mock().await;
+    let client = client(&base);
+
+    let users = client.search_users("max mus", 15).await.unwrap();
+
+    assert_eq!(users.len(), 2);
+    assert_eq!(users[0].id.as_deref(), Some("u1"));
+    assert_eq!(
+        users[0].picture.as_deref(),
+        Some("https://pics.example/max.png")
+    );
+    assert_eq!(users[1].picture, None);
+    let calls = rec.lock().unwrap().admin_calls.clone();
+    assert_eq!(
+        calls[0].0,
+        r#"GET users [("first", "0"), ("max", "15"), ("search", "max mus")]"#
+    );
 }

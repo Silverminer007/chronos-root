@@ -62,12 +62,6 @@
       "reason": "Rust writes no system messages for RSVP/cancel (#159)"
     },
     {
-      "step": "friend suggestions",
-      "kind": "length_mismatch",
-      "path": "$",
-      "reason": "Rust returns no suggestions (#160)"
-    },
-    {
       "step": "admin change participation status",
       "kind": "status_mismatch",
       "path": "$",

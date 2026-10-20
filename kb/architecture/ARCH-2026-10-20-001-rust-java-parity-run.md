@@ -95,7 +95,7 @@ The first full run on `53b4016` (Java: intended routing, see below) had 81 steps
 | 3 | Rust | Error bodies `text/plain` (or empty) instead of the JSON `ErrorResponse`; missing appointment 404 instead of 403 | #157 (fixed on `main`, verified in run 7; its two allowlist entries are removed) |
 | 4 | Rust | Invited participant (PENDING) gets 403 on `GET /appointments/{id}`; a non-friend can be added as participant (Java 403); creator starts `APPROVED` (Java `PENDING`), so the creator's RSVP fails with 400 | #158 |
 | 5 | Rust | No system messages on RSVP/cancel; `DELETE` after `cancel` 404; group members are not turned into participants (admin change status 400); `POST /admin/appointments/message` 500 | #159 |
-| 6 | Rust | `GET /friendships/suggestions` always `[]` (Java returns known users) | #160 |
+| 6 | Rust | `GET /friendships/suggestions` always `[]` (Java returns known users) | #160 (fixed, ADR-2026-10-20-027; allowlist entry removed) |
 | 7 | Rust | `checks[].data` missing in readiness, trailing slash 404, unknown route has no body, malformed settings JSON 500 (Java 400), push subscribe error without body | #161 |
 | 8 | Java | The 8 participation routes of `AppointmentParticipationResource` answer 404 in the packaged app (no class-level `@Path` since #54) | #162 |
 | 9 | Java | 500 instead of 401/400/404 for: request without token, missing/invalid fields and enums, unknown admin user, wrong method, unlinking an unknown provider | #162 |
@@ -165,7 +165,6 @@ ALLOWED admin list appointments* $.data[[]].* missing_in_rust: Rust appointment 
 ALLOWED rsvp $ status_mismatch: Java creates the owner as PENDING, Rust as APPROVED (#158)
 ALLOWED list messages $ length_mismatch: Rust writes no system messages for RSVP/cancel (#159)
 ALLOWED list messages of missing appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)
-ALLOWED friend suggestions $ length_mismatch: Rust returns no suggestions (#160)
 ALLOWED admin change participation status $ status_mismatch: Rust does not turn group members into participants (#159)
 ALLOWED admin send message $ status_mismatch: Rust answers 500, Java 200 (#159)
 ALLOWED delete admin appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)

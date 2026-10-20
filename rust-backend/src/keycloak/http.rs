@@ -34,6 +34,7 @@ struct UserRepresentation {
     last_name: Option<String>,
     email: Option<String>,
     created_timestamp: Option<i64>,
+    attributes: Option<std::collections::HashMap<String, Vec<String>>>,
 }
 
 impl From<UserRepresentation> for KeycloakUser {
@@ -44,6 +45,10 @@ impl From<UserRepresentation> for KeycloakUser {
             last_name: rep.last_name,
             email: rep.email,
             created_timestamp: rep.created_timestamp,
+            picture: rep
+                .attributes
+                .and_then(|mut attributes| attributes.remove("picture"))
+                .and_then(|values| values.into_iter().next()),
         }
     }
 }
@@ -276,6 +281,21 @@ impl KeycloakAdmin for HttpKeycloakAdmin {
             .send_json(
                 self.request(Method::GET, self.users_url(&[])?)
                     .query(&[("first", first), ("max", max)]),
+            )
+            .await?;
+        Ok(reps.into_iter().map(Into::into).collect())
+    }
+
+    async fn search_users(
+        &self,
+        search: &str,
+        max: i64,
+    ) -> Result<Vec<KeycloakUser>, KeycloakError> {
+        let reps: Vec<UserRepresentation> = self
+            .send_json(
+                self.request(Method::GET, self.users_url(&[])?)
+                    .query(&[("search", search)])
+                    .query(&[("first", 0), ("max", max)]),
             )
             .await?;
         Ok(reps.into_iter().map(Into::into).collect())

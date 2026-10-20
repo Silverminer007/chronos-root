@@ -49,6 +49,8 @@ pub struct KeycloakUser {
     pub email: Option<String>,
     /// Creation time in epoch milliseconds (`createdTimestamp`)
     pub created_timestamp: Option<i64>,
+    /// First value of the `picture` attribute (Java: `rep.getAttributes().get("picture")`)
+    pub picture: Option<String>,
 }
 
 /// Partial update of a Keycloak user; `None` fields are left untouched (Java: `UserRepresentation`)
@@ -100,6 +102,13 @@ pub trait KeycloakAdmin: Send + Sync {
     async fn delete_user(&self, oidc_id: &str) -> Result<(), KeycloakError>;
     /// One page of the realm's users (`first` is the offset, `max` the page size)
     async fn list_users(&self, first: i64, max: i64) -> Result<Vec<KeycloakUser>, KeycloakError>;
+    /// Users matching `search` (Keycloak's own search, ordered by username), the first `max` of them.
+    /// Java: `users().search(query, 0, limit)`
+    async fn search_users(
+        &self,
+        search: &str,
+        max: i64,
+    ) -> Result<Vec<KeycloakUser>, KeycloakError>;
     /// Number of users in the realm
     async fn count_users(&self) -> Result<i64, KeycloakError>;
 }

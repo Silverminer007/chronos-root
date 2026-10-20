@@ -15,6 +15,7 @@ use crate::appointments::handlers::AppState;
 use crate::error::AppError;
 use crate::groups::models::{GroupDto, UserDto};
 use crate::groups::services::{FriendshipService, GroupService};
+use crate::keycloak::KeycloakAdmin;
 use crate::security::PrincipalContext;
 
 /// Suggestions returned when the search term is missing or too short
@@ -153,9 +154,16 @@ pub struct SuggestionsQuery {
     pub limit: Option<String>,
 }
 
+/// State of the suggestions route: the identity search is delegated to Keycloak (ADR-2026-10-20-027)
+#[derive(Clone)]
+pub struct SuggestionsState {
+    pub app: Arc<AppState>,
+    pub keycloak: Arc<dyn KeycloakAdmin>,
+}
+
 /// GET /api/v2/friendships/suggestions - Users that are not yet friends
 pub async fn friendship_suggestions(
-    State(state): State<Arc<AppState>>,
+    State(state): State<SuggestionsState>,
     principal: PrincipalContext,
     Query(query): Query<SuggestionsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -163,16 +171,17 @@ pub async fn friendship_suggestions(
         Some(raw) => parse_number(raw)?,
         None => DEFAULT_SUGGESTIONS_LIMIT,
     };
-    let service = friendship_service(&state);
+    let service = friendship_service(&state.app);
+    let keycloak = state.keycloak.as_ref();
     let suggestions = match query.search.as_deref().map(str::trim) {
         Some(search) if search.chars().count() >= MIN_SEARCH_LENGTH => {
             service
-                .find_non_friends(principal.user_id(), search, limit)
+                .find_non_friends(keycloak, principal.user_id(), search, limit)
                 .await?
         }
         _ => {
             service
-                .find_non_friends(principal.user_id(), "", RECENT_SUGGESTIONS_LIMIT)
+                .find_non_friends(keycloak, principal.user_id(), "", RECENT_SUGGESTIONS_LIMIT)
                 .await?
         }
     };

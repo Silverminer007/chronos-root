@@ -158,33 +158,6 @@ impl IdentityRepository {
         .await?;
         Ok(profile.map(UserIdentity::from))
     }
-
-    /// Users matching `query` (Keycloak semantics: every whitespace separated term must be contained,
-    /// case-insensitively, in the first name, last name or email), ordered by name
-    pub async fn search<'e>(
-        db: impl PgExecutor<'e>,
-        query: &str,
-        limit: i64,
-    ) -> Result<Vec<UserIdentity>, sqlx::Error> {
-        let terms: Vec<String> = query.split_whitespace().map(str::to_string).collect();
-        let profiles = sqlx::query_as::<_, UserProfile>(&format!(
-            "SELECT {PROFILE_COLUMNS} FROM user_profiles
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM unnest($1::text[]) AS term
-                 WHERE strpos(
-                     lower(concat_ws(E'\\x01', first_name, last_name, email)),
-                     lower(term)
-                 ) = 0
-             )
-             ORDER BY lower(coalesce(last_name, '')), lower(coalesce(first_name, '')), oidc_id
-             LIMIT $2"
-        ))
-        .bind(&terms)
-        .bind(limit)
-        .fetch_all(db)
-        .await?;
-        Ok(profiles.into_iter().map(UserIdentity::from).collect())
-    }
 }
 
 /// Upserts the principal's profile. A transient DB failure must not abort a valid request (as in Java).
