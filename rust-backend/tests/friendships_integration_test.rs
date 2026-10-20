@@ -216,10 +216,11 @@ async fn test_send_request_to_self_is_rejected() {
 }
 
 #[tokio::test]
-async fn test_send_request_to_unknown_user_is_not_found() {
+async fn test_send_request_to_unknown_user_is_accepted_like_java() {
+    // Java's existsById falls back to Keycloak, which never reports "not found".
     let app = app_with_users().await;
 
-    let (status, body) = app
+    let (status, _) = app
         .post(
             "alice",
             "/api/v2/friendships/requests?adresse_id=ghost",
@@ -227,11 +228,11 @@ async fn test_send_request_to_unknown_user_is_not_found() {
         )
         .await;
 
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(
-        body["message"],
-        json!("Kein Benutzer mit der ID ghost gefunden")
-    );
+    assert_eq!(status, StatusCode::CREATED);
+    let (_, outgoing) = app
+        .get("alice", "/api/v2/friendships/requests/outgoing")
+        .await;
+    assert_eq!(outgoing[0]["userId"], json!("ghost"));
 }
 
 #[tokio::test]

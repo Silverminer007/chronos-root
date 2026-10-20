@@ -284,12 +284,8 @@ impl FriendshipService {
                 "Du kannst dir nicht selbst eine Freundschaftsanfrage senden",
             ));
         }
-        if !IdentityRepository::exists(&self.pool, &addressee_id).await? {
-            return Err(AppError::not_found_message(format!(
-                "Kein Benutzer mit der ID {} gefunden",
-                addressee_id
-            )));
-        }
+        // Java's `existsById` falls back to Keycloak, which answers unknown ids with a
+        // "deleted" sentinel, so any id is accepted (ADR-017 section 4).
 
         let mut tx = self.pool.begin().await?;
         if let Some(existing) =

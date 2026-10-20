@@ -40,7 +40,7 @@ Java's exception mappers produce `{timestamp, status, error, errorCode, message,
 
 Java resolves names via `IdentityPort`: `user_profiles` first, Keycloak Admin API as fallback and for search. The Rust backend has no Keycloak admin client, so `users::identity` reads **only** `user_profiles`:
 
-- A user without a profile row behaves like a Keycloak-deleted user: name `Gelöschter Benutzer`, `null` names in `UserDto`, existence check fails (`404 Kein Benutzer mit der ID ... gefunden`).
+- A user without a profile row behaves like a Keycloak-deleted user: name `Gelöschter Benutzer`, `null` names in `UserDto`, the existence check of `POST /friendships/requests` is not performed: Java's `existsById` falls back to Keycloak, which answers unknown ids with the deleted sentinel (never `null`), so Java accepts any addressee id (`201`). Rust does the same instead of answering `404 Kein Benutzer mit der ID ... gefunden`; `IdentityRepository::exists` is therefore unused by this flow.
 - Suggestions and email lookup search `user_profiles` (first name, last name, email; every whitespace separated term must be contained, case-insensitive, like Keycloak's search), ordered by last name, first name, id. Keycloak orders by username, which the cache does not hold, so the order of "recent" suggestions can differ from Java.
 - Profiles are filled by the Java backend's per-request upsert today; the Rust auth middleware does not upsert JWT claims yet (out of scope for this ticket). A user who never authenticated against a backend that upserts is not findable.
 
