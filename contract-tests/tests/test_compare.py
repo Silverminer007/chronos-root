@@ -92,6 +92,20 @@ class CompareResponsesTest(unittest.TestCase):
         rust = resp(404, {"message": "x", "timestamp": "2026-02-02T00:00:00Z"})
         self.assertEqual(compare_responses(java, rust), [])
 
+    def test_message_body_without_timestamp_in_rust_reported(self):
+        diffs = compare_responses(
+            resp(200, {"text": "x", "timestamp": "2026-01-01T00:00:00Z"}), resp(200, {"text": "x"})
+        )
+        self.assertEqual([(d.path, d.kind) for d in diffs], [("$.timestamp", "missing_in_rust")])
+
+    def test_success_body_volatile_key_type_checked(self):
+        diffs = compare_responses(resp(200, {"timestamp": "t"}), resp(200, {"timestamp": None}))
+        self.assertEqual([(d.path, d.kind) for d in diffs], [("$.timestamp", "type_mismatch")])
+
+    def test_error_body_volatile_key_missing_reported(self):
+        diffs = compare_responses(resp(404, {"message": "x", "timestamp": "t"}), resp(404, {"message": "x"}))
+        self.assertEqual([d.kind for d in diffs], ["missing_in_rust"])
+
     def test_error_body_shape_still_checked(self):
         diffs = compare_responses(resp(400, {"message": "x", "code": 1}), resp(400, {"message": "x"}))
         self.assertEqual([d.kind for d in diffs], ["missing_in_rust"])

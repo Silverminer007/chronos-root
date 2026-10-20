@@ -116,10 +116,6 @@ def _media_type(content_type: str) -> str:
     return content_type.split(";")[0].strip().lower()
 
 
-def _strip_volatile(diffs: "list[Diff]") -> "list[Diff]":
-    return [d for d in diffs if d.path.rsplit(".", 1)[-1] not in VOLATILE_ERROR_KEYS]
-
-
 def compare_responses(java: Response, rust: Response) -> "list[Diff]":
     if java.status != rust.status:
         kind = MISSING_ROUTE if rust.status in ROUTE_MISSING_STATUSES else "status_mismatch"
@@ -141,7 +137,7 @@ def compare_responses(java: Response, rust: Response) -> "list[Diff]":
             return [Diff("$", "value_mismatch", f"java: {java.body!r}, rust: {rust.body!r}")]
         return []
 
-    diffs = _strip_volatile(shape_diffs(java.body, rust.body))
+    diffs = shape_diffs(java.body, rust.body)
     if is_error:
         diffs.extend(_value_diffs(java.body, rust.body))
     return diffs
