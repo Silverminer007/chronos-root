@@ -716,11 +716,7 @@ impl AppointmentService {
 
         // Mutate: add group to appointment
         self.repo
-            .add_group(appointment_id, group_id, role)
-            .await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-        self.repo
-            .add_group_members_as_participants(appointment_id, group_id, role)
+            .add_group_with_members(appointment_id, group_id, role)
             .await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 

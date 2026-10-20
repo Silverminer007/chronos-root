@@ -701,13 +701,18 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
-    /// Add a group to an appointment
-    pub async fn add_group(
+    /// Adds a group to an appointment and makes its members PENDING participants with the given
+    /// role, marked as coming in through the group (Java: `addGroupToAppointment`). Both writes run
+    /// in one transaction, so a failing member insert leaves no group link behind. Users that
+    /// already participate keep their row.
+    pub async fn add_group_with_members(
         &self,
         appointment_id: i64,
         group_id: i64,
         role: UserRole,
     ) -> Result<(), RepositoryError> {
+        let db_err = |e: sqlx::Error| RepositoryError::DatabaseError(e.to_string());
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query(
             "INSERT INTO appointment_group_participations (id, appointment_id, group_id, role)
              VALUES (nextval('appointment_group_participations_seq'), $1, $2, $3)",
@@ -715,22 +720,9 @@ impl AppointmentRepository {
         .bind(appointment_id)
         .bind(group_id)
         .bind(role)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
-
-        Ok(())
-    }
-
-    /// Makes the members of a group PENDING participants of the appointment with the given role,
-    /// marked as coming in through the group; users that already participate keep their row
-    /// (Java: the loop in `addGroupToAppointment`).
-    pub async fn add_group_members_as_participants(
-        &self,
-        appointment_id: i64,
-        group_id: i64,
-        role: UserRole,
-    ) -> Result<(), RepositoryError> {
+        .map_err(db_err)?;
         sqlx::query(
             "INSERT INTO appointment_participation
                  (id, appointment_id, user_oidcid, role, status, group_participation_id)
@@ -741,10 +733,10 @@ impl AppointmentRepository {
         .bind(appointment_id)
         .bind(group_id)
         .bind(role)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
-        .map(|_| ())
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
+        .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)
     }
 
     /// Delete the link between a group and an appointment; returns the number of deleted rows
