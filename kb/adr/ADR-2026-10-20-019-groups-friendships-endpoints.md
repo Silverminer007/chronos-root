@@ -3,7 +3,7 @@ title: ADR-2026-10-20-019: Groups and friendships endpoints (Java parity)
 date: 2026-10-20
 status: Accepted
 supercedes: (none)
-superceded_by: (none)
+superceded_by: ADR-2026-10-20-027 (partial: only §4 "suggestions search `user_profiles`")
 ---
 
 ## Context
