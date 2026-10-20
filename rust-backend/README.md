@@ -88,7 +88,14 @@ docker build -t chronos-rust-backend:latest .
 - `PUT /api/v2/appointments/:id/participation/:userId/role` - Change a participant's role. Requires a valid bearer token; the caller must be `RESPONSIBLE` for the appointment. `:userId` is the target's OIDC ID.
   - Request body: `{"role": "NONE" | "GUEST" | "ATTENDANT" | "HELPER" | "RESPONSIBLE"}`
   - Response: `200 OK` with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
-  - Errors: `400` for an unknown role, a target that is not a participant, or a role the target already has; `403` if the caller is not `RESPONSIBLE`; `404` for an unknown appointment (see [ADR-2026-10-20-019](../kb/adr/ADR-2026-10-20-019-change-participant-role.md)).
+  - Errors: `400` for an unknown role, a target that is not a participant, or a role the target already has; `403` if the caller is not `RESPONSIBLE`; `404` for an unknown appointment (see [ADR-2026-10-20-020](../kb/adr/ADR-2026-10-20-020-change-participant-role.md)).
+
+### Groups and friendships
+
+All routes require a valid bearer token and follow the Java contract (see [ADR-2026-10-20-019](../kb/adr/ADR-2026-10-20-019-groups-friendships-endpoints.md)). Names are resolved from `user_profiles`.
+
+- `GET|POST /api/v2/groups`, `DELETE|PATCH /api/v2/groups/:group`, `GET /api/v2/groups/:group/users`, `POST|DELETE /api/v2/groups/:groupId/user/:userId`
+- `GET /api/v2/friendships/suggestions`, `POST /api/v2/friendships/requests`, `POST /api/v2/friendships/requests/:requestId/accept|decline`, `DELETE /api/v2/friendships/requests/:requestId`, `GET /api/v2/friendships/requests/incoming|outgoing`, `GET /api/v2/friendships/friends`, `DELETE /api/v2/friendships/friends/:friendId`
 
 ## Authentication
 

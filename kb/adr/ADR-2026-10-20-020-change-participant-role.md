@@ -1,5 +1,5 @@
 ---
-title: ADR-2026-10-20-019: Change participant role endpoint
+title: ADR-2026-10-20-020: Change participant role endpoint
 date: 2026-10-20
 status: Accepted
 supercedes: (none)

@@ -267,7 +267,8 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-14-016: Participation status endpoint (Java parity)](adr/ADR-2026-10-14-016-participation-status-endpoint.md)
 - [ADR-2026-10-20-017: User and settings endpoints with Keycloak anti-corruption layer (Java parity)](adr/ADR-2026-10-20-017-user-settings-keycloak-acl.md)
 - [ADR-2026-10-20-018: Rust backend deploy dispatch is opt-in via repository variable](adr/ADR-2026-10-20-018-rust-deploy-opt-in.md)
-- [ADR-2026-10-20-019: Change participant role endpoint (Java parity)](adr/ADR-2026-10-20-019-change-participant-role.md)
+- [ADR-2026-10-20-019: Groups and friendships endpoints (Java parity)](adr/ADR-2026-10-20-019-groups-friendships-endpoints.md)
+- [ADR-2026-10-20-020: Change participant role endpoint (Java parity)](adr/ADR-2026-10-20-020-change-participant-role.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)
@@ -276,6 +277,8 @@ grep -r "relates_to.*backend" kb/constraints/
 - [C2025-09-28-004: Database migrations are forward-only](constraints/C2025-09-28-004-forward-migrations.md)
 - [C2025-09-28-005: No direct backend calls from frontend](constraints/C2025-09-28-005-no-direct-backend-calls.md)
 - [C2025-09-28-006: SSR disabled (SPA only)](constraints/C2025-09-28-006-spa-only.md)
+- [C2026-10-20-001: Local agent settings must not be tracked in git](constraints/C2026-10-20-001-no-local-agent-settings-in-git.md)
+- [C2026-10-20-002: LiteLLM key in git history is leaked and must be rotated](constraints/C2026-10-20-002-leaked-litellm-key-in-history.md)
 
 ### Architecture
 - [ARCH-2025-09-28-001: Frontend authentication flow](architecture/ARCH-2025-09-28-001-auth-flow.md)
