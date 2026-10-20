@@ -43,7 +43,12 @@ impl std::error::Error for KeycloakError {}
 /// The part of a Keycloak user representation the API needs
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct KeycloakUser {
+    pub id: Option<String>,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
     pub email: Option<String>,
+    /// Creation time in epoch milliseconds (`createdTimestamp`)
+    pub created_timestamp: Option<i64>,
 }
 
 /// Partial update of a Keycloak user; `None` fields are left untouched (Java: `UserRepresentation`)
@@ -91,8 +96,12 @@ pub trait KeycloakAdmin: Send + Sync {
         provider_id: &str,
     ) -> Result<(), KeycloakError>;
     async fn credentials(&self, oidc_id: &str) -> Result<Vec<Credential>, KeycloakError>;
-    /// Deletes the user in Keycloak. Not routed here: Java only exposes it on the admin endpoint (#101).
+    /// Deletes the user in Keycloak (admin endpoint `DELETE /api/v2/admin/users/{id}`)
     async fn delete_user(&self, oidc_id: &str) -> Result<(), KeycloakError>;
+    /// One page of the realm's users (`first` is the offset, `max` the page size)
+    async fn list_users(&self, first: i64, max: i64) -> Result<Vec<KeycloakUser>, KeycloakError>;
+    /// Number of users in the realm
+    async fn count_users(&self) -> Result<i64, KeycloakError>;
 }
 
 /// Connection settings of the confidential client (same variable names as the Helm chart)

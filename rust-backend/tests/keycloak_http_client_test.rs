@@ -71,6 +71,24 @@ async fn start_mock() -> (String, Shared) {
             ),
         )
         .route(
+            "/admin/realms/chronos/users",
+            get(
+                |State(rec): State<Shared>, Query(q): Query<HashMap<String, String>>, h: HeaderMap| async move {
+                    let mut q: Vec<_> = q.into_iter().collect();
+                    q.sort();
+                    record(&rec, &h, format!("GET users {q:?}"), None).await;
+                    Json(json!([{"id": "u1", "firstName": "Max", "lastName": "Muster", "email": "max@example.org", "createdTimestamp": 1700000000123i64}, {"id": "u2"}]))
+                },
+            ),
+        )
+        .route(
+            "/admin/realms/chronos/users/count",
+            get(|State(rec): State<Shared>, h: HeaderMap| async move {
+                record(&rec, &h, "GET users count".to_string(), None).await;
+                Json(json!(42))
+            }),
+        )
+        .route(
             "/admin/realms/chronos/users/:id/send-verify-email",
             put(
                 |State(rec): State<Shared>, Path(id): Path<String>, Query(q): Query<HashMap<String, String>>, h: HeaderMap| async move {
@@ -217,4 +235,24 @@ async fn maps_404_to_not_found_and_everything_else_to_failed() {
         unreachable.get_user("u1").await.unwrap_err(),
         KeycloakError::Failed(_)
     ));
+}
+
+#[tokio::test]
+async fn lists_and_counts_the_users_of_the_realm() {
+    let (base, rec) = start_mock().await;
+    let client = client(&base);
+
+    let users = client.list_users(40, 20).await.unwrap();
+    assert_eq!(client.count_users().await.unwrap(), 42);
+
+    assert_eq!(users.len(), 2);
+    assert_eq!(users[0].id.as_deref(), Some("u1"));
+    assert_eq!(users[0].first_name.as_deref(), Some("Max"));
+    assert_eq!(users[0].last_name.as_deref(), Some("Muster"));
+    assert_eq!(users[0].email.as_deref(), Some("max@example.org"));
+    assert_eq!(users[0].created_timestamp, Some(1_700_000_000_123));
+    assert_eq!(users[1].first_name, None);
+    let calls = rec.lock().unwrap().admin_calls.clone();
+    assert_eq!(calls[0].0, r#"GET users [("first", "40"), ("max", "20")]"#);
+    assert_eq!(calls[1].0, "GET users count");
 }

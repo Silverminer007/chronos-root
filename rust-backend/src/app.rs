@@ -6,6 +6,7 @@ use axum::{
 };
 use std::sync::Arc;
 
+use crate::admin::{admin_routes, AdminState};
 use crate::appointments::handlers::{
     add_group_to_appointment, add_participant, cancel_appointment, change_participant_role,
     create_appointment, delete_appointment, get_appointment, get_participation_status,
@@ -135,7 +136,12 @@ pub fn build_router(
             "/api/v2/friendships/friends/:friend_id",
             delete(remove_friend),
         )
-        .with_state(app_state)
+        .with_state(app_state.clone())
+        .merge(admin_routes(Arc::new(AdminState::new(
+            &app_state,
+            &user_state,
+            &push_state,
+        ))))
         .merge(user_routes(user_state.clone()))
         .merge(push_routes(push_state))
         // Inner layer: runs after authentication, so the principal is available

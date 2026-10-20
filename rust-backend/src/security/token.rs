@@ -22,6 +22,16 @@ pub struct TokenClaims {
     pub email: Option<String>,
     #[serde(default)]
     pub picture: Option<String>,
+    /// Keycloak realm roles (`realm_access/roles`, Java: `quarkus.oidc.roles.role-claim-path`)
+    #[serde(default)]
+    pub realm_access: Option<RealmAccess>,
+}
+
+/// The `realm_access` claim of a Keycloak access token
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RealmAccess {
+    #[serde(default)]
+    pub roles: Vec<String>,
 }
 
 /// Keycloak public key information

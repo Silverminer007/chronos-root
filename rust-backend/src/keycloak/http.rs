@@ -27,8 +27,25 @@ struct TokenResponse {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct UserRepresentation {
+    id: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
     email: Option<String>,
+    created_timestamp: Option<i64>,
+}
+
+impl From<UserRepresentation> for KeycloakUser {
+    fn from(rep: UserRepresentation) -> Self {
+        Self {
+            id: rep.id,
+            first_name: rep.first_name,
+            last_name: rep.last_name,
+            email: rep.email,
+            created_timestamp: rep.created_timestamp,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -70,22 +87,23 @@ impl HttpKeycloakAdmin {
         )
     }
 
-    /// `{base}/admin/realms/{realm}/users/{id}/{segments...}` with every segment percent-encoded
-    fn user_url(&self, oidc_id: &str, segments: &[&str]) -> Result<url::Url, KeycloakError> {
+    /// `{base}/admin/realms/{realm}/users/{segments...}` with every segment percent-encoded
+    fn users_url(&self, segments: &[&str]) -> Result<url::Url, KeycloakError> {
         let mut url = url::Url::parse(&self.config.base_url)
             .map_err(|e| KeycloakError::Failed(format!("invalid AUTH_SERVER_BASE_URL: {}", e)))?;
         url.path_segments_mut()
             .map_err(|_| KeycloakError::Failed("AUTH_SERVER_BASE_URL cannot be a base".into()))?
             .pop_if_empty()
-            .extend([
-                "admin",
-                "realms",
-                self.config.realm.as_str(),
-                "users",
-                oidc_id,
-            ])
+            .extend(["admin", "realms", self.config.realm.as_str(), "users"])
             .extend(segments);
         Ok(url)
+    }
+
+    /// `{base}/admin/realms/{realm}/users/{id}/{segments...}`
+    fn user_url(&self, oidc_id: &str, segments: &[&str]) -> Result<url::Url, KeycloakError> {
+        let mut all = vec![oidc_id];
+        all.extend_from_slice(segments);
+        self.users_url(&all)
     }
 
     async fn access_token(&self) -> Result<String, KeycloakError> {
@@ -158,7 +176,7 @@ impl KeycloakAdmin for HttpKeycloakAdmin {
         let rep: UserRepresentation = self
             .send_json(self.request(Method::GET, self.user_url(oidc_id, &[])?))
             .await?;
-        Ok(KeycloakUser { email: rep.email })
+        Ok(rep.into())
     }
 
     async fn update_user(&self, oidc_id: &str, update: &UserUpdate) -> Result<(), KeycloakError> {
@@ -251,5 +269,20 @@ impl KeycloakAdmin for HttpKeycloakAdmin {
         self.send(self.request(Method::DELETE, self.user_url(oidc_id, &[])?))
             .await?;
         Ok(())
+    }
+
+    async fn list_users(&self, first: i64, max: i64) -> Result<Vec<KeycloakUser>, KeycloakError> {
+        let reps: Vec<UserRepresentation> = self
+            .send_json(
+                self.request(Method::GET, self.users_url(&[])?)
+                    .query(&[("first", first), ("max", max)]),
+            )
+            .await?;
+        Ok(reps.into_iter().map(Into::into).collect())
+    }
+
+    async fn count_users(&self) -> Result<i64, KeycloakError> {
+        self.send_json(self.request(Method::GET, self.users_url(&["count"])?))
+            .await
     }
 }
