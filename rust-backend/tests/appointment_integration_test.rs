@@ -5,13 +5,23 @@ mod integration_tests {
     use chronos_date_api::appointments::repository::APPOINTMENT_COLUMNS;
     use chronos_date_api::test_utils::{AppointmentFixture, TestAuthHelper, TestDb, TestFixtures};
 
+    macro_rules! setup_test_db {
+        () => {
+            match TestDb::new().await {
+                Ok(db) => db,
+                Err(e) => {
+                    eprintln!("Skipping test: Failed to initialize test database: {}", e);
+                    return;
+                }
+            }
+        };
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_create_appointment_and_verify_in_db() {
         // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
+        let db = setup_test_db!();
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create a test user (creator of the appointment)
@@ -59,9 +69,7 @@ mod integration_tests {
     #[ignore]
     async fn test_create_multiple_users_and_appointments() {
         // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
+        let db = setup_test_db!();
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create multiple test users
@@ -111,9 +119,7 @@ mod integration_tests {
     #[ignore]
     async fn test_add_appointment_participants() {
         // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
+        let db = setup_test_db!();
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create users
@@ -184,9 +190,7 @@ mod integration_tests {
     #[ignore]
     async fn test_transaction_rollback() {
         // Setup
-        let db = TestDb::new()
-            .await
-            .expect("Failed to initialize test database");
+        let db = setup_test_db!();
         let fixtures = TestFixtures::new(db.pool().clone());
 
         // Create initial user

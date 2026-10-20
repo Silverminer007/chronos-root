@@ -288,6 +288,29 @@ async fn ensure_creator(
     }
 }
 
+/// DELETE /api/v2/appointments/:id/participants/:userId - Remove a participant (hard delete)
+///
+/// Only a RESPONSIBLE participant may remove participants. Fires an
+/// `AppointmentParticipationRemovedEvent`. Returns 404 if the appointment or participant is
+/// unknown and 403 if the caller is not RESPONSIBLE.
+pub async fn remove_participant(
+    State(state): State<Arc<AppState>>,
+    Path((appointment_id, target_user_id)): Path<(i64, String)>,
+    principal: PrincipalContext,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let acting_user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .remove_participant(appointment_id, &target_user_id, acting_user_id)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
+}
+
 /// Errors that can occur in appointment handlers
 #[derive(Debug)]
 pub enum AppointmentError {
