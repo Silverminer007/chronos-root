@@ -336,6 +336,31 @@ impl AppointmentRepository {
         .map_err(|e| RepositoryError::DatabaseError(e.to_string()))
     }
 
+    /// Update a user's participation status; NotFound if the user has no participation row
+    pub async fn update_participation_status(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+        new_status: ParticipationStatus,
+    ) -> Result<(), RepositoryError> {
+        let result = sqlx::query(
+            "UPDATE appointment_participation SET status = $1
+             WHERE appointment_id = $2 AND user_oidcid = $3",
+        )
+        .bind(new_status.to_string())
+        .bind(appointment_id)
+        .bind(user_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(RepositoryError::NotFound);
+        }
+
+        Ok(())
+    }
+
     /// Add a participant to an appointment (no-op if the user already participates)
     pub async fn add_participant(
         &self,

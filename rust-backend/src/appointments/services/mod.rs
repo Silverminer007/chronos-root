@@ -1,6 +1,6 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
-    AppointmentEditedEvent, AppointmentMovedEvent,
+    AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
@@ -502,6 +502,71 @@ impl AppointmentService {
                 crate::event_bus::Event::new("AppointmentCancelledEvent", event_json);
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!("Failed to fire AppointmentCancelledEvent: {:?}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Change a user's participation status in an appointment
+    pub async fn change_participation_status(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+        new_status: ParticipationStatus,
+    ) -> Result<(), ServiceError> {
+        if new_status == ParticipationStatus::Pending {
+            return Err(ServiceError::ValidationError(
+                "you cannot set your participation status back to pending".to_string(),
+            ));
+        }
+
+        let current_status = self
+            .repo
+            .find_participation_status(appointment_id, user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or_else(|| {
+                ServiceError::ValidationError(
+                    "This user is not a participant of this event".to_string(),
+                )
+            })?;
+
+        if current_status == new_status {
+            return Err(ServiceError::ValidationError(
+                "this is already your participation status".to_string(),
+            ));
+        }
+
+        self.repo
+            .update_participation_status(appointment_id, user_id, new_status)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        // Fire event after successful database commit
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationStatusChangedEvent::new(
+                appointment_id,
+                user_id.to_string(),
+                new_status,
+                current_status,
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id,
+                "user_id": event.user_id,
+                "new_status": event.new_status,
+                "old_status": event.old_status,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new(
+                "AppointmentParticipationStatusChangedEvent",
+                event_json,
+            );
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!(
+                    "Failed to fire AppointmentParticipationStatusChangedEvent: {:?}",
+                    e
+                );
             }
         }
 

@@ -15,6 +15,16 @@ pub enum ParticipationStatus {
     Rejected,
 }
 
+impl std::fmt::Display for ParticipationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParticipationStatus::Pending => write!(f, "PENDING"),
+            ParticipationStatus::Approved => write!(f, "APPROVED"),
+            ParticipationStatus::Rejected => write!(f, "REJECTED"),
+        }
+    }
+}
+
 /// Status of an appointment
 ///
 /// Stored as `SMALLINT` holding the ordinal of the Java enum (`appointment.status`, ADR-2026-10-12-014),

@@ -10,7 +10,8 @@ use std::sync::Arc;
 use crate::appointments::{
     models::{
         AddParticipantRequest, AppointmentResponse, CreateAppointmentRequest,
-        ParticipationStatusResponse, UpdateAppointmentRequest, UserRole,
+        ParticipationStatusResponse, UpdateAppointmentRequest, UpdateParticipationStatusRequest,
+        UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
@@ -79,6 +80,37 @@ pub async fn get_participation_status(
         .map_err(AppointmentError::from)?;
 
     Ok(Json(ParticipationStatusResponse { status }))
+}
+
+/// POST /api/v2/appointments/:id/participation - RSVP to an appointment
+pub async fn rsvp_to_appointment(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+    Json(request): Json<UpdateParticipationStatusRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let user_id = principal.user_id();
+
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    // Authorization check - user must be a participant in the appointment
+    let participant_role = repo
+        .get_participant_role(id, user_id)
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    if participant_role == Some(UserRole::None) || participant_role.is_none() {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let service = AppointmentService::with_events(repo, state.event_publisher.clone());
+
+    service
+        .change_participation_status(id, user_id, request.status)
+        .await
+        .map_err(AppointmentError::from)?;
+
+    Ok(StatusCode::OK)
 }
 
 /// GET /api/v2/appointments - List appointments with pagination
