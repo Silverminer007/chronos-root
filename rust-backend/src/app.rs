@@ -18,6 +18,7 @@ use crate::groups::handlers::{
     list_friends, list_group_users, list_groups, outgoing_friendship_requests, remove_friend,
     remove_group_member, send_friendship_request, update_group,
 };
+use crate::metrics::{metrics_handler, track_requests, Metrics};
 use crate::security::TokenValidator;
 use crate::users::{
     handlers::{
@@ -30,18 +31,26 @@ use crate::users::{
     UserState,
 };
 
+/// Name of the readiness check, as Quarkus' Agroal health check reports it.
+const DB_CHECK_NAME: &str = "Database connections health check";
+
 pub fn build_router(
     app_state: Arc<AppState>,
     user_state: Arc<UserState>,
     validator: Arc<TokenValidator>,
 ) -> Router {
+    let metrics = Arc::new(Metrics::default());
     let public_routes = Router::new()
+        .route(
+            "/metrics",
+            get(metrics_handler).with_state((metrics.clone(), app_state.db_pool.clone())),
+        )
         .route("/q/health/live", get(health_live))
         .route(
             "/q/health/ready",
             get(health_ready).with_state(app_state.db_pool.clone()),
         )
-        .route("/health", get(health_live));
+        .route("/health", get(health_plain));
 
     let protected_routes = Router::new()
         .route("/api/v2/me", get(get_user_info))
@@ -131,6 +140,7 @@ pub fn build_router(
         .merge(public_routes)
         .merge(protected_routes)
         .layer(middleware::from_fn(fill_error_path))
+        .layer(middleware::from_fn_with_state(metrics, track_requests))
 }
 
 /// `/api/v2/user*` and `/api/v2/settings` (Java: `UserResource`, `SettingsResource`)
@@ -157,23 +167,34 @@ pub fn user_routes(user_state: Arc<UserState>) -> Router {
         .with_state(user_state)
 }
 
-async fn health_live() -> &'static str {
+/// Quarkus (SmallRye Health) body of a health group.
+fn health_body(up: bool, checks: Vec<serde_json::Value>) -> serde_json::Value {
+    serde_json::json!({ "status": if up { "UP" } else { "DOWN" }, "checks": checks })
+}
+
+async fn health_live() -> impl IntoResponse {
+    Json(health_body(true, vec![]))
+}
+
+async fn health_plain() -> &'static str {
     "OK"
 }
 
 async fn health_ready(
     axum::extract::State(pool): axum::extract::State<sqlx::PgPool>,
 ) -> impl IntoResponse {
-    match sqlx::query_scalar::<_, i32>("SELECT 1")
+    let up = sqlx::query_scalar::<_, i32>("SELECT 1")
         .fetch_one(&pool)
         .await
-    {
-        Ok(_) => (axum::http::StatusCode::OK, "OK"),
-        Err(_) => (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            "Database unavailable",
-        ),
-    }
+        .is_ok();
+    let check =
+        serde_json::json!({ "name": DB_CHECK_NAME, "status": if up { "UP" } else { "DOWN" } });
+    let status = if up {
+        axum::http::StatusCode::OK
+    } else {
+        axum::http::StatusCode::SERVICE_UNAVAILABLE
+    };
+    (status, Json(health_body(up, vec![check])))
 }
 
 async fn get_user_info(principal: crate::security::PrincipalContext) -> impl IntoResponse {
