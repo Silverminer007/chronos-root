@@ -65,8 +65,12 @@ class AllowlistTest(unittest.TestCase):
             p.write_text(json.dumps({"rust_only": [{"route": "GET /x", "reason": "probe"}]}))
             self.assertEqual(Allowlist.load(p).rust_only, {"GET /x": "probe"})
 
-    def test_load_missing_file_is_empty(self):
-        self.assertEqual(Allowlist.load(Path("/nonexistent/x.json")).entries, [])
+    def test_load_missing_file_is_an_error(self):
+        with self.assertRaises(AllowlistError):
+            Allowlist.load(Path("/nonexistent/x.json"))
+
+    def test_load_without_path_is_empty(self):
+        self.assertEqual(Allowlist.load(None).entries, [])
 
 
 if __name__ == "__main__":

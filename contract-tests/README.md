@@ -45,7 +45,7 @@ Both backends must be configured for this one realm, so the same token is the sa
 Instead of tokens, set `CONTRACT_TOKEN_URL`, `CONTRACT_CLIENT_ID`, optionally `CONTRACT_CLIENT_SECRET`
 and `CONTRACT_USER`/`CONTRACT_PASSWORD` (and `CONTRACT_ADMIN_USER`/`CONTRACT_ADMIN_PASSWORD`) to fetch them.
 
-Exit code 0: no mismatch. 1: mismatch. 2: harness error (backend unreachable, invalid allowlist, no token).
+Exit code 0: no mismatch. 1: mismatch. 2: harness error (backend unreachable, invalid or missing allowlist file, no token).
 A route that Rust does not serve yet shows up as `missing_route` (Rust 404/405 where Java answers, with an empty body or one without the application's error fields
 `errorCode`/`message`/`fieldErrors`) and cannot be allowlisted. A 404 carrying the application's error body
 (route exists, resource missing) is a normal `status_mismatch` and can be allowlisted.

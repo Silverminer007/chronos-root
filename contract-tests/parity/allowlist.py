@@ -58,8 +58,10 @@ class Allowlist:
 
     @classmethod
     def load(cls, path: Optional[Path]) -> "Allowlist":
-        if path is None or not Path(path).exists():
+        if path is None:
             return cls([])
+        if not Path(path).is_file():
+            raise AllowlistError(f"allowlist file not found: {path}")
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         allowlist = cls.from_entries(data.get("entries", []))
         allowlist.rust_only = cls._rust_only(data.get("rust_only", []))
