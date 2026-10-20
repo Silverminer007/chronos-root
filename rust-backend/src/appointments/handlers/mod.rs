@@ -392,17 +392,40 @@ pub async fn update_appointment(
 
     let service = AppointmentService::with_events(repo, state.event_publisher.clone());
 
+    // Java reads the appointment (and with it the messages) before the update; the system message
+    // of a move is written afterwards in its own transaction and is not part of the response
+    let messages_before = service
+        .with_details(
+            vec![service.get_appointment(id).await?.into()],
+            Embed {
+                participants: false,
+                group_participants: false,
+                ..Embed::UNNAMED
+            },
+        )
+        .await?
+        .remove(0)
+        .messages;
+
     // Validate and update appointment
     let response = service
         .update_appointment(id, request, user_id)
         .await
         .map_err(AppointmentError::from)?;
     let mut detailed = service
-        .with_details(vec![response], Embed::UNNAMED)
+        .with_details(
+            vec![response],
+            Embed {
+                messages: false,
+                ..Embed::UNNAMED
+            },
+        )
         .await
         .map_err(AppointmentError::from)?;
+    let mut detailed = detailed.remove(0);
+    detailed.messages = messages_before;
 
-    Ok(Json(detailed.remove(0)))
+    Ok(Json(detailed))
 }
 
 /// DELETE /api/v2/appointments/:id - Delete an appointment (soft delete)

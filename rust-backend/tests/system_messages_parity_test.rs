@@ -222,3 +222,23 @@ async fn test_moving_an_appointment_writes_a_system_message_with_the_hours() {
         ]
     );
 }
+
+/// Java loads the appointment before it fires the move event (the message is written in its own
+/// transaction), so the PATCH response does not contain the message of this very request.
+#[tokio::test]
+async fn test_patch_response_embeds_the_messages_from_before_the_move() {
+    let app = app().await;
+    let id = appointment(&app).await;
+
+    let (status, body) = app
+        .patch(
+            OWNER,
+            &format!("/api/v2/appointments/{id}"),
+            Some(json!({"start": "2030-01-01T11:00:00Z", "end": "2030-01-01T12:00:00Z"})),
+        )
+        .await;
+
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["messages"], json!([]));
+    assert_eq!(bodies(&app, id).await.len(), 1);
+}
