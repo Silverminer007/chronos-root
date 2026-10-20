@@ -18,11 +18,11 @@ use crate::groups::handlers::{
     list_friends, list_group_users, list_groups, outgoing_friendship_requests, remove_friend,
     remove_group_member, send_friendship_request, update_group,
 };
+use crate::metrics::{metrics_handler, track_requests, Metrics};
 use crate::push_notifications::handlers::endpoints::{
     get_public_key, status as push_status, subscribe, unsubscribe,
 };
 use crate::push_notifications::PushState;
-use crate::metrics::{metrics_handler, track_requests, Metrics};
 use crate::security::TokenValidator;
 use crate::users::{
     handlers::{
