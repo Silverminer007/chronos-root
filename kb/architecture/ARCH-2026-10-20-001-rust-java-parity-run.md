@@ -16,7 +16,7 @@ Ticket #137. The Rust backend (`rust-backend/`) was deployed next to the Java ba
 
 | Item | Value |
 |---|---|
-| Date | 2026-10-20, 11:30-15:00 UTC |
+| Date | 2026-10-20, 11:30-15:45 UTC |
 | Commit under test | `main` at `53b4016` (all endpoint tickets #96-#102 and #116-#125 merged); #153 was fixed on `main` (`5b6dd8f`) during the run |
 | Cluster | k3s v1.36.5+k3s1, single node, containerd 2.3.4 |
 | Helm | 3.16.4 (installed to `~/.local/bin`, was not present) |
@@ -75,11 +75,11 @@ Unit tests for all of them are in `contract-tests/tests`.
 
 ### Rust pod not Ready (#153, fixed on main)
 
-At `53b4016` `/q/health/ready` answered 503 `Database connections health check: DOWN` forever: `PostgresEventBus::subscribe` opened one `PgListener::connect_with(&pool)` per event type (16) and each held a pool connection, the default pool is 16. `DATABASE_MAX_CONNECTIONS=40` showed the cause (17 connections). #153 was fixed on `main` (`5b6dd8f`) during the run; the Rust image must be rebuilt from a commit at or after it and `DATABASE_MAX_CONNECTIONS` removed from `values-parity.yaml` (see "Open at the end of this entry").
+At `53b4016` `/q/health/ready` answered 503 `Database connections health check: DOWN` forever: `PostgresEventBus::subscribe` opened one `PgListener::connect_with(&pool)` per event type (16) and each held a pool connection, the default pool is 16. `DATABASE_MAX_CONNECTIONS=40` showed the cause (17 connections). #153 was fixed on `main` (`5b6dd8f`) during the run; the Rust image must be rebuilt from a commit at or after it and `DATABASE_MAX_CONNECTIONS` removed from `values-parity.yaml` (done, see "Final harness run").
 
 ### Contract harness
 
-The run on `53b4016` (Java: intended routing, see below) had 81 steps, 16 mismatches. Every mismatch is either in `contract-tests/allowlist.json` with its ticket in the reason, or is of kind `missing_route`, which the allowlist refuses by design (ADR-2026-10-20-021) and which therefore keeps the run red until fixed:
+The first full run on `53b4016` (Java: intended routing, see below) had 81 steps, 16 mismatches; the final run on `5b6dd8f` ("Final harness run" below) has 2. Every mismatch is either in `contract-tests/allowlist.json` with its ticket in the reason, or is of kind `missing_route`, which the allowlist refuses by design (ADR-2026-10-20-021) and which therefore keeps the run red until fixed:
 
 | Step | Mismatch | Ticket |
 |---|---|---|
@@ -127,17 +127,29 @@ Identical on both sides (checked): duplicate friendship request 400, request to 
 
 ## Open at the end of this entry
 
-- Re-run on a Rust image built after #153 without `DATABASE_MAX_CONNECTIONS` (the run above used the workaround at `53b4016`).
-- The mismatches #156-#162 are open; the allowlist entries are removed with their tickets, the two `missing_route` steps turn green with #157 and #159.
+- **Acceptance criterion 2 ("only allowlist entries") is not met**: the final run still exits 1 with 2 mismatches, both `missing_route`, which the allowlist refuses by design (ADR-2026-10-20-021). They block the run until their tickets are fixed:
+  - `get missing appointment` (Java 403, Rust 404): #157. #157 was merged to `main` as `5960878` (PR #165) *after* the Rust image of the final run (built from `5b6dd8f`), so the run does not contain it. The next run on an image from `5960878` or later should clear this step.
+  - `delete appointment` after `cancel` (Java 200, Rust 404): #159, open.
+- The re-run on a Rust image built after #153 without `DATABASE_MAX_CONNECTIONS` is done (below); the workaround was removed from `values-parity.yaml`. `patch user` is gone from the mismatches (Keycloak reset, realm user with the target e-mail).
+- The mismatches #156-#162 are open; the allowlist entries are removed with their tickets. When #159 (and #157 on the image) are in, rebuild the Rust image (`docker build`, import, pin, `rollout restart`), reset (`reset-databases.sh`) and run `run-contract.sh` again; the expected result is the output below without the two `MISMATCH` blocks.
 
-## Last complete harness output
+## Final harness run (run 6)
 
-Run 5, `main` at `53b4016`, Java with the local routing change, Rust built from `53b4016` with `DATABASE_MAX_CONNECTIONS=40`, fresh databases, Keycloak **not** reset (so `parity-user-1` still had the e-mail from the previous run; the first line `patch user` is the SMTP effect of environment finding 4 and is fixed by the realm change made afterwards, it is not a parity finding). `UNCHECKED` lines are listed after the output.
+2026-10-20, 15:10-15:45 UTC, after the node had recovered from DiskPressure. Rust image built from this checkout (base `main` `5b6dd8f`, contains #153; `DATABASE_MAX_CONNECTIONS` removed, the pod env has no such variable), Java image `chronos-backend:parity-patched` (see "The Java participation routes"), `reset-databases.sh` before the run (fresh databases, Keycloak re-imported). Commands:
+
+```bash
+docker build -t chronos-rust-backend:parity rust-backend && docker save chronos-rust-backend:parity | sudo k3s ctr -n k8s.io images import -
+sudo k3s ctr -n k8s.io images label docker.io/library/chronos-rust-backend:parity io.cri-containerd.pinned=pinned
+helm upgrade --install chronos deployment -n chronos-parity -f deployment/values-local.yaml -f deployment/values-parity.yaml \
+  --set backend.image.tag=parity-patched --set-file secrets.values.vapid_public_key=... --set-file secrets.values.vapid_private_key=...
+deployment/parity/reset-databases.sh
+kubectl -n chronos-parity port-forward svc/chronos-rust-backend 18081:80 &  curl localhost:18081/q/health/ready
+deployment/parity/run-contract.sh        # exit 1
+```
+
+All four pods Ready (`chronos-backend`, `chronos-rust-backend`, `keycloak`, `postgres`); `GET /q/health/ready` on the Rust service answered `200 {"checks":[{"name":"Database connections health check","status":"UP"}],"status":"UP"}` (acceptance criterion 1). Output, `exit 1`:
 
 ```
-MISMATCH patch user (PATCH /api/v2/user?redirectUri={redirect})
-  status: java 500, rust 200
-  $  status_mismatch  java: 500, rust: 200
 MISMATCH get missing appointment (GET /api/v2/appointments/{missing_id})
   status: java 403, rust 404
   $  missing_route  java: 403, rust: 404
@@ -149,8 +161,8 @@ ALLOWED unauthenticated request $ status_mismatch: Java answers 500 for a reques
 ALLOWED create appointment without body fields $ status_mismatch: Java answers 500 (NPE) for missing fields, Rust 422 (#162; Java defect)
 ALLOWED rsvp with invalid status $ status_mismatch: Java answers 500 for an unknown enum value, Rust 422 (#162; Java defect)
 ALLOWED list appointments $ type_mismatch: Java returns {data, meta}, Rust a bare array (#156)
-ALLOWED patch appointment $.*participants missing_in_rust: Rust response lacks participants/group_participants/messages (#156)
-ALLOWED patch appointment $.messages missing_in_rust: Rust response lacks participants/group_participants/messages (#156)
+ALLOWED patch appointment $.*participants missing_in_rust: Rust response lacks participants/group_participants (#156)
+ALLOWED patch appointment $.messages missing_in_rust: Rust response lacks messages (#156)
 ALLOWED admin list appointments* $.data[[]].* missing_in_rust: Rust appointment objects lack participants/group_participants/messages (#156)
 ALLOWED rsvp $ status_mismatch: Java creates the owner as PENDING, Rust as APPROVED (#158)
 ALLOWED list messages $ length_mismatch: Rust writes no system messages for RSVP/cancel (#159)
@@ -159,8 +171,7 @@ ALLOWED friend suggestions $ length_mismatch: Rust returns no suggestions (#160)
 ALLOWED admin change participation status $ status_mismatch: Rust does not turn group members into participants (#159)
 ALLOWED admin send message $ status_mismatch: Rust answers 500, Java 200 (#159)
 ALLOWED delete admin appointment $ content_type_mismatch: Rust answers text/plain instead of the JSON error body (#157)
-81 steps, 3 mismatches, 18 allowed differences, 6 arrays with unchecked element shape
-exit 1
+81 steps, 2 mismatches, 18 allowed differences, 6 arrays with unchecked element shape
 ```
 
 UNCHECKED lines:
@@ -174,4 +185,6 @@ UNCHECKED incoming requests (GET /api/v2/friendships/requests/incoming) $  beide
 UNCHECKED admin push log (GET /api/v2/admin/push/log) $  beide leer, Form ungeprüft
 ```
 
-A run after the realm change (Keycloak reset between runs) and on a Rust image built at or after `5b6dd8f` could not be completed: during the run the k3s node went into DiskPressure (/ at 92 %, mostly the host PostgreSQL with thousands of `test_db_*` databases and other agents' cargo `target/` directories), which evicted the Keycloak and PostgreSQL pods of the namespace, and the ticket worktrees were replaced twice by the orchestrator. The expected result of that run is the same output without the `patch user` mismatch. The explorative output (42 of 103 steps differing) was produced against the same state and is summarised above.
+### Explorative pass on the final state (run 4 of `explore.py`)
+
+`deployment/parity/reset-databases.sh`, then `deployment/parity/run-contract.sh --explore`: 103 steps, 43 with differences, exit 1. The differing steps are the same groups as in the table above (list shapes #156, error bodies and 404/403 #157, non-friend and PENDING invitee #158, system messages and group members #159, suggestions #160, trailing slash, malformed settings JSON and push errors #161, Java 500s #162; in the shape-only `DIFF` lines with equal status codes the differing part is the body shape). New relative to run 3: none except `us: patch empty names` (Java 500, Rust 200, #162). The raw output is kept on the workstation (`~/hl/explore-run4.txt`, `~/hl/contract-run6.txt`), not in the repository.

@@ -1,7 +1,7 @@
 # Parity environment (Java and Rust side by side)
 
 Local k3s only, namespace `chronos-parity`. Proves that the Java backend (reference) and the Rust backend
-expose the same API contract (ticket #137, KB entry `kb/137-rust-java-parity-run.md`).
+expose the same API contract (ticket #137, KB entry `kb/architecture/ARCH-2026-10-20-001-rust-java-parity-run.md`).
 **Never deploy the Rust backend to staging or production from here** (see #140 / ADR-2026-10-20-018).
 
 | Component | What | Database |
@@ -54,7 +54,7 @@ The credentials are throw-away values for this namespace only.
   docker rmi chronos-rust-backend:parity      # free the Docker copy
   ```
 
-  `values-parity.yaml` references `chronos-backend:parity` and `chronos-rust-backend:parity` with `pullPolicy: Never`.
+  `values-parity.yaml` references `chronos-backend:parity` (the run used a locally patched build tagged `parity-patched`, passed with `--set backend.image.tag=parity-patched`, see the KB entry) and `chronos-rust-backend:parity` with `pullPolicy: Never`.
   After a rebuild: `kubectl -n chronos-parity rollout restart deploy/<name>`.
 
 ## Deploy
