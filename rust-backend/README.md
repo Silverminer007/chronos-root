@@ -85,6 +85,10 @@ docker build -t chronos-rust-backend:latest .
   - Response body: `{"status": "PENDING" | "APPROVED" | "REJECTED"}`
   - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-14-016](../kb/adr/ADR-2026-10-14-016-participation-status-endpoint.md)).
   - Returns only the caller's own status; there is no way to query another user's status.
+- `PUT /api/v2/appointments/:id/participation/:userId/role` - Change a participant's role. Requires a valid bearer token; the caller must be `RESPONSIBLE` for the appointment. `:userId` is the target's OIDC ID.
+  - Request body: `{"role": "NONE" | "GUEST" | "ATTENDANT" | "HELPER" | "RESPONSIBLE"}`
+  - Response: `200 OK` with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
+  - Errors: `400` for an unknown role, a target that is not a participant, or a role the target already has; `403` if the caller is not `RESPONSIBLE`; `404` for an unknown appointment (see [ADR-2026-10-20-019](../kb/adr/ADR-2026-10-20-019-change-participant-role.md)).
 
 ## Authentication
 
