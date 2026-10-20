@@ -269,6 +269,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-017: User and settings endpoints with Keycloak anti-corruption layer (Java parity)](adr/ADR-2026-10-20-017-user-settings-keycloak-acl.md)
 - [ADR-2026-10-20-018: Rust backend deploy dispatch is opt-in via repository variable](adr/ADR-2026-10-20-018-rust-deploy-opt-in.md)
 - [ADR-2026-10-20-019: Groups and friendships endpoints (Java parity)](adr/ADR-2026-10-20-019-groups-friendships-endpoints.md)
+- [ADR-2026-10-20-020: Change participant role endpoint (Java parity)](adr/ADR-2026-10-20-020-change-participant-role.md)
 - [ADR-2026-10-20-020: Prometheus metrics and health endpoint parity](adr/ADR-2026-10-20-020-prometheus-metrics-health-parity.md)
 - [ADR-2026-10-20-021: Contract parity harness for the Rust port](adr/ADR-2026-10-20-021-contract-parity-harness.md)
 - [ADR-2026-10-20-022: List participants endpoint (Java parity)](adr/ADR-2026-10-20-022-list-participants-endpoint.md)

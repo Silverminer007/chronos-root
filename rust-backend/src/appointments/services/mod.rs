@@ -1,7 +1,7 @@
 use crate::appointments::events::{
     AppointmentCancelledEvent, AppointmentCreatedEvent, AppointmentDeletedEvent,
     AppointmentEditedEvent, AppointmentMovedEvent, AppointmentParticipationRemovedEvent,
-    AppointmentParticipationStatusChangedEvent,
+    AppointmentParticipationRoleChangedEvent, AppointmentParticipationStatusChangedEvent,
 };
 use crate::appointments::models::{
     Appointment, AppointmentResponse, CreateAppointmentRequest, ParticipationStatus,
@@ -17,9 +17,9 @@ use chrono::{DateTime, Utc};
 pub enum ServiceError {
     ValidationError(String),
     NotFound,
-    Forbidden(String),
     DatabaseError(String),
     InvalidFormat(String),
+    Forbidden(String),
 }
 
 impl std::fmt::Display for ServiceError {
@@ -27,9 +27,9 @@ impl std::fmt::Display for ServiceError {
         match self {
             ServiceError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             ServiceError::NotFound => write!(f, "Appointment not found"),
-            ServiceError::Forbidden(msg) => write!(f, "Forbidden: {}", msg),
             ServiceError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             ServiceError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
+            ServiceError::Forbidden(msg) => write!(f, "Forbidden: {}", msg),
         }
     }
 }
@@ -723,6 +723,84 @@ impl AppointmentService {
             if let Err(e) = publisher.fire(event_bus_event).await {
                 eprintln!(
                     "Failed to fire AppointmentParticipationStatusChangedEvent: {:?}",
+                    e
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Change the role of a participant (Java: `changeUserRole`)
+    /// Requires the acting user to be RESPONSIBLE in the appointment
+    pub async fn change_participant_role(
+        &self,
+        appointment_id: i64,
+        target_user_id: &str,
+        acting_user_id: &str,
+        new_role: UserRole,
+    ) -> Result<(), ServiceError> {
+        self.repo
+            .find_by_id_any_status(appointment_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or(ServiceError::NotFound)?;
+
+        let acting_user_role = self
+            .repo
+            .get_participant_role(appointment_id, acting_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if acting_user_role != Some(UserRole::Responsible) {
+            return Err(ServiceError::Forbidden(
+                "You have to be responsible for this appointment".to_string(),
+            ));
+        }
+
+        let old_role = self
+            .repo
+            .get_participant_role(appointment_id, target_user_id)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
+            .ok_or_else(|| {
+                ServiceError::ValidationError(
+                    "This user is not a participant of this event".to_string(),
+                )
+            })?;
+
+        if old_role == new_role {
+            return Err(ServiceError::ValidationError(
+                "this is already the users role".to_string(),
+            ));
+        }
+
+        self.repo
+            .update_participant_role(appointment_id, target_user_id, new_role)
+            .await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+
+        if let Some(ref publisher) = self.event_publisher {
+            let event = AppointmentParticipationRoleChangedEvent::new(
+                appointment_id,
+                target_user_id.to_string(),
+                acting_user_id.to_string(),
+                old_role,
+            );
+            let event_json = serde_json::json!({
+                "appointment_id": event.appointment_id,
+                "target_user_id": event.target_user_id,
+                "acting_user_id": event.acting_user_id,
+                "old_role": event.old_role,
+                "timestamp": event.timestamp,
+            });
+            let event_bus_event = crate::event_bus::Event::new(
+                "AppointmentParticipationRoleChangedEvent",
+                event_json,
+            );
+            if let Err(e) = publisher.fire(event_bus_event).await {
+                eprintln!(
+                    "Failed to fire AppointmentParticipationRoleChangedEvent: {:?}",
                     e
                 );
             }

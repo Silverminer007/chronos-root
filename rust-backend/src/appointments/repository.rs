@@ -484,6 +484,30 @@ impl AppointmentRepository {
         Ok(())
     }
 
+    /// Set the role of an existing participant
+    pub async fn update_participant_role(
+        &self,
+        appointment_id: i64,
+        user_id: &str,
+        role: UserRole,
+    ) -> Result<(), RepositoryError> {
+        let result = sqlx::query(
+            "UPDATE appointment_participation SET role = $3 WHERE appointment_id = $1 AND user_oidcid = $2",
+        )
+        .bind(appointment_id)
+        .bind(user_id)
+        .bind(role)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(RepositoryError::NotFound);
+        }
+
+        Ok(())
+    }
+
     /// Remove a participant from an appointment (hard delete)
     pub async fn remove_participant(
         &self,

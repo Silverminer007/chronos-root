@@ -1,16 +1,16 @@
 use axum::{
     middleware,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use std::sync::Arc;
 
 use crate::appointments::handlers::{
-    add_group_to_appointment, add_participant, cancel_appointment, create_appointment,
-    delete_appointment, get_appointment, get_participation_status, list_appointments,
-    list_messages, list_participants, remove_participant, rsvp_to_appointment, update_appointment,
-    AppState,
+    add_group_to_appointment, add_participant, cancel_appointment, change_participant_role,
+    create_appointment, delete_appointment, get_appointment, get_participation_status,
+    list_appointments, list_messages, list_participants, remove_participant, rsvp_to_appointment,
+    update_appointment, AppState,
 };
 use crate::error::fill_error_path;
 use crate::groups::handlers::{
@@ -82,6 +82,10 @@ pub fn build_router(
         .route(
             "/api/v2/appointments/:id/participants",
             get(list_participants),
+        )
+        .route(
+            "/api/v2/appointments/:id/participation/:userId/role",
+            put(change_participant_role),
         )
         .route(
             "/api/v2/appointments/:id/participation",
