@@ -11,16 +11,16 @@ use std::sync::Arc;
 use crate::appointments::{
     models::{
         AddGroupToAppointmentRequest, AddParticipantRequest, AppointmentResponse,
-        ChangeParticipantRoleRequest, CreateAppointmentRequest, MessageDto,
-        ParticipationStatusResponse, UpdateAppointmentRequest, UpdateParticipationStatusRequest,
-        UserRole,
+        ChangeParticipantRoleRequest, CreateAppointmentRequest, CreateMessageRequest, Message,
+        MessageDto, ParticipationStatusResponse, UpdateAppointmentRequest,
+        UpdateParticipationStatusRequest, UserRole,
     },
     repository::AppointmentRepository,
     services::{AppointmentService, ServiceError},
 };
 use crate::event_bus::EventPublisher;
 use crate::security::PrincipalContext;
-use crate::users::identity::IdentityRepository;
+use crate::users::identity::{IdentityRepository, UserIdentity};
 use chrono::SecondsFormat;
 
 /// Shared application state
@@ -138,22 +138,77 @@ pub async fn list_messages(
 
     let responses: Vec<MessageDto> = messages
         .into_iter()
-        .map(|m| MessageDto {
-            id: m.id,
-            sender_name: senders
+        .map(|m| {
+            let sender_name = senders
                 .get(&m.sender_oidcid)
                 .map(|s| s.name())
-                .unwrap_or_default(),
-            sender_id: m.sender_oidcid,
-            appointment_id: m.appointment_id,
-            body: m.body,
-            timestamp: m
-                .timestamp
-                .map(|t| t.to_rfc3339_opts(SecondsFormat::AutoSi, true)),
+                .unwrap_or_default();
+            message_dto(m, sender_name)
         })
         .collect();
 
     Ok(Json(responses))
+}
+
+/// POST /api/v2/appointments/:id/messages - Post a message to an appointment
+///
+/// Any participant (role other than NONE) may post; everybody else, including callers of an
+/// unknown appointment, gets 403 (Java: `requireSendMessage`). Answers 200 (Java `Response.ok`,
+/// the 201 of the first ticket answer was superseded) with the stored message,
+/// `sender_name` is the caller's name from the access token. After the insert a
+/// `MessageSentEvent {message_id}` is fired (Java: `MessageService#sendMessage`).
+pub async fn send_message(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    principal: PrincipalContext,
+    Json(request): Json<CreateMessageRequest>,
+) -> Result<impl IntoResponse, AppointmentError> {
+    let repo = AppointmentRepository::new(state.db_pool.clone());
+
+    let role = repo
+        .get_participant_role(id, principal.user_id())
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+    if matches!(role, None | Some(UserRole::None)) {
+        return Err(AppointmentError::Unauthorized);
+    }
+
+    let message = repo
+        .persist_message(id, principal.user_id(), request.body.as_deref())
+        .await
+        .map_err(|_| AppointmentError::DatabaseError)?;
+
+    let event = crate::event_bus::Event::new(
+        crate::push_notifications::events::MESSAGE_SENT,
+        serde_json::json!({ "message_id": message.id }),
+    );
+    // The message is already stored, so a failing publisher must not fail the request
+    if let Err(e) = state.event_publisher.fire(event).await {
+        tracing::warn!(
+            "Failed to publish MessageSentEvent for message {}: {}",
+            message.id,
+            e
+        );
+    }
+
+    Ok(Json(message_dto(
+        message,
+        UserIdentity::from(&principal).name(),
+    )))
+}
+
+/// Maps a stored message to the Java `MessageDto`
+fn message_dto(message: Message, sender_name: String) -> MessageDto {
+    MessageDto {
+        id: message.id,
+        sender_id: message.sender_oidcid,
+        sender_name,
+        appointment_id: message.appointment_id,
+        body: message.body,
+        timestamp: message
+            .timestamp
+            .map(|t| t.to_rfc3339_opts(SecondsFormat::AutoSi, true)),
+    }
 }
 
 /// POST /api/v2/appointments/:id/participation - RSVP to an appointment

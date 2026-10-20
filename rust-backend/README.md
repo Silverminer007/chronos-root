@@ -101,6 +101,7 @@ Health and metrics follow the Quarkus contract (see [ADR-2026-10-20-020](../kb/a
   - Response body: `{"status": "PENDING" | "APPROVED" | "REJECTED"}`
   - `PENDING` is returned when the user has no participation row for the appointment, including for unknown appointment IDs, non-participants, and `CANCELLED`/`DELETED` appointments (matches the Java backend; see [ADR-2026-10-14-016](../kb/adr/ADR-2026-10-14-016-participation-status-endpoint.md)).
   - Returns only the caller's own status; there is no way to query another user's status.
+- `POST /api/v2/appointments/:id/messages` - Posts a message (`{"body": "..."}`, any body is accepted like in Java). Same authorization as the `GET`. Answers `200` with the stored message `{id, sender_id, sender_name, appointment_id, body, timestamp}` (`sender_name` is the caller's name from the token) and fires `MessageSentEvent {message_id}` (see [ADR-2026-10-20-023](../kb/adr/ADR-2026-10-20-023-post-appointment-message.md)).
 - `PUT /api/v2/appointments/:id/participation/:userId/role` - Change a participant's role. Requires a valid bearer token; the caller must be `RESPONSIBLE` for the appointment. `:userId` is the target's OIDC ID.
   - Request body: `{"role": "NONE" | "GUEST" | "ATTENDANT" | "HELPER" | "RESPONSIBLE"}`
   - Response: `200 OK` with an empty body. Fires `AppointmentParticipationRoleChangedEvent` (with the old role).
