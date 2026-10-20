@@ -50,6 +50,15 @@ Java sends web push notifications from `WebPushService` (CDI observers) through 
    quoted, case-preserved name, so no CamelCase event (including `AppointmentCreatedEvent`) reached a
    subscriber. `PostgresEventBus::fire` now uses `pg_notify($1, $2)`.
 
+8. **Deliberate deviation: environment variable names.** Rust reads `VAPID_PUBLIC_KEY`,
+   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`; Java reads `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_MAILTO`
+   (CLAUDE.md). The Rust names are prescribed by the ticket and describe the content (the value is
+   the full VAPID subject claim, e.g. `mailto:...`, not just an address). Both backends are fed from
+   the same Kubernetes secret keys (`vapid_public_key`, `vapid_private_key`, `vapid_mailto`), so
+   operations maintain one set of secrets; only the container variable name differs
+   (`deployment/values-staging.yaml`, `rustBackend.envFromSecrets`). Operating rule and behaviour
+   without the variables: `kb/constraints/003-deployment-rules.md` (Secrets Management).
+
 ## Event -> publisher -> ticket
 
 | Event | Publisher in Rust | Status |
