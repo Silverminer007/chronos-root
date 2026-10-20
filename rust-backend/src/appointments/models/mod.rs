@@ -276,8 +276,9 @@ impl From<Appointment> for AppointmentResponse {
 }
 
 /// User participant in an appointment response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
 /// Java's `UserParticipantDto` is `@JsonInclude(NON_NULL)`, so `null` fields are omitted
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserParticipantDto {
     pub user_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
