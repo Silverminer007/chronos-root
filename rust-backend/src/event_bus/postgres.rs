@@ -220,6 +220,10 @@ mod tests {
             .clone()
     }
 
+    async fn create_test_db() -> TestDb {
+        TestDb::new().await.expect("Failed to create test database")
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_event_bus_creation() {
@@ -285,21 +289,97 @@ mod tests {
             .await
             .expect("subscribe failed");
         }
-        // Let the listener connect
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        // Delivery proves the subscription is active, so no fixed wait is needed
+        fire_until_delivered(&bus, "pool_test_7", &mut rx).await;
 
         let one: i32 = sqlx::query_scalar("SELECT 1")
             .fetch_one(db.pool())
             .await
             .expect("no free pool connection left for a query");
         assert_eq!(one, 1);
+    }
 
-        bus.fire(Event::new("pool_test_7", serde_json::json!({})))
+    /// Fires `event_type` until a subscriber reports it: a NOTIFY sent before the dispatcher has
+    /// executed its LISTEN is lost, so the first attempts may legitimately go unnoticed.
+    async fn fire_until_delivered(
+        bus: &PostgresEventBus,
+        event_type: &str,
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<String>,
+    ) -> String {
+        tokio::time::timeout(Duration::from_secs(20), async {
+            loop {
+                bus.fire(Event::new(event_type, serde_json::json!({})))
+                    .await
+                    .expect("fire failed");
+                if let Ok(Some(received)) =
+                    tokio::time::timeout(Duration::from_millis(300), rx.recv()).await
+                {
+                    return received;
+                }
+            }
+        })
+        .await
+        .expect("event not delivered")
+    }
+
+    #[tokio::test]
+    async fn test_multiple_subscribers_per_event_type_all_receive() {
+        let db = create_test_db().await;
+        let bus = PostgresEventBus::new(db.pool().clone());
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        for name in ["first", "second"] {
+            let tx = tx.clone();
+            bus.subscribe("multi_sub_test".to_string(), move |_| {
+                let _ = tx.send(name.to_string());
+            })
             .await
-            .expect("fire failed");
-        let delivered = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+            .expect("subscribe failed");
+        }
+
+        let first = fire_until_delivered(&bus, "multi_sub_test", &mut rx).await;
+        // Both callbacks run for the same notification, so each name shows up at least once
+        let mut seen = std::collections::HashSet::new();
+        seen.insert(first);
+        while seen.len() < 2 {
+            let name = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+                .await
+                .expect("second subscriber not called")
+                .expect("channel closed");
+            seen.insert(name);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_listener_relistens_all_channels_after_reconnect() {
+        let db = create_test_db().await;
+        let bus = PostgresEventBus::new(db.pool().clone());
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        for event_type in ["reconnect_a", "reconnect_b"] {
+            let tx = tx.clone();
+            bus.subscribe(event_type.to_string(), move |event| {
+                let _ = tx.send(event.event_type);
+            })
             .await
-            .expect("event not delivered");
-        assert_eq!(delivered.as_deref(), Some("pool_test_7"));
+            .expect("subscribe failed");
+        }
+        fire_until_delivered(&bus, "reconnect_a", &mut rx).await;
+        fire_until_delivered(&bus, "reconnect_b", &mut rx).await;
+
+        // Kill the LISTEN connection; the dispatcher must reconnect and listen again on both
+        let killed: i64 = sqlx::query_scalar(
+            "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity
+             WHERE datname = current_database() AND pid <> pg_backend_pid()
+               AND query LIKE 'LISTEN%'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .expect("terminate failed");
+        assert_eq!(killed, 1, "expected exactly one LISTEN connection");
+
+        // Drain events delivered while the old connection was still up
+        while rx.try_recv().is_ok() {}
+        fire_until_delivered(&bus, "reconnect_a", &mut rx).await;
+        fire_until_delivered(&bus, "reconnect_b", &mut rx).await;
     }
 }
