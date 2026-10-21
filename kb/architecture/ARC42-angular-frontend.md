@@ -130,3 +130,11 @@ Die KB ist unveränderlich, daher stehen die Ergänzungen als Nachtrag. Sie gelt
 - Alle `CHRONOS_AUTH_*`, `CHRONOS_QUARKUS_URL` und `CHRONOS_PUBLIC_IMPRESSUM_*`-Werte fallen auf den gleichnamigen `NUXT_*`-Wert zurück, wenn die `CHRONOS_*`-Variable fehlt.
 - Pflichtwerte sind `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AUTH_REDIRECT_URI` und `CHRONOS_QUARKUS_URL` (jeweils auch als `NUXT_*`). Fehlt einer, gibt der BFF `Fehlende Konfiguration: <Namen>` aus und beendet sich mit Exit-Code 1.
 - Start: `npm start` startet den BFF (`node server/index.ts`, TypeScript ohne Build-Schritt per Node-Type-Stripping, Node 24; vorher `npm run build`). `npm run start:dev` ist `ng serve` (Port 4200) und startet keinen BFF.
+
+## Nachtrag 2026-10-21: Ergänzung zu Abschnitt 8 (Querschnittliche Konzepte, Sicherheit)
+
+Die KB ist unveränderlich, daher steht die Ergänzung als Nachtrag. Abschnitt 8 nennt für die Sicherheit nur `SameSite=Lax`; zusätzlich gilt für den BFF (Ticket #177, ADR-2026-10-21-003):
+
+- **Cookies:** `kc_access` und `kc_refresh` sind httpOnly, `kc_expires` ist für den Client lesbar. `SameSite=Lax` ist eine bewusste Abweichung von Nuxt (`SameSite=None`), weil SPA und BFF same-origin ausgeliefert werden. `Secure` ist Standard; `CHRONOS_COOKIE_SECURE=false` schaltet es nur für lokale HTTP-Entwicklung ab (siehe Nachtrag zu Abschnitt 7).
+- **Fehlercodes:** Fehlender `code` im Callback ergibt 400, Keycloak-/Token-Fehler und ein nicht erreichbares Backend 502, unbekannte `/api/*`-Pfade 404 als JSON. Ohne `kc_access` sendet der Proxy keinen `Authorization`-Header (kein `Bearer undefined`); das Backend antwortet dann 401.
+- Die vollständige Liste der Abweichungen und ihre Begründung stehen im ADR-2026-10-21-003.
