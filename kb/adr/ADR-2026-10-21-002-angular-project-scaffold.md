@@ -13,3 +13,7 @@ Entscheidungen:
 - **Toolchain-Pinning:** Node 24 in der CI (`actions/setup-node`) und `packageManager: npm@11.20.0` in `package.json` legen eine reproduzierbare Toolchain fest; `npm ci` nutzt das eingecheckte Lockfile.
 - **Editor-Konfiguration:** `.prettierrc` (Zeilenbreite 100, einfache Anführungszeichen, Angular-Parser für HTML), `.editorconfig` und `.vscode/` (`extensions.json`, `launch.json`, `tasks.json`) sind bewusst eingecheckt, damit Formatierung und Debug-/Task-Einstieg im Team einheitlich sind.
 - **Nicht im Umfang:** BFF, Auth, Service Worker, Playwright (eigene Tickets).
+
+## Nachtrag 2026-10-21: Bezug zu ARC42
+
+ARC42-angular-frontend.md bleibt unverändert (KB-Unveränderlichkeitsregel, nur Nachträge). Dieser ADR ist die maßgebliche Stelle für die Gerüst-Entscheidungen zu ARC42 Abschnitt 9 (Architekturentscheidungen, dort bisher nur ADR-2026-10-21-001) und Abschnitt 10 (Qualität): Die Bundle-Budgets in `angular.json` messen roh, Q-05 fordert gzip; die Begründung und die Werte stehen oben unter „Bundle-Budgets“.
