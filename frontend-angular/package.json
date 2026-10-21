@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node server/index.ts",
+    "start:dev": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test --no-watch",
+    "test": "ng test --no-watch && npm run test:server",
+    "test:server": "tsc -p server/tsconfig.json && vitest run -c vitest.server.config.mjs",
     "lint": "ng lint"
   },
   "private": true,
@@ -21,6 +23,7 @@
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.2",
+    "express": "^5.3.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -29,6 +32,8 @@
     "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.0",
     "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
     "angular-eslint": "^22.6.0",
     "eslint": "^10.13.0",
     "jsdom": "^30.0.0",
