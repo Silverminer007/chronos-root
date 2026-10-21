@@ -69,7 +69,9 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 
 ## 8. Querschnittliche Konzepte
 
-- **Fehlerbehandlung:** zentraler HTTP-Interceptor mappt Backend-Fehler auf deutsche Meldungen (Port von `utils/errors.ts`), Anzeige per Toast.
+- **Fehlerbehandlung:** zweistufig, siehe ADR-2026-10-21-004.
+  - `errorInterceptor` zeigt nur auf Anforderung (`HttpContextToken` `GLOBAL_ERROR_TOAST`, Standard `false`) einen festen deutschen Toast für übergreifende Fehler: Status 0 (keine Verbindung), 403 und ≥ 500. 401 und `/api/auth/isLoggedIn` ignoriert er (Token-Erneuerung und Sitzungsende liegen beim Service Worker bzw. `AuthService`). Der Fehler wird unverändert weitergeworfen.
+  - 4xx wie 400/404/409 behandeln die Aufrufer selbst: `getErrorMessage(err, fallback)` (`core/errors.ts`, Port von `utils/errors.ts`) liefert die Backend-Meldung oder den deutschen Fallback, `getErrorStatus(err)` den HTTP-Status zur Fallunterscheidung. Die englische `HttpErrorResponse.message` wird nie angezeigt.
 - **Datum/Zeit:** Luxon bleibt (`DateFormatterService`).
 - **Theming:** SCSS-Partials `_variables.scss`, `_theme.scss`; Bootstrap-Variablen überschrieben vor dem Import; Dark Mode via `data-bs-theme`.
 - **Typen:** `core/models` ist 1:1 Port von `app/types/index.ts`.
