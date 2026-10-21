@@ -1,0 +1,66 @@
+{
+ "list appointments": {
+  "warm": {
+   "rps": 37.8,
+   "p50_ms": 850.56,
+   "cores": 1.83,
+   "cpu_ms_per_req": 49.04
+  },
+  "unpinned": {
+   "rps": 44.7,
+   "p50_ms": 714.41,
+   "cores": 1.89,
+   "cpu_ms_per_req": 42.68
+  },
+  "1 cpu": {
+   "rps": 58.2,
+   "p50_ms": 536.42,
+   "cores": 0.15,
+   "cpu_ms_per_req": 2.62
+  },
+  "2 cpus": {
+   "rps": 45.8,
+   "p50_ms": 703.63,
+   "cores": 1.6,
+   "cpu_ms_per_req": 35.09
+  },
+  "unpinned again": {
+   "rps": 42.6,
+   "p50_ms": 753.39,
+   "cores": 1.88,
+   "cpu_ms_per_req": 44.57
+  }
+ },
+ "get user": {
+  "warm": {
+   "rps": 189.8,
+   "p50_ms": 166.46,
+   "cores": 1.48,
+   "cpu_ms_per_req": 7.93
+  },
+  "unpinned": {
+   "rps": 189.8,
+   "p50_ms": 166.62,
+   "cores": 1.47,
+   "cpu_ms_per_req": 7.78
+  },
+  "1 cpu": {
+   "rps": 160.7,
+   "p50_ms": 197.31,
+   "cores": 0.09,
+   "cpu_ms_per_req": 0.59
+  },
+  "2 cpus": {
+   "rps": 175.5,
+   "p50_ms": 179.51,
+   "cores": 0.97,
+   "cpu_ms_per_req": 5.57
+  },
+  "unpinned again": {
+   "rps": 192.0,
+   "p50_ms": 165.08,
+   "cores": 1.48,
+   "cpu_ms_per_req": 7.77
+  }
+ }
+}

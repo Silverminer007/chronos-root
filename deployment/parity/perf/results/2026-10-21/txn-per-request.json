@@ -1,0 +1,98 @@
+{
+ "get user": {
+  "java": {
+   "transactions": 0.74,
+   "rows_returned": 54.0,
+   "rows_fetched": 7.6,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.7
+  },
+  "rust": {
+   "transactions": 0.25,
+   "rows_returned": 12.9,
+   "rows_fetched": 9.7,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.1
+  }
+ },
+ "list appointments": {
+  "java": {
+   "transactions": 6.04,
+   "rows_returned": 4084.9,
+   "rows_fetched": 1900.7,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.9
+  },
+  "rust": {
+   "transactions": 5.63,
+   "rows_returned": 3290.6,
+   "rows_fetched": 37.3,
+   "rows_inserted": 0.0,
+   "rows_updated": 1.0
+  }
+ },
+ "get appointment": {
+  "java": {
+   "transactions": 1.24,
+   "rows_returned": 3.0,
+   "rows_fetched": 3.0,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.6
+  },
+  "rust": {
+   "transactions": 4.88,
+   "rows_returned": 87.1,
+   "rows_fetched": 12.6,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.9
+  }
+ },
+ "list messages": {
+  "java": {
+   "transactions": 1.78,
+   "rows_returned": 3.0,
+   "rows_fetched": 3.0,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.9
+  },
+  "rust": {
+   "transactions": 0.8,
+   "rows_returned": 21.2,
+   "rows_fetched": 6.4,
+   "rows_inserted": 0.0,
+   "rows_updated": 0.6
+  }
+ },
+ "create appointment": {
+  "java": {
+   "transactions": 2.93,
+   "rows_returned": 4.3,
+   "rows_fetched": 4.3,
+   "rows_inserted": 1.9,
+   "rows_updated": 1.0
+  },
+  "rust": {
+   "transactions": 5.71,
+   "rows_returned": 10.5,
+   "rows_fetched": 10.5,
+   "rows_inserted": 2.7,
+   "rows_updated": 0.9
+  }
+ },
+ "send message": {
+  "java": {
+   "transactions": 2.85,
+   "rows_returned": 1816.8,
+   "rows_fetched": 1816.8,
+   "rows_inserted": 0.9,
+   "rows_updated": 0.9
+  },
+  "rust": {
+   "transactions": 10.84,
+   "rows_returned": 175.0,
+   "rows_fetched": 15.9,
+   "rows_inserted": 1.7,
+   "rows_updated": 0.9
+  }
+ }
+}
