@@ -1,10 +1,35 @@
 import { Routes } from '@angular/router';
+import { LandingLayoutComponent } from './layout/landing-layout.component';
 
 export const routes: Routes = [
   {
     path: '',
-    pathMatch: 'full',
-    loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
+    component: LandingLayoutComponent,
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./features/public/landing/landing.component').then((m) => m.LandingComponent),
+      },
+      {
+        path: 'public/install',
+        loadComponent: () =>
+          import('./features/public/install/install.component').then((m) => m.InstallComponent),
+      },
+      {
+        path: 'public/impressum',
+        loadComponent: () =>
+          import('./features/public/impressum/impressum.component').then((m) => m.ImpressumComponent),
+      },
+      {
+        path: 'public/datenschutz',
+        loadComponent: () =>
+          import('./features/public/datenschutz/datenschutz.component').then(
+            (m) => m.DatenschutzComponent,
+          ),
+      },
+    ],
   },
   { path: '**', redirectTo: '' },
 ];

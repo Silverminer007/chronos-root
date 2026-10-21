@@ -1,0 +1,25 @@
+<div class="landing">
+  <div class="landing-bg" aria-hidden="true">
+    <div class="blob blob-left"></div>
+    <div class="blob blob-right"></div>
+  </div>
+
+  <div class="landing-content">
+    <header class="container py-3 py-sm-4">
+      <nav class="d-flex align-items-center justify-content-between gap-3">
+        <a routerLink="/" class="d-flex align-items-center gap-2 text-decoration-none">
+          <img src="/icons/icon.png" alt="Chronos Logo" width="40" height="40" class="rounded shadow" />
+          <span class="fs-3 fw-bold text-white">Chronos</span>
+        </a>
+        <div class="d-flex gap-2">
+          <a href="/api/auth/login" class="btn btn-light text-primary fw-medium shadow-sm">Anmelden</a>
+          <a href="/api/auth/register" class="btn btn-gradient fw-medium shadow">Registrieren</a>
+        </div>
+      </nav>
+    </header>
+
+    <router-outlet />
+
+    <app-landing-footer />
+  </div>
+</div>

@@ -34,3 +34,7 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: E2E-Tests (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e

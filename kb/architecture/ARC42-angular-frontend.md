@@ -93,6 +93,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 - ADR-2026-10-21-001: Angular statt Nuxt (diese Migration). Kein NgRx, eigener Node-BFF, handgeschriebener Service Worker.
 - ADR-2026-10-21-004: `core/` (Modelle, AuthService, authGuard, Interceptor, Toast, Modal).
 - ADR-2026-10-21-005: Service Worker (`push-sw.js` + `sw-core.js`, Tests mit `node --test`, Registrierung über `provideAppInitializer`) und PWA-Manifest.
+- ADR-2026-10-21-006: Layouts als Eltern-Routen, öffentliche Seiten (Landing, Install, Impressum, Datenschutz), `PublicConfigService` (`/api/config`), Playwright-Grundgerüst.
 
 ## 10. Qualitätsanforderungen
 
@@ -129,7 +130,7 @@ Die KB ist unveränderlich, daher stehen die Ergänzungen als Nachtrag. Sie gelt
 
 **Routen und Datenflüsse (Ergänzung zu Abschnitt 6):**
 
-- `GET /api/config` liefert die Impressum-Werte (`CHRONOS_PUBLIC_IMPRESSUM_*`) als JSON an die SPA. Die Werte werden zur Laufzeit gelesen, nicht zur Build-Zeit; der Endpoint braucht keine Anmeldung. Der Abruf durch die Impressum-Seite folgt mit dem Ticket für die öffentlichen Seiten.
+- `GET /api/config` liefert die Impressum-Werte (`CHRONOS_PUBLIC_IMPRESSUM_*`) als JSON an die SPA. Die Werte werden zur Laufzeit gelesen, nicht zur Build-Zeit; der Endpoint braucht keine Anmeldung. Der Abruf erfolgt über `PublicConfigService` (Impressum- und Datenschutz-Seite, ADR-2026-10-21-006).
 - Weitere BFF-Routen: `GET /api/auth/register`, `GET /api/auth/login|callback|isLoggedIn`, `POST /api/auth/refresh|logout`, Catch-all `/api/v2/*` (Proxy mit `Authorization: Bearer` aus `kc_access`). Unbekannte `/api/*`-Pfade ergeben 404 und fallen nicht auf die SPA zurück.
 - Statische Auslieferung: GET/HEAD-Anfragen ohne Sitzungs-Cookie (`SESSION_COOKIES`) auf Seiten außer `/` und `/public/*` werden mit 301 auf `/` umgeleitet; Dateien mit Endung (Bundles, Manifest, Service Worker) bleiben erreichbar. Alle übrigen Pfade erhalten den SPA-Fallback (`index.html`).
 

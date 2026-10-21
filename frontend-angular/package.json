@@ -10,7 +10,8 @@
     "test": "ng test --no-watch && npm run test:server && npm run test:sw",
     "test:server": "tsc -p server/tsconfig.json && vitest run -c vitest.server.config.mjs",
     "test:sw": "node --test \"sw-tests/*.test.js\"",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "test:e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.20.0",
@@ -33,6 +34,7 @@
     "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.61.1",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "angular-eslint": "^22.6.0",

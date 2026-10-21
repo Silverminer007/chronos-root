@@ -1,0 +1,47 @@
+@use '../../../../styles/variables' as *;
+
+.description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.avatar-stack .avatar + .avatar {
+  margin-left: -0.5rem;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 2px solid var(--bs-body-bg);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+  color: $brand-purple;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.avatar-more {
+  background: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+}
+
+[data-bs-theme='dark'] .avatar:not(.avatar-more) {
+  background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+}
+
+// Deaktivierte Zu-/Absage-Schaltfläche bleibt voll sichtbar (Nuxt: `opacity: 1`), sie zeigt den gewählten Stand.
+.btn:disabled {
+  opacity: 1;
+}
