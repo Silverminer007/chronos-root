@@ -1,32 +1,32 @@
 {
  "chronos-backend": {
   "limits": {
-   "cpu": "2",
-   "memory": "2Gi"
+   "cpu": "1",
+   "memory": "768Mi"
   },
   "requests": {
-   "cpu": "500m",
+   "cpu": "100m",
    "memory": "256Mi"
   }
  },
  "chronos-rust-backend": {
   "limits": {
-   "cpu": "2",
-   "memory": "2Gi"
+   "cpu": "500m",
+   "memory": "128Mi"
   },
   "requests": {
-   "cpu": "500m",
-   "memory": "256Mi"
+   "cpu": "50m",
+   "memory": "64Mi"
   }
  },
  "postgres": {
   "limits": {
-   "cpu": "2",
-   "memory": "1Gi"
+   "cpu": "500m",
+   "memory": "384Mi"
   },
   "requests": {
-   "cpu": "500m",
-   "memory": "256Mi"
+   "cpu": "50m",
+   "memory": "128Mi"
   }
  }
 }

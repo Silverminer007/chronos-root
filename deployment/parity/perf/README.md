@@ -23,7 +23,9 @@ python3 deployment/parity/perf/report.py results/round1 results/round2 > tables.
   and measured from the start (time until `/q/health/ready` answers 200, includes the schema migration on an empty database).
 - **Same limits.** Both backends get the same limits (2 CPUs, 2 GiB; the chart values differ: Java 1 CPU / 768 MiB, Rust 0.5 CPU / 128 MiB).
   Postgres gets 6 CPUs and 2 GiB, because 2 CPUs were saturated by the mixed workload and the database would have been the cap
-  instead of the backends. `bench.py` sets the limits at the start and puts the original values back at the end.
+  instead of the backends. `bench.py` sets the limits at the start and puts the original values back at the end. The originals are kept as the annotation
+  `perf-original-resources` on the deployments, so a run that was killed does not make the next run take the benchmark values for the originals;
+  `results/<date>/original-limits.json` shows the values of the chart before the first run.
   Postgres is switched to the `Recreate` strategy (a rolling update starts a second Postgres on the same data directory, which
   crashes it).
 - **No proxy on the data path.** Requests go to the pod IP, not through `kubectl port-forward`. Tokens come from Keycloak once.

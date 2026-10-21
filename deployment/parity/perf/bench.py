@@ -56,17 +56,25 @@ def kubectl(*args, **kw):
 # --- cluster ---------------------------------------------------------------------------------------------------------
 
 def set_limits(restore=None):
-    """Equal resource limits for both backends and a Postgres that is not the bottleneck. Returns the previous values."""
+    """Equal resource limits for both backends and a Postgres that is not the bottleneck. Returns the original values.
+
+    The originals are kept as an annotation on the deployment, so that a run that was killed (no `finally`) does not make
+    the next run take the benchmark values for the originals. The annotation is removed when the originals are restored."""
     names = ["chronos-backend", "chronos-rust-backend", "postgres"]
     old = {}
     kubectl("patch", "deploy/postgres", "-p", '{"spec":{"strategy":{"type":"Recreate","rollingUpdate":null}}}', check=False)
     for n in names:
-        res = json.loads(kubectl("get", f"deploy/{n}", "-o", "jsonpath={.spec.template.spec.containers[0].resources}"))
-        old[n] = res
+        current = json.loads(kubectl("get", f"deploy/{n}", "-o", "jsonpath={.spec.template.spec.containers[0].resources}"))
+        saved = kubectl("get", f"deploy/{n}", "-o", "jsonpath={.metadata.annotations.perf-original-resources}")
+        old[n] = json.loads(saved) if saved else current
+        if not saved and not restore:
+            kubectl("annotate", f"deploy/{n}", f"perf-original-resources={json.dumps(current)}", "--overwrite")
         want = restore[n] if restore else {"limits": PG_LIMITS if n == "postgres" else LIMITS,
                                             "requests": {"cpu": "500m", "memory": "256Mi"}}
         kubectl("set", "resources", f"deploy/{n}", f"--limits=cpu={want['limits']['cpu']},memory={want['limits']['memory']}",
                 f"--requests=cpu={want['requests']['cpu']},memory={want['requests']['memory']}")
+        if restore:
+            kubectl("annotate", f"deploy/{n}", "perf-original-resources-", check=False)
     return old
 
 
