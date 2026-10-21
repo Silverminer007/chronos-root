@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Friend } from '../../core/models';
 import { ParticipantLookupService } from '../appointment/participant-lookup.service';
+import { FriendshipStore } from '../friends/friendship.store';
 import { AppointmentParticipantPickerComponent } from './appointment-participant-picker.component';
 
 const friend = (id: number, name: string): Friend => ({
@@ -12,11 +13,15 @@ const friend = (id: number, name: string): Friend => ({
 });
 
 describe('AppointmentParticipantPickerComponent', () => {
-  const lookup = { loadFriends: vi.fn(), searchGroups: vi.fn() };
+  const lookup = { searchGroups: vi.fn() };
+  const friendships = { fetchFriends: vi.fn() };
 
   const setup = () => {
     TestBed.configureTestingModule({
-      providers: [{ provide: ParticipantLookupService, useValue: lookup }],
+      providers: [
+        { provide: ParticipantLookupService, useValue: lookup },
+        { provide: FriendshipStore, useValue: friendships },
+      ],
     });
     const fixture = TestBed.createComponent(AppointmentParticipantPickerComponent);
     const changes: [number, number][] = [];
@@ -47,7 +52,7 @@ describe('AppointmentParticipantPickerComponent', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    lookup.loadFriends.mockReset().mockResolvedValue([friend(1, 'Anna'), friend(2, 'Anton')]);
+    friendships.fetchFriends.mockReset().mockResolvedValue([friend(1, 'Anna'), friend(2, 'Anton')]);
     lookup.searchGroups
       .mockReset()
       .mockResolvedValue([{ id: 7, name: 'Jugend', members: [{}, {}, {}] }]);
@@ -57,14 +62,14 @@ describe('AppointmentParticipantPickerComponent', () => {
   it('sucht erst ab zwei Zeichen und entprellt um 250 ms', async () => {
     const { el, type } = setup();
     await type('a');
-    expect(lookup.loadFriends).not.toHaveBeenCalled();
+    expect(friendships.fetchFriends).not.toHaveBeenCalled();
     const input = el.querySelector('input') as HTMLInputElement;
     input.value = 'an';
     input.dispatchEvent(new Event('input'));
     await vi.advanceTimersByTimeAsync(249);
-    expect(lookup.loadFriends).not.toHaveBeenCalled();
+    expect(friendships.fetchFriends).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
-    expect(lookup.loadFriends).toHaveBeenCalledTimes(1);
+    expect(friendships.fetchFriends).toHaveBeenCalledTimes(1);
   });
 
   it('filtert die Freunde lokal ohne Beachtung der Groß-/Kleinschreibung und lädt die Liste nur einmal', async () => {
@@ -73,7 +78,7 @@ describe('AppointmentParticipantPickerComponent', () => {
     expect(results()).toHaveLength(2);
     await type('anto');
     expect(results()).toHaveLength(1);
-    expect(lookup.loadFriends).toHaveBeenCalledTimes(1);
+    expect(friendships.fetchFriends).toHaveBeenCalledTimes(1);
   });
 
   it('zeigt Treffer und wählt eine Person mit der Rolle Teilnehmer', async () => {
@@ -149,7 +154,7 @@ describe('AppointmentParticipantPickerComponent', () => {
   });
 
   it('zeigt „Keine Ergebnisse“, wenn nichts gefunden wurde', async () => {
-    lookup.loadFriends.mockResolvedValue([]);
+    friendships.fetchFriends.mockResolvedValue([]);
     const { el, type } = setup();
     await type('zz');
     expect(el.textContent).toContain('Keine Ergebnisse');

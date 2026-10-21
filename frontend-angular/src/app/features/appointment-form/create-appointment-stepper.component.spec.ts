@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
 import { ParticipantLookupService } from '../appointment/participant-lookup.service';
+import { FriendshipStore } from '../friends/friendship.store';
 import { CreateAppointmentStepperComponent } from './create-appointment-stepper.component';
 
 describe('CreateAppointmentStepperComponent', () => {
@@ -43,8 +44,9 @@ describe('CreateAppointmentStepperComponent', () => {
         { provide: ToastService, useValue: toast },
         {
           provide: ParticipantLookupService,
-          useValue: { loadFriends: vi.fn(), searchGroups: vi.fn() },
+          useValue: { searchGroups: vi.fn() },
         },
+        { provide: FriendshipStore, useValue: { fetchFriends: vi.fn() } },
       ],
     });
     fixture = TestBed.createComponent(CreateAppointmentStepperComponent);

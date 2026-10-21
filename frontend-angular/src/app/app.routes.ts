@@ -44,6 +44,11 @@ export const routes: Routes = [
           import('./features/agenda/agenda.component').then((m) => m.AgendaComponent),
       },
       {
+        path: 'friends',
+        loadComponent: () =>
+          import('./features/friends/friends.component').then((m) => m.FriendsComponent),
+      },
+      {
         path: 'appointment/:id',
         loadComponent: () =>
           import('./features/appointment/appointment-page.component').then((m) => m.AppointmentPageComponent),

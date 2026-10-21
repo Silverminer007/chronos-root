@@ -15,12 +15,6 @@ describe('ParticipantLookupService', () => {
 
   afterEach(() => http.verify());
 
-  it('lädt die Freundesliste', async () => {
-    const result = service.loadFriends();
-    http.expectOne('/api/v2/friendships/friends/').flush([{ user_id: 1, name: 'Anna' }]);
-    expect(await result).toEqual([{ user_id: 1, name: 'Anna' }]);
-  });
-
   it('sucht Gruppen mit Suchbegriff', async () => {
     const result = service.searchGroups('Jugend');
     http.expectOne((r) => r.url === '/api/v2/groups/' && r.params.get('search') === 'Jugend').flush([{ id: 1, name: 'Jugend' }]);

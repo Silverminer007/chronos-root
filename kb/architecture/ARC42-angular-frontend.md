@@ -96,6 +96,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 - ADR-2026-10-21-006: Layouts als Eltern-Routen, öffentliche Seiten (Landing, Install, Impressum, Datenschutz), `PublicConfigService` (`/api/config`), Playwright-Grundgerüst.
 - ADR-2026-10-21-007: `/agenda` mit `AppointmentStore` (Signals), `AppointmentCard`, Skeleton, `SearchHeader`; Zu-/Absage ohne Nachrichten-Dialog und FAB; Abweichungen (Suchbegriff bei „Mehr laden“, überholte Antworten).
 - ADR-2026-10-21-008: `/appointment/:id` mit Teilnehmer-, Gruppen-, Rollen- und Nachrichtenkarten, Mutationen im `AppointmentStore`, `AppointmentShareService`; Bearbeiten/Absagen bleiben bei F-06; Grid statt doppeltem Rendern.
+- ADR-2026-10-21-010: `/friends` mit `FriendshipStore` (Signals), `FriendCard`, `FriendRequestCard`, `SendFriendRequestDialog`; Freundessuche der Teilnehmer-Auswahl nutzt den Store statt `ParticipantLookupService.loadFriends`.
 
 ## 10. Qualitätsanforderungen
 
