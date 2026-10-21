@@ -53,6 +53,10 @@ frontend-angular/
 Zuordnung alt → neu: Pinia-Store → `*Store`-Service (Signals); `useFetch` → `HttpClient` in Services; `middleware/auth.global.ts` → `authGuard`;
 `layouts/*.vue` → Layout-Komponenten; PrimeVue-Dialoge → Bootstrap-Modal (eigene `ModalService`/Komponente); Toast → Bootstrap-Toast-Service.
 
+Bausteine in `core/` (siehe ADR-2026-10-21-004): `ToastService` (Signal-Liste) und `ModalService` (`confirm()` liefert `Promise<boolean>`) halten den Zustand;
+`ToastContainerComponent` und `ConfirmDialogComponent` stellen ihn dar und sind je einmal in `App` eingebunden. `OnboardingService` (Port von `useOnboarding`,
+localStorage-Schlüssel `onboardingShownAt`) wird vom `authGuard` für die Weiterleitung auf `/onboarding` befragt; `errorInterceptor` nutzt den `ToastService`.
+
 ## 6. Laufzeitsicht
 
 1. **Login:** `/` → Button → `GET /api/auth/login` → Keycloak → `GET /api/auth/callback` setzt `kc_access`, `kc_refresh` (httpOnly), `kc_expires` → Redirect `/agenda`.
@@ -69,7 +73,9 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 
 ## 8. Querschnittliche Konzepte
 
-- **Fehlerbehandlung:** zentraler HTTP-Interceptor mappt Backend-Fehler auf deutsche Meldungen (Port von `utils/errors.ts`), Anzeige per Toast.
+- **Fehlerbehandlung:** zweistufig, siehe ADR-2026-10-21-004.
+  - `errorInterceptor` zeigt nur auf Anforderung (`HttpContextToken` `GLOBAL_ERROR_TOAST`, Standard `false`) einen festen deutschen Toast für übergreifende Fehler: Status 0 (keine Verbindung), 403 und ≥ 500. 401 und `/api/auth/isLoggedIn` ignoriert er (Token-Erneuerung und Sitzungsende liegen beim Service Worker bzw. `AuthService`). Der Fehler wird unverändert weitergeworfen.
+  - 4xx wie 400/404/409 behandeln die Aufrufer selbst: `getErrorMessage(err, fallback)` (`core/errors.ts`, Port von `utils/errors.ts`) liefert die Backend-Meldung oder den deutschen Fallback, `getErrorStatus(err)` den HTTP-Status zur Fallunterscheidung. Die englische `HttpErrorResponse.message` wird nie angezeigt.
 - **Datum/Zeit:** Luxon bleibt (`DateFormatterService`).
 - **Theming:** SCSS-Partials `_variables.scss`, `_theme.scss`; Bootstrap-Variablen überschrieben vor dem Import; Dark Mode via `data-bs-theme`.
 - **Typen:** `core/models` ist 1:1 Port von `app/types/index.ts`.
@@ -79,6 +85,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 ## 9. Architekturentscheidungen
 
 - ADR-2026-10-21-001: Angular statt Nuxt (diese Migration). Kein NgRx, eigener Node-BFF, handgeschriebener Service Worker.
+- ADR-2026-10-21-004: `core/` (Modelle, AuthService, authGuard, Interceptor, Toast, Modal).
 
 ## 10. Qualitätsanforderungen
 
