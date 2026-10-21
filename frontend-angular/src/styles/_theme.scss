@@ -118,3 +118,8 @@
 .appointment-actions .btn:disabled {
   opacity: 1;
 }
+
+// Zeilenumbrüche in Freitexten (Beschreibung, Nachrichten) erhalten.
+.text-pre-wrap {
+  white-space: pre-wrap;
+}

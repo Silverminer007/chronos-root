@@ -43,6 +43,12 @@ describe('routes', () => {
     expect(typeof agenda?.loadComponent).toBe('function');
   });
 
+  it('hängt die Termindetails lazy unter das Default-Layout mit authGuard', () => {
+    const shell = routes.find((r) => r.component === DefaultLayoutComponent);
+    const detail = shell?.children?.find((r) => r.path === 'appointment/:id');
+    expect(typeof detail?.loadComponent).toBe('function');
+  });
+
   it('leitet unbekannte Pfade auf die Startseite um', async () => {
     await render('/gibt-es-nicht');
     expect(TestBed.inject(Router).url).toBe('/');
