@@ -4,6 +4,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
+import { authGuard } from './core/auth.guard';
+import { DefaultLayoutComponent } from './layout/default-layout.component';
 
 describe('routes', () => {
   beforeEach(() =>
@@ -32,6 +34,13 @@ describe('routes', () => {
   it('lädt alle öffentlichen Seiten lazy', () => {
     const landing = routes.find((r) => r.component !== undefined || r.children);
     expect(landing?.children?.every((r) => typeof r.loadComponent === 'function')).toBe(true);
+  });
+
+  it('hängt die Agenda lazy unter das Default-Layout mit authGuard', () => {
+    const shell = routes.find((r) => r.component === DefaultLayoutComponent);
+    expect(shell?.canActivate).toEqual([authGuard]);
+    const agenda = shell?.children?.find((r) => r.path === 'agenda');
+    expect(typeof agenda?.loadComponent).toBe('function');
   });
 
   it('leitet unbekannte Pfade auf die Startseite um', async () => {

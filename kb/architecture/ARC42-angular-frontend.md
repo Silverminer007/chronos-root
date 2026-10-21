@@ -94,6 +94,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 - ADR-2026-10-21-004: `core/` (Modelle, AuthService, authGuard, Interceptor, Toast, Modal).
 - ADR-2026-10-21-005: Service Worker (`push-sw.js` + `sw-core.js`, Tests mit `node --test`, Registrierung über `provideAppInitializer`) und PWA-Manifest.
 - ADR-2026-10-21-006: Layouts als Eltern-Routen, öffentliche Seiten (Landing, Install, Impressum, Datenschutz), `PublicConfigService` (`/api/config`), Playwright-Grundgerüst.
+- ADR-2026-10-21-007: `/agenda` mit `AppointmentStore` (Signals), `AppointmentCard`, Skeleton, `SearchHeader`; Zu-/Absage ohne Nachrichten-Dialog und FAB; Abweichungen (Suchbegriff bei „Mehr laden“, überholte Antworten).
 
 ## 10. Qualitätsanforderungen
 

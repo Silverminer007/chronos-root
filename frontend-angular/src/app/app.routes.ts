@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/auth.guard';
+import { DefaultLayoutComponent } from './layout/default-layout.component';
 import { LandingLayoutComponent } from './layout/landing-layout.component';
 
 export const routes: Routes = [
@@ -28,6 +30,18 @@ export const routes: Routes = [
           import('./features/public/datenschutz/datenschutz.component').then(
             (m) => m.DatenschutzComponent,
           ),
+      },
+    ],
+  },
+  {
+    path: '',
+    component: DefaultLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'agenda',
+        loadComponent: () =>
+          import('./features/agenda/agenda.component').then((m) => m.AgendaComponent),
       },
     ],
   },

@@ -14,7 +14,6 @@ const SEND_DELAY_MS = 500;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MessageDialogComponent],
   templateUrl: './appointment-demo-card.component.html',
-  styleUrl: './appointment-demo-card.component.scss',
 })
 export class AppointmentDemoCardComponent {
   private readonly toast = inject(ToastService);

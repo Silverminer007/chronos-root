@@ -1,0 +1,61 @@
+<header class="sticky-top bg-body border-bottom shadow-sm">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between gap-3 header-row">
+      <a routerLink="/agenda" class="d-flex align-items-center gap-2 text-decoration-none flex-shrink-0">
+        <img src="/icons/icon.png" alt="" width="40" height="40" class="rounded" />
+        <span class="fs-4 fw-bold text-gradient d-none d-sm-block">Chronos</span>
+      </a>
+
+      <div class="flex-grow-1 search-box">
+        <div class="position-relative">
+          <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-body-tertiary" aria-hidden="true"></i>
+          <input
+            type="search"
+            class="form-control ps-5"
+            placeholder="Termine durchsuchen..."
+            aria-label="Termine durchsuchen"
+            (input)="search($any($event.target).value)"
+          />
+        </div>
+      </div>
+
+      @if (user()) {
+        <div class="dropdown flex-shrink-0">
+          <button
+            type="button"
+            class="btn btn-link d-flex align-items-center gap-2 p-1 text-decoration-none text-body"
+            aria-haspopup="true"
+            [attr.aria-expanded]="menuOpen()"
+            (click)="toggleMenu()"
+          >
+            <span class="avatar user-avatar">{{ initials() }}</span>
+            <span class="d-none d-md-block fw-medium">{{ user()?.first_name }}</span>
+            <i class="bi bi-chevron-down small text-body-tertiary d-none d-md-block" aria-hidden="true"></i>
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end user-menu" [class.show]="menuOpen()">
+            <div class="d-flex align-items-center gap-3 px-3 py-2">
+              <span class="avatar user-avatar">{{ initials() }}</span>
+              <div class="min-w-0">
+                <p class="fw-semibold mb-0 text-truncate">{{ user()?.first_name }} {{ user()?.last_name }}</p>
+                <p class="small text-body-secondary mb-0 text-truncate">{{ user()?.email }}</p>
+              </div>
+            </div>
+            <hr class="dropdown-divider" />
+            @for (link of links; track link.path) {
+              <a class="dropdown-item d-flex align-items-center gap-3 py-2" [routerLink]="link.path" (click)="menuOpen.set(false)">
+                <i class="bi" [class]="link.icon" aria-hidden="true"></i>{{ link.label }}
+              </a>
+            }
+            <hr class="dropdown-divider" />
+            <button type="button" class="dropdown-item d-flex align-items-center gap-3 py-2" (click)="logout()">
+              <i class="bi bi-box-arrow-right" aria-hidden="true"></i>Abmelden
+            </button>
+          </div>
+        </div>
+      } @else {
+        <a href="/api/auth/login" class="btn btn-gradient fw-medium flex-shrink-0">Anmelden</a>
+      }
+    </div>
+  </div>
+</header>
