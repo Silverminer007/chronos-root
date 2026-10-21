@@ -1,11 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { formatDate, formatTime } from '../../core/date-format';
 import { Appointment, AppointmentStatus } from '../../core/models';
+import { EditAppointmentBottomSheetComponent } from '../appointment-form/edit-appointment-bottom-sheet.component';
 import { AppointmentShareService } from './appointment-share.service';
 
 const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>> = {
   CANCELLED: { label: 'Abgesagt', css: 'bg-danger-subtle text-danger-emphasis' },
-  NOT_ENOUGH_ATTENDEES: { label: 'Zu wenig Teilnehmer', css: 'bg-warning-subtle text-warning-emphasis' },
+  NOT_ENOUGH_ATTENDEES: {
+    label: 'Zu wenig Teilnehmer',
+    css: 'bg-warning-subtle text-warning-emphasis',
+  },
   DELETED: { label: 'Gelöscht', css: 'bg-secondary-subtle text-secondary-emphasis' },
 };
 
@@ -13,6 +17,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
 @Component({
   selector: 'app-appointment-details-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [EditAppointmentBottomSheetComponent],
   template: `
     <div class="card shadow-sm overflow-hidden">
       <div class="bg-gradient-brand p-4">
@@ -22,16 +27,37 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
             @if (status(); as s) {
               <span class="badge rounded-pill {{ s.css }}" data-testid="status">{{ s.label }}</span>
             }
-            <button type="button" class="btn btn-light bg-opacity-25 border-0 text-white" title="Link teilen" aria-label="Link teilen" (click)="share()">
+            <button
+              type="button"
+              class="btn btn-light bg-opacity-25 border-0 text-white"
+              title="Link teilen"
+              aria-label="Link teilen"
+              (click)="share()"
+            >
               <i class="bi bi-share" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="btn btn-light bg-opacity-25 border-0 text-white"
+              title="Termin bearbeiten"
+              aria-label="Termin bearbeiten"
+              (click)="editOpen.set(true)"
+            >
+              <i class="bi bi-pencil" aria-hidden="true"></i>
             </button>
           </div>
         </div>
         <div class="d-flex flex-wrap gap-3 small opacity-75">
-          <span class="d-flex align-items-center gap-2"><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ date() }}</span>
-          <span class="d-flex align-items-center gap-2"><i class="bi bi-clock" aria-hidden="true"></i>{{ time() }}</span>
+          <span class="d-flex align-items-center gap-2"
+            ><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ date() }}</span
+          >
+          <span class="d-flex align-items-center gap-2"
+            ><i class="bi bi-clock" aria-hidden="true"></i>{{ time() }}</span
+          >
           @if (appointment().venue) {
-            <span class="d-flex align-items-center gap-2"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ appointment().venue }}</span>
+            <span class="d-flex align-items-center gap-2"
+              ><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ appointment().venue }}</span
+            >
           }
         </div>
       </div>
@@ -48,6 +74,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
         </div>
       </div>
     </div>
+    <app-edit-appointment-bottom-sheet [(open)]="editOpen" [appointment]="appointment()" />
   `,
 })
 export class AppointmentDetailsCardComponent {
@@ -55,9 +82,13 @@ export class AppointmentDetailsCardComponent {
 
   readonly appointment = input.required<Appointment>();
 
+  protected readonly editOpen = signal(false);
+
   protected readonly status = computed(() => STATUS[this.appointment().status]);
   protected readonly date = computed(() => formatDate(this.appointment().start));
-  protected readonly time = computed(() => `${formatTime(this.appointment().start)} - ${formatTime(this.appointment().end)}`);
+  protected readonly time = computed(
+    () => `${formatTime(this.appointment().start)} - ${formatTime(this.appointment().end)}`,
+  );
 
   protected share(): void {
     void this.shareService.share(this.appointment());

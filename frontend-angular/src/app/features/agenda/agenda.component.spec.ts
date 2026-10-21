@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { Router, provideRouter } from '@angular/router';
 import { Appointment } from '../../core/models';
+import { CreateAppointmentStepperComponent } from '../appointment-form/create-appointment-stepper.component';
 import { AgendaComponent } from './agenda.component';
 
 const appointment = (id: number): Appointment => ({
@@ -49,7 +51,10 @@ describe('AgendaComponent', () => {
   });
 
   it('zeigt die geladenen Termine als Karten', async () => {
-    await respond({ data: [appointment(1), appointment(2)], meta: { page: 0, size: 20, total: 2 } });
+    await respond({
+      data: [appointment(1), appointment(2)],
+      meta: { page: 0, size: 20, total: 2 },
+    });
     expect(el().querySelectorAll('app-appointment-card')).toHaveLength(2);
     expect(el().querySelector('app-appointment-card-skeleton')).toBeNull();
     expect(el().textContent).not.toContain('Mehr laden');
@@ -58,7 +63,9 @@ describe('AgendaComponent', () => {
   it('zeigt den Leerzustand ohne Termine', async () => {
     await respond({ data: [], meta: { page: 0, size: 20, total: 0 } });
     expect(el().textContent).toContain('Keine Termine vorhanden');
-    expect(el().textContent).toContain('Erstelle deinen ersten Termin oder warte auf eine Einladung.');
+    expect(el().textContent).toContain(
+      'Erstelle deinen ersten Termin oder warte auf eine Einladung.',
+    );
   });
 
   it('zeigt den Fehlerzustand statt des Leerzustands', async () => {
@@ -70,7 +77,9 @@ describe('AgendaComponent', () => {
 
   it('lädt über „Mehr laden“ die nächste Seite nach', async () => {
     await respond({ data: [appointment(1)], meta: { page: 0, size: 20, total: 21 } });
-    const more = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Mehr laden'));
+    const more = Array.from(el().querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Mehr laden'),
+    );
     more?.click();
     http
       .expectOne('/api/v2/appointments?page=1&size=20&participants=true')
@@ -81,9 +90,23 @@ describe('AgendaComponent', () => {
     expect(el().textContent).not.toContain('Mehr laden');
   });
 
-  it('enthält den Suchkopf und noch keinen Anlegen-Button', async () => {
+  it('enthält den Suchkopf und den Anlegen-Button', async () => {
     await respond({ data: [], meta: { page: 0, size: 20, total: 0 } });
     expect(el().querySelector('app-search-header')).not.toBeNull();
-    expect(el().querySelector('.fab')).toBeNull();
+    expect(el().querySelector('button.fab[aria-label="Termin erstellen"]')).not.toBeNull();
+  });
+
+  it('öffnet über den Anlegen-Button den Stepper und springt nach dem Anlegen zum Termin', async () => {
+    await respond({ data: [], meta: { page: 0, size: 20, total: 0 } });
+    expect(el().querySelector('.stepper')).toBeNull();
+    (el().querySelector('.fab') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(el().querySelector('.stepper')).not.toBeNull();
+
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    fixture.debugElement
+      .query(By.directive(CreateAppointmentStepperComponent))
+      .componentInstance.created.emit(42);
+    expect(navigate).toHaveBeenCalledWith('/appointment/42');
   });
 });

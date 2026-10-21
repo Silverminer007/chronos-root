@@ -1,0 +1,352 @@
+@if (open()) {
+  <div
+    class="stepper position-fixed top-0 start-0 w-100 h-100 d-flex flex-column flex-lg-row bg-body"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Neuer Termin"
+    (touchstart)="onTouchStart($event)"
+    (touchend)="onTouchEnd($event)"
+    (keydown.escape)="close()"
+  >
+    <aside
+      class="summary d-none d-lg-flex flex-column flex-shrink-0 bg-body-tertiary border-end p-5"
+    >
+      <p class="small fw-semibold text-uppercase text-body-secondary mb-4">Neuer Termin</p>
+      <h2
+        class="summary-title display-6 fw-bold mb-4"
+        [class.text-body-tertiary]="!formValue().name"
+      >
+        {{ formValue().name || 'Terminname' }}
+      </h2>
+      <ul class="list-unstyled small text-body-secondary d-flex flex-column gap-2 mb-auto">
+        @if (startLabel(); as label) {
+          <li class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-event" aria-hidden="true"></i>{{ label }}
+          </li>
+        }
+        @if (durationText(); as label) {
+          <li class="d-flex align-items-center gap-2">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i>{{ label }}
+          </li>
+        }
+        @if (formValue().description) {
+          <li class="d-flex align-items-start gap-2">
+            <i class="bi bi-file-text" aria-hidden="true"></i
+            ><span class="clamp-2">{{ formValue().description }}</span>
+          </li>
+        }
+        @if (formValue().venue) {
+          <li class="d-flex align-items-center gap-2">
+            <i class="bi bi-geo-alt" aria-hidden="true"></i>{{ formValue().venue }}
+          </li>
+        }
+        @if (formValue().hasAttendees) {
+          <li class="d-flex align-items-center gap-2">
+            <i class="bi bi-people" aria-hidden="true"></i>Mindestens
+            {{ formValue().minimalAttendees }} Teilnehmer
+          </li>
+        }
+        @if (participantsLabel(); as label) {
+          <li class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-check" aria-hidden="true"></i>{{ label }}
+          </li>
+        }
+      </ul>
+      <ol class="list-unstyled d-flex flex-column gap-2 mt-4 mb-0">
+        @for (label of stepLabels; track label; let i = $index) {
+          <li
+            class="d-flex align-items-center gap-3"
+            [class.fw-semibold]="i + 1 === step()"
+            [class.text-body-secondary]="i + 1 !== step()"
+          >
+            <span class="step-dot" [class.done]="i + 1 < step()" [class.current]="i + 1 === step()">
+              @if (i + 1 < step()) {
+                <i class="bi bi-check-lg" aria-hidden="true"></i>
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            {{ label }}
+          </li>
+        }
+      </ol>
+    </aside>
+
+    <div class="d-flex flex-column flex-grow-1 min-h-0">
+      <header
+        class="d-flex align-items-center justify-content-between px-3 py-3 border-bottom flex-shrink-0"
+      >
+        <button
+          type="button"
+          class="btn btn-link text-body-secondary fs-4 p-0 lh-1"
+          [attr.aria-label]="step() > 1 ? 'Zurück' : 'Schließen'"
+          (click)="step() > 1 ? goBack() : close()"
+        >
+          <i
+            class="bi"
+            [class.bi-arrow-left]="step() > 1"
+            [class.bi-x-lg]="step() === 1"
+            aria-hidden="true"
+          ></i>
+        </button>
+        <div class="d-flex align-items-center gap-2 d-lg-none" aria-hidden="true">
+          @for (s of steps; track s) {
+            <span
+              class="progress-dot"
+              [class.current]="s === step()"
+              [class.done]="s < step()"
+            ></span>
+          }
+        </div>
+        <span class="d-none d-lg-block fw-semibold">{{ stepLabels[step() - 1] }}</span>
+        <span class="small text-body-secondary">{{ step() }} / {{ totalSteps }}</span>
+      </header>
+
+      <form class="flex-grow-1 overflow-y-auto" [formGroup]="form" (ngSubmit)="goNext()">
+        @if (step() < totalSteps) {
+          <div
+            [class]="
+              'step d-flex flex-column align-items-center justify-content-center text-center px-4 py-5 min-h-100 ' +
+              stepClass
+            "
+          >
+            @switch (step()) {
+              @case (1) {
+                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                  ><i class="bi bi-type fs-2"></i
+                ></span>
+                <h1 class="h3 fw-bold">Wie heißt der Termin?</h1>
+                <p class="text-body-secondary mb-5">Gib deinem Termin einen Namen.</p>
+                <input
+                  id="stepper-name"
+                  type="text"
+                  class="form-control form-control-lg text-center fw-semibold line-input"
+                  aria-label="Terminname"
+                  placeholder="z.B. Sommerfest 2025"
+                  formControlName="name"
+                  (keydown.enter)="$event.preventDefault(); goNext()"
+                />
+              }
+              @case (2) {
+                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                  ><i class="bi bi-calendar-event fs-2"></i
+                ></span>
+                <h1 class="h3 fw-bold">Wann?</h1>
+                <p class="text-body-secondary mb-4">Wähle Datum und Uhrzeit.</p>
+                <div class="d-flex gap-2 mb-4">
+                  @for (chip of todayChips; track chip.days) {
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary rounded-pill"
+                      (click)="setToday(chip.days)"
+                    >
+                      {{ chip.label }}
+                    </button>
+                  }
+                </div>
+                <input
+                  type="datetime-local"
+                  class="form-control form-control-lg w-auto"
+                  aria-label="Datum und Uhrzeit"
+                  formControlName="start"
+                />
+              }
+              @case (3) {
+                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                  ><i class="bi bi-stopwatch fs-2"></i
+                ></span>
+                <h1 class="h3 fw-bold">Wie lange?</h1>
+                <p class="text-body-secondary mb-4">Wähle die Dauer des Termins.</p>
+                <div class="row row-cols-2 g-3 option-grid">
+                  @for (chip of durationChips; track chip.minutes) {
+                    <div class="col">
+                      <button
+                        type="button"
+                        class="btn btn-lg w-100"
+                        [class]="
+                          !form.controls.customDuration.value &&
+                          form.controls.durationMinutes.value === chip.minutes
+                            ? 'btn-primary'
+                            : 'btn-outline-secondary'
+                        "
+                        (click)="selectDuration(chip.minutes)"
+                      >
+                        {{ chip.label }}
+                      </button>
+                    </div>
+                  }
+                  <div class="col-12">
+                    <button
+                      type="button"
+                      class="btn btn-lg w-100"
+                      [class]="
+                        form.controls.customDuration.value ? 'btn-primary' : 'btn-outline-secondary'
+                      "
+                      (click)="toggleCustomDuration()"
+                    >
+                      Eigene Dauer
+                    </button>
+                  </div>
+                </div>
+                @if (form.controls.customDuration.value) {
+                  <div class="option-grid mt-4 d-flex flex-column gap-3">
+                    <div class="btn-group" role="group" aria-label="Einheit">
+                      @for (unit of durationUnits; track unit.value) {
+                        <button
+                          type="button"
+                          class="btn"
+                          [class]="
+                            form.controls.customUnit.value === unit.value
+                              ? 'btn-primary'
+                              : 'btn-outline-secondary'
+                          "
+                          (click)="form.controls.customUnit.setValue(unit.value)"
+                        >
+                          {{ unit.label }}
+                        </button>
+                      }
+                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      class="form-control form-control-lg text-center"
+                      aria-label="Eigene Dauer"
+                      formControlName="customValue"
+                    />
+                  </div>
+                }
+              }
+              @case (4) {
+                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                  ><i class="bi bi-file-text fs-2"></i
+                ></span>
+                <h1 class="h3 fw-bold">Beschreibung</h1>
+                <p class="text-body-secondary mb-4">Optional – überspringe einfach mit „Weiter".</p>
+                <textarea
+                  id="stepper-description"
+                  rows="5"
+                  class="form-control option-grid"
+                  aria-label="Beschreibung"
+                  placeholder="Was sollen die Teilnehmer wissen?"
+                  formControlName="description"
+                ></textarea>
+              }
+              @case (5) {
+                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                  ><i class="bi bi-geo-alt fs-2"></i
+                ></span>
+                <h1 class="h3 fw-bold">Wo findet es statt?</h1>
+                <p class="text-body-secondary mb-4">Optional – überspringe einfach mit „Weiter".</p>
+                <input
+                  id="stepper-venue"
+                  type="text"
+                  class="form-control form-control-lg text-center line-input"
+                  aria-label="Ort"
+                  placeholder="z.B. Vereinsheim"
+                  formControlName="venue"
+                  (keydown.enter)="$event.preventDefault(); goNext()"
+                />
+              }
+            }
+          </div>
+        }
+
+        <div
+          class="step-6 d-flex flex-column align-items-center gap-4 px-3 py-4"
+          [class.d-none]="step() !== 6"
+        >
+          <div class="text-center">
+            <span class="icon-tile rounded-4 mb-3" aria-hidden="true"
+              ><i class="bi bi-people fs-2"></i
+            ></span>
+            <h1 class="h3 fw-bold mb-1">Teilnehmer</h1>
+            <p class="small text-body-secondary mb-0">Mindestanzahl und Einladungen festlegen.</p>
+          </div>
+          <div class="option-grid w-100">
+            <p class="small fw-semibold text-uppercase text-body-secondary text-center mb-3">
+              Mindestanzahl Teilnehmer
+            </p>
+            <div class="d-flex gap-3 justify-content-center mb-3">
+              <button
+                type="button"
+                class="btn btn-lg flex-fill"
+                [class]="form.controls.hasAttendees.value ? 'btn-success' : 'btn-outline-secondary'"
+                (click)="setAttendees(true)"
+              >
+                Ja
+              </button>
+              <button
+                type="button"
+                class="btn btn-lg flex-fill"
+                [class]="!form.controls.hasAttendees.value ? 'btn-dark' : 'btn-outline-secondary'"
+                (click)="setAttendees(false)"
+              >
+                Nein
+              </button>
+            </div>
+            @if (form.controls.hasAttendees.value) {
+              <div class="d-flex align-items-center justify-content-center gap-4">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary rounded-circle count-btn"
+                  aria-label="Weniger"
+                  (click)="changeMinimalAttendees(-1)"
+                >
+                  −
+                </button>
+                <span class="display-6 fw-bold count" aria-live="polite">{{
+                  form.controls.minimalAttendees.value
+                }}</span>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary rounded-circle count-btn"
+                  aria-label="Mehr"
+                  (click)="changeMinimalAttendees(1)"
+                >
+                  +
+                </button>
+              </div>
+            }
+          </div>
+          <div class="option-grid w-100">
+            <p class="small fw-semibold text-uppercase text-body-secondary text-center mb-3">
+              Personen &amp; Gruppen einladen
+            </p>
+            <app-appointment-participant-picker (changed)="onPickerChange($event)" />
+          </div>
+        </div>
+      </form>
+
+      <footer
+        class="d-flex align-items-center gap-3 px-3 py-3 border-top flex-shrink-0 footer-safe"
+      >
+        <button
+          type="button"
+          class="btn btn-light btn-lg"
+          (click)="step() > 1 ? goBack() : close()"
+        >
+          {{ step() > 1 ? 'Zurück' : 'Abbrechen' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-gradient btn-lg flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+          [disabled]="!canProceed() || saving()"
+          (click)="goNext()"
+        >
+          @if (saving()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          }
+          <span>{{ step() < totalSteps ? 'Weiter' : saving() ? 'Erstelle…' : 'Erstellen' }}</span>
+          @if (!saving()) {
+            <i
+              class="bi"
+              [class.bi-arrow-right]="step() < totalSteps"
+              [class.bi-check-lg]="step() === totalSteps"
+              aria-hidden="true"
+            ></i>
+          }
+        </button>
+      </footer>
+    </div>
+  </div>
+}

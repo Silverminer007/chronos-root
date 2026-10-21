@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { AppointmentDetailsCardComponent } from './appointment-details-card.component';
 import { AppointmentShareService } from './appointment-share.service';
@@ -7,7 +9,13 @@ describe('AppointmentDetailsCardComponent', () => {
   const share = { share: vi.fn() };
 
   const render = (overrides = {}) => {
-    TestBed.configureTestingModule({ providers: [{ provide: AppointmentShareService, useValue: share }] });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AppointmentShareService, useValue: share },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    });
     const fixture = TestBed.createComponent(AppointmentDetailsCardComponent);
     fixture.componentRef.setInput('appointment', appointment(overrides));
     fixture.detectChanges();
@@ -47,8 +55,14 @@ describe('AppointmentDetailsCardComponent', () => {
     expect(share.share).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
   });
 
-  it('zeigt keinen Bearbeiten-Button (kommt mit dem Ticket „Termin anlegen und bearbeiten“)', () => {
-    const { el } = render();
-    expect(el.querySelector('button[title="Termin bearbeiten"]')).toBeNull();
+  it('öffnet über den Bearbeiten-Button das Bottom-Sheet', () => {
+    const { fixture, el } = render();
+    expect(el.querySelector('.sheet')).toBeNull();
+    click(el.querySelector('button[title="Termin bearbeiten"]'));
+    fixture.detectChanges();
+    expect(el.querySelector('.sheet')).not.toBeNull();
+    expect((el.querySelector('.sheet input[type="text"]') as HTMLInputElement).value).toBe(
+      'Zeltlager',
+    );
   });
 });
