@@ -18,7 +18,9 @@ export const authGuard: CanActivateFn = async (_route, state) => {
   if (!auth.user()) {
     await auth.fetchUser();
   }
-  if ((onboarding.shouldShow() || !auth.isProfileComplete()) && path !== '/onboarding') {
+  // Nur bei geladenem, unvollständigem Profil umleiten; ein fehlgeschlagenes `fetchUser` (user bleibt null) ist kein „Profil unvollständig“.
+  const profileIncomplete = !!auth.user() && !auth.isProfileComplete();
+  if ((onboarding.shouldShow() || profileIncomplete) && path !== '/onboarding') {
     return router.parseUrl('/onboarding');
   }
   if (path === '/') {

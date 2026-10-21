@@ -61,8 +61,15 @@ describe('authGuard', () => {
   });
 
   it('leitet auf /onboarding, wenn das Profil unvollständig ist', async () => {
+    user.set({ id: 1 });
     isProfileComplete.mockReturnValue(false);
     expect(urlOf(await run('/agenda'))).toBe('/onboarding');
+  });
+
+  it('leitet nicht auf /onboarding, wenn der Benutzer nicht geladen werden konnte', async () => {
+    isProfileComplete.mockReturnValue(false);
+    expect(await run('/agenda')).toBe(true);
+    expect(fetchUser).toHaveBeenCalledOnce();
   });
 
   it('lässt /onboarding selbst durch', async () => {
