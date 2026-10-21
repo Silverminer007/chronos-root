@@ -306,6 +306,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ARCH-2025-09-28-006: Authorization and security](architecture/ARCH-2025-09-28-006-authorization.md)
 - [ARCH-2026-10-20-001: Parity run of the Rust backend against the Java reference in the local k3s cluster](architecture/ARCH-2026-10-20-001-rust-java-parity-run.md)
 - [ARCH-2026-10-20-002: Final proof run of the Rust port (harness and explorative pass, local k3s)](architecture/ARCH-2026-10-20-002-rust-port-final-proof.md)
+- [ARCH-2026-10-21-001: Performance comparison of the Java and the Rust backend (local k3s)](architecture/ARCH-2026-10-21-001-rust-java-performance-comparison.md)
 
 ### Patterns
 - [PATTERN-2025-09-28-001: Principal context pattern](patterns/PATTERN-2025-09-28-001-principal-context.md)
