@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Friend } from '../../core/models';
 import { AddParticipantDialogComponent } from './add-participant-dialog.component';
-import { ParticipantLookupService } from './participant-lookup.service';
+import { FriendshipStore } from '../friends/friendship.store';
 import { buttonByText, click } from './testing';
 
 const friend = (id: number, name: string): Friend => ({
@@ -13,11 +13,11 @@ const friend = (id: number, name: string): Friend => ({
 });
 
 describe('AddParticipantDialogComponent', () => {
-  let lookup: { loadFriends: ReturnType<typeof vi.fn> };
+  let lookup: { fetchFriends: ReturnType<typeof vi.fn> };
 
   const render = (visible = true) => {
-    lookup = { loadFriends: vi.fn().mockResolvedValue([friend(1, 'Anna'), friend(2, 'Annika'), friend(3, 'Bernd')]) };
-    TestBed.configureTestingModule({ providers: [{ provide: ParticipantLookupService, useValue: lookup }] });
+    lookup = { fetchFriends: vi.fn().mockResolvedValue([friend(1, 'Anna'), friend(2, 'Annika'), friend(3, 'Bernd')]) };
+    TestBed.configureTestingModule({ providers: [{ provide: FriendshipStore, useValue: lookup }] });
     const fixture = TestBed.createComponent(AddParticipantDialogComponent);
     fixture.componentRef.setInput('visible', visible);
     fixture.detectChanges();
@@ -40,7 +40,7 @@ describe('AddParticipantDialogComponent', () => {
   it('sucht erst ab zwei Zeichen (wie Nuxt: davor „Keine Ergebnisse“, ohne die Freunde zu laden)', async () => {
     const { el, type } = render();
     await type('A');
-    expect(lookup.loadFriends).not.toHaveBeenCalled();
+    expect(lookup.fetchFriends).not.toHaveBeenCalled();
     expect(el.querySelectorAll('[data-testid="result"]')).toHaveLength(0);
     expect(el.textContent).toContain('Keine Ergebnisse gefunden');
   });
@@ -51,7 +51,7 @@ describe('AddParticipantDialogComponent', () => {
     expect(el.querySelectorAll('[data-testid="result"]')).toHaveLength(2);
     await type('bern');
     expect(el.querySelectorAll('[data-testid="result"]')).toHaveLength(1);
-    expect(lookup.loadFriends).toHaveBeenCalledTimes(1);
+    expect(lookup.fetchFriends).toHaveBeenCalledTimes(1);
   });
 
   it('zeigt „Keine Ergebnisse gefunden“ ohne Treffer', async () => {

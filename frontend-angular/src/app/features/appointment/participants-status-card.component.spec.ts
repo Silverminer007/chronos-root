@@ -4,7 +4,7 @@ import { AuthService } from '../../core/auth.service';
 import { User } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
-import { ParticipantLookupService } from './participant-lookup.service';
+import { FriendshipStore } from '../friends/friendship.store';
 import { ParticipantsStatusCardComponent } from './participants-status-card.component';
 import { appointment, buttonByText, click, participant } from './testing';
 
@@ -33,7 +33,7 @@ describe('ParticipantsStatusCardComponent', () => {
         { provide: AppointmentStore, useValue: store },
         { provide: AuthService, useValue: { user } },
         { provide: ToastService, useValue: toast },
-        { provide: ParticipantLookupService, useValue: { loadFriends: vi.fn().mockResolvedValue([]) } },
+        { provide: FriendshipStore, useValue: { fetchFriends: vi.fn().mockResolvedValue([]) } },
       ],
     });
     const fixture = TestBed.createComponent(ParticipantsStatusCardComponent);

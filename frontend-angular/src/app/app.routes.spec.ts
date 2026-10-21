@@ -49,6 +49,12 @@ describe('routes', () => {
     expect(typeof detail?.loadComponent).toBe('function');
   });
 
+  it('hängt die Freundesseite lazy unter das Default-Layout mit authGuard', () => {
+    const shell = routes.find((r) => r.component === DefaultLayoutComponent);
+    const friends = shell?.children?.find((r) => r.path === 'friends');
+    expect(typeof friends?.loadComponent).toBe('function');
+  });
+
   it('leitet unbekannte Pfade auf die Startseite um', async () => {
     await render('/gibt-es-nicht');
     expect(TestBed.inject(Router).url).toBe('/');

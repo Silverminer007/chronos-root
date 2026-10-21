@@ -1,0 +1,127 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="friends mx-auto pt-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h1 class="h2 fw-bold mb-1">Freunde</h1>
+        <p class="text-body-secondary mb-0">Verwalte deine Freundschaften</p>
+      </div>
+      <button type="button" class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddDialog.set(true)">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Hinzufügen</span>
+      </button>
+    </div>
+
+    <div class="d-flex gap-2 mb-4" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        class="btn fw-medium flex-fill flex-sm-grow-0 px-4 py-2"
+        [class]="activeTab() === 'friends' ? 'btn-gradient' : 'btn-outline-secondary'"
+        [attr.aria-selected]="activeTab() === 'friends'"
+        (click)="activeTab.set('friends')"
+      >
+        <i class="bi bi-people me-2" aria-hidden="true"></i>Freunde
+        <span class="badge rounded-pill ms-2" [class]="activeTab() === 'friends' ? 'text-bg-light' : 'text-bg-secondary'">{{ store.friendsCount() }}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="btn fw-medium flex-fill flex-sm-grow-0 px-4 py-2"
+        [class]="activeTab() === 'requests' ? 'btn-gradient' : 'btn-outline-secondary'"
+        [attr.aria-selected]="activeTab() === 'requests'"
+        (click)="activeTab.set('requests')"
+      >
+        <i class="bi bi-inbox me-2" aria-hidden="true"></i>Anfragen
+        @if (store.totalRequestsCount() > 0) {
+          <span class="badge rounded-pill ms-2" [class]="activeTab() === 'requests' ? 'text-bg-light' : 'text-bg-danger'">{{ store.totalRequestsCount() }}</span>
+        }
+      </button>
+    </div>
+
+    @if (store.loading()) {
+      <div class="text-center py-5" role="status">
+        <span class="spinner-border text-primary mb-3" aria-hidden="true"></span>
+        <p class="text-body-secondary mb-0">Wird geladen...</p>
+      </div>
+    } @else if (store.error(); as error) {
+      <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
+        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <div>
+          <p class="fw-semibold mb-0">Fehler beim Laden</p>
+          <p class="small mb-0">{{ error }}</p>
+        </div>
+      </div>
+    } @else if (activeTab() === 'friends') {
+      <div class="d-flex flex-column gap-3">
+        @for (friend of store.friends(); track friend.user_id) {
+          <app-friend-card [friend]="friend" (remove)="removeFriend($event)" />
+        }
+
+        @if (store.friends().length === 0) {
+          <div class="text-center py-5 px-3">
+            <div class="icon-tile rounded-circle empty-icon mb-3">
+              <i class="bi bi-people fs-2" aria-hidden="true"></i>
+            </div>
+            <h3 class="h4 fw-bold mb-2">Noch keine Freunde</h3>
+            <p class="text-body-secondary mb-4">Füge Freunde hinzu, um Termine gemeinsam zu planen.</p>
+            <button type="button" class="btn btn-gradient fw-medium px-4" (click)="showAddDialog.set(true)">
+              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Freund hinzufügen
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="d-flex flex-column gap-4">
+        <section>
+          <h2 class="h5 fw-semibold mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-arrow-down text-success" aria-hidden="true"></i>
+            Eingehende Anfragen
+            <span class="small fw-normal text-body-secondary">({{ store.incomingRequestsCount() }})</span>
+          </h2>
+          <div class="d-flex flex-column gap-3">
+            @for (request of store.incomingRequests(); track request.requestId) {
+              <app-friend-request-card
+                [request]="request"
+                type="incoming"
+                (accepted)="acceptRequest($event)"
+                (declined)="declineRequest($event)"
+              />
+            }
+            @if (store.incomingRequests().length === 0) {
+              <div class="p-4 bg-body-tertiary rounded text-center text-body-secondary">Keine eingehenden Anfragen</div>
+            }
+          </div>
+        </section>
+
+        <section>
+          <h2 class="h5 fw-semibold mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-arrow-up text-primary" aria-hidden="true"></i>
+            Ausgehende Anfragen
+            <span class="small fw-normal text-body-secondary">({{ store.outgoingRequestsCount() }})</span>
+          </h2>
+          <div class="d-flex flex-column gap-3">
+            @for (request of store.outgoingRequests(); track request.requestId) {
+              <app-friend-request-card [request]="request" type="outgoing" (cancelled)="cancelRequest($event)" />
+            }
+            @if (store.outgoingRequests().length === 0) {
+              <div class="p-4 bg-body-tertiary rounded text-center text-body-secondary">Keine ausgehenden Anfragen</div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+  </div>
+</main>
+
+<button
+  type="button"
+  class="fab btn btn-gradient rounded-circle shadow-lg d-flex align-items-center justify-content-center d-sm-none"
+  aria-label="Freund hinzufügen"
+  (click)="showAddDialog.set(true)"
+>
+  <i class="bi bi-plus-lg fs-3" aria-hidden="true"></i>
+</button>
+
+<app-send-friend-request-dialog [visible]="showAddDialog()" (closed)="showAddDialog.set(false)" />

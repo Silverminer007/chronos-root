@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, HostListener, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { Friend, Role } from '../../core/models';
-import { ParticipantLookupService } from './participant-lookup.service';
+import { FriendshipStore } from '../friends/friendship.store';
 import { roleLabel } from './participation';
 import { RolePickerComponent } from './role-picker.component';
 
@@ -107,7 +107,7 @@ const MIN_QUERY_LENGTH = 2;
   styles: '.result-list { max-height: 15rem; overflow-y: auto; }',
 })
 export class AddParticipantDialogComponent {
-  private readonly lookup = inject(ParticipantLookupService);
+  private readonly friendships = inject(FriendshipStore);
 
   readonly visible = input.required<boolean>();
   readonly closed = output<void>();
@@ -137,7 +137,7 @@ export class AddParticipantDialogComponent {
     }
     this.searching.set(true);
     try {
-      this.friends ??= await this.lookup.loadFriends();
+      this.friends ??= await this.friendships.fetchFriends();
       // Wurde inzwischen weitergetippt, gehört das Ergebnis zur neueren Eingabe.
       if (this.query() !== query) return;
       const needle = query.toLowerCase();

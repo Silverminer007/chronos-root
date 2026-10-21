@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Friend, Group, Role } from '../../core/models';
 import { ParticipantLookupService } from '../appointment/participant-lookup.service';
+import { FriendshipStore } from '../friends/friendship.store';
 
 export type ParticipationRole = Exclude<Role, 'NONE'>;
 
@@ -225,6 +226,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
 })
 export class AppointmentParticipantPickerComponent {
   private readonly lookup = inject(ParticipantLookupService);
+  private readonly friendships = inject(FriendshipStore);
 
   readonly changed = output<PickerChange>();
 
@@ -333,7 +335,7 @@ export class AppointmentParticipantPickerComponent {
     this.loading.set(true);
     try {
       if (this.tab() === 'users') {
-        if (this.friends.length < 1) this.friends = await this.lookup.loadFriends();
+        if (this.friends.length < 1) this.friends = await this.friendships.fetchFriends();
         const needle = query.toLowerCase();
         if (request === this.latestSearch)
           this.userResults.set(this.friends.filter((f) => f.name.toLowerCase().includes(needle)));
