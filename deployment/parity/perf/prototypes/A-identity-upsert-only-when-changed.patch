@@ -1,0 +1,57 @@
+diff --git a/rust-backend/src/users/identity.rs b/rust-backend/src/users/identity.rs
+index ca244b2..8eeb7b3 100644
+--- a/rust-backend/src/users/identity.rs
++++ b/rust-backend/src/users/identity.rs
+@@ -161,18 +161,46 @@ impl IdentityRepository {
+ }
+ 
+ /// Upserts the principal's profile. A transient DB failure must not abort a valid request (as in Java).
++/// PROTOTYPE: skipped while the same claims were stored less than five minutes ago.
+ pub async fn cache_identity(
+     State(repository): State<UserRepository>,
+     request: Request,
+     next: Next,
+ ) -> Response {
++    use std::collections::HashMap;
++    use std::hash::{Hash, Hasher};
++    use std::sync::{Mutex, OnceLock};
++    use std::time::{Duration, Instant};
++    static SEEN: OnceLock<Mutex<HashMap<String, (u64, Instant)>>> = OnceLock::new();
++
+     if let Some(principal) = request.extensions().get::<Arc<PrincipalContext>>() {
+-        if let Err(e) = repository.upsert_profile(principal).await {
+-            warn!(
+-                "Failed to upsert identity cache for user {}: {}",
+-                principal.user_id(),
+-                e
+-            );
++        let identity = UserIdentity::from(principal.as_ref());
++        let mut hasher = std::collections::hash_map::DefaultHasher::new();
++        identity.first_name.hash(&mut hasher);
++        identity.last_name.hash(&mut hasher);
++        identity.email.hash(&mut hasher);
++        identity.profile_picture_url.hash(&mut hasher);
++        let fingerprint = hasher.finish();
++        let seen = SEEN.get_or_init(|| Mutex::new(HashMap::new()));
++        let fresh = seen
++            .lock()
++            .unwrap()
++            .get(&identity.oidc_id)
++            .map(|(f, at)| *f == fingerprint && at.elapsed() < Duration::from_secs(300))
++            .unwrap_or(false);
++        if !fresh {
++            match repository.upsert_identity(&identity).await {
++                Ok(()) => {
++                    seen.lock()
++                        .unwrap()
++                        .insert(identity.oidc_id.clone(), (fingerprint, Instant::now()));
++                }
++                Err(e) => warn!(
++                    "Failed to upsert identity cache for user {}: {}",
++                    principal.user_id(),
++                    e
++                ),
++            }
+         }
+     }
+     next.run(request).await

@@ -1,0 +1,37 @@
+{
+ "get user": {
+  "rps": 3119.0,
+  "p50_ms": 9.11,
+  "errors": 0,
+  "cores": 1.76,
+  "cpu_ms_per_req": 0.57
+ },
+ "get appointment": {
+  "rps": 125.3,
+  "p50_ms": 270.77,
+  "errors": 0,
+  "cores": 1.91,
+  "cpu_ms_per_req": 15.48
+ },
+ "list appointments": {
+  "rps": 62.6,
+  "p50_ms": 516.12,
+  "errors": 0,
+  "cores": 1.89,
+  "cpu_ms_per_req": 30.43
+ },
+ "send message": {
+  "rps": 53.8,
+  "p50_ms": 590.92,
+  "errors": 0,
+  "cores": 1.57,
+  "cpu_ms_per_req": 29.69
+ },
+ "create appointment": {
+  "rps": 55.4,
+  "p50_ms": 566.85,
+  "errors": 0,
+  "cores": 1.37,
+  "cpu_ms_per_req": 25.08
+ }
+}

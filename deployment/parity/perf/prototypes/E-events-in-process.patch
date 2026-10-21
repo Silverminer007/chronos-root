@@ -1,0 +1,85 @@
+diff --git a/rust-backend/src/event_bus/postgres.rs b/rust-backend/src/event_bus/postgres.rs
+index 25c5a18..8bd8510 100644
+--- a/rust-backend/src/event_bus/postgres.rs
++++ b/rust-backend/src/event_bus/postgres.rs
+@@ -28,6 +28,8 @@ pub struct PostgresEventBus {
+     pool: PgPool,
+     /// Channel to the dispatcher task; the task is spawned by the first `subscribe`
+     dispatcher: Mutex<Option<mpsc::UnboundedSender<Subscription>>>,
++    /// PROTOTYPE: callbacks of this process, called directly by `fire`
++    local: Arc<Mutex<HashMap<String, Vec<Callback>>>>,
+ }
+ 
+ impl PostgresEventBus {
+@@ -36,6 +38,7 @@ impl PostgresEventBus {
+         Self {
+             pool,
+             dispatcher: Mutex::new(None),
++            local: Arc::new(Mutex::new(HashMap::new())),
+         }
+     }
+ 
+@@ -155,29 +158,22 @@ impl EventPublisher for PostgresEventBus {
+             );
+         }
+ 
+-        // Insert event into events table for persistence
+-        let payload_str = serde_json::to_string(&event.payload)?;
+-
+-        sqlx::query(
+-            "INSERT INTO events (id, event_type, payload, timestamp)
+-             VALUES ($1, $2, $3, $4)",
+-        )
+-        .bind(&event.id)
+-        .bind(&event.event_type)
+-        .bind(&payload_str)
+-        .bind(event.timestamp)
+-        .execute(&self.pool)
+-        .await?;
+-
+-        // NOTIFY all subscribers listening on this channel. `pg_notify` keeps the channel name
+-        // case-sensitive, like the quoted `LISTEN` of `PgListener` (a plain `NOTIFY Name` folds it
+-        // to lower case, so CamelCase event types were never delivered).
+-        // Include the event ID in the payload so subscribers can fetch the full event
+-        sqlx::query("SELECT pg_notify($1, $2)")
+-            .bind(&event.event_type)
+-            .bind(&event.id)
+-            .execute(&self.pool)
+-            .await?;
++        // PROTOTYPE: deliver in this process, like the CDI events of the Java backend
++        let handlers = self
++            .local
++            .lock()
++            .unwrap()
++            .get(&event.event_type)
++            .cloned()
++            .unwrap_or_default();
++        for callback in handlers {
++            callback(Event {
++                id: event.id.clone(),
++                event_type: event.event_type.clone(),
++                payload: event.payload.clone(),
++                timestamp: event.timestamp,
++            });
++        }
+ 
+         info!("Event fired: {} (id: {})", event.event_type, event.id);
+         Ok(())
+@@ -196,9 +192,16 @@ impl EventSubscriber for PostgresEventBus {
+     where
+         F: Fn(Event) + Send + Sync + 'static,
+     {
++        let callback: Callback = Arc::new(callback);
++        self.local
++            .lock()
++            .unwrap()
++            .entry(event_type.clone())
++            .or_default()
++            .push(callback.clone());
+         self.send_subscription(Subscription {
+             event_type,
+-            callback: Arc::new(callback),
++            callback,
+         })?;
+         Ok(())
+     }
