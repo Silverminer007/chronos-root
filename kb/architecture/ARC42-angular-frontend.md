@@ -79,6 +79,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 ## 9. Architekturentscheidungen
 
 - ADR-2026-10-21-001: Angular statt Nuxt (diese Migration). Kein NgRx, eigener Node-BFF, handgeschriebener Service Worker.
+- ADR-2026-10-21-004: `core/` (Modelle, AuthService, authGuard, Interceptor, Toast, Modal).
 
 ## 10. Qualitätsanforderungen
 

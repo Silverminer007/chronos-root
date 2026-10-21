@@ -29,13 +29,15 @@ Details: `kb/adr/ADR-2026-10-21-003-angular-bff-server.md`.
 ```
 src/
 ├── app/
-│   ├── core/              Services (z. B. ThemeService)
+│   ├── core/              Modelle, AuthService, authGuard, errorInterceptor, ToastService, ModalService, ThemeService
 │   ├── features/<name>/   je Feature eine lazy geladene Komponente
 │   └── app.routes.ts      Routing (loadComponent je Route, Wildcard → Startseite)
 └── styles/
     ├── _variables.scss    Bootstrap-Variablen und Markenfarben (Lila/Pink), vor Bootstrap eingebunden
     └── _theme.scss        Gradient-Klassen (`text-gradient`, `bg-gradient-brand`, `btn-gradient`)
 ```
+
+`core/` im Detail: `kb/adr/ADR-2026-10-21-004-angular-core.md`. Toast-Container und Bestätigungsdialog sind in `App` eingebunden.
 
 ## Theming und Dark Mode
 
