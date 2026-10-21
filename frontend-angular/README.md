@@ -9,11 +9,20 @@ Architektur: `kb/architecture/ARC42-angular-frontend.md`. Die Oberfläche ist ko
 
 ```bash
 npm ci
-npm start        # Dev-Server auf :4200
+npm start        # BFF (Node) auf :3000, liefert dist/browser aus (vorher npm run build)
+npm run start:dev # Angular-Dev-Server auf :4200
 npm run lint     # angular-eslint
-npm test         # Unit-Tests (Vitest, einmalig)
+npm test         # Unit-Tests (Vitest, einmalig) und BFF-Tests (npm run test:server)
 npm run build    # Produktions-Build inkl. Bundle-Budgets nach dist/
 ```
+
+## BFF (`server/`)
+
+Node/Express-Server: Auth-Routen (`/api/auth/*`), Proxy `/api/v2/*` mit Bearer-Token aus `kc_access`, `GET /api/config`
+(Impressum), statisches Hosting mit SPA-Fallback und 301-Redirect nicht angemeldeter Anfragen auf `/`.
+Konfiguration über `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AUTH_REDIRECT_URI`, `CHRONOS_QUARKUS_URL`,
+`CHRONOS_PUBLIC_IMPRESSUM_*` (Fallback auf `NUXT_*`), optional `CHRONOS_PORT`, `CHRONOS_STATIC_DIR`, `CHRONOS_COOKIE_SECURE`.
+Details: `kb/adr/ADR-2026-10-21-003-angular-bff-server.md`.
 
 ## Aufbau
 
