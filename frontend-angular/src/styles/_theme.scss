@@ -1,0 +1,26 @@
+@use 'variables' as *;
+
+// Markenfarbe als Gradient (Lila → Pink).
+.text-gradient {
+  background: $brand-gradient;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-gradient-brand {
+  background: $brand-gradient;
+  color: #fff;
+}
+
+.btn-gradient {
+  background: $brand-gradient;
+  border: 0;
+  color: #fff;
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+    filter: brightness(1.1);
+  }
+}

@@ -1,0 +1,36 @@
+name: Frontend Angular CI
+
+on:
+  push:
+    branches: [ main, develop, angular-frontend ]
+    paths: [ 'frontend-angular/**', '.github/workflows/frontend-angular.yml' ]
+  pull_request:
+    branches: [ main, develop, angular-frontend ]
+    paths: [ 'frontend-angular/**', '.github/workflows/frontend-angular.yml' ]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend-angular
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend-angular/package-lock.json
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit-Tests
+        run: npm test
+      - name: Build
+        run: npm run build

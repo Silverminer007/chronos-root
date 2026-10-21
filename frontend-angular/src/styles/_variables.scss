@@ -1,0 +1,11 @@
+// Bootstrap-Variablen überschreiben; muss vor dem Bootstrap-Import eingebunden werden.
+$brand-purple: #9333ea; // purple-600
+$brand-pink: #ec4899; // pink-500
+
+$primary: $brand-purple;
+$link-color: $brand-purple;
+
+$brand-gradient: linear-gradient(90deg, $brand-purple, $brand-pink);
+
+$font-family-sans-serif: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$enable-dark-mode: true;
