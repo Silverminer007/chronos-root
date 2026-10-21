@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Friend } from '../../core/models';
-import { ParticipantLookupService } from '../appointment/participant-lookup.service';
+import { GroupStore } from '../groups/group.store';
 import { FriendshipStore } from '../friends/friendship.store';
 import { AppointmentParticipantPickerComponent } from './appointment-participant-picker.component';
 
@@ -19,7 +19,7 @@ describe('AppointmentParticipantPickerComponent', () => {
   const setup = () => {
     TestBed.configureTestingModule({
       providers: [
-        { provide: ParticipantLookupService, useValue: lookup },
+        { provide: GroupStore, useValue: lookup },
         { provide: FriendshipStore, useValue: friendships },
       ],
     });

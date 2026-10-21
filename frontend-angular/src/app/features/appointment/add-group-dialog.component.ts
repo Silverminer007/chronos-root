@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, HostListener, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { Role } from '../../core/models';
-import { GroupSearchResult, ParticipantLookupService } from './participant-lookup.service';
+import { GroupStore, GroupSearchResult } from '../groups/group.store';
 import { roleLabel } from './participation';
 import { RolePickerComponent } from './role-picker.component';
 
@@ -110,7 +110,7 @@ import { RolePickerComponent } from './role-picker.component';
   styles: '.result-list { max-height: 12rem; overflow-y: auto; }',
 })
 export class AddGroupDialogComponent {
-  private readonly lookup = inject(ParticipantLookupService);
+  private readonly groupStore = inject(GroupStore);
 
   readonly visible = input.required<boolean>();
   /** Das Hinzufügen läuft (Eltern setzen es, Buttons werden gesperrt). */
@@ -135,7 +135,7 @@ export class AddGroupDialogComponent {
     this.query.set(query);
     this.searching.set(true);
     try {
-      const results = await this.lookup.searchGroups(query);
+      const results = await this.groupStore.searchGroups(query);
       // Wurde inzwischen weitergetippt, gehört das Ergebnis zur neueren Eingabe.
       if (this.query() === query) this.results.set(results);
     } catch {

@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { Friend, Group, Role } from '../../core/models';
-import { ParticipantLookupService } from '../appointment/participant-lookup.service';
+import { GroupStore } from '../groups/group.store';
 import { FriendshipStore } from '../friends/friendship.store';
 
 export type ParticipationRole = Exclude<Role, 'NONE'>;
@@ -225,7 +225,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
   `,
 })
 export class AppointmentParticipantPickerComponent {
-  private readonly lookup = inject(ParticipantLookupService);
+  private readonly groupStore = inject(GroupStore);
   private readonly friendships = inject(FriendshipStore);
 
   readonly changed = output<PickerChange>();
@@ -340,7 +340,7 @@ export class AppointmentParticipantPickerComponent {
         if (request === this.latestSearch)
           this.userResults.set(this.friends.filter((f) => f.name.toLowerCase().includes(needle)));
       } else {
-        const groups = await this.lookup.searchGroups(query);
+        const groups = await this.groupStore.searchGroups(query);
         if (request === this.latestSearch)
           this.groupResults.set(Array.isArray(groups) ? groups : []);
       }

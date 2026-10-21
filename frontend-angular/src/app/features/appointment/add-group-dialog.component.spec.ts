@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { AddGroupDialogComponent } from './add-group-dialog.component';
-import { ParticipantLookupService } from './participant-lookup.service';
+import { GroupStore } from '../groups/group.store';
 import { buttonByText, click } from './testing';
 
 describe('AddGroupDialogComponent', () => {
@@ -13,7 +13,7 @@ describe('AddGroupDialogComponent', () => {
         { id: 2, name: 'Leiter', members: [] },
       ]),
     };
-    TestBed.configureTestingModule({ providers: [{ provide: ParticipantLookupService, useValue: lookup }] });
+    TestBed.configureTestingModule({ providers: [{ provide: GroupStore, useValue: lookup }] });
     const fixture = TestBed.createComponent(AddGroupDialogComponent);
     fixture.componentRef.setInput('visible', true);
     fixture.detectChanges();

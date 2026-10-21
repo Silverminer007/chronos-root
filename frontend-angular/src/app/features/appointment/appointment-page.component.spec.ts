@@ -8,7 +8,7 @@ import { Appointment } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
 import { AppointmentPageComponent } from './appointment-page.component';
-import { ParticipantLookupService } from './participant-lookup.service';
+import { GroupStore } from '../groups/group.store';
 import { appointment, buttonByText, click } from './testing';
 
 describe('AppointmentPageComponent', () => {
@@ -25,7 +25,7 @@ describe('AppointmentPageComponent', () => {
         { provide: AppointmentStore, useValue: store },
         { provide: AuthService, useValue: { user: signal(null) } },
         { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
-        { provide: ParticipantLookupService, useValue: {} },
+        { provide: GroupStore, useValue: {} },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: '5' })) } },
         { provide: Router, useValue: router },
         { provide: Location, useValue: { back: vi.fn() } },
