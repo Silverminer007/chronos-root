@@ -29,7 +29,7 @@ BFF (Node/Express, frontend-angular/server)  ──►  Quarkus / Rust Backend (
 | Zustand in Signal-basierten Services (`*Store`) statt NgRx | gleiche Größe wie bisherige Pinia-Stores (~1500 Zeilen), geringere Komplexität |
 | Bootstrap 5 + eigene SCSS-Variablen/Theme (Lila/Pink-Gradient als Markenfarbe) | Vorgabe; Dark Mode über `data-bs-theme` |
 | Eigener schlanker BFF in Node statt Angular SSR | Das Nuxt-Frontend ist SPA + Serverrouten; Cookie-/Token-Logik (httpOnly) braucht einen Serverteil. SSR ist nicht gefordert |
-| Service Worker bleibt handgeschrieben (`push-sw.js` portiert) | Token-Refresh und Push sind Kernlogik; `@angular/service-worker` deckt das Verhalten nicht ab |
+| Service Worker bleibt handgeschrieben (`push-sw.js` und `sw-core.js` portiert, siehe ADR-2026-10-21-005) | Token-Refresh und Push sind Kernlogik; `@angular/service-worker` deckt das Verhalten nicht ab |
 
 ## 5. Bausteinsicht
 
@@ -46,7 +46,8 @@ frontend-angular/
 │   │   ├── appointment/     Details, Anlegen/Bearbeiten, Teilnehmer, Nachrichten
 │   │   ├── friends/  groups/  settings/  profile/  onboarding/  survey/  admin/
 │   └── app.routes.ts
-├── public/                  Manifest, Icons, push-sw.js
+├── public/                  Manifest, Icons, Screenshots, push-sw.js (Verdrahtung), sw-core.js (reine Funktionen)
+├── sw-tests/                Tests für sw-core.js (Node-Testrunner)
 └── e2e/                     Playwright
 ```
 
@@ -56,6 +57,11 @@ Zuordnung alt → neu: Pinia-Store → `*Store`-Service (Signals); `useFetch` �
 Bausteine in `core/` (siehe ADR-2026-10-21-004): `ToastService` (Signal-Liste) und `ModalService` (`confirm()` liefert `Promise<boolean>`) halten den Zustand;
 `ToastContainerComponent` und `ConfirmDialogComponent` stellen ihn dar und sind je einmal in `App` eingebunden. `OnboardingService` (Port von `useOnboarding`,
 localStorage-Schlüssel `onboardingShownAt`) wird vom `authGuard` für die Weiterleitung auf `/onboarding` befragt; `errorInterceptor` nutzt den `ToastService`.
+
+Service Worker (siehe ADR-2026-10-21-005): `public/push-sw.js` enthält nur die Verdrahtung mit den Browser-APIs (`fetch`, `push`, `notificationclick`, `cookieStore`, `clients`).
+Reine Funktionen und die Ablauflogik (Token-Refresh, `inflightRefresh`-Dedup, synthetisches `isLoggedIn`, Benachrichtigungen) liegen in `public/sw-core.js` (UMD: im Worker per
+`importScripts` als `self.ChronosSw`, in Node per `require`) und werden in `sw-tests/` mit `node --test` getestet (`npm run test:sw`). Registriert wird der Worker in
+`core/service-worker.ts` (`registerServiceWorker`), ausgelöst über `provideAppInitializer` in `app.config.ts`.
 
 ## 6. Laufzeitsicht
 
@@ -86,6 +92,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 
 - ADR-2026-10-21-001: Angular statt Nuxt (diese Migration). Kein NgRx, eigener Node-BFF, handgeschriebener Service Worker.
 - ADR-2026-10-21-004: `core/` (Modelle, AuthService, authGuard, Interceptor, Toast, Modal).
+- ADR-2026-10-21-005: Service Worker (`push-sw.js` + `sw-core.js`, Tests mit `node --test`, Registrierung über `provideAppInitializer`) und PWA-Manifest.
 
 ## 10. Qualitätsanforderungen
 
