@@ -52,4 +52,36 @@ describe('ConfirmDialogComponent', () => {
       await settle();
     }
   });
+
+  it('setzt Fokus auf Bestätigen, hält Tab im Dialog und stellt den Fokus wieder her', async () => {
+    const { modal, el, settle } = await setup();
+    document.body.appendChild(el);
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    const result = modal.confirm({ title: 'T', message: 'M', confirmText: 'Ja' });
+    await settle();
+    const [cancel, confirm] = Array.from(el.querySelectorAll<HTMLButtonElement>('.modal-footer button'));
+    expect(document.activeElement).toBe(confirm);
+
+    const tab = (shiftKey: boolean) => {
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, cancelable: true });
+      document.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(tab(false)).toBe(true);
+    expect(document.activeElement).toBe(cancel);
+    expect(tab(true)).toBe(true);
+    expect(document.activeElement).toBe(confirm);
+    opener.focus();
+    expect(tab(false)).toBe(true);
+    expect(document.activeElement).toBe(cancel);
+
+    confirm.click();
+    await result;
+    await settle();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+    el.remove();
+  });
 });

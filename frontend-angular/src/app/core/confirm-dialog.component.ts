@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+} from '@angular/core';
 import { ConfirmColor, ModalService } from './modal.service';
 
 const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirmIcon: string }> = {
@@ -33,6 +43,7 @@ const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirm
               <button
                 type="button"
                 class="btn"
+                data-autofocus
                 [class]="v.request.confirmColor === 'purple' ? 'btn-gradient' : 'btn-' + v.style.variant"
                 (click)="modal.resolve(true)"
               >
@@ -47,11 +58,46 @@ const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirm
 })
 export class ConfirmDialogComponent {
   protected readonly modal = inject(ModalService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  private opener: HTMLElement | null = null;
 
   protected readonly view = computed(() => {
     const request = this.modal.confirmRequest();
     return request ? { request, style: COLOR_STYLE[request.confirmColor] } : null;
   });
+
+  constructor() {
+    effect(() => {
+      if (this.view()) {
+        this.opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('[data-autofocus]')?.focus(), {
+          injector: this.injector,
+        });
+      } else if (this.opener) {
+        const opener = this.opener;
+        this.opener = null;
+        opener.focus();
+      }
+    });
+  }
+
+  /** Hält den Tab-Fokus im Dialog, solange er offen ist. */
+  @HostListener('document:keydown.tab', ['$event'])
+  @HostListener('document:keydown.shift.tab', ['$event'])
+  protected onTab(event: Event): void {
+    if (!this.modal.confirmRequest()) return;
+    const buttons = Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('.modal-footer button'));
+    if (buttons.length === 0) return;
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+    const shift = (event as KeyboardEvent).shiftKey;
+    const active = document.activeElement;
+    if (!buttons.includes(active as HTMLElement) || (shift && active === first) || (!shift && active === last)) {
+      event.preventDefault();
+      (shift ? last : first).focus();
+    }
+  }
 
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
