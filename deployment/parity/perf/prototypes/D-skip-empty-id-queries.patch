@@ -1,0 +1,33 @@
+diff --git a/rust-backend/src/appointments/services/mod.rs b/rust-backend/src/appointments/services/mod.rs
+index a28fb47..9052cf6 100644
+--- a/rust-backend/src/appointments/services/mod.rs
++++ b/rust-backend/src/appointments/services/mod.rs
+@@ -289,11 +289,14 @@ impl AppointmentService {
+         let mut group_ids: Vec<i64> = group_participations.iter().map(|g| g.1).collect();
+         group_ids.sort_unstable();
+         group_ids.dedup();
+-        let members = self
+-            .repo
+-            .list_group_members(&group_ids)
+-            .await
+-            .map_err(db_error)?;
++        let members = if group_ids.is_empty() {
++            Vec::new()
++        } else {
++            self.repo
++                .list_group_members(&group_ids)
++                .await
++                .map_err(db_error)?
++        };
+ 
+         let mut user_ids: Vec<String> = participants
+             .iter()
+@@ -303,7 +306,7 @@ impl AppointmentService {
+             .collect();
+         user_ids.sort();
+         user_ids.dedup();
+-        let users = if embed.names {
++        let users = if embed.names && !user_ids.is_empty() {
+             self.repo
+                 .find_identities(&user_ids)
+                 .await

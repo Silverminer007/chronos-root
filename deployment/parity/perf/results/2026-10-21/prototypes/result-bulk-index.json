@@ -1,0 +1,16 @@
+{
+ "get appointment": {
+  "rps": 348.9,
+  "p50_ms": 90.93,
+  "errors": 0,
+  "cores": 1.9,
+  "cpu_ms_per_req": 5.5
+ },
+ "list appointments": {
+  "rps": 104.9,
+  "p50_ms": 306.71,
+  "errors": 0,
+  "cores": 1.88,
+  "cpu_ms_per_req": 18.14
+ }
+}

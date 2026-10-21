@@ -79,3 +79,11 @@ python3 deployment/parity/perf/report.py results/round1 results/round2 > tables.
 | `diagnostics/txn-count.py` | database transactions and rows per request from `pg_stat_database` |
 
 The diagnostics need `OHA` and write to `/tmp/perf-diag`; they set the same limits as `bench.py` and put the original ones back.
+
+## Throughput analysis (diagnostics and prototypes)
+
+`diagnostics/` also holds the scripts of the throughput analysis (`kb/architecture/ARCH-2026-10-21-002-...`): `anatomy.py` (statements of one request,
+`log_statement`), `waits.py` (wait events of Postgres under load, `synchronous_commit` on and off), `scaling.py` (throughput over the number of
+connections, CPU limit as argument), `host-run.py` (runs a Rust binary on the host with two CPUs against the cluster Postgres: the loop to measure one change; `BULK` and
+`INDEX` add data and the index). They expect `OHA` and `/tmp/perf-diag/{tools,proto}` (copy of `bench.py` in `tools/`, the environment of the Rust pod in `proto/env`).
+`prototypes/*.patch` are the changes that were measured (apply to `origin/main` `37c717c`); `results/2026-10-21/prototypes/` has the numbers.
