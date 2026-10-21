@@ -20,11 +20,14 @@ export class PublicConfigService {
 
   readonly impressum = signal<ImpressumConfig>(EMPTY_IMPRESSUM);
 
-  /** Lädt die Konfiguration einmalig; bei einem Fehler bleiben die Werte leer. */
+  /** Lädt die Konfiguration einmalig; bei einem Fehler bleiben die Werte leer und der nächste Aufruf versucht es erneut. */
   loadImpressum(): Promise<void> {
     this.loading ??= firstValueFrom(this.http.get<{ impressum: ImpressumConfig }>('/api/config')).then(
       (config) => this.impressum.set({ ...EMPTY_IMPRESSUM, ...config.impressum }),
-      () => undefined,
+      () => {
+        // Fehler nicht zwischenspeichern: der nächste Aufruf lädt neu.
+        this.loading = null;
+      },
     );
     return this.loading;
   }

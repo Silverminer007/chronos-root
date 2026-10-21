@@ -39,4 +39,15 @@ describe('PublicConfigService', () => {
     await result;
     expect(service.impressum()).toEqual({ name: '', street: '', city: '', email: '', phone: '' });
   });
+
+  it('lädt nach einem Fehler beim nächsten Aufruf erneut', async () => {
+    const failed = service.loadImpressum();
+    http.expectOne('/api/config').flush(null, { status: 502, statusText: 'Bad Gateway' });
+    await failed;
+
+    const retry = service.loadImpressum();
+    http.expectOne('/api/config').flush({ impressum });
+    await retry;
+    expect(service.impressum()).toEqual(impressum);
+  });
 });
