@@ -12,6 +12,11 @@ describe('errors', () => {
       expect(getErrorMessage({ data: { message: 'Daten' }, message: 'Allgemein' }, 'Fallback')).toBe('Daten');
     });
 
+    it('nutzt bei HttpErrorResponse ohne JSON-Body den Fallback statt der englischen Angular-Meldung', () => {
+      expect(getErrorMessage(new HttpErrorResponse({ status: 500, error: 'text' }), 'Fallback')).toBe('Fallback');
+      expect(getErrorMessage(new HttpErrorResponse({ status: 500 }), 'Fallback')).toBe('Fallback');
+    });
+
     it('nutzt message eines normalen Fehlers', () => {
       expect(getErrorMessage(new Error('Kaputt'), 'Fallback')).toBe('Kaputt');
     });

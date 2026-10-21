@@ -1,3 +1,5 @@
+import { HttpErrorResponse } from '@angular/common/http';
+
 /** Liefert die Backend-/Fehlermeldung oder den deutschen Fallback (Port von `utils/errors.ts`). */
 export function getErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
@@ -6,6 +8,10 @@ export function getErrorMessage(err: unknown, fallback: string): string {
       error?: { message?: string } | null;
       message?: string;
     };
+    // Angulars HttpErrorResponse.message ist englisch und enthält die URL – nie anzeigen.
+    if (err instanceof HttpErrorResponse) {
+      return data?.message || error?.message || fallback;
+    }
     return data?.message || error?.message || message || fallback;
   }
   return fallback;
