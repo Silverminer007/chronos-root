@@ -1,7 +1,7 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { errorInterceptor } from './error.interceptor';
+import { errorInterceptor, GLOBAL_ERROR_TOAST } from './error.interceptor';
 import { ToastService } from './toast.service';
 
 describe('errorInterceptor', () => {
@@ -20,9 +20,11 @@ describe('errorInterceptor', () => {
 
   afterEach(() => ctrl.verify());
 
-  const fail = (url: string, status: number, body: object | null = null) => {
+  const optIn = () => new HttpContext().set(GLOBAL_ERROR_TOAST, true);
+
+  const fail = (url: string, status: number, body: object | null = null, context?: HttpContext) => {
     let error: unknown;
-    http.get(url).subscribe({ error: (e) => (error = e) });
+    http.get(url, { context }).subscribe({ error: (e) => (error = e) });
     ctrl.expectOne(url).flush(body, { status, statusText: 'x' });
     return error;
   };
@@ -31,20 +33,27 @@ describe('errorInterceptor', () => {
     expect(fail('/api/v2/appointments', 500)).toMatchObject({ status: 500 });
   });
 
-  it('zeigt bei Serverfehlern einen deutschen Toast', () => {
+  it('zeigt standardmäßig keinen Toast, damit Aufrufer mit eigener Fehlerbehandlung keinen zweiten erhalten', () => {
     fail('/api/v2/appointments', 500);
+    fail('/api/v2/appointments', 0);
+    fail('/api/v2/appointments/1', 403);
+    expect(toast.toasts()).toHaveLength(0);
+  });
+
+  it('zeigt bei Serverfehlern auf Anforderung einen deutschen Toast', () => {
+    fail('/api/v2/appointments', 500, null, optIn());
     expect(toast.toasts()).toEqual([
       expect.objectContaining({ severity: 'error', detail: 'Der Server ist derzeit nicht erreichbar oder hat einen Fehler gemeldet.' }),
     ]);
   });
 
-  it('zeigt bei Verbindungsabbruch (Status 0) einen deutschen Toast', () => {
-    fail('/api/v2/appointments', 0);
+  it('zeigt bei Verbindungsabbruch (Status 0) auf Anforderung einen deutschen Toast', () => {
+    fail('/api/v2/appointments', 0, null, optIn());
     expect(toast.toasts()[0].detail).toBe('Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung.');
   });
 
-  it('zeigt bei 403 einen Toast', () => {
-    fail('/api/v2/appointments/1', 403);
+  it('zeigt bei 403 auf Anforderung einen Toast', () => {
+    fail('/api/v2/appointments/1', 403, null, optIn());
     expect(toast.toasts()[0].detail).toBe('Dazu hast du keine Berechtigung.');
   });
 
@@ -55,12 +64,12 @@ describe('errorInterceptor', () => {
   });
 
   it('zeigt bei 401 keinen Toast (Sitzungsende regelt der Service Worker)', () => {
-    fail('/api/v2/appointments', 401);
+    fail('/api/v2/appointments', 401, null, optIn());
     expect(toast.toasts()).toHaveLength(0);
   });
 
   it('zeigt für /api/auth/isLoggedIn keinen Toast', () => {
-    fail('/api/auth/isLoggedIn', 500);
+    fail('/api/auth/isLoggedIn', 500, null, optIn());
     expect(toast.toasts()).toHaveLength(0);
   });
 });
