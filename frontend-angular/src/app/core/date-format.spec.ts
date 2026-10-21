@@ -1,4 +1,4 @@
-import { formatDate, formatTimeRange } from './date-format';
+import { formatDate, formatDateTime, formatTime, formatTimeRange } from './date-format';
 
 describe('date-format', () => {
   it('formatiert ein Datum deutsch', () => {
@@ -13,5 +13,13 @@ describe('date-format', () => {
     expect(formatTimeRange('2026-10-21T18:00:00', '2026-10-22T10:00:00')).toBe(
       'Mi., 21.10.2026, 18:00 Uhr - Do., 22.10.2026, 10:00 Uhr',
     );
+  });
+
+  it('formatiert eine Uhrzeit mit „Uhr“', () => {
+    expect(formatTime('2026-10-21T18:05:00')).toBe('18:05 Uhr');
+  });
+
+  it('formatiert Datum und Uhrzeit mit „Uhr“', () => {
+    expect(formatDateTime('2026-10-21T18:05:00')).toBe('21.10.2026 18:05 Uhr');
   });
 });

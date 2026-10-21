@@ -196,4 +196,118 @@ describe('AppointmentStore', () => {
       expect(store.error()).toBe('Fehler beim Absagen');
     });
   });
+
+  describe('Termindetails', () => {
+    const DETAIL = '/api/v2/appointments/3?participants=true&messages=true&group_participants=true';
+
+    it('fetchAppointment übernimmt den Termin als aktuellen Termin', async () => {
+      const result = store.fetchAppointment(3);
+      http.expectOne(DETAIL).flush(appointment(3, { name: 'Detail' }));
+      await result;
+      expect(store.currentAppointment()?.name).toBe('Detail');
+    });
+
+    it('resetCurrentAppointment leert den aktuellen Termin und die Fehlermeldung', async () => {
+      const result = store.fetchAppointment(3);
+      http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
+      await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      expect(store.error()).toBe('Fehler beim Laden des Appointments');
+
+      store.resetCurrentAppointment();
+      expect(store.currentAppointment()).toBeNull();
+      expect(store.error()).toBeNull();
+    });
+
+    it('lädt nach einer Mutation neu und aktualisiert den aktuellen Termin', async () => {
+      const result = store.fetchAppointment(3);
+      http.expectOne(DETAIL).flush(appointment(3, { name: 'Alt' }));
+      await result;
+
+      const approve = store.approveAppointment(3);
+      http.expectOne('/api/v2/appointments/3/participants/approve').flush(null);
+      await Promise.resolve();
+      http.expectOne(DETAIL).flush(appointment(3, { name: 'Neu' }));
+      await approve;
+
+      expect(store.currentAppointment()?.name).toBe('Neu');
+    });
+
+    const mutations: {
+      name: string;
+      call: (s: AppointmentStore) => Promise<unknown>;
+      method: string;
+      url: string;
+      body: unknown;
+      error: string;
+    }[] = [
+      {
+        name: 'addParticipant',
+        call: (s) => s.addParticipant(3, 9, 'HELPER'),
+        method: 'POST',
+        url: '/api/v2/appointments/3/participants/users',
+        body: { user_id: 9, user_role: 'HELPER' },
+        error: 'Fehler beim Hinzufügen des Teilnehmers',
+      },
+      {
+        name: 'removeParticipant',
+        call: (s) => s.removeParticipant(3, 9),
+        method: 'DELETE',
+        url: '/api/v2/appointments/3/participants/users/9',
+        body: null,
+        error: 'Fehler beim Entfernen des Teilnehmers',
+      },
+      {
+        name: 'changeParticipantRole',
+        call: (s) => s.changeParticipantRole(3, 9, 'GUEST'),
+        method: 'PATCH',
+        url: '/api/v2/appointments/3/participants/users/9',
+        body: { role: 'GUEST' },
+        error: 'Fehler beim Ändern der Rolle',
+      },
+      {
+        name: 'addGroupParticipant',
+        call: (s) => s.addGroupParticipant(3, 4, 'ATTENDANT'),
+        method: 'POST',
+        url: '/api/v2/appointments/3/participants/groups',
+        body: { group_id: 4, user_role: 'ATTENDANT' },
+        error: 'Fehler beim Hinzufügen der Gruppe',
+      },
+      {
+        name: 'removeGroupParticipant',
+        call: (s) => s.removeGroupParticipant(3, 4),
+        method: 'DELETE',
+        url: '/api/v2/appointments/3/participants/groups/4',
+        body: null,
+        error: 'Fehler beim Entfernen der Gruppe',
+      },
+      {
+        name: 'sendMessage',
+        call: (s) => s.sendMessage(3, 'Hallo'),
+        method: 'POST',
+        url: '/api/v2/appointments/3/messages',
+        body: { body: 'Hallo' },
+        error: 'Fehler beim Senden der Nachricht',
+      },
+    ];
+
+    for (const m of mutations) {
+      it(`${m.name} sendet die Anfrage und lädt den Termin neu`, async () => {
+        const result = m.call(store);
+        const req = http.expectOne({ method: m.method, url: m.url });
+        expect(req.request.body).toEqual(m.body);
+        req.flush(null);
+        await Promise.resolve();
+        http.expectOne(DETAIL).flush(appointment(3, { name: 'Neu' }));
+        await result;
+        expect(store.currentAppointment()?.name).toBe('Neu');
+      });
+
+      it(`${m.name} meldet Fehler und wirft ihn weiter`, async () => {
+        const result = m.call(store);
+        http.expectOne({ method: m.method, url: m.url }).flush(null, { status: 500, statusText: 'Server Error' });
+        await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+        expect(store.error()).toBe(m.error);
+      });
+    }
+  });
 });

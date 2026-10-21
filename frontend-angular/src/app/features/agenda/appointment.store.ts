@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { getErrorMessage } from '../../core/errors';
-import { Appointment } from '../../core/models';
+import { Appointment, Role } from '../../core/models';
 
 const API = '/api/v2/appointments';
 const PAGE_SIZE = 20;
@@ -35,6 +35,8 @@ export class AppointmentStore {
   private readonly http = inject(HttpClient);
 
   readonly appointments = signal<Appointment[]>([]);
+  /** Termin der Detailseite; wird von `fetchAppointment` und damit nach jeder Mutation aktualisiert. */
+  readonly currentAppointment = signal<Appointment | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly pagination = signal<Pagination>({ page: 0, size: PAGE_SIZE, total: 0 });
@@ -92,13 +94,14 @@ export class AppointmentStore {
     return this.appointments();
   }
 
-  /** Lädt einen Termin neu und ersetzt ihn in der Liste; berührt `loading` nicht, damit die Liste nicht flackert. */
+  /** Lädt einen Termin neu, setzt ihn als aktuellen Termin und ersetzt ihn in der Liste; berührt `loading` nicht, damit die Liste nicht flackert. */
   async fetchAppointment(id: number): Promise<Appointment> {
     this.error.set(null);
     try {
       const appointment = await firstValueFrom(
         this.http.get<Appointment>(`${API}/${id}?participants=true&messages=true&group_participants=true`),
       );
+      this.currentAppointment.set(appointment);
       this.appointments.update((list) => list.map((a) => (a.id === id ? appointment : a)));
       return appointment;
     } catch (err) {
@@ -113,6 +116,35 @@ export class AppointmentStore {
 
   rejectAppointment(id: number): Promise<void> {
     return this.setOwnParticipation(id, 'reject', 'Fehler beim Absagen');
+  }
+
+  addParticipant(id: number, userId: number, role: Role): Promise<void> {
+    return this.mutate(id, 'POST', 'participants/users', { user_id: userId, user_role: role }, 'Fehler beim Hinzufügen des Teilnehmers');
+  }
+
+  removeParticipant(id: number, userId: number): Promise<void> {
+    return this.mutate(id, 'DELETE', `participants/users/${userId}`, null, 'Fehler beim Entfernen des Teilnehmers');
+  }
+
+  changeParticipantRole(id: number, userId: number, role: Role): Promise<void> {
+    return this.mutate(id, 'PATCH', `participants/users/${userId}`, { role }, 'Fehler beim Ändern der Rolle');
+  }
+
+  addGroupParticipant(id: number, groupId: number, role: Role): Promise<void> {
+    return this.mutate(id, 'POST', 'participants/groups', { group_id: groupId, user_role: role }, 'Fehler beim Hinzufügen der Gruppe');
+  }
+
+  removeGroupParticipant(id: number, groupId: number): Promise<void> {
+    return this.mutate(id, 'DELETE', `participants/groups/${groupId}`, null, 'Fehler beim Entfernen der Gruppe');
+  }
+
+  sendMessage(id: number, body: string): Promise<void> {
+    return this.mutate(id, 'POST', 'messages', { body }, 'Fehler beim Senden der Nachricht');
+  }
+
+  resetCurrentAppointment(): void {
+    this.currentAppointment.set(null);
+    this.error.set(null);
   }
 
   /** Erste Seite der Agenda (ohne Suche). */
@@ -138,9 +170,14 @@ export class AppointmentStore {
     return this.fetchAgenda({ search: query, participants: true, page: 0, size: PAGE_SIZE });
   }
 
-  private async setOwnParticipation(id: number, action: 'approve' | 'reject', fallback: string): Promise<void> {
+  private setOwnParticipation(id: number, action: 'approve' | 'reject', fallback: string): Promise<void> {
+    return this.mutate(id, 'POST', `participants/${action}`, null, fallback);
+  }
+
+  /** Sendet die Änderung und lädt den Termin neu; Fehler setzen `error()` und werden weitergeworfen. */
+  private async mutate(id: number, method: 'POST' | 'PATCH' | 'DELETE', path: string, body: unknown, fallback: string): Promise<void> {
     try {
-      await firstValueFrom(this.http.post(`${API}/${id}/participants/${action}`, null));
+      await firstValueFrom(this.http.request(method, `${API}/${id}/${path}`, { body }));
       await this.fetchAppointment(id);
     } catch (err) {
       this.error.set(getErrorMessage(err, fallback));

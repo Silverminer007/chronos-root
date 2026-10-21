@@ -24,3 +24,14 @@ export function formatTimeRange(start: string, end: string): string {
   }
   return `${dateTime(from)} Uhr - ${dateTime(to)} Uhr`;
 }
+
+/** `18:00 Uhr` (Port von `useDateFormatter.formatTime`). */
+export function formatTime(iso: string): string {
+  return `${TIME.format(new Date(iso))} Uhr`;
+}
+
+/** `21.10.2026 18:00 Uhr` (Port von `useDateFormatter.formatDateTime`). */
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  return `${DATE.format(date)} ${TIME.format(date)} Uhr`;
+}

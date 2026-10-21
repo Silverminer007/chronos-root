@@ -43,6 +43,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/agenda/agenda.component').then((m) => m.AgendaComponent),
       },
+      {
+        path: 'appointment/:id',
+        loadComponent: () =>
+          import('./features/appointment/appointment-page.component').then((m) => m.AppointmentPageComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
