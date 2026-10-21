@@ -1,12 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { AuthService } from '../../core/auth.service';
 import { Appointment } from '../../core/models';
+import { ModalService } from '../../core/modal.service';
+import { ToastService } from '../../core/toast.service';
+import { AppointmentStore } from '../agenda/appointment.store';
 import { isResponsible } from './participation';
 
-/**
- * Aktionen für Organisierende (Port von `AppointmentResponsibleActions.vue`). Das Absagen selbst gehört zum Ticket
- * „Termin anlegen und bearbeiten“; hier zeigt die Karte nur den Button und meldet den Klick über `cancelRequested`.
- */
+/** Aktionen für Organisierende: Termin absagen (Port von `AppointmentResponsibleActions.vue`). */
 @Component({
   selector: 'app-appointment-responsible-actions',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,8 +18,8 @@ import { isResponsible } from './participation';
           <button
             type="button"
             class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2"
-            [disabled]="appointment().status === 'CANCELLED'"
-            (click)="cancelRequested.emit()"
+            [disabled]="busy() || appointment().status === 'CANCELLED'"
+            (click)="cancel()"
           >
             <i class="bi bi-x-circle" aria-hidden="true"></i><span>Termin absagen</span>
           </button>
@@ -30,9 +30,33 @@ import { isResponsible } from './participation';
 })
 export class AppointmentResponsibleActionsComponent {
   private readonly auth = inject(AuthService);
+  private readonly store = inject(AppointmentStore);
+  private readonly modal = inject(ModalService);
+  private readonly toast = inject(ToastService);
 
   readonly appointment = input.required<Appointment>();
-  readonly cancelRequested = output<void>();
+  protected readonly busy = signal(false);
 
-  protected readonly responsible = computed(() => isResponsible(this.appointment(), this.auth.user()?.id));
+  protected readonly responsible = computed(() =>
+    isResponsible(this.appointment(), this.auth.user()?.id),
+  );
+
+  protected async cancel(): Promise<void> {
+    const confirmed = await this.modal.confirm({
+      title: 'Termin absagen',
+      message: 'Möchtest du diesen Termin wirklich absagen? Alle Teilnehmer werden benachrichtigt.',
+      confirmText: 'Termin absagen',
+      confirmColor: 'red',
+    });
+    if (!confirmed) return;
+    this.busy.set(true);
+    try {
+      await this.store.cancelAppointment(this.appointment().id);
+      this.toast.success('Termin abgesagt', 'Alle Teilnehmer wurden benachrichtigt');
+    } catch {
+      this.toast.error('Fehler', 'Termin konnte nicht abgesagt werden');
+    } finally {
+      this.busy.set(false);
+    }
+  }
 }

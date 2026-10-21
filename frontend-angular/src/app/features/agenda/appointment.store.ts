@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { getErrorMessage } from '../../core/errors';
 import { Appointment, Role } from '../../core/models';
+import { AppointmentPayload } from '../appointment-form/appointment-form';
 
 const API = '/api/v2/appointments';
 const PAGE_SIZE = 20;
@@ -99,7 +100,9 @@ export class AppointmentStore {
     this.error.set(null);
     try {
       const appointment = await firstValueFrom(
-        this.http.get<Appointment>(`${API}/${id}?participants=true&messages=true&group_participants=true`),
+        this.http.get<Appointment>(
+          `${API}/${id}?participants=true&messages=true&group_participants=true`,
+        ),
       );
       this.currentAppointment.set(appointment);
       this.appointments.update((list) => list.map((a) => (a.id === id ? appointment : a)));
@@ -108,6 +111,53 @@ export class AppointmentStore {
       this.error.set(getErrorMessage(err, 'Fehler beim Laden des Appointments'));
       throw err;
     }
+  }
+
+  /** Legt einen Termin an. Berührt `loading` nicht (die Aufrufer zeigen ihren eigenen Speicherzustand). */
+  async createAppointment(data: AppointmentPayload): Promise<Appointment> {
+    this.error.set(null);
+    try {
+      const created = await firstValueFrom(this.http.post<Appointment>(API, data));
+      this.appointments.update((list) => [...list, created]);
+      return created;
+    } catch (err) {
+      this.error.set(getErrorMessage(err, 'Fehler beim Erstellen des Appointments'));
+      throw err;
+    }
+  }
+
+  async updateAppointment(id: number, data: Partial<Appointment>): Promise<Appointment> {
+    this.error.set(null);
+    try {
+      const updated = await firstValueFrom(this.http.patch<Appointment>(`${API}/${id}`, data));
+      this.appointments.update((list) => list.map((a) => (a.id === id ? updated : a)));
+      if (this.currentAppointment()?.id === id) this.currentAppointment.set(updated);
+      return updated;
+    } catch (err) {
+      this.error.set(getErrorMessage(err, 'Fehler beim Aktualisieren des Appointments'));
+      throw err;
+    }
+  }
+
+  /** Verschiebt einen Termin auf einen neuen Zeitraum (PATCH von `start` und `end`). */
+  moveAppointment(id: number, start: string, end: string): Promise<Appointment> {
+    return this.updateAppointment(id, { start, end });
+  }
+
+  async deleteAppointment(id: number): Promise<void> {
+    this.error.set(null);
+    try {
+      await firstValueFrom(this.http.delete(`${API}/${id}`));
+      this.appointments.update((list) => list.filter((a) => a.id !== id));
+      if (this.currentAppointment()?.id === id) this.currentAppointment.set(null);
+    } catch (err) {
+      this.error.set(getErrorMessage(err, 'Fehler beim Löschen des Appointments'));
+      throw err;
+    }
+  }
+
+  cancelAppointment(id: number): Promise<void> {
+    return this.mutate(id, 'POST', 'cancel', null, 'Fehler beim Absagen des Appointments');
   }
 
   approveAppointment(id: number): Promise<void> {
@@ -119,23 +169,53 @@ export class AppointmentStore {
   }
 
   addParticipant(id: number, userId: number, role: Role): Promise<void> {
-    return this.mutate(id, 'POST', 'participants/users', { user_id: userId, user_role: role }, 'Fehler beim Hinzufügen des Teilnehmers');
+    return this.mutate(
+      id,
+      'POST',
+      'participants/users',
+      { user_id: userId, user_role: role },
+      'Fehler beim Hinzufügen des Teilnehmers',
+    );
   }
 
   removeParticipant(id: number, userId: number): Promise<void> {
-    return this.mutate(id, 'DELETE', `participants/users/${userId}`, null, 'Fehler beim Entfernen des Teilnehmers');
+    return this.mutate(
+      id,
+      'DELETE',
+      `participants/users/${userId}`,
+      null,
+      'Fehler beim Entfernen des Teilnehmers',
+    );
   }
 
   changeParticipantRole(id: number, userId: number, role: Role): Promise<void> {
-    return this.mutate(id, 'PATCH', `participants/users/${userId}`, { role }, 'Fehler beim Ändern der Rolle');
+    return this.mutate(
+      id,
+      'PATCH',
+      `participants/users/${userId}`,
+      { role },
+      'Fehler beim Ändern der Rolle',
+    );
   }
 
   addGroupParticipant(id: number, groupId: number, role: Role): Promise<void> {
-    return this.mutate(id, 'POST', 'participants/groups', { group_id: groupId, user_role: role }, 'Fehler beim Hinzufügen der Gruppe');
+    return this.mutate(
+      id,
+      'POST',
+      'participants/groups',
+      { group_id: groupId, user_role: role },
+      'Fehler beim Hinzufügen der Gruppe',
+    );
   }
 
   removeGroupParticipant(id: number, groupId: number): Promise<void> {
-    return this.mutate(id, 'DELETE', `participants/groups/${groupId}`, null, 'Fehler beim Entfernen der Gruppe');
+    return this.mutate(
+      id,
+      'DELETE',
+      `participants/groups/${groupId}`,
+      null,
+      'Fehler beim Entfernen der Gruppe',
+    );
   }
 
   sendMessage(id: number, body: string): Promise<void> {
@@ -170,12 +250,22 @@ export class AppointmentStore {
     return this.fetchAgenda({ search: query, participants: true, page: 0, size: PAGE_SIZE });
   }
 
-  private setOwnParticipation(id: number, action: 'approve' | 'reject', fallback: string): Promise<void> {
+  private setOwnParticipation(
+    id: number,
+    action: 'approve' | 'reject',
+    fallback: string,
+  ): Promise<void> {
     return this.mutate(id, 'POST', `participants/${action}`, null, fallback);
   }
 
   /** Sendet die Änderung und lädt den Termin neu; Fehler setzen `error()` und werden weitergeworfen. */
-  private async mutate(id: number, method: 'POST' | 'PATCH' | 'DELETE', path: string, body: unknown, fallback: string): Promise<void> {
+  private async mutate(
+    id: number,
+    method: 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    body: unknown,
+    fallback: string,
+  ): Promise<void> {
     try {
       await firstValueFrom(this.http.request(method, `${API}/${id}/${path}`, { body }));
       await this.fetchAppointment(id);

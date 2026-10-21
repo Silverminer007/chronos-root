@@ -26,7 +26,9 @@ describe('AppointmentStore', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     store = TestBed.inject(AppointmentStore);
     http = TestBed.inject(HttpTestingController);
   });
@@ -37,7 +39,9 @@ describe('AppointmentStore', () => {
     it('lädt Seite 0 mit Teilnehmenden und übernimmt Liste und Paginierung', async () => {
       const result = store.loadInitialAppointments();
       expect(store.loading()).toBe(true);
-      http.expectOne(AGENDA).flush({ data: [appointment(1), appointment(2)], meta: { page: 0, size: 20, total: 2 } });
+      http
+        .expectOne(AGENDA)
+        .flush({ data: [appointment(1), appointment(2)], meta: { page: 0, size: 20, total: 2 } });
       await result;
 
       expect(store.appointments().map((a) => a.id)).toEqual([1, 2]);
@@ -55,7 +59,9 @@ describe('AppointmentStore', () => {
 
     it('setzt Fehlermeldung, beendet das Laden und wirft den Fehler weiter', async () => {
       const result = store.loadInitialAppointments();
-      http.expectOne(AGENDA).flush({ message: 'Kaputt' }, { status: 500, statusText: 'Server Error' });
+      http
+        .expectOne(AGENDA)
+        .flush({ message: 'Kaputt' }, { status: 500, statusText: 'Server Error' });
 
       await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
       expect(store.error()).toBe('Kaputt');
@@ -73,14 +79,18 @@ describe('AppointmentStore', () => {
   describe('Paginierung', () => {
     it('hasMore ist wahr, solange nicht alle Termine geladen sind', async () => {
       const result = store.loadInitialAppointments();
-      http.expectOne(AGENDA).flush({ data: [appointment(1)], meta: { page: 0, size: 1, total: 3 } });
+      http
+        .expectOne(AGENDA)
+        .flush({ data: [appointment(1)], meta: { page: 0, size: 1, total: 3 } });
       await result;
       expect(store.hasMore()).toBe(true);
     });
 
     it('loadMore hängt die nächste Seite an', async () => {
       const first = store.loadInitialAppointments();
-      http.expectOne(AGENDA).flush({ data: [appointment(1)], meta: { page: 0, size: 20, total: 21 } });
+      http
+        .expectOne(AGENDA)
+        .flush({ data: [appointment(1)], meta: { page: 0, size: 20, total: 21 } });
       await first;
 
       const more = store.loadMore();
@@ -98,7 +108,9 @@ describe('AppointmentStore', () => {
   describe('search', () => {
     it('ersetzt die Liste durch die Treffer', async () => {
       const first = store.loadInitialAppointments();
-      http.expectOne(AGENDA).flush({ data: [appointment(1)], meta: { page: 0, size: 20, total: 1 } });
+      http
+        .expectOne(AGENDA)
+        .flush({ data: [appointment(1)], meta: { page: 0, size: 20, total: 1 } });
       await first;
 
       const result = store.search('Zelt');
@@ -150,13 +162,17 @@ describe('AppointmentStore', () => {
   describe('Zu- und Absage', () => {
     beforeEach(async () => {
       const result = store.loadInitialAppointments();
-      http.expectOne(AGENDA).flush({ data: [appointment(1), appointment(2)], meta: { page: 0, size: 20, total: 2 } });
+      http
+        .expectOne(AGENDA)
+        .flush({ data: [appointment(1), appointment(2)], meta: { page: 0, size: 20, total: 2 } });
       await result;
     });
 
     it('approveAppointment sagt zu und aktualisiert den Termin in der Liste', async () => {
       const result = store.approveAppointment(2);
-      http.expectOne({ method: 'POST', url: '/api/v2/appointments/2/participants/approve' }).flush(null);
+      http
+        .expectOne({ method: 'POST', url: '/api/v2/appointments/2/participants/approve' })
+        .flush(null);
       await Promise.resolve();
       http
         .expectOne('/api/v2/appointments/2?participants=true&messages=true&group_participants=true')
@@ -169,7 +185,9 @@ describe('AppointmentStore', () => {
 
     it('rejectAppointment sagt ab und lädt den Termin neu', async () => {
       const result = store.rejectAppointment(1);
-      http.expectOne({ method: 'POST', url: '/api/v2/appointments/1/participants/reject' }).flush(null);
+      http
+        .expectOne({ method: 'POST', url: '/api/v2/appointments/1/participants/reject' })
+        .flush(null);
       await Promise.resolve();
       http
         .expectOne('/api/v2/appointments/1?participants=true&messages=true&group_participants=true')
@@ -304,10 +322,113 @@ describe('AppointmentStore', () => {
 
       it(`${m.name} meldet Fehler und wirft ihn weiter`, async () => {
         const result = m.call(store);
-        http.expectOne({ method: m.method, url: m.url }).flush(null, { status: 500, statusText: 'Server Error' });
+        http
+          .expectOne({ method: m.method, url: m.url })
+          .flush(null, { status: 500, statusText: 'Server Error' });
         await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
         expect(store.error()).toBe(m.error);
       });
     }
+  });
+  describe('Mutationen am Termin', () => {
+    const DETAIL = '/api/v2/appointments/3?participants=true&messages=true&group_participants=true';
+    const data = {
+      name: 'Neu',
+      description: null,
+      start: '2026-10-21T18:00:00Z',
+      end: '2026-10-21T19:00:00Z',
+      venue: null,
+      minimal_attendees: 0,
+    };
+
+    it('createAppointment sendet POST und gibt den neuen Termin zurück, ohne die Ladeanzeige zu berühren', async () => {
+      const result = store.createAppointment(data);
+      expect(store.loading()).toBe(false);
+      const req = http.expectOne({ method: 'POST', url: '/api/v2/appointments' });
+      expect(req.request.body).toEqual(data);
+      req.flush(appointment(9, { name: 'Neu' }));
+      expect((await result).id).toBe(9);
+      expect(store.appointments().map((a) => a.id)).toEqual([9]);
+    });
+
+    it('createAppointment meldet Fehler und wirft ihn weiter', async () => {
+      const result = store.createAppointment(data);
+      http
+        .expectOne('/api/v2/appointments')
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      expect(store.error()).toBe('Fehler beim Erstellen des Appointments');
+    });
+
+    it('updateAppointment sendet PATCH und ersetzt den Termin in Liste und Detailansicht', async () => {
+      store.appointments.set([appointment(3), appointment(4)]);
+      store.currentAppointment.set(appointment(3));
+      const result = store.updateAppointment(3, { name: 'Geändert' });
+      const req = http.expectOne({ method: 'PATCH', url: '/api/v2/appointments/3' });
+      expect(req.request.body).toEqual({ name: 'Geändert' });
+      req.flush(appointment(3, { name: 'Geändert' }));
+      await result;
+      expect(store.appointments()[0].name).toBe('Geändert');
+      expect(store.currentAppointment()?.name).toBe('Geändert');
+    });
+
+    it('updateAppointment meldet Fehler', async () => {
+      const result = store.updateAppointment(3, {});
+      http
+        .expectOne({ method: 'PATCH', url: '/api/v2/appointments/3' })
+        .flush(null, { status: 500, statusText: 'x' });
+      await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      expect(store.error()).toBe('Fehler beim Aktualisieren des Appointments');
+    });
+
+    it('moveAppointment ändert nur Start und Ende per PATCH', async () => {
+      const result = store.moveAppointment(3, '2026-11-01T10:00:00Z', '2026-11-01T11:00:00Z');
+      const req = http.expectOne({ method: 'PATCH', url: '/api/v2/appointments/3' });
+      expect(req.request.body).toEqual({
+        start: '2026-11-01T10:00:00Z',
+        end: '2026-11-01T11:00:00Z',
+      });
+      req.flush(appointment(3));
+      await result;
+    });
+
+    it('deleteAppointment entfernt den Termin aus Liste und Detailansicht', async () => {
+      store.appointments.set([appointment(3), appointment(4)]);
+      store.currentAppointment.set(appointment(3));
+      const result = store.deleteAppointment(3);
+      http.expectOne({ method: 'DELETE', url: '/api/v2/appointments/3' }).flush(null);
+      await result;
+      expect(store.appointments().map((a) => a.id)).toEqual([4]);
+      expect(store.currentAppointment()).toBeNull();
+    });
+
+    it('deleteAppointment meldet Fehler und behält die Liste', async () => {
+      store.appointments.set([appointment(3)]);
+      const result = store.deleteAppointment(3);
+      http
+        .expectOne({ method: 'DELETE', url: '/api/v2/appointments/3' })
+        .flush(null, { status: 500, statusText: 'x' });
+      await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      expect(store.error()).toBe('Fehler beim Löschen des Appointments');
+      expect(store.appointments()).toHaveLength(1);
+    });
+
+    it('cancelAppointment sendet POST und lädt den Termin neu', async () => {
+      const result = store.cancelAppointment(3);
+      http.expectOne({ method: 'POST', url: '/api/v2/appointments/3/cancel' }).flush(null);
+      await Promise.resolve();
+      http.expectOne(DETAIL).flush(appointment(3, { status: 'CANCELLED' }));
+      await result;
+      expect(store.currentAppointment()?.status).toBe('CANCELLED');
+    });
+
+    it('cancelAppointment meldet Fehler', async () => {
+      const result = store.cancelAppointment(3);
+      http
+        .expectOne({ method: 'POST', url: '/api/v2/appointments/3/cancel' })
+        .flush(null, { status: 500, statusText: 'x' });
+      await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      expect(store.error()).toBe('Fehler beim Absagen des Appointments');
+    });
   });
 });
