@@ -1,0 +1,119 @@
+<section class="container py-4 text-center">
+  <div class="mx-auto page-width">
+    <div class="pill mb-3"><i class="bi bi-download" aria-hidden="true"></i> App installieren</div>
+    <h1 class="display-5 fw-bold text-white mb-3">Chronos installieren</h1>
+    <p class="fs-5 text-white mb-4">
+      Installiere Chronos als App auf deinem Gerät für schnellen Zugriff und Push-Benachrichtigungen.
+    </p>
+  </div>
+</section>
+
+<section class="container pb-5">
+  <div class="mx-auto page-width d-flex flex-column gap-4">
+    @for (browser of order; track browser) {
+      <div class="glass-card p-4 p-sm-5" [class.border-primary]="detected === browser">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <span class="icon-tile" aria-hidden="true">
+            <i
+              class="bi fs-4"
+              [class.bi-browser-chrome]="browser === 'chrome'"
+              [class.bi-compass]="browser === 'safari'"
+              [class.bi-fire]="browser === 'firefox'"
+            ></i>
+          </span>
+          <div class="flex-grow-1">
+            <h2 class="browser-name h4 fw-bold mb-0">
+              @switch (browser) {
+                @case ('chrome') { Chrome / Edge }
+                @case ('safari') { Safari }
+                @case ('firefox') { Firefox }
+              }
+            </h2>
+            <p class="small text-body-secondary mb-0">
+              @switch (browser) {
+                @case ('chrome') { Desktop &amp; Android }
+                @case ('safari') { iPhone, iPad &amp; macOS }
+                @case ('firefox') { Desktop &amp; Android }
+              }
+            </p>
+          </div>
+          @if (detected === browser) {
+            <span class="badge text-bg-primary">Dein Browser</span>
+          }
+        </div>
+
+        @switch (browser) {
+          @case ('chrome') {
+            <h3 class="h6 fw-semibold"><i class="bi bi-display me-2" aria-hidden="true"></i>Desktop (Windows, macOS, Linux)</h3>
+            <ol class="text-body-secondary mb-4">
+              <li>Öffne <a [href]="origin">{{ host }}</a> in Chrome oder Edge</li>
+              <li>Klicke auf das <strong>Installieren-Symbol</strong> <i class="bi bi-plus-square" aria-hidden="true"></i> in der Adressleiste (rechts)</li>
+              <li>Klicke auf <strong>„Installieren“</strong> im Dialog</li>
+            </ol>
+            <h3 class="h6 fw-semibold"><i class="bi bi-phone me-2" aria-hidden="true"></i>Android</h3>
+            <ol class="text-body-secondary mb-0">
+              <li>Öffne <a [href]="origin">{{ host }}</a> in Chrome</li>
+              <li>Tippe auf das <strong>Drei-Punkte-Menü</strong> <i class="bi bi-three-dots-vertical" aria-hidden="true"></i> oben rechts</li>
+              <li>Wähle <strong>„Zum Startbildschirm hinzufügen“</strong> oder <strong>„App installieren“</strong></li>
+              <li>Bestätige mit <strong>„Installieren“</strong></li>
+            </ol>
+          }
+          @case ('safari') {
+            <h3 class="h6 fw-semibold"><i class="bi bi-phone me-2" aria-hidden="true"></i>iPhone &amp; iPad</h3>
+            <ol class="text-body-secondary">
+              <li>Öffne <a [href]="origin">{{ host }}</a> in Safari</li>
+              <li>Tippe auf das <strong>Teilen-Symbol</strong> <i class="bi bi-box-arrow-up" aria-hidden="true"></i> unten in der Mitte</li>
+              <li>Scrolle nach unten und tippe auf <strong>„Zum Home-Bildschirm“</strong></li>
+              <li>Tippe auf <strong>„Hinzufügen“</strong> oben rechts</li>
+            </ol>
+            <div class="alert alert-warning d-flex gap-2 mb-4" role="note">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              <span><strong>Wichtig:</strong> Auf iOS muss Safari verwendet werden. Andere Browser unterstützen keine PWA-Installation.</span>
+            </div>
+            <h3 class="h6 fw-semibold"><i class="bi bi-display me-2" aria-hidden="true"></i>macOS (Safari 17+)</h3>
+            <ol class="text-body-secondary mb-0">
+              <li>Öffne <a [href]="origin">{{ host }}</a> in Safari</li>
+              <li>Klicke in der Menüleiste auf <strong>Ablage → Zum Dock hinzufügen</strong></li>
+              <li>Bestätige im Dialog mit <strong>„Hinzufügen“</strong></li>
+            </ol>
+          }
+          @case ('firefox') {
+            <div class="alert alert-warning d-flex gap-2 mb-4" role="note">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              <span>Firefox unterstützt PWAs nur eingeschränkt. Für das beste Erlebnis empfehlen wir Chrome, Edge oder Safari.</span>
+            </div>
+            <h3 class="h6 fw-semibold"><i class="bi bi-phone me-2" aria-hidden="true"></i>Android</h3>
+            <ol class="text-body-secondary mb-4">
+              <li>Öffne <a [href]="origin">{{ host }}</a> in Firefox</li>
+              <li>Tippe auf das <strong>Drei-Punkte-Menü</strong> <i class="bi bi-three-dots-vertical" aria-hidden="true"></i></li>
+              <li>Wähle <strong>„Zum Startbildschirm hinzufügen“</strong></li>
+              <li>Bestätige mit <strong>„Hinzufügen“</strong></li>
+            </ol>
+            <h3 class="h6 fw-semibold"><i class="bi bi-display me-2" aria-hidden="true"></i>Desktop</h3>
+            <p class="text-body-secondary mb-0">
+              Firefox Desktop unterstützt derzeit keine PWA-Installation. Du kannst Chronos als Lesezeichen speichern oder
+              einen anderen Browser wie Chrome oder Edge verwenden.
+            </p>
+          }
+        }
+      </div>
+    }
+
+    <div class="glass-card p-4 p-sm-5">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="icon-tile" aria-hidden="true"><i class="bi bi-question-circle fs-4"></i></span>
+        <h2 class="h4 fw-bold mb-0">Was ist eine PWA?</h2>
+      </div>
+      <p class="text-body-secondary">
+        Eine <strong>Progressive Web App (PWA)</strong> ist eine Website, die wie eine native App funktioniert. Nach der
+        Installation erhältst du:
+      </p>
+      <ul class="list-unstyled text-body-secondary mb-0 d-flex flex-column gap-2">
+        <li><i class="bi bi-rocket-takeoff text-primary me-2" aria-hidden="true"></i><strong>Schnellerer Zugriff</strong> – Öffne Chronos direkt vom Startbildschirm</li>
+        <li><i class="bi bi-bell text-primary me-2" aria-hidden="true"></i><strong>Push-Benachrichtigungen</strong> – Erhalte Erinnerungen an wichtige Termine</li>
+        <li><i class="bi bi-fullscreen text-primary me-2" aria-hidden="true"></i><strong>Vollbild-Modus</strong> – Nutze die App ohne Browser-Oberfläche</li>
+        <li><i class="bi bi-hdd text-primary me-2" aria-hidden="true"></i><strong>Kein App Store nötig</strong> – Installiere direkt aus dem Browser</li>
+      </ul>
+    </div>
+  </div>
+</section>

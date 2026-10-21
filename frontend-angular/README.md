@@ -14,6 +14,7 @@ npm run start:dev # Angular-Dev-Server auf :4200
 npm run lint     # angular-eslint
 npm test         # Unit-Tests (Vitest, einmalig) und BFF-Tests (npm run test:server)
 npm run build    # Produktions-Build inkl. Bundle-Budgets nach dist/
+npm run test:e2e # Playwright gegen den BFF mit dist/browser (vorher build; einmalig `npx playwright install chromium`)
 ```
 
 ## BFF (`server/`)
@@ -29,6 +30,8 @@ Details: `kb/adr/ADR-2026-10-21-003-angular-bff-server.md`.
 ```
 src/
 ├── app/
+│   ├── layout/            DefaultLayout, LandingLayout (Router-Outlet-Rahmen), LandingFooter
+│   ├── shared/            wiederverwendbare Komponenten (MessageDialog)
 │   ├── core/              Modelle, AuthService, authGuard, errorInterceptor, ToastService, ModalService, ThemeService
 │   ├── features/<name>/   je Feature eine lazy geladene Komponente
 │   └── app.routes.ts      Routing (loadComponent je Route, Wildcard → Startseite)
@@ -37,6 +40,7 @@ src/
     └── _theme.scss        Gradient-Klassen (`text-gradient`, `bg-gradient-brand`, `btn-gradient`)
 ```
 
+Layouts und öffentliche Seiten: `kb/adr/ADR-2026-10-21-006-angular-layouts-public-pages.md`. E2E-Tests liegen in `e2e/`.
 `core/` im Detail: `kb/adr/ADR-2026-10-21-004-angular-core.md`. Toast-Container und Bestätigungsdialog sind in `App` eingebunden.
 
 ## Theming und Dark Mode

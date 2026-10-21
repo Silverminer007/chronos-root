@@ -24,3 +24,50 @@
     filter: brightness(1.1);
   }
 }
+
+// Halbtransparente Karte der öffentlichen Seiten (Nuxt: `bg-white/90 border-2 border-purple-200 rounded-xl`).
+.glass-card {
+  background-color: rgba(var(--bs-body-bg-rgb), 0.9);
+  border: 2px solid #e9d5ff; // purple-200
+  border-radius: var(--bs-border-radius-xl);
+  backdrop-filter: blur(4px);
+}
+
+[data-bs-theme='dark'] .glass-card {
+  border-color: $brand-purple;
+}
+
+// Hervorgehobenes Icon-Feld (Nuxt: `bg-linear-to-br from-purple-100 to-pink-100`).
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--bs-border-radius-lg);
+  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+  color: $brand-purple;
+}
+
+[data-bs-theme='dark'] .icon-tile {
+  background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+}
+
+// Kleine Überschrift-Pille über den Seitentiteln.
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 50rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+// Inhaltsbreite der öffentlichen Textseiten (Nuxt: `max-w-4xl`).
+.page-width {
+  max-width: 56rem;
+}
