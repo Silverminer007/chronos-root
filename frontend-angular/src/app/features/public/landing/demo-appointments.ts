@@ -1,5 +1,8 @@
 import { Appointment, AppointmentStatus, ParticipationStatus, UserParticipant } from '../../../core/models';
 
+/** Feste id des eigenen Demo-Teilnehmers; negativ, damit sie nie mit echten Benutzer-ids kollidiert. */
+export const DEMO_OWN_USER_ID = -1;
+
 const START_HOUR = 18;
 const DURATION_HOURS = 3;
 
@@ -19,7 +22,7 @@ function localIso(date: Date): string {
 
 function participants(statuses: ParticipationStatus[]): UserParticipant[] {
   return statuses.map((status, index) => ({
-    user_id: index + 1,
+    user_id: index === 0 ? DEMO_OWN_USER_ID : index + 1,
     name: String.fromCharCode(65 + index),
     profile_picture_url: '',
     role: 'ATTENDANT',

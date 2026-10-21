@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
-import { AuthService } from '../../../core/auth.service';
 import { formatDate, formatTimeRange } from '../../../core/date-format';
 import { Appointment } from '../../../core/models';
 import { ToastService } from '../../../core/toast.service';
 import { MessageDialogComponent } from '../../../shared/message-dialog.component';
+import { DEMO_OWN_USER_ID } from './demo-appointments';
 
 const MAX_AVATARS = 4;
 const SEND_DELAY_MS = 500;
@@ -17,7 +17,6 @@ const SEND_DELAY_MS = 500;
   styleUrl: './appointment-demo-card.component.scss',
 })
 export class AppointmentDemoCardComponent {
-  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
   readonly appointment = input.required<Appointment>();
@@ -36,13 +35,11 @@ export class AppointmentDemoCardComponent {
   );
 
   private readonly ownStatus = computed(() => {
-    const userId = this.auth.user()?.id;
-    return this.participants().find((p) => p.user_id === userId)?.status;
+    return this.participants().find((p) => p.user_id === DEMO_OWN_USER_ID)?.status;
   });
 
   protected setParticipationStatus(status: 'APPROVED' | 'REJECTED'): void {
-    const userId = this.auth.user()?.id;
-    this.participants.update((list) => list.map((p) => (p.user_id === userId ? { ...p, status } : p)));
+    this.participants.update((list) => list.map((p) => (p.user_id === DEMO_OWN_USER_ID ? { ...p, status } : p)));
   }
 
   protected async sendMessage(): Promise<void> {

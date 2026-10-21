@@ -4,9 +4,9 @@ import { ComponentRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Appointment } from '../../../core/models';
-import { AuthService } from '../../../core/auth.service';
 import { ToastService } from '../../../core/toast.service';
 import { AppointmentDemoCardComponent } from './appointment-demo-card.component';
+import { DEMO_OWN_USER_ID } from './demo-appointments';
 
 const participant = (id: number, status: 'APPROVED' | 'REJECTED' | 'PENDING') => ({
   user_id: id,
@@ -27,7 +27,7 @@ const appointment = (over: Partial<Appointment> = {}): Appointment => ({
   status: 'PLANNED',
   venue: '',
   minimal_attendees: 8,
-  participants: [participant(1, 'REJECTED'), ...[2, 3, 4, 5, 6, 7].map((i) => participant(i, 'APPROVED'))],
+  participants: [participant(DEMO_OWN_USER_ID, 'REJECTED'), ...[2, 3, 4, 5, 6, 7].map((i) => participant(i, 'APPROVED'))],
   group_participants: [],
   messages: [],
   ...over,
@@ -83,10 +83,8 @@ describe('AppointmentDemoCardComponent', () => {
     expect(el.textContent).toContain('Gemeindehaus');
   });
 
-  it('ändert den eigenen Status in der Demo für den angemeldeten Benutzer', async () => {
+  it('ändert den eigenen Status in der Demo auch anonym ohne Anmeldung', async () => {
     const fixture = await create(appointment());
-    TestBed.inject(AuthService).user.set({ id: 1, first_name: 'A', last_name: 'B', email: 'a@b.de' });
-    await fixture.whenStable();
     expect(button('Absagen').disabled).toBe(true);
     expect(button('Zusagen').disabled).toBe(false);
     button('Zusagen').click();
@@ -96,11 +94,11 @@ describe('AppointmentDemoCardComponent', () => {
     expect(el.querySelector('.attendance')?.textContent?.replace(/\s/g, '')).toBe('7/8Zusagen');
   });
 
-  it('ändert ohne Benutzer nichts', async () => {
+  it('ändert die Teilnehmer mit echten ids nicht', async () => {
     const fixture = await create(appointment());
     button('Zusagen').click();
     await fixture.whenStable();
-    expect(button('Zusagen').disabled).toBe(false);
+    expect(el.querySelector('.attendance')?.textContent?.replace(/\s/g, '')).toBe('7/8Zusagen');
   });
 
   it('öffnet den Nachrichtendialog und meldet den Versand per Toast', async () => {
