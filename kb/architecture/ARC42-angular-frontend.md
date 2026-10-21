@@ -95,3 +95,16 @@ Siehe REQ42 Abschnitt 4; Umsetzung: Bundle-Budgets in `angular.json`, ESLint (an
 ## 12. Glossar
 
 BFF = Backend for Frontend (Node-Proxy). SW = Service Worker. OIDC = OpenID Connect.
+
+## Nachtrag 2026-10-21: Ergänzung zu Abschnitt 9 (Architekturentscheidungen)
+
+Die KB ist unveränderlich, daher steht die Ergänzung als Nachtrag. Abschnitt 9 nennt nur ADR-2026-10-21-001; weitere maßgebliche Entscheidungen:
+
+- ADR-2026-10-21-002 (Ticket #176, Projektgerüst): Angular 22 mit Application-Builder, Standalone, strict; Vitest statt Karma; angular-eslint (Flat-Config); SCSS-Partials mit Dark Mode über `data-bs-theme`; Bundle-Budgets roh gemessen (Warnung 600 kB, Fehler 750 kB; Q-05 fordert gzip); Lazy-Loading je Route; eigener CI-Workflow `frontend-angular.yml`; Node 24 und `packageManager` gepinnt.
+- ADR-2026-10-21-003 (Ticket #177, BFF-Server): Express 5 mit eingebautem `fetch`, TypeScript ohne Build-Schritt (`node server/index.ts`); Port der Nuxt-Routen (`/api/auth/*`, Catch-all `/api/v2/*`), statisches Hosting von `dist/browser` mit SPA-Fallback, 301-Redirect auf `/` ohne Auth-Cookie, Konfiguration über `CHRONOS_*` mit Fallback auf `NUXT_*`, neuer Endpoint `GET /api/config` für die Impressum-Werte. Abweichungen vom Nuxt-Verhalten:
+  1. `SameSite=Lax` statt `None`.
+  2. `Secure` per `CHRONOS_COOKIE_SECURE=false` abschaltbar (Standard `true`).
+  3. Fehlender `code` im Callback gibt 400, Keycloak-/Token-Fehler 502 (Nuxt: ungefangener 500er bzw. leere Antwort).
+  4. Ohne `kc_access` sendet der Proxy keinen `Authorization`-Header (Nuxt: `Bearer undefined`).
+  5. Der Proxy reicht Status und Body des Backends unverändert durch (Nuxt: eigene Fehlerobjekte von `$fetch`); Backend nicht erreichbar ergibt 502.
+  6. `refresh` und `isLoggedIn` antworten 204; der Browser-Cookie-Header wird nicht ans Backend weitergegeben.
