@@ -53,6 +53,10 @@ frontend-angular/
 Zuordnung alt → neu: Pinia-Store → `*Store`-Service (Signals); `useFetch` → `HttpClient` in Services; `middleware/auth.global.ts` → `authGuard`;
 `layouts/*.vue` → Layout-Komponenten; PrimeVue-Dialoge → Bootstrap-Modal (eigene `ModalService`/Komponente); Toast → Bootstrap-Toast-Service.
 
+Bausteine in `core/` (siehe ADR-2026-10-21-004): `ToastService` (Signal-Liste) und `ModalService` (`confirm()` liefert `Promise<boolean>`) halten den Zustand;
+`ToastContainerComponent` und `ConfirmDialogComponent` stellen ihn dar und sind je einmal in `App` eingebunden. `OnboardingService` (Port von `useOnboarding`,
+localStorage-Schlüssel `onboardingShownAt`) wird vom `authGuard` für die Weiterleitung auf `/onboarding` befragt; `errorInterceptor` nutzt den `ToastService`.
+
 ## 6. Laufzeitsicht
 
 1. **Login:** `/` → Button → `GET /api/auth/login` → Keycloak → `GET /api/auth/callback` setzt `kc_access`, `kc_refresh` (httpOnly), `kc_expires` → Redirect `/agenda`.
