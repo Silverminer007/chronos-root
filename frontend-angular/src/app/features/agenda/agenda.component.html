@@ -1,0 +1,44 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="agenda mx-auto d-flex flex-column gap-4 pt-4">
+    @for (appointment of store.appointments(); track appointment.id) {
+      <app-appointment-card [appointment]="appointment" />
+    }
+
+    @if (store.loading()) {
+      @for (i of skeletons; track i) {
+        <app-appointment-card-skeleton />
+      }
+    }
+
+    @if (store.error(); as error) {
+      <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
+        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <div>
+          <p class="fw-semibold mb-0">Fehler beim Laden</p>
+          <p class="small mb-0">{{ error }}</p>
+        </div>
+      </div>
+    }
+
+    @if (!store.loading() && store.appointments().length === 0 && !store.error()) {
+      <div class="text-center py-5 px-3">
+        <div class="icon-tile rounded-circle empty-icon mb-3">
+          <i class="bi bi-calendar-event fs-2" aria-hidden="true"></i>
+        </div>
+        <h3 class="h4 fw-bold mb-2">Keine Termine vorhanden</h3>
+        <p class="text-body-secondary mb-0">Erstelle deinen ersten Termin oder warte auf eine Einladung.</p>
+      </div>
+    }
+
+    @if (!store.loading() && store.hasMore()) {
+      <div class="d-flex justify-content-center pt-2">
+        <button type="button" class="btn btn-outline-primary fw-medium d-flex align-items-center gap-2" (click)="loadMore()">
+          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+          <span>Mehr laden</span>
+        </button>
+      </div>
+    }
+  </div>
+</main>

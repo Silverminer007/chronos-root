@@ -1,0 +1,13 @@
+@use '../../../styles/variables' as *;
+
+.title {
+  transition: color 0.15s;
+}
+
+.title-link:hover .title {
+  color: $brand-purple;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
