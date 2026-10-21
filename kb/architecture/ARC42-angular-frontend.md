@@ -108,3 +108,25 @@ Die KB ist unveränderlich, daher steht die Ergänzung als Nachtrag. Abschnitt 9
   4. Ohne `kc_access` sendet der Proxy keinen `Authorization`-Header (Nuxt: `Bearer undefined`).
   5. Der Proxy reicht Status und Body des Backends unverändert durch (Nuxt: eigene Fehlerobjekte von `$fetch`); Backend nicht erreichbar ergibt 502.
   6. `refresh` und `isLoggedIn` antworten 204; der Browser-Cookie-Header wird nicht ans Backend weitergegeben.
+
+## Nachtrag 2026-10-21: Ergänzung zu Abschnitt 6 (Laufzeitsicht) und 7 (Verteilungssicht)
+
+Die KB ist unveränderlich, daher stehen die Ergänzungen als Nachtrag. Sie gelten zusätzlich zu den Abschnitten 6 und 7 und zum ADR-2026-10-21-003 (Ticket #177).
+
+**Routen und Datenflüsse (Ergänzung zu Abschnitt 6):**
+
+- `GET /api/config` liefert die Impressum-Werte (`CHRONOS_PUBLIC_IMPRESSUM_*`) als JSON an die SPA. Die Werte werden zur Laufzeit gelesen, nicht zur Build-Zeit; der Endpoint braucht keine Anmeldung. Der Abruf durch die Impressum-Seite folgt mit dem Ticket für die öffentlichen Seiten.
+- Weitere BFF-Routen: `GET /api/auth/register`, `GET /api/auth/login|callback|isLoggedIn`, `POST /api/auth/refresh|logout`, Catch-all `/api/v2/*` (Proxy mit `Authorization: Bearer` aus `kc_access`). Unbekannte `/api/*`-Pfade ergeben 404 und fallen nicht auf die SPA zurück.
+- Statische Auslieferung: GET/HEAD-Anfragen ohne Sitzungs-Cookie (`SESSION_COOKIES`) auf Seiten außer `/` und `/public/*` werden mit 301 auf `/` umgeleitet; Dateien mit Endung (Bundles, Manifest, Service Worker) bleiben erreichbar. Alle übrigen Pfade erhalten den SPA-Fallback (`index.html`).
+
+**Betrieb und Konfiguration (Ergänzung zu Abschnitt 7):**
+
+| Variable | Bedeutung | Standard |
+|---|---|---|
+| `CHRONOS_PORT` (Fallback `PORT`) | Listen-Port des BFF | `3000` |
+| `CHRONOS_STATIC_DIR` | Verzeichnis der statischen SPA | `dist/browser` relativ zu `frontend-angular/` |
+| `CHRONOS_COOKIE_SECURE` | `false` schaltet das `Secure`-Attribut der Cookies ab (lokale HTTP-Entwicklung) | `true` |
+
+- Alle `CHRONOS_AUTH_*`, `CHRONOS_QUARKUS_URL` und `CHRONOS_PUBLIC_IMPRESSUM_*`-Werte fallen auf den gleichnamigen `NUXT_*`-Wert zurück, wenn die `CHRONOS_*`-Variable fehlt.
+- Pflichtwerte sind `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AUTH_REDIRECT_URI` und `CHRONOS_QUARKUS_URL` (jeweils auch als `NUXT_*`). Fehlt einer, gibt der BFF `Fehlende Konfiguration: <Namen>` aus und beendet sich mit Exit-Code 1.
+- Start: `npm start` startet den BFF (`node server/index.ts`, TypeScript ohne Build-Schritt per Node-Type-Stripping, Node 24; vorher `npm run build`). `npm run start:dev` ist `ng serve` (Port 4200) und startet keinen BFF.
