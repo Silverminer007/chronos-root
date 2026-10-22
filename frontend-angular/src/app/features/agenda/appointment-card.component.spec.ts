@@ -33,7 +33,7 @@ const base: Appointment = {
 
 describe('AppointmentCardComponent', () => {
   let fixture: ComponentFixture<AppointmentCardComponent>;
-  let store: { approveAppointment: ReturnType<typeof vi.fn>; rejectAppointment: ReturnType<typeof vi.fn> };
+  let store: { approveAppointment: ReturnType<typeof vi.fn>; rejectAppointment: ReturnType<typeof vi.fn>; sendMessage: ReturnType<typeof vi.fn> };
   let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
   const user = signal<User | null>({ id: 1, first_name: 'Max', last_name: 'Muster', email: 'm@example.org' });
 
@@ -50,6 +50,7 @@ describe('AppointmentCardComponent', () => {
     store = {
       approveAppointment: vi.fn().mockResolvedValue(undefined),
       rejectAppointment: vi.fn().mockResolvedValue(undefined),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
     };
     toast = { success: vi.fn(), error: vi.fn() };
     TestBed.configureTestingModule({
@@ -166,5 +167,50 @@ describe('AppointmentCardComponent', () => {
     await fixture.whenStable();
     expect(store.approveAppointment).not.toHaveBeenCalled();
     expect(store.rejectAppointment).not.toHaveBeenCalled();
+  });
+
+  describe('Nachricht senden', () => {
+    const openAndSend = async (text: string) => {
+      button('Nachricht').click();
+      fixture.detectChanges();
+      const textarea = el().querySelector('textarea') as HTMLTextAreaElement;
+      textarea.value = text;
+      textarea.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      button('Nachricht senden').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    it('zeigt den Nachricht-Button zwischen Zusagen und Absagen', () => {
+      render();
+      const labels = Array.from(el().querySelectorAll('.appointment-actions button')).map((b) => b.textContent?.trim());
+      expect(labels).toEqual(['ZusagenZusagen', 'NachrichtNachricht', 'AbsagenAbsagen']);
+    });
+
+    it('öffnet den Dialog für den Termin der Karte', () => {
+      render();
+      expect(el().querySelector('[role="dialog"]')).toBeNull();
+      button('Nachricht').click();
+      fixture.detectChanges();
+      expect(el().querySelector('[role="dialog"]')?.textContent).toContain('Zeltlager');
+    });
+
+    it('sendet die Nachricht, zeigt einen Toast und schließt den Dialog', async () => {
+      render();
+      await openAndSend('Hallo');
+      expect(store.sendMessage).toHaveBeenCalledWith(5, 'Hallo');
+      expect(toast.success).toHaveBeenCalledWith('Nachricht versendet');
+      expect(el().querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('meldet einen Sendefehler als Toast und lässt den Dialog offen', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      store.sendMessage.mockRejectedValue(new Error('x'));
+      render();
+      await openAndSend('Hallo');
+      expect(toast.error).toHaveBeenCalledWith('Fehler beim Senden', 'Bitte kontaktiere den Entwickler der App');
+      expect(el().querySelector('[role="dialog"]')).not.toBeNull();
+    });
   });
 });

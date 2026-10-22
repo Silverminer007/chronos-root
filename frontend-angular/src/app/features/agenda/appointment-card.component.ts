@@ -1,18 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { formatTimeRange } from '../../core/date-format';
 import { Appointment } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
+import { MessageDialogComponent } from '../../shared/message-dialog.component';
 import { AppointmentStore } from './appointment.store';
 
 const MAX_AVATARS = 4;
 
-/** Termin-Karte der Agenda mit Zu-/Absage (Port von `AppointmentCard.vue` ohne Nachrichten-Dialog, siehe Ticket #181). */
+/** Termin-Karte der Agenda mit Zu-/Absage (Port von `AppointmentCard.vue` inkl. Nachricht-Dialog, Ticket #209). */
 @Component({
   selector: 'app-appointment-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, MessageDialogComponent],
   templateUrl: './appointment-card.component.html',
   styleUrl: './appointment-card.component.scss',
 })
@@ -23,6 +24,7 @@ export class AppointmentCardComponent {
 
   readonly appointment = input.required<Appointment>();
 
+  protected readonly showMessageDialog = signal(false);
   protected readonly approved = computed(() => this.appointment().participants.filter((p) => p.status === 'APPROVED'));
   protected readonly avatars = computed(() => this.approved().slice(0, MAX_AVATARS));
   protected readonly hiddenAvatars = computed(() => this.approved().length - MAX_AVATARS);
@@ -41,6 +43,17 @@ export class AppointmentCardComponent {
 
   protected reject(): Promise<void> {
     return this.respond(() => this.store.rejectAppointment(this.appointment().id), 'Absage registriert');
+  }
+
+  protected async sendMessage(message: string): Promise<void> {
+    try {
+      await this.store.sendMessage(this.appointment().id, message);
+      this.toast.success('Nachricht versendet');
+      this.showMessageDialog.set(false);
+    } catch (err) {
+      console.error(err);
+      this.toast.error('Fehler beim Senden', 'Bitte kontaktiere den Entwickler der App');
+    }
   }
 
   private async respond(action: () => Promise<void>, successSummary: string): Promise<void> {
