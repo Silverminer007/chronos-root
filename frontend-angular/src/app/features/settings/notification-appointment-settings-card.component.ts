@@ -24,8 +24,8 @@ interface RoleOption {
   template: `
     <div class="card shadow-sm">
       <div class="card-header p-4 d-flex align-items-center gap-3 bg-transparent">
-        <span class="icon-tile" aria-hidden="true"><i class="bi bi-calendar3"></i></span>
-        <div>
+        <span class="icon-tile flex-shrink-0" aria-hidden="true"><i class="bi bi-calendar3"></i></span>
+        <div class="text-break" style="min-width: 0">
           <h3 class="h5 fw-bold mb-0">Terminbenachrichtigungen</h3>
           <p class="small text-body-secondary mb-0">Wähle für welche Rollen du benachrichtigt werden möchtest</p>
         </div>

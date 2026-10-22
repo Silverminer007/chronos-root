@@ -131,4 +131,24 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     expect(await login.evaluate((el) => getComputedStyle(el).borderTopColor), 'Anmelden: lila Rahmen').toBe('rgb(147, 51, 234)');
     expect(await login.evaluate((el) => getComputedStyle(el).backgroundColor), 'Anmelden: weiß').toBe('rgb(255, 255, 255)');
   });
+
+  test('Einstellungen bei 390px: Push-Schalter und Überschrift laufen nicht über', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/settings', (route) => route.fulfill({ status: 404, json: {} }));
+    await page.goto('/settings', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Terminbenachrichtigungen' })).toBeVisible();
+    const sw = page.getByRole('switch', { name: 'Push-Benachrichtigungen' });
+    await expect(sw).toBeVisible();
+    const card = page.locator('.card', { has: sw });
+    const [swBox, cardBox] = await Promise.all([sw.boundingBox(), card.boundingBox()]);
+    expect(swBox!.x + swBox!.width, 'Schalter innerhalb der Karte').toBeLessThanOrEqual(cardBox!.x + cardBox!.width);
+    const overflow = await page.evaluate(() => ({
+      doc: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      cards: [...document.querySelectorAll<HTMLElement>('.card, .card-header, .card-body')].filter((e) => e.scrollWidth > e.clientWidth).length,
+      heading: [...document.querySelectorAll<HTMLElement>('h3')].filter((e) => e.scrollWidth > e.clientWidth).length,
+    }));
+    expect(overflow.doc, 'Seite ohne horizontalen Überlauf').toBeLessThanOrEqual(0);
+    expect(overflow.cards, 'Karten: scrollWidth <= clientWidth').toBe(0);
+    expect(overflow.heading, 'Überschriften: scrollWidth <= clientWidth').toBe(0);
+  });
 });
