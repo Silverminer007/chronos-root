@@ -21,7 +21,7 @@ Route ablehnte. Die E2E-Spec `appointment-participants.spec.ts` lässt den Mock 
 | Teilnehmer hinzufügen | `POST /appointments/{id}/participants/{userId}` `{user_role}` | `AddParticipantRequest` | korrigiert |
 | Teilnehmer entfernen | `DELETE /appointments/{id}/participants/{userId}` | ✅ | korrigiert |
 | Rolle ändern | `PUT /appointments/{id}/participation/{userId}/role` `{role}` | `ChangeParticipantRoleRequest` | korrigiert |
-| Gruppe hinzufügen | `POST /appointments/{id}/groups/{groupId}` `{user_role}` (Java `AddGroupParticipantDto.user_role`; Rust akzeptiert `user_role` als Alias von `role`) | `AddGroupToAppointmentRequest` | korrigiert |
+| Gruppe hinzufügen | `POST /appointments/{id}/groups/{groupId}` `{user_role}` (Java `AddGroupParticipantDto.user_role`; Rust akzeptiert `user_role` als Alias von `role`; `group_id` im Body ist in Java ungenutzt, die Gruppe kommt aus dem Pfad) | `AddGroupToAppointmentRequest` | korrigiert |
 | Gruppe entfernen | `DELETE /appointments/{id}/groups/{groupId}` | ✅ | korrigiert |
 | Nachricht senden | `POST /appointments/{id}/messages` `{body}` | ✅ | ✅ |
 
