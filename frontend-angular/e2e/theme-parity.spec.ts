@@ -55,6 +55,32 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     expect(input.radius, 'Eingabefeld-Rundung (erwartet >= 12)').toBeGreaterThanOrEqual(12);
   });
 
+  test('Dunkelmodus: Eingabe-Rahmen adaptiv, Fokus- und Validierungsrahmen bleiben erhalten', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: /Terminplanung/ })).toBeVisible();
+    const res = await page.evaluate(() => {
+      const border = (el: Element) => getComputedStyle(el).borderTopColor;
+      const mk = (cls: string) => {
+        const el = document.createElement('input');
+        el.className = cls;
+        el.style.transition = 'none';
+        document.body.appendChild(el);
+        return el;
+      };
+      const light = border(mk('form-control'));
+      document.documentElement.setAttribute('data-bs-theme', 'dark');
+      const dark = border(mk('form-control'));
+      const invalid = border(mk('form-control is-invalid'));
+      const focused = mk('form-control');
+      focused.focus();
+      return { light, dark, invalid, focus: border(focused), invalidRef: getComputedStyle(document.documentElement).getPropertyValue('--bs-form-invalid-border-color').trim() };
+    });
+    expect(res.light, 'hell: gray-200').toBe('rgb(229, 231, 235)');
+    expect(res.dark, 'dunkel: nicht das helle gray-200').not.toBe(res.light);
+    expect(res.invalid, 'dunkel: Validierungsrahmen bleibt').not.toBe(res.dark);
+    expect(res.focus, 'dunkel: Fokusrahmen bleibt').not.toBe(res.dark);
+  });
+
   test('Auswahlzustände: .btn-check:checked, .active und Hover sind Markenlila mit Rahmen, gefüllte Buttons unberührt', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /Terminplanung/ })).toBeVisible();

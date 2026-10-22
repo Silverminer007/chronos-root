@@ -17,7 +17,7 @@ $border-radius-lg: 0.75rem;
 $border-radius-xl: 1rem;
 $card-border-radius: 1rem;
 $input-border-radius: 0.75rem;
-$input-border-color: $gray-200;
+$border-color: $gray-200; // nur hell; dunkel nutzt Bootstraps $border-color-dark. Eingabefelder erben adaptiv via var(--bs-border-color).
 
 $brand-gradient: linear-gradient(90deg, $brand-purple, $brand-pink);
 
@@ -37,7 +37,7 @@ $bootstrap-config: (
   'border-radius-xl': $border-radius-xl,
   'card-border-radius': $card-border-radius,
   'input-border-radius': $input-border-radius,
-  'input-border-color': $input-border-color,
+  'border-color': $border-color,
   'font-family-sans-serif': $font-family-sans-serif,
   'enable-dark-mode': $enable-dark-mode,
 );

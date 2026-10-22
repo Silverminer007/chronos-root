@@ -7,7 +7,7 @@ Einbinden eigener Variablen Bootstrap nicht (anders als bei `@import`): `$primar
 Standardwerten (Blau `#0d6efd`, weißer Hintergrund, Radius 6px). Das Theme sah daher nie wie das Nuxt-Frontend aus.
 
 **Entscheidung:** `_variables.scss` baut die Map `$bootstrap-config` (Markenlila, `body-bg` gray-50, `body-color` gray-600, `headings-color` gray-900,
-Radien 0.75/1rem, Eingabefeld-Rahmen gray-200); `styles.scss` übergibt sie mit `meta.load-css('bootstrap/scss/bootstrap', $with: ...)`. Neue
+Radien 0.75/1rem, Rahmenfarbe `$border-color` gray-200 nur hell; Eingabefelder bleiben bei Bootstraps adaptivem `var(--bs-border-color)`, damit der Dunkelmodus nicht hell umrandet wird); `styles.scss` übergibt sie mit `meta.load-css('bootstrap/scss/bootstrap', $with: ...)`. Neue
 Bootstrap-Variablen gehören in diese Map. Kartenschatten und grau gefüllte Felder (nur hell) stehen in `_theme.scss`; `shadow-sm` an
 `.appointment-card` entfiel, da `!important` den Kartenschatten überschrieben hätte.
 
