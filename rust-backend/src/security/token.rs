@@ -86,6 +86,8 @@ pub struct TokenValidator {
     http_client: reqwest::Client,
     /// Cache TTL in seconds (default 1 hour)
     cache_ttl: Duration,
+    /// Expected `aud`; `None` skips the audience check (Quarkus default, see ADR-2026-10-22-030)
+    audience: Option<String>,
 }
 
 impl TokenValidator {
@@ -102,7 +104,14 @@ impl TokenValidator {
             key_cache: Arc::new(RwLock::new(None)),
             http_client: reqwest::Client::new(),
             cache_ttl,
+            audience: None,
         }
+    }
+
+    /// Require `audience` in the token's `aud` claim. `None` (default) does not validate `aud`.
+    pub fn with_audience(mut self, audience: Option<String>) -> Self {
+        self.audience = audience;
+        self
     }
 
     /// Fetch the public key set from Keycloak
@@ -167,7 +176,12 @@ impl TokenValidator {
             .map_err(|e| TokenError::InvalidToken(e.to_string()))?;
 
         // Validate the token
-        let validation = Validation::new(jsonwebtoken::Algorithm::RS256);
+        let mut validation = Validation::new(jsonwebtoken::Algorithm::RS256);
+        match &self.audience {
+            Some(audience) => validation.set_audience(&[audience]),
+            // Keycloak puts `aud: account` into tokens of users with default roles
+            None => validation.validate_aud = false,
+        }
 
         let token_data = decode::<TokenClaims>(token, &decoding_key, &validation).map_err(|e| {
             use jsonwebtoken::errors::ErrorKind;
