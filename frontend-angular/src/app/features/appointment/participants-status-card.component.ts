@@ -8,9 +8,13 @@ import { ASSIGNABLE_ROLES, isResponsible, roleLabel, sortByRoleThenStatusThenNam
 
 interface OpenMenu {
   participant: UserParticipant;
-  top: number;
+  top: number | null;
+  bottom: number | null;
   right: number;
 }
+
+/** Höhe des Menüs (Überschrift, Rollen, Entfernen) mit Reserve; reicht der Platz darunter nicht, öffnet es nach oben. */
+const MENU_HEIGHT = 240;
 
 const ROLE_BADGE: Record<string, string> = {
   RESPONSIBLE: 'bg-primary-subtle text-primary-emphasis',
@@ -79,7 +83,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
     </div>
 
     @if (menu(); as m) {
-      <ul class="dropdown-menu show position-fixed shadow" role="menu" [style.top.px]="m.top" [style.right.px]="m.right">
+      <ul class="dropdown-menu show position-fixed shadow" role="menu" [style.top.px]="m.top" [style.bottom.px]="m.bottom" [style.right.px]="m.right">
         <li><h6 class="dropdown-header">Rolle ändern</h6></li>
         @for (role of rolesFor(m.participant); track role) {
           <li><button type="button" class="dropdown-item" role="menuitem" (click)="changeRole(m.participant, role)">{{ label(role) }}</button></li>
@@ -127,7 +131,13 @@ export class ParticipantsStatusCardComponent {
       return;
     }
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    this.menu.set({ participant, top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    const right = window.innerWidth - rect.right;
+    const opensUp = rect.bottom + 4 + MENU_HEIGHT > window.innerHeight && rect.top > MENU_HEIGHT;
+    this.menu.set(
+      opensUp
+        ? { participant, top: null, bottom: window.innerHeight - rect.top + 4, right }
+        : { participant, top: rect.bottom + 4, bottom: null, right },
+    );
   }
 
   protected closeMenu(): void {

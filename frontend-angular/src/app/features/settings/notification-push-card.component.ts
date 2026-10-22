@@ -9,12 +9,12 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
       <div class="card-body p-4">
         <div class="d-flex align-items-center gap-3">
           <span class="icon-tile flex-shrink-0" aria-hidden="true"><i class="bi bi-bell fs-4"></i></span>
-          <div class="flex-grow-1">
+          <div class="flex-grow-1 text-break" style="min-width: 0">
             <h3 class="h5 fw-bold mb-0">Push-Benachrichtigungen</h3>
             <p class="small text-body-secondary mb-0">Erhalte Benachrichtigungen auf diesem Gerät</p>
             <p class="small mb-0 mt-1" [class]="statusClass()">{{ statusText() }}</p>
           </div>
-          <div class="form-check form-switch fs-4 mb-0">
+          <div class="form-check form-switch fs-4 mb-0 flex-shrink-0">
             <input
               class="form-check-input"
               type="checkbox"

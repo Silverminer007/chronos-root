@@ -93,7 +93,7 @@
             @for (provider of providers; track provider.id) {
               <li class="list-group-item px-0 d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
-                  <i class="bi fs-4" [class]="provider.icon" aria-hidden="true"></i>
+                  <i class="bi fs-4" [class]="provider.icon + ' ' + provider.color" aria-hidden="true"></i>
                   <div>
                     <p class="fw-medium mb-0">{{ provider.name }}</p>
                     <p class="small text-body-secondary mb-0">{{ isLinked(provider.id) ? 'Verknüpft' : 'Nicht verknüpft' }}</p>

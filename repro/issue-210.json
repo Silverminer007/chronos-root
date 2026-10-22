@@ -1,0 +1,14 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && timeout 500 npx ng build && (npx playwright install chromium >/dev/null 2>&1; timeout 300 npx playwright test e2e/theme-parity.spec.ts --project=chromium --reporter=line)",
+  "description": "Das SCSS-Theme des Angular-Frontends weicht vom alten Nuxt-Frontend ab: Seitenhintergrund weiß statt gray-50, Bootstrap-Blau statt Markenlila, kleine Kartenrundung ohne Schatten, Eingabefelder weiß.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/theme-parity.spec.ts"],
+  "failure_signature": "Seitenhintergrund (erwartet gray-50)",
+  "steps": [
+    "Landing bei 390x844 öffnen und den berechneten Seitenhintergrund, Überschrift- und Textfarbe prüfen",
+    "/agenda mit gemockter Sitzung öffnen und Rundung und Schatten der Termin-Karte prüfen",
+    "--bs-primary und Stil eines .form-control prüfen"
+  ],
+  "expected": "body rgb(249,250,251), Überschrift gray-900, Fließtext gray-600, --bs-primary #9333ea, Karten-Radius >= 16px mit Schatten, Eingabefelder gray-50 gefüllt mit Radius >= 12px.",
+  "actual": "body rgb(255,255,255), --bs-primary #0d6efd (Bootstrap-Blau), Karten-Radius 6px, Eingabefelder weiß."
+}
