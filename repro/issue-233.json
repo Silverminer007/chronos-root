@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/public-headings-wrap.spec.ts --project=chromium --reporter=line",
+  "description": "Angular bei 390x844: Überschriften (h2/h3) auf Impressum, Datenschutz und Install müssen umbrechen statt mit Ellipsis abgeschnitten zu werden (scrollWidth <= clientWidth, kein text-overflow: ellipsis).",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/public-headings-wrap.spec.ts"],
+  "failure_signature": "text-overflow: ellipsis",
+  "steps": ["Viewport 390x844", "/public/impressum, /public/datenschutz, /public/install öffnen", "Berechnete Style und scrollWidth/clientWidth der h2/h3 lesen"],
+  "expected": "Überschriften brechen um, vollständiger Text sichtbar, kein text-overflow: ellipsis",
+  "actual": "'Verantwortlich für den Inhalt' wird mit '…' abgeschnitten (.section-heading: nowrap, overflow hidden, ellipsis)"
+}
