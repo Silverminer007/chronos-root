@@ -1,4 +1,6 @@
+@use 'sass:meta';
 @use 'styles/variables' as *;
-@use 'bootstrap/scss/bootstrap';
 @use 'bootstrap-icons/font/bootstrap-icons';
 @use 'styles/theme';
+
+@include meta.load-css('bootstrap/scss/bootstrap', $with: $bootstrap-config);

@@ -2,10 +2,40 @@
 $brand-purple: #9333ea; // purple-600
 $brand-pink: #ec4899; // pink-500
 
+$gray-50: #f9fafb;
+$gray-200: #e5e7eb;
+$gray-600: #4b5563;
+$gray-900: #111827;
+
 $primary: $brand-purple;
 $link-color: $brand-purple;
+$body-bg: $gray-50;
+$body-color: $gray-600;
+$headings-color: $gray-900;
+$border-radius-lg: 0.75rem;
+$border-radius-xl: 1rem;
+$card-border-radius: 1rem;
+$input-border-radius: 0.75rem;
+$input-border-color: $gray-200;
 
 $brand-gradient: linear-gradient(90deg, $brand-purple, $brand-pink);
 
 $font-family-sans-serif: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 $enable-dark-mode: true;
+
+// Muss per `meta.load-css(..., $with:)` an Bootstrap übergeben werden: ein bloßes `@use ... as *` konfiguriert
+// Bootstrap nicht, die !default-Variablen blieben dann auf den Bootstrap-Standardwerten (#0d6efd, weißer Hintergrund).
+$bootstrap-config: (
+  'primary': $primary,
+  'link-color': $link-color,
+  'body-bg': $body-bg,
+  'body-color': $body-color,
+  'headings-color': $headings-color,
+  'border-radius-lg': $border-radius-lg,
+  'border-radius-xl': $border-radius-xl,
+  'card-border-radius': $card-border-radius,
+  'input-border-radius': $input-border-radius,
+  'input-border-color': $input-border-color,
+  'font-family-sans-serif': $font-family-sans-serif,
+  'enable-dark-mode': $enable-dark-mode,
+);
