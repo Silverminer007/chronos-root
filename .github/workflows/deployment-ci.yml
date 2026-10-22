@@ -151,6 +151,15 @@ jobs:
 
           echo "✅ $ENVIRONMENT deployment completed!"
 
+      - name: ✅ Verify rollout
+        run: |
+          NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
+          # helm upgrade does not wait: fail the run if a Deployment does not become ready
+          for d in $(kubectl get deployments -n $NAMESPACE -o name); do
+            kubectl rollout status $d -n $NAMESPACE --timeout=300s
+          done
+          kubectl get pods -n $NAMESPACE -o wide
+
       - name: 🔍 Debug on failure
         if: failure()
         run: |
@@ -166,6 +175,15 @@ jobs:
 
           echo "📋 Recent Events:"
           kubectl get events -n $NAMESPACE --sort-by=.metadata.creationTimestamp --field-selector type=Warning
+
+          echo "📋 Logs of pods that are not Running/Completed:"
+          for p in $(kubectl get pods -n $NAMESPACE --no-headers | grep -vE "Running|Completed" | awk '{print $1}'); do
+            echo "--- $p"; kubectl logs $p -n $NAMESPACE --all-containers --tail=80 || true
+            kubectl logs $p -n $NAMESPACE --all-containers --previous --tail=80 || true
+          done
+          for p in $(kubectl get pods -n $NAMESPACE --no-headers | grep -E "rust" | awk '{print $1}'); do
+            echo "--- $p (rust)"; kubectl logs $p -n $NAMESPACE --tail=120 || true
+          done
 
           echo "📋 Pod Details:"
           kubectl get pods -n $NAMESPACE | grep -v Running | tail -n +2 | awk '{print $1}' | xargs -I {} kubectl describe pod {} -n $NAMESPACE
