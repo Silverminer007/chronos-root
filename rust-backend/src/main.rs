@@ -51,7 +51,13 @@ async fn main() {
 
     let keycloak_url = std::env::var("KEYCLOAK_URL")
         .unwrap_or_else(|_| "http://localhost:8080/realms/chronos".to_string());
-    let validator = Arc::new(TokenValidator::new(keycloak_url));
+    let validator = Arc::new(
+        TokenValidator::new(keycloak_url).with_audience(
+            std::env::var("AUTH_SERVER_AUDIENCE")
+                .ok()
+                .filter(|audience| !audience.is_empty()),
+        ),
+    );
 
     // Initialize event bus
     let event_bus = Arc::new(PostgresEventBus::new(pool.clone()));

@@ -83,6 +83,7 @@
         }
       ],
       "realmRoles": [
+        "default-roles-chronos",
         "user"
       ]
     },
