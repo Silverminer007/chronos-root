@@ -170,9 +170,9 @@ describe('AppointmentStore', () => {
 
     it('approveAppointment sagt zu und aktualisiert den Termin in der Liste', async () => {
       const result = store.approveAppointment(2);
-      http
-        .expectOne({ method: 'POST', url: '/api/v2/appointments/2/participants/approve' })
-        .flush(null);
+      const rsvp = http.expectOne({ method: 'POST', url: '/api/v2/appointments/2/participation' });
+      expect(rsvp.request.body).toEqual({ status: 'APPROVED' });
+      rsvp.flush(null);
       await Promise.resolve();
       http
         .expectOne('/api/v2/appointments/2?participants=true&messages=true&group_participants=true')
@@ -185,9 +185,9 @@ describe('AppointmentStore', () => {
 
     it('rejectAppointment sagt ab und lädt den Termin neu', async () => {
       const result = store.rejectAppointment(1);
-      http
-        .expectOne({ method: 'POST', url: '/api/v2/appointments/1/participants/reject' })
-        .flush(null);
+      const rsvp = http.expectOne({ method: 'POST', url: '/api/v2/appointments/1/participation' });
+      expect(rsvp.request.body).toEqual({ status: 'REJECTED' });
+      rsvp.flush(null);
       await Promise.resolve();
       http
         .expectOne('/api/v2/appointments/1?participants=true&messages=true&group_participants=true')
@@ -199,7 +199,7 @@ describe('AppointmentStore', () => {
     it('meldet einen Fehler beim Zusagen und wirft ihn weiter', async () => {
       const result = store.approveAppointment(1);
       http
-        .expectOne('/api/v2/appointments/1/participants/approve')
+        .expectOne('/api/v2/appointments/1/participation')
         .flush(null, { status: 500, statusText: 'Server Error' });
       await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
       expect(store.error()).toBe('Fehler beim Zusagen');
@@ -208,7 +208,7 @@ describe('AppointmentStore', () => {
     it('meldet einen Fehler beim Absagen und wirft ihn weiter', async () => {
       const result = store.rejectAppointment(1);
       http
-        .expectOne('/api/v2/appointments/1/participants/reject')
+        .expectOne('/api/v2/appointments/1/participation')
         .flush(null, { status: 500, statusText: 'Server Error' });
       await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
       expect(store.error()).toBe('Fehler beim Absagen');
@@ -242,7 +242,7 @@ describe('AppointmentStore', () => {
       await result;
 
       const approve = store.approveAppointment(3);
-      http.expectOne('/api/v2/appointments/3/participants/approve').flush(null);
+      http.expectOne('/api/v2/appointments/3/participation').flush(null);
       await Promise.resolve();
       http.expectOne(DETAIL).flush(appointment(3, { name: 'Neu' }));
       await approve;

@@ -374,8 +374,9 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Appointment zusagen
         async approveAppointment(appointmentId: number) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/approve`, {
-                    method: 'POST'
+                await $fetch(`/api/v2/appointments/${appointmentId}/participation`, {
+                    method: 'POST',
+                    body: { status: 'APPROVED' }
                 })
 
                 await this.fetchAppointment(appointmentId)
@@ -388,8 +389,9 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Appointment absagen (als Teilnehmer)
         async rejectAppointment(appointmentId: number) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/reject`, {
-                    method: 'POST'
+                await $fetch(`/api/v2/appointments/${appointmentId}/participation`, {
+                    method: 'POST',
+                    body: { status: 'REJECTED' }
                 })
 
                 await this.fetchAppointment(appointmentId)

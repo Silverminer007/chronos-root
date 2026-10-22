@@ -283,6 +283,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-025: Appointment invite parity (read access, friendship check, creator status)](adr/ADR-2026-10-20-025-appointment-invite-parity.md)
 - [ADR-2026-10-20-025: Test databases are cloned from a template and dropped by a guard](adr/ADR-2026-10-20-025-test-db-template-and-cleanup.md)
 - [ADR-2026-10-20-026: Appointment list paged, embedded participants/messages/group_participants (Java parity)](adr/ADR-2026-10-20-026-appointment-list-and-embedded-details.md)
+- [ADR-2026-10-22-015: RSVP über POST /appointments/{id}/participation (Ticket #206)](adr/ADR-2026-10-22-015-rsvp-participation-endpoint.md)
 - [ADR-2026-10-20-027: Friend suggestions search Keycloak (Java parity)](adr/ADR-2026-10-20-027-friend-suggestions-keycloak-search.md)
 - [ADR-2026-10-20-028: Small parity deviations (health data, trailing slash, settings 400)](adr/ADR-2026-10-20-028-small-parity-deviations.md)
 - [ADR-2026-10-20-029: Final parity run fixes (names, move message, PATCH messages, bare settings 400) and explorative allowlist](adr/ADR-2026-10-20-029-final-parity-run-fixes.md)
