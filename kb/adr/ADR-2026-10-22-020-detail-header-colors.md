@@ -11,3 +11,4 @@
 - Neue Variante `.icon-tile-blue` in `_theme.scss`, im Gruppendetail verwendet.
 - Regel: Farben auf Bootstrap-Komponenten (Überschriften, Buttons) über deren CSS-Variablen/Klassen setzen, nicht über Utility-Opacity.
 - Abgesichert durch `e2e/detail-colors.spec.ts` (`getComputedStyle`).
+- Gruppendetail (Review): schwebender Plus-/Header-Button `.btn-gradient-blue` (blue-600→indigo-500), Mitglied-entfernen-Symbol grau (gray-400, Hover red-500), Buttons `0.5rem` (Nuxt `rounded-lg`). Karten bleiben bei 1rem (≥ Nuxt `rounded-xl` 0.75rem), daher keine Änderung.

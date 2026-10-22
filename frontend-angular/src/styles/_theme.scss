@@ -25,6 +25,11 @@
   }
 }
 
+// Blau-Violett-Variante (Nuxt: `bg-linear-to-r from-blue-600 to-indigo-500`), z. B. Gruppendetail.
+.btn-gradient-blue {
+  background: linear-gradient(90deg, #2563eb, #6366f1);
+}
+
 // Halbtransparente Karte der öffentlichen Seiten (Nuxt: `bg-white/90 border-2 border-purple-200 rounded-xl`).
 .glass-card {
   background-color: rgba(var(--bs-body-bg-rgb), 0.9);

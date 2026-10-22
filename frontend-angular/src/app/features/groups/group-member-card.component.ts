@@ -13,7 +13,7 @@ import { User } from '../../core/models';
         @if (canRemove()) {
           <button
             type="button"
-            class="btn btn-outline-danger border-0"
+            class="btn btn-sm remove-btn border-0"
             title="Mitglied entfernen"
             aria-label="Mitglied entfernen"
             (click)="remove.emit(member().id)"
@@ -23,6 +23,16 @@ import { User } from '../../core/models';
         }
       </div>
     </div>
+  `,
+  styles: `
+    .remove-btn {
+      color: #9ca3af; // Nuxt: text-gray-400, Hover red-500
+      &:hover,
+      &:focus-visible {
+        color: #ef4444;
+        background: #fef2f2;
+      }
+    }
   `,
 })
 export class GroupMemberCardComponent {

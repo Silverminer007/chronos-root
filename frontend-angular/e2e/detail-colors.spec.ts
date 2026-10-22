@@ -71,5 +71,12 @@ test.describe('Farben der Detailseiten (#221)', () => {
     expect(tile.bg, 'Verlauf der Icon-Kachel (erwartet blue-100 → indigo-100)').toContain('rgb(219, 234, 254)');
     expect(tile.bg, 'Verlauf der Icon-Kachel (erwartet blue-100 → indigo-100)').toContain('rgb(224, 231, 255)');
     expect(tile.icon, 'Icon-Farbe der Icon-Kachel (erwartet blue-600)').toBe('rgb(37, 99, 235)');
+
+    const fab = await page.evaluate(() => {
+      const el = document.querySelector('.fab')!;
+      return { bg: getComputedStyle(el).backgroundImage };
+    });
+    expect(fab.bg, 'Verlauf des Plus-Buttons (erwartet blue-600 → indigo-500)').toContain('rgb(37, 99, 235)');
+    expect(fab.bg, 'Verlauf des Plus-Buttons (erwartet blue-600 → indigo-500)').toContain('rgb(99, 102, 241)');
   });
 });
