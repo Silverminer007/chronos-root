@@ -56,6 +56,49 @@ test.describe('Farben der Detailseiten (#221)', () => {
     }
   });
 
+  test('Termindetail: Zusagen/Absagen, Hinweisbox und Plus-Knopf wie im alten Frontend', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/appointments/1?**', (route) => route.fulfill({ json: appointment }));
+    await page.goto('/appointment/1', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('button', { name: 'Zusagen' })).toBeVisible();
+
+    const res = await page.evaluate(() => {
+      const css = (el: Element) => getComputedStyle(el);
+      const btn = (text: string) => {
+        const b = [...document.querySelectorAll('button')].find((e) => e.textContent?.includes(text))!;
+        return { border: css(b).borderTopWidth, color: css(b).color, borderColor: css(b).borderTopColor, radius: css(b).borderTopLeftRadius };
+      };
+      const note = document.querySelector('.alert-pending')!;
+      const plus = document.querySelector('button[aria-label="Teilnehmer hinzufügen"]')!;
+      return {
+        approve: btn('Zusagen'),
+        reject: btn('Absagen'),
+        noteBg: css(note).backgroundColor,
+        noteBorder: css(note).borderTopColor,
+        noteBorderWidth: css(note).borderTopWidth,
+        noteTitle: css(note.querySelector('.alert-pending-title')!).color,
+        noteText: css(note.querySelector('p.small')!).color,
+        plusBg: css(plus).backgroundImage,
+        plusRadius: css(plus).borderTopLeftRadius,
+        plusWidth: css(plus).width,
+      };
+    });
+
+    // Nuxt: `border-2 border-green-600 text-green-600 rounded-lg` / red-600
+    expect(res.approve).toMatchObject({ border: '2px', color: 'rgb(22, 163, 74)', borderColor: 'rgb(22, 163, 74)', radius: '8px' });
+    expect(res.reject).toMatchObject({ border: '2px', color: 'rgb(220, 38, 38)', borderColor: 'rgb(220, 38, 38)', radius: '8px' });
+    // Nuxt: `bg-yellow-50 border border-yellow-200 rounded-lg`, Titel yellow-900, Text yellow-700
+    expect(res.noteBg, 'Hintergrund der Hinweisbox (erwartet yellow-50)').toBe('rgb(254, 252, 232)');
+    expect(res.noteBorder).toBe('rgb(254, 240, 138)');
+    expect(res.noteBorderWidth).toBe('1px');
+    expect(res.noteTitle, 'Titel der Hinweisbox (erwartet yellow-900)').toBe('rgb(113, 63, 18)');
+    expect(res.noteText, 'Text der Hinweisbox (erwartet yellow-700)').toBe('rgb(161, 98, 7)');
+    // Nuxt: `w-8 h-8 rounded-lg bg-linear-to-r from-purple-600 to-pink-500`
+    expect(res.plusBg, 'Verlauf des Plus-Knopfs').toContain('linear-gradient');
+    expect(res.plusRadius).toBe('8px');
+    expect(res.plusWidth).toBe('32px');
+  });
+
   test('Gruppendetail: Icon-Kachel blau/indigo statt lila', async ({ page, baseURL }) => {
     await mockSession(page, baseURL ?? '');
     await page.route('**/api/v2/groups', (route) => route.fulfill({ json: [{ id: 1, name: 'Leiterrunde', members: [] }] }));

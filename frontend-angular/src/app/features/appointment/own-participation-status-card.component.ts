@@ -16,7 +16,7 @@ import { AppointmentStore } from '../agenda/appointment.store';
           <button
             type="button"
             class="btn btn-lg flex-fill d-flex align-items-center justify-content-center gap-2"
-            [class]="status() === 'APPROVED' ? 'btn-success' : 'btn-outline-success'"
+            [class]="status() === 'APPROVED' ? 'btn-approve btn-success' : 'btn-approve btn-outline-success'"
             [disabled]="status() === 'APPROVED' || updating()"
             (click)="update('approve')"
           >
@@ -25,7 +25,7 @@ import { AppointmentStore } from '../agenda/appointment.store';
           <button
             type="button"
             class="btn btn-lg flex-fill d-flex align-items-center justify-content-center gap-2"
-            [class]="status() === 'REJECTED' ? 'btn-danger' : 'btn-outline-danger'"
+            [class]="status() === 'REJECTED' ? 'btn-reject btn-danger' : 'btn-reject btn-outline-danger'"
             [disabled]="status() === 'REJECTED' || updating()"
             (click)="update('reject')"
           >
@@ -33,10 +33,10 @@ import { AppointmentStore } from '../agenda/appointment.store';
           </button>
         </div>
         @if (status() === 'PENDING') {
-          <div class="alert alert-warning d-flex gap-3 mt-3 mb-0" role="note">
+          <div class="alert alert-pending d-flex gap-3 mt-3 mb-0" role="note">
             <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
             <div>
-              <p class="fw-medium mb-1">Bitte bestätige deine Teilnahme</p>
+              <p class="alert-pending-title fw-medium mb-1">Bitte bestätige deine Teilnahme</p>
               <p class="small mb-0">Deine Rückmeldung hilft bei der Planung des Termins.</p>
             </div>
           </div>

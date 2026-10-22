@@ -41,7 +41,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
         <div class="d-flex align-items-center justify-content-between">
           <h3 class="card-heading fw-bold mb-0">Teilnehmer</h3>
           @if (responsible()) {
-            <button type="button" class="btn btn-gradient btn-sm" aria-label="Teilnehmer hinzufügen" (click)="showAddDialog.set(true)">
+            <button type="button" class="btn btn-gradient btn-icon-square" aria-label="Teilnehmer hinzufügen" (click)="showAddDialog.set(true)">
               <i class="bi bi-plus-lg" aria-hidden="true"></i>
             </button>
           }
