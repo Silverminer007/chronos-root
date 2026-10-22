@@ -74,6 +74,16 @@
 
       <button
         type="button"
+        class="btn btn-outline-primary fw-medium d-flex align-items-center justify-content-center gap-2"
+        (click)="showMessageDialog.set(true)"
+      >
+        <i class="bi bi-send" aria-hidden="true"></i>
+        <span class="d-none d-sm-inline">Nachricht</span>
+        <span class="visually-hidden d-sm-none">Nachricht</span>
+      </button>
+
+      <button
+        type="button"
         class="btn fw-medium d-flex align-items-center justify-content-center gap-2"
         [class.btn-danger]="hasRejected()"
         [class.btn-outline-danger]="!hasRejected()"
@@ -87,3 +97,11 @@
     </div>
   </div>
 </div>
+
+<app-message-dialog
+  [visible]="showMessageDialog()"
+  [appointmentTitle]="appointment().name"
+  [recipientCount]="appointment().participants.length"
+  (closed)="showMessageDialog.set(false)"
+  (sent)="sendMessage($event.message)"
+/>
