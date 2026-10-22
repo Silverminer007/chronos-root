@@ -38,13 +38,6 @@
   backdrop-filter: blur(4px);
 }
 
-// Abschnittsüberschriften öffentlicher Seiten: kompakt, ohne Umbruch (Nuxt).
-.section-heading {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 // Hinweis auf fehlende Konfiguration (Nuxt: `text-amber-600`).
 .config-missing {
   color: #d97706;
