@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { DialogQueueService } from './dialog-queue.service';
 import { NewFeature, NewFeaturesService } from '../core/new-features.service';
 
 /** Dauer des Ausblendens, bevor der Dialog entfernt wird. */
@@ -15,10 +16,12 @@ export const LEAVE_DELAY_MS = 200;
 export class NewFeaturesDialogComponent implements OnInit {
   private readonly newFeatures = inject(NewFeaturesService);
   private readonly router = inject(Router);
+  private readonly queue = inject(DialogQueueService);
 
   protected readonly features = signal<NewFeature[]>([]);
   protected readonly currentStep = signal(0);
-  protected readonly visible = signal(false);
+  private readonly wanted = signal(false);
+  protected readonly visible = computed(() => this.wanted() && this.queue.active() === 'features');
   protected readonly leaving = signal(false);
 
   protected readonly currentFeature = computed<NewFeature | undefined>(() => this.features()[this.currentStep()]);
@@ -27,7 +30,8 @@ export class NewFeaturesDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.features.set(this.newFeatures.getUnshownFeatures());
-    this.visible.set(this.features().length > 0);
+    this.wanted.set(this.features().length > 0);
+    if (this.wanted()) this.queue.claim('features');
   }
 
   protected next(): void {
@@ -61,7 +65,8 @@ export class NewFeaturesDialogComponent implements OnInit {
   private close(): void {
     this.leaving.set(true);
     setTimeout(() => {
-      this.visible.set(false);
+      this.wanted.set(false);
+      this.queue.release('features');
       this.leaving.set(false);
     }, LEAVE_DELAY_MS);
   }

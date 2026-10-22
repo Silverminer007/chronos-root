@@ -1,0 +1,14 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && timeout 500 npx ng build && (npx playwright install chromium >/dev/null 2>&1; timeout 300 npx playwright test e2e/first-start-dialogs.spec.ts --project=chromium --reporter=line)",
+  "description": "Beim Erststart (keine Neuigkeiten gesehen, Push noch nicht beantwortet) erscheinen NewFeaturesDialog und PushPermissionModal gleichzeitig; der Neuigkeiten-Dialog fängt die Klicks auf 'Nicht jetzt' im Push-Dialog ab.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/first-start-dialogs.spec.ts"],
+  "failure_signature": "intercepts pointer events",
+  "steps": [
+    "Mit frischem localStorage anmelden und /agenda öffnen",
+    "Push-Dialog 'Push-Benachrichtigungen aktivieren?' und 'Neu in Chronos' sind gleichzeitig offen",
+    "Im Push-Dialog 'Nicht jetzt' klicken"
+  ],
+  "expected": "Dialoge erscheinen nacheinander bzw. korrekt gestapelt; 'Nicht jetzt' und 'Alle überspringen' sind klickbar und schließen ihren Dialog.",
+  "actual": "Der Klick auf 'Nicht jetzt' wird von app-new-features-dialog abgefangen (Playwright: subtree intercepts pointer events, Timeout)."
+}
