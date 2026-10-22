@@ -34,8 +34,20 @@
 .glass-card {
   background-color: rgba(var(--bs-body-bg-rgb), 0.9);
   border: 2px solid #e9d5ff; // purple-200
-  border-radius: var(--bs-border-radius-xl);
+  border-radius: var(--bs-border-radius-xxl);
   backdrop-filter: blur(4px);
+}
+
+// Abschnittsüberschriften öffentlicher Seiten: kompakt, ohne Umbruch (Nuxt).
+.section-heading {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Hinweis auf fehlende Konfiguration (Nuxt: `text-amber-600`).
+.config-missing {
+  color: #d97706;
 }
 
 [data-bs-theme='dark'] .glass-card {
@@ -306,6 +318,7 @@
   // DOM-Reihenfolge: Abbrechen, Primäraktion; umgekehrt dargestellt steht die Primäraktion oben (unabhängig von der Farbvariante).
   flex-direction: column-reverse;
   align-items: stretch;
+  gap: 0.75rem;
 
   > .btn {
     width: 100%;

@@ -10,7 +10,7 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    icon: 'bi-stars',
+    icon: 'party-popper',
     title: 'Willkommen bei Chronos!',
     description: 'Schön, dass du dabei bist. Lass uns kurz zeigen, was Chronos für dich und dein Team kann.',
   },
