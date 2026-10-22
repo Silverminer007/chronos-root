@@ -1,0 +1,14 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/appointment-participants.spec.ts --project=chromium --reporter=line",
+  "description": "Termin-Detailseite (Angular, gemockter BFF): Teilnehmer hinzufügen, Rolle ändern und Teilnehmer entfernen müssen die Backend-Routen POST participants/{userId} {user_role}, PUT participation/{userId}/role {role} und DELETE participants/{userId} aufrufen. Der Mock verhält sich wie das Backend und antwortet auf alle anderen Pfade (z. B. participants/users) mit 403.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/appointment-participants.spec.ts"],
+  "failure_signature": "Der Teilnehmer wurde erfolgreich hinzugefügt",
+  "steps": [
+    "Als Organisator die Detailseite /appointment/1 öffnen",
+    "„Teilnehmer hinzufügen“, Freund suchen, auswählen, „Hinzufügen“ klicken",
+    "Über das Aktionsmenü eines Teilnehmers die Rolle ändern bzw. „Entfernen“ wählen"
+  ],
+  "expected": "POST /api/v2/appointments/1/participants/2 {\"user_role\":\"ATTENDANT\"}, PUT .../participation/2/role {\"role\":\"HELPER\"}, DELETE .../participants/2; jeweils Erfolgs-Toast",
+  "actual": "POST/DELETE .../participants/users[/2] und PATCH .../participants/users/2 werden gesendet, das Backend antwortet 403, es erscheint der Fehler-Toast und kein Erfolgs-Toast"
+}

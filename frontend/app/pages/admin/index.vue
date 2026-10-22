@@ -49,8 +49,8 @@ interface AdminUserResponse {
   total: number;
 }
 
-const {data: statistics} = await useFetch<AdminStatistics>('/api/v2/admin/statistics');
-const {data: usersData} = await useFetch<AdminUserResponse>('/api/v2/admin/user/', {params: {size: 20}});
+const {data: statistics} = await useFetch<AdminStatistics>('/api/v2/admin/stats');
+const {data: usersData} = await useFetch<AdminUserResponse>('/api/v2/admin/users', {params: {size: 20}});
 
 const stats = computed(() => [
   {label: 'Registrierte Nutzer', icon: 'lucide:users', value: statistics.value?.users.total ?? 0},
