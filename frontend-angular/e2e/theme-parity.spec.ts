@@ -216,15 +216,15 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     await expect(page.locator('button[aria-haspopup] i.bi-chevron-down')).toBeVisible();
   });
 
-  test('Landing-Kopfzeile: Logo mit großer Rundung/Schatten, Anmelden mit lila Rahmen auf Weiß', async ({ page }) => {
+  test('Landing-Kopfzeile: Logo mit großer Rundung/Schatten, Anmelden transparent mit weißem Rahmen (#235)', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     const logo = page.locator('header img[alt="Chronos Logo"]');
     await expect(logo).toBeVisible();
     expect(parseFloat(await logo.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)), 'Logo-Rundung').toBeGreaterThanOrEqual(12);
     expect(await logo.evaluate((el) => getComputedStyle(el).boxShadow), 'Logo-Schatten').not.toBe('none');
     const login = page.getByRole('link', { name: 'Anmelden' }).first();
-    expect(await login.evaluate((el) => getComputedStyle(el).borderTopColor), 'Anmelden: lila Rahmen').toBe('rgb(147, 51, 234)');
-    expect(await login.evaluate((el) => getComputedStyle(el).backgroundColor), 'Anmelden: weiß').toBe('rgb(255, 255, 255)');
+    expect(await login.evaluate((el) => getComputedStyle(el).borderTopColor), 'Anmelden: weißer Rahmen').toBe('rgb(255, 255, 255)');
+    expect(await login.evaluate((el) => getComputedStyle(el).backgroundColor), 'Anmelden: transparent').toBe('rgba(0, 0, 0, 0)');
   });
 
   test('Einstellungen bei 390px: Push-Schalter und Überschrift laufen nicht über', async ({ page, baseURL }) => {
