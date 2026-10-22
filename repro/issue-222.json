@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/dialog-parity.spec.ts --project=chromium --reporter=line",
+  "description": "Angular bei 390x844 (gemockte Sitzung): Dialog 'Freund hinzufügen' braucht fetten Titel (700) und Footer-Buttons untereinander in voller Breite; im Stepper 'Termin anlegen' muss der Platzhalter des Namensfelds gray-300 (rgb(209,213,219)) sein. Geprüft per getComputedStyle.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/dialog-parity.spec.ts"],
+  "failure_signature": "Schriftstärke des Dialogtitels (erwartet 700)",
+  "steps": ["Angemeldet /friends bei 390x844 öffnen (Backend gemockt) und 'Hinzufügen' klicken", "Schriftstärke des Dialogtitels und Layout des .modal-footer lesen", "/agenda öffnen, 'Termin erstellen' klicken, Platzhalterfarbe des Felds 'Terminname' lesen"],
+  "expected": "Titel font-weight 700; Footer flex-direction column mit Buttons in voller Breite; Platzhalter rgb(209, 213, 219)",
+  "actual": "Titel normale Schriftstärke, Footer-Buttons nebeneinander rechtsbündig, Platzhalter dunkelgrau"
+}
