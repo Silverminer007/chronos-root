@@ -1,14 +1,20 @@
 name: 🚀 Deploy to Kubernetes
 
-# A repository_dispatch event always runs the workflow file and the chart of the DEFAULT branch (main),
-# whatever commit built the image. develop therefore deploys staging itself on push: this file and the
-# chart of develop are used (the push event runs the workflow of the pushed ref).
+# staging-deploy.yml (push to develop) calls this workflow with the SHA tag of the images it built, so
+# staging is deployed from the workflow and chart of develop. A repository_dispatch event always runs
+# the workflow file and the chart of the DEFAULT branch (main) and is only used for production.
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths: [ 'deployment/**', '.github/workflows/deployment-ci.yml' ]
   repository_dispatch:
     types: [ deploy-staging, deploy-production ]
+  workflow_call:
+    inputs:
+      tag:
+        description: Image tag (short commit SHA) of frontend, backend and rust-backend for staging
+        type: string
+        required: true
 
 defaults:
   run:
@@ -58,7 +64,11 @@ jobs:
       - name: 🎯 Determine deployment target
         id: deployment-info
         run: |
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "namespace=chronos-staging" >> $GITHUB_OUTPUT
+            echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             if [ "${{ github.event.action }}" = "deploy-production" ]; then
               echo "environment=production" >> $GITHUB_OUTPUT
               echo "namespace=chronos-prod" >> $GITHUB_OUTPUT
@@ -68,10 +78,6 @@ jobs:
               echo "namespace=chronos-staging" >> $GITHUB_OUTPUT
               echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
             fi
-          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
-            echo "environment=staging" >> $GITHUB_OUTPUT
-            echo "namespace=chronos-staging" >> $GITHUB_OUTPUT
-            echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "namespace=chronos-prod" >> $GITHUB_OUTPUT
@@ -93,7 +99,11 @@ jobs:
           VERSION=${{ github.event.client_payload.version }}
           REPOSITORY=${{ github.event.client_payload.image }}
           echo "$REPOSITORY:$VERSION"
-          if [ "${{ github.event.client_payload.service }}" = "backend" ]; then
+          if [ -n "${{ inputs.tag }}" ]; then
+            # repositories stay from the values file; every image is built from this commit
+            printf 'frontend:\n  image:\n    tag: "%s"\nbackend:\n  image:\n    tag: "%s"\nrustBackend:\n  image:\n    tag: "%s"\n' \
+              "${{ inputs.tag }}" "${{ inputs.tag }}" "${{ inputs.tag }}" >> overrides.yaml
+          elif [ "${{ github.event.client_payload.service }}" = "backend" ]; then
             echo "
             backend:
               image:
@@ -156,7 +166,7 @@ jobs:
           NAMESPACE=${{ steps.deployment-info.outputs.namespace }}
           # helm upgrade does not wait: fail the run if a Deployment does not become ready
           for d in $(kubectl get deployments -n $NAMESPACE -o name); do
-            kubectl rollout status $d -n $NAMESPACE --timeout=300s
+            kubectl rollout status $d -n $NAMESPACE --timeout=420s
           done
           kubectl get pods -n $NAMESPACE -o wide
 

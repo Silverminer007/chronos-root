@@ -1,0 +1,79 @@
+name: 🧪 Staging (develop)
+
+# Every push to develop builds all three images with the short commit SHA as tag and deploys exactly
+# these images to chronos-staging. The deployment runs as a reusable workflow of THIS ref, so it uses
+# the workflow file and the Helm chart of develop (a repository_dispatch would use those of main).
+# Tests run on the pull request; main keeps its own pipelines (Backend CI, Frontend CI, Rust Backend CI).
+on:
+  push:
+    branches: [ develop ]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.t.outputs.tag }}
+      owner: ${{ steps.t.outputs.owner }}
+    steps:
+      - id: t
+        run: |
+          echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: tag
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { image: chronos-frontend, context: frontend, file: Dockerfile }
+          - { image: chronos-backend, context: backend, file: src/main/docker/Dockerfile.jvm }
+          - { image: chronos-rust-backend, context: rust-backend, file: Dockerfile }
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        if: matrix.image == 'chronos-backend'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build Quarkus app
+        if: matrix.image == 'chronos-backend'
+        working-directory: backend
+        run: ./mvnw -B package -DskipTests
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐳 Build & Push ${{ matrix.image }}
+        working-directory: ${{ matrix.context }}
+        run: |
+          IMAGE=ghcr.io/${{ needs.tag.outputs.owner }}/${{ matrix.image }}
+          docker build -t $IMAGE:${{ needs.tag.outputs.tag }} -f ${{ matrix.file }} .
+          docker push $IMAGE:${{ needs.tag.outputs.tag }}
+          # moving tag for convenience; the deployment always uses the SHA tag
+          docker tag $IMAGE:${{ needs.tag.outputs.tag }} $IMAGE:develop
+          docker push $IMAGE:develop
+
+  deploy:
+    needs: [ tag, build ]
+    uses: ./.github/workflows/deployment-ci.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+    secrets: inherit

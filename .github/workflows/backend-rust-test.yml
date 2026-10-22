@@ -2,7 +2,7 @@ name: Rust Backend CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths: [ 'rust-backend/**', '.github/workflows/backend-rust-test.yml' ]
   pull_request:
     branches: [ main, develop ]
@@ -282,34 +282,3 @@ jobs:
         run: |
           docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:latest
           docker push ${{needs.calculate-version.outputs.image}}:latest
-      - name: Re-tag Docker Image (develop)
-        if: github.ref == 'refs/heads/develop'
-        run: |
-          docker tag ${{needs.calculate-version.outputs.image}}:${{needs.calculate-version.outputs.version}} ${{needs.calculate-version.outputs.image}}:develop
-          docker push ${{needs.calculate-version.outputs.image}}:develop
-
-  # Deploys the Rust backend to staging (push on develop). Production keeps the Java backend and the
-  # Nuxt frontend, so main never dispatches a Rust deployment.
-  # See kb/adr/ADR-2026-10-22-031-rust-backend-staging-deploy.md.
-  deploy:
-    needs:
-      - build
-      - calculate-version
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    # Only curl runs here and there is no checkout, so the workflow default
-    # `rust-backend` directory does not exist on the runner.
-    defaults:
-      run:
-        working-directory: .
-    concurrency:
-      group: deploy-${{ github.ref }}
-      cancel-in-progress: false
-    steps:
-      - name: Trigger Staging Deployment
-        run: |
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d '{"event_type":"deploy-staging","client_payload":{"service":"rust-backend","version":"${{needs.calculate-version.outputs.version}}","image":"${{needs.calculate-version.outputs.image}}"}}'
