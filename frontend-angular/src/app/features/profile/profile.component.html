@@ -1,0 +1,179 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="profile mx-auto pt-4">
+    <div class="mb-4">
+      <h1 class="h2 fw-bold mb-1">Profil</h1>
+      <p class="text-body-secondary mb-0">Verwalte deine persönlichen Daten</p>
+    </div>
+
+    <section class="card shadow-sm mb-4" aria-label="Persönliche Daten">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-3 mb-4 pb-4 border-bottom">
+          <span class="icon-tile avatar-lg rounded-circle flex-shrink-0 fw-bold fs-3" aria-hidden="true">{{ initials() }}</span>
+          <div>
+            <p class="fw-semibold fs-5 mb-0">{{ firstName() }} {{ lastName() }}</p>
+            <p class="small text-body-secondary mb-0">{{ email() }}</p>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <label for="profile-first-name" class="form-label fw-medium">Vorname</label>
+            <input
+              id="profile-first-name"
+              type="text"
+              class="form-control"
+              placeholder="Vorname"
+              [value]="firstName()"
+              (input)="firstName.set($any($event.target).value)"
+            />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label for="profile-last-name" class="form-label fw-medium">Nachname</label>
+            <input
+              id="profile-last-name"
+              type="text"
+              class="form-control"
+              placeholder="Nachname"
+              [value]="lastName()"
+              (input)="lastName.set($any($event.target).value)"
+            />
+          </div>
+          <div class="col-12">
+            <label for="profile-email" class="form-label fw-medium">E-Mail-Adresse</label>
+            <input
+              id="profile-email"
+              type="email"
+              class="form-control"
+              placeholder="deine@email.de"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+            />
+          </div>
+          <div class="col-12 d-flex justify-content-between pt-2">
+            <button type="button" class="btn btn-gradient fw-medium d-inline-flex align-items-center gap-2" (click)="changePassword()">
+              <i class="bi bi-key" aria-hidden="true"></i>
+              <span>Passwort ändern</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-gradient fw-medium d-inline-flex align-items-center gap-2"
+              [disabled]="savingProfile()"
+              (click)="saveProfile()"
+            >
+              @if (savingProfile()) {
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              } @else {
+                <i class="bi bi-floppy" aria-hidden="true"></i>
+              }
+              <span>Speichern</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card shadow-sm mb-4" aria-label="Verknüpfte Konten">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <span class="icon-tile" aria-hidden="true"><i class="bi bi-link-45deg"></i></span>
+          <div>
+            <p class="fw-semibold mb-0">Verknüpfte Konten</p>
+            <p class="small text-body-secondary mb-0">Melde dich mit einem externen Anbieter an</p>
+          </div>
+        </div>
+
+        @if (loadingLinked()) {
+          <div class="text-center py-3" role="status">
+            <span class="spinner-border spinner-border-sm text-primary" aria-label="Wird geladen"></span>
+          </div>
+        } @else {
+          <ul class="list-group list-group-flush">
+            @for (provider of providers; track provider.id) {
+              <li class="list-group-item px-0 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                  <i class="bi fs-4" [class]="provider.icon" aria-hidden="true"></i>
+                  <div>
+                    <p class="fw-medium mb-0">{{ provider.name }}</p>
+                    <p class="small text-body-secondary mb-0">{{ isLinked(provider.id) ? 'Verknüpft' : 'Nicht verknüpft' }}</p>
+                  </div>
+                </div>
+                @if (isLinked(provider.id)) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                    [disabled]="unlinkingProvider() === provider.id"
+                    (click)="unlink(provider.id)"
+                  >
+                    @if (unlinkingProvider() === provider.id) {
+                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    } @else {
+                      <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                    }
+                    <span>Trennen</span>
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" (click)="link(provider.id)">
+                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                    <span>Verknüpfen</span>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+
+    <section class="card shadow-sm mb-4" aria-label="Passkeys">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+          <div class="d-flex align-items-center gap-3">
+            <span class="icon-tile" aria-hidden="true"><i class="bi bi-fingerprint"></i></span>
+            <div>
+              <p class="fw-semibold mb-0">Passkeys</p>
+              <p class="small text-body-secondary mb-0">Passwortlos anmelden mit Fingerabdruck oder Gesicht</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 flex-shrink-0" (click)="createPasskey()">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Hinzufügen</span>
+          </button>
+        </div>
+
+        @if (loadingPasskeys()) {
+          <div class="text-center py-3" role="status">
+            <span class="spinner-border spinner-border-sm text-primary" aria-label="Wird geladen"></span>
+          </div>
+        } @else if (passkeys().length === 0) {
+          <div class="text-center py-4">
+            <p class="small fw-medium text-body-secondary mb-1">Keine Passkeys hinterlegt</p>
+            <p class="small text-body-tertiary mb-0">Füge einen Passkey hinzu, um dich ohne Passwort anzumelden</p>
+          </div>
+        } @else {
+          <ul class="list-group list-group-flush">
+            @for (passkey of passkeys(); track passkey.id) {
+              <li class="list-group-item px-0 d-flex align-items-center gap-3">
+                <i class="bi bi-key fs-5 text-body-secondary" aria-hidden="true"></i>
+                <div class="flex-grow-1 min-w-0">
+                  <p class="fw-medium text-truncate mb-0">{{ passkey.name }}</p>
+                  <p class="small text-body-secondary mb-0">
+                    Erstellt am {{ formatDate(passkey.created_at) }}
+                    @if (passkey.last_used_at) {
+                      <span> · Zuletzt genutzt {{ formatDate(passkey.last_used_at) }}</span>
+                    }
+                  </p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" (click)="deletePasskey(passkey.id)">
+                  <i class="bi bi-x-lg" aria-hidden="true"></i>
+                  <span>Entfernen</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+  </div>
+</main>

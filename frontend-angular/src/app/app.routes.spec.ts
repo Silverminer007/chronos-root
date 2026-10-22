@@ -61,6 +61,19 @@ describe('routes', () => {
     expect(typeof shell?.children?.find((r) => r.path === path)?.loadComponent).toBe('function');
   });
 
+  it.each(['settings', 'profile'])('hängt %s lazy unter das Default-Layout mit authGuard', (path) => {
+    const shell = routes.find((r) => r.component === DefaultLayoutComponent);
+    expect(shell?.canActivate).toContain(authGuard);
+    expect(typeof shell?.children?.find((r) => r.path === path)?.loadComponent).toBe('function');
+  });
+
+  it('hängt das Onboarding lazy mit authGuard, aber ohne Layout ein', () => {
+    const onboarding = routes.find((r) => r.path === 'onboarding');
+    expect(onboarding?.canActivate).toEqual([authGuard]);
+    expect(typeof onboarding?.loadComponent).toBe('function');
+    expect(onboarding?.component).toBeUndefined();
+  });
+
   it('leitet unbekannte Pfade auf die Startseite um', async () => {
     await render('/gibt-es-nicht');
     expect(TestBed.inject(Router).url).toBe('/');

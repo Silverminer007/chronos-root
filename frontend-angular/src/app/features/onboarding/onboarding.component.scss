@@ -1,0 +1,77 @@
+@use '../../../styles/variables' as *;
+
+:host {
+  display: block;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, $brand-purple, $brand-pink, #fb923c);
+}
+
+[data-bs-theme='dark'] :host {
+  background: linear-gradient(135deg, #581c87, #831843, #7c2d12);
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.2;
+  filter: blur(24px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.blob-top {
+  top: 5rem;
+  left: 2.5rem;
+  width: 18rem;
+  height: 18rem;
+}
+
+.blob-bottom {
+  right: 2.5rem;
+  bottom: 5rem;
+  width: 24rem;
+  height: 24rem;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+.logo {
+  width: 2rem;
+  height: 2rem;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  &.active {
+    background: #fff;
+    transform: scale(1.25);
+  }
+}
+
+.step-card {
+  max-width: 32rem;
+  width: 100%;
+}
+
+.step-icon {
+  width: 4rem;
+  height: 4rem;
+}

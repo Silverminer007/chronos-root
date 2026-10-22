@@ -1,0 +1,26 @@
+// Auswahl-Kachel der Einstellungen; die Farbe kommt über `tone-*` aus den Bootstrap-Variablen (Hell/Dunkel automatisch).
+.option {
+  background: transparent;
+  border: 2px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg);
+  color: var(--bs-secondary-color);
+
+  &:hover {
+    border-color: var(--bs-secondary-color);
+  }
+
+  &.selected {
+    color: var(--bs-body-color);
+  }
+
+  @each $tone in (secondary, primary, info, success, warning) {
+    &.tone-#{$tone}.selected {
+      border-color: var(--bs-#{$tone});
+      background: var(--bs-#{$tone}-bg-subtle);
+
+      .bi {
+        color: var(--bs-#{$tone}-text-emphasis);
+      }
+    }
+  }
+}
