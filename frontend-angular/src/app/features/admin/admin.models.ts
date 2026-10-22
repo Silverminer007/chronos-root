@@ -1,4 +1,4 @@
-/** Antwort von `GET /api/v2/admin/statistics`. */
+/** Antwort von `GET /api/v2/admin/stats`. */
 export interface AdminStatistics {
   users: { total: number };
   appointments: { total: number; planned: number; cancelled: number; deleted: number; notEnoughAttendees: number };
