@@ -75,8 +75,9 @@ frontend:
       secretKey: frontend_sentry_dsn
 
 backend:
-  # Replaced by the Rust backend on staging
-  enabled: false
+  # TEMPORARY: the Java backend runs once so that Flyway migrates the staging database to V2.1.0
+  # (the Rust backend adopts that schema). Set to false afterwards: the Rust backend replaces it.
+  enabled: true
   replicaCount: 1
   autoscaling:
     enabled: false
