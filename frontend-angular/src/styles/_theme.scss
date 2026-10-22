@@ -339,3 +339,39 @@
 .line-input::placeholder {
   color: #d1d5db; // gray-300
 }
+
+// Rechtstext-Karten (Impressum/Datenschutz): 16 px Rundung wie im alten Frontend (Nuxt: `rounded-2xl`, `p-6`).
+.glass-card.legal-card {
+  border-radius: var(--bs-border-radius-xl);
+}
+
+// Abschnittsüberschrift mit Icon: Icon oben links, Text darf umbrechen (Nuxt: `text-gray-800`, Icon `text-purple-600`).
+.legal-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1f2937; // gray-800
+
+  > .bi {
+    flex-shrink: 0;
+    align-self: flex-start;
+    color: $brand-purple;
+  }
+
+  > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+// 'Anmelden' in der Kopfzeile: transparent, 2 px reines Weiß (Bootstrap-Light wäre #f8f9fa).
+.btn-outline-white {
+  --bs-btn-color: #fff;
+  --bs-btn-border-color: #fff;
+  --bs-btn-hover-color: #{$brand-purple};
+  --bs-btn-hover-bg: #fff;
+  --bs-btn-hover-border-color: #fff;
+  --bs-btn-active-color: #{$brand-purple};
+  --bs-btn-active-bg: #fff;
+  --bs-btn-active-border-color: #fff;
+}
