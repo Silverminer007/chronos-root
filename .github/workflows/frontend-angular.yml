@@ -40,7 +40,7 @@ jobs:
           npm run test:e2e
       - name: Chrome-Pfad für Lighthouse
         id: chrome
-        run: echo "path=$(node -e \"console.log(require('@playwright/test').chromium.executablePath())\")" >> "$GITHUB_OUTPUT"
+        run: node -e "console.log('path=' + require('@playwright/test').chromium.executablePath())" >> "$GITHUB_OUTPUT"
       - name: Lighthouse
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.path }}
@@ -56,4 +56,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Container-Image bauen (ohne Push)
-        run: docker build -t chronos-frontend-angular:ci frontend-angular
+        run: docker build -t chronos-frontend-angular:ci .
