@@ -33,7 +33,7 @@ token() {
 }
 
 # parity-user-2 has the default roles, so its token carries `aud: account` (#174); parity-user-1 has none.
-python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; sys.exit(0 if "aud" in json.loads(base64.urlsafe_b64decode(p+"="*-len(p)%4)) else 1)' "$(token parity-user-2)" \
+python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; sys.exit(0 if "aud" in json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))) else 1)' "$(token parity-user-2)" \
   || { echo "parity-user-2 token has no aud claim: the realm no longer covers default-role users" >&2; exit 1; }
 
 export CONTRACT_JAVA_URL="http://localhost:$JAVA_PORT"
