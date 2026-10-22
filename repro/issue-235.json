@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/public-pages-parity.spec.ts --project=chromium --reporter=line",
+  "description": "Angular bei 390x844: /public/impressum und /public/datenschutz gegen die Werte des alten Frontends prüfen ('Anmelden' transparent mit weißem 2-px-Rahmen, Icons in h2, Überschriftenfarbe gray-800, Karte 16 px/24 px, kein Abschneiden). Geprüft per getComputedStyle.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/public-pages-parity.spec.ts"],
+  "failure_signature": "'Anmelden' Hintergrund soll transparent sein",
+  "steps": ["Viewport 390x844, /public/impressum öffnen und den 'Anmelden'-Button der Kopfzeile auslesen", "/public/impressum und /public/datenschutz: Abschnittsüberschriften auf Icons, Farbe und Abschneiden prüfen", "Rundung und Innenabstand der Karte auslesen"],
+  "expected": "'Anmelden' transparent, 2 px weißer Rahmen, weiße Schrift; jede h2 mit Icon und Farbe rgb(31, 41, 55); Karte 16 px Rundung, 24 px Innenabstand",
+  "actual": "'Anmelden' weiß gefüllt mit lila Schrift; keine Icons in den Überschriften; Datenschutz-Überschriften grau; Karte mit 32 px Rundung (Ticket: ca. 12 px/20 px)"
+}
