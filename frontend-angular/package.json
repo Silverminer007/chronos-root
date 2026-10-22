@@ -11,7 +11,8 @@
     "test:server": "tsc -p server/tsconfig.json && vitest run -c vitest.server.config.mjs",
     "test:sw": "node --test \"sw-tests/*.test.js\"",
     "lint": "ng lint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:lhci": "npx --yes @lhci/cli@0.15.1 autorun"
   },
   "private": true,
   "packageManager": "npm@11.20.0",

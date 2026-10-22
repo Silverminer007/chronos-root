@@ -15,6 +15,7 @@ npm run lint     # angular-eslint
 npm test         # Unit-Tests (Vitest, einmalig) und BFF-Tests (npm run test:server)
 npm run build    # Produktions-Build inkl. Bundle-Budgets nach dist/
 npm run test:e2e # Playwright gegen den BFF mit dist/browser (vorher build; einmalig `npx playwright install chromium`)
+npm run test:lhci # Lighthouse CI (vorher build; BFF-Variablen und CHROME_PATH setzen, siehe .github/workflows/frontend-angular.yml)
 ```
 
 ## BFF (`server/`)
@@ -39,6 +40,9 @@ src/
     ├── _variables.scss    Bootstrap-Variablen und Markenfarben (Lila/Pink), vor Bootstrap eingebunden
     └── _theme.scss        Gradient-Klassen (`text-gradient`, `bg-gradient-brand`, `btn-gradient`)
 ```
+
+Container-Image (`Dockerfile`), E2E, Lighthouse, Parität und Cutover: `kb/adr/ADR-2026-10-21-014-angular-image-e2e-cutover.md`,
+`kb/architecture/ARC42-angular-parity.md`, `kb/architecture/ARC42-angular-cutover.md`.
 
 Layouts und öffentliche Seiten: `kb/adr/ADR-2026-10-21-006-angular-layouts-public-pages.md`. E2E-Tests liegen in `e2e/`.
 `core/` im Detail: `kb/adr/ADR-2026-10-21-004-angular-core.md`. Toast-Container und Bestätigungsdialog sind in `App` eingebunden.

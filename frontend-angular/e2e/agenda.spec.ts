@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { mockSession } from './support/mock-session';
 
 // Die Agenda läuft gegen den echten BFF (Hosting, Cookie-Weiterleitung); Sitzung, Benutzer und Termine kommen aus
 // gemockten API-Antworten. Der Service Worker bleibt aus, damit `page.route` alle Anfragen sieht.
@@ -19,25 +20,10 @@ const appointment = (id: number, name: string, extra: object = {}) => ({
   ...extra,
 });
 
-const user = { id: 1, first_name: 'Max', last_name: 'Muster', email: 'max@example.org' };
 const page1 = [appointment(1, 'Gruppenstunde', { venue: 'Pfarrheim' }), appointment(2, 'Zeltlager')];
 
 async function mockBff(page: Page, baseUrl: string, requests: string[] = []): Promise<void> {
-  await page.context().addCookies(
-    ['kc_access', 'kc_refresh', 'kc_expires'].map((name) => ({
-      name,
-      value: name === 'kc_expires' ? String(Math.floor(Date.now() / 1000) + 3600) : 'e2e',
-      url: baseUrl,
-    })),
-  );
-  // Onboarding, Neuigkeiten und Push-Dialog würden die Seite sonst überdecken.
-  await page.addInitScript(() => {
-    localStorage.setItem('onboardingShownAt', '1');
-    localStorage.setItem('shownFeatureIds', JSON.stringify(['profile-page-v1', 'linked-accounts-v1', 'passkeys-v1', 'change-password-v1']));
-    localStorage.setItem('pushPromptAnswer', 'denied');
-  });
-  await page.route('**/api/auth/isLoggedIn', (route) => route.fulfill({ status: 204 }));
-  await page.route('**/api/v2/user', (route) => route.fulfill({ json: user }));
+  await mockSession(page, baseUrl);
   await page.route('**/api/v2/appointments?**', (route) => {
     const url = new URL(route.request().url());
     requests.push(url.search);
