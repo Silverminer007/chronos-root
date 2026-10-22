@@ -303,19 +303,13 @@
 }
 
 .modal-footer {
-  flex-direction: column;
+  // DOM-Reihenfolge: Abbrechen, Primäraktion; umgekehrt dargestellt steht die Primäraktion oben (unabhängig von der Farbvariante).
+  flex-direction: column-reverse;
   align-items: stretch;
 
   > .btn {
     width: 100%;
     margin: 0;
-  }
-
-  // Primäraktion oben (steht im DOM nach "Abbrechen").
-  > .btn-gradient,
-  > .btn-primary,
-  > .btn-danger {
-    order: -1;
   }
 }
 

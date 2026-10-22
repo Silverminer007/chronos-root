@@ -33,7 +33,7 @@ test.describe('Dialoge und Stepper wie im alten Frontend (#222)', () => {
     expect(res.weight, 'Schriftstärke des Dialogtitels (erwartet 700)').toBe('700');
     expect(res.inputHeight, 'Höhe des Eingabefelds (erwartet ca. 52 px)').toBeGreaterThanOrEqual(52);
     expect(res.inputBorder, 'Rahmen des Eingabefelds (erwartet 2 px)').toBe('2px');
-    expect(res.direction, 'Anordnung der Footer-Buttons (erwartet column)').toBe('column');
+    expect(res.direction, 'Anordnung der Footer-Buttons (erwartet Spalte)').toMatch(/^column(-reverse)?$/);
     expect(res.buttons.length).toBeGreaterThanOrEqual(2);
     for (const b of res.buttons) {
       expect(b.width, 'Breite der Footer-Buttons (erwartet volle Footer-Breite)').toBeGreaterThan(res.footerWidth * 0.8);
