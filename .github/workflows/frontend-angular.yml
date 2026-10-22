@@ -38,3 +38,22 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm run test:e2e
+      - name: Chrome-Pfad für Lighthouse
+        id: chrome
+        run: echo "path=$(node -e \"console.log(require('@playwright/test').chromium.executablePath())\")" >> "$GITHUB_OUTPUT"
+      - name: Lighthouse
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.path }}
+          CHRONOS_PORT: 4400
+          CHRONOS_COOKIE_SECURE: 'false'
+          CHRONOS_AUTH_ISSUER: http://localhost:1/realms/e2e
+          CHRONOS_AUTH_CLIENT_ID: e2e
+          CHRONOS_AUTH_REDIRECT_URI: http://localhost:4400/api/auth/callback
+          CHRONOS_QUARKUS_URL: http://localhost:1
+        run: npm run test:lhci
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Container-Image bauen (ohne Push)
+        run: docker build -t chronos-frontend-angular:ci frontend-angular
