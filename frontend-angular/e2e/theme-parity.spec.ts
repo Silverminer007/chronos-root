@@ -54,4 +54,81 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     expect(input.bg, 'Eingabefeld grau gefüllt (erwartet gray-50)').toBe('rgb(249, 250, 251)');
     expect(input.radius, 'Eingabefeld-Rundung (erwartet >= 12)').toBeGreaterThanOrEqual(12);
   });
+
+  test('Auswahlzustände: .btn-check:checked, .active und Hover sind Markenlila mit Rahmen, gefüllte Buttons unberührt', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: /Terminplanung/ })).toBeVisible();
+    const res = await page.evaluate(() => {
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        `<div id="t"><input type="radio" class="btn-check" id="r1" name="r" checked><label class="btn btn-outline-primary border-2" for="r1">a</label>
+         <button class="btn btn-outline-primary border-2 active">b</button><button class="btn btn-outline-primary">c</button>
+         <button class="btn btn-primary active">d</button><button class="btn btn-success active">e</button></div>`,
+      );
+      const s = (sel: string) => {
+        const c = getComputedStyle(document.querySelector(`#t ${sel}`) as Element);
+        return { color: c.color, border: c.borderTopColor, bg: c.backgroundColor, width: c.borderTopWidth };
+      };
+      return { checked: s('label'), active: s('button.active.btn-outline-primary'), idle: s('button.btn-outline-primary:not(.active)'), filled: s('.btn-primary'), success: s('.btn-success') };
+    });
+    const purple = 'rgb(147, 51, 234)';
+    for (const state of [res.checked, res.active]) {
+      expect(state.color, 'Auswahl: Text lila').toBe(purple);
+      expect(state.border, 'Auswahl: lila Rahmen').toBe(purple);
+      expect(state.bg, 'Auswahl: transluzente lila Füllung').toBe('rgba(147, 51, 234, 0.1)');
+      expect(parseFloat(state.width), 'Auswahl: Rahmen sichtbar').toBeGreaterThanOrEqual(2);
+    }
+    expect(res.idle.border, 'Sekundärbutton: Rahmen purple-200').toBe('rgb(233, 213, 255)');
+    expect(res.idle.color, 'Sekundärbutton: Text lila').toBe(purple);
+    expect(res.filled.bg, 'gefüllter Primärbutton bleibt deckend gefüllt (Bootstrap-Active-Abdunkelung)').toBe('rgb(118, 41, 187)');
+    expect(res.filled.color).toBe('rgb(255, 255, 255)');
+    expect(res.success.bg, 'gefüllter Erfolgsbutton unverändert (Bootstrap-Active-Abdunkelung)').toBe('rgb(20, 108, 67)');
+  });
+
+  test('Profil: Google-Icon farbig, "Verknüpfen" lila/transluzent', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/user/linked-accounts*', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/v2/user/passkeys*', (route) => route.fulfill({ json: [] }));
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    const icon = page.locator('i.bi-google');
+    await expect(icon).toBeVisible();
+    expect(await icon.evaluate((el) => getComputedStyle(el).color), 'Google-Icon nicht schwarz/grau').toBe('rgb(220, 53, 69)');
+    const link = page.getByRole('button', { name: 'Verknüpfen' });
+    await expect(link).toBeVisible();
+    expect(await link.evaluate((el) => getComputedStyle(el).color), 'Verknüpfen lila').toBe('rgb(147, 51, 234)');
+    expect(await link.evaluate((el) => getComputedStyle(el).borderTopColor), 'Verknüpfen Rahmen purple-200').toBe('rgb(233, 213, 255)');
+  });
+
+  test('Freunde: Tab-Badges transluzent lila / weiß', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/friendships*', (route) => route.fulfill({ json: [] }));
+    await page.goto('/friends', { waitUntil: 'domcontentloaded' });
+    const badge = page.locator('[role=tab][aria-selected=true] .badge');
+    await expect(badge).toBeVisible();
+    expect(await badge.evaluate((el) => getComputedStyle(el).backgroundColor), 'aktiver Tab: transluzentes Weiß').toBe('rgba(255, 255, 255, 0.2)');
+    const inactive = page.locator('[role=tab][aria-selected=false] .badge');
+    if (await inactive.count()) {
+      expect(await inactive.first().evaluate((el) => getComputedStyle(el).color)).not.toBe('rgb(255, 255, 255)');
+    }
+  });
+
+  test('Avatar-Menü zeigt den Dropdown-Pfeil (ab md, wie Nuxt "hidden md:block")', async ({ page, baseURL }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/appointments?**', (route) => route.fulfill({ json: { data: [], meta: { page: 0, size: 20, total: 0 } } }));
+    await page.goto('/agenda', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.user-avatar').first()).toBeVisible();
+    await expect(page.locator('button[aria-haspopup] i.bi-chevron-down')).toBeVisible();
+  });
+
+  test('Landing-Kopfzeile: Logo mit großer Rundung/Schatten, Anmelden mit lila Rahmen auf Weiß', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    const logo = page.locator('header img[alt="Chronos Logo"]');
+    await expect(logo).toBeVisible();
+    expect(parseFloat(await logo.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)), 'Logo-Rundung').toBeGreaterThanOrEqual(12);
+    expect(await logo.evaluate((el) => getComputedStyle(el).boxShadow), 'Logo-Schatten').not.toBe('none');
+    const login = page.getByRole('link', { name: 'Anmelden' }).first();
+    expect(await login.evaluate((el) => getComputedStyle(el).borderTopColor), 'Anmelden: lila Rahmen').toBe('rgb(147, 51, 234)');
+    expect(await login.evaluate((el) => getComputedStyle(el).backgroundColor), 'Anmelden: weiß').toBe('rgb(255, 255, 255)');
+  });
 });

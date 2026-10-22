@@ -23,7 +23,7 @@
         (click)="activeTab.set('friends')"
       >
         <i class="bi bi-people me-2" aria-hidden="true"></i>Freunde
-        <span class="badge rounded-pill ms-2" [class]="activeTab() === 'friends' ? 'text-bg-light' : 'text-bg-secondary'">{{ store.friendsCount() }}</span>
+        <span class="badge rounded-pill ms-2" [class]="activeTab() === 'friends' ? 'badge-on-brand' : 'badge-soft'">{{ store.friendsCount() }}</span>
       </button>
       <button
         type="button"
@@ -35,7 +35,7 @@
       >
         <i class="bi bi-inbox me-2" aria-hidden="true"></i>Anfragen
         @if (store.totalRequestsCount() > 0) {
-          <span class="badge rounded-pill ms-2" [class]="activeTab() === 'requests' ? 'text-bg-light' : 'text-bg-danger'">{{ store.totalRequestsCount() }}</span>
+          <span class="badge rounded-pill ms-2" [class]="activeTab() === 'requests' ? 'badge-on-brand' : 'bg-danger-subtle text-danger-emphasis'">{{ store.totalRequestsCount() }}</span>
         }
       </button>
     </div>

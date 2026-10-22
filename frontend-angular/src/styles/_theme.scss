@@ -150,3 +150,32 @@
 [data-bs-theme='dark'] .form-select {
   background-color: var(--bs-body-bg);
 }
+
+// Sekundär-/Auswahlbuttons wie im Nuxt-Frontend: Markenlila, Rahmen purple-200, transluzente Füllung bei Hover.
+// Ausgewählt (`.active`, `.btn-check:checked + .btn`, `:active`) nutzt dieselben Bootstrap-Variablen: lila Rahmen
+// und transluzente lila Füllung. Gesetzt wird nur über `--bs-btn-*` von `.btn-outline-primary`; gefüllte Buttons
+// (`.btn-primary`, `.btn-success`, ...) bleiben unberührt.
+.btn-outline-primary {
+  --bs-btn-color: #{$brand-purple};
+  --bs-btn-border-color: #e9d5ff; // purple-200
+  --bs-btn-hover-color: #{$brand-purple};
+  --bs-btn-hover-bg: #{rgba($brand-purple, 0.1)};
+  --bs-btn-hover-border-color: #{$brand-purple};
+  --bs-btn-focus-shadow-rgb: 147, 51, 234;
+  --bs-btn-active-color: #{$brand-purple};
+  --bs-btn-active-bg: #{rgba($brand-purple, 0.1)};
+  --bs-btn-active-border-color: #{$brand-purple};
+  --bs-btn-disabled-color: #{$brand-purple};
+  --bs-btn-disabled-border-color: #e9d5ff;
+}
+
+// Tab-Badges (Freunde/Anfragen): transluzent lila bzw. transluzent weiß auf dem Gradient-Tab.
+.badge-soft {
+  background-color: rgba($brand-purple, 0.1);
+  color: $brand-purple;
+}
+
+.badge-on-brand {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}

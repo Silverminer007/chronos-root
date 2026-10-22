@@ -8,6 +8,7 @@ interface Provider {
   id: string;
   name: string;
   icon: string;
+  color: string;
 }
 
 /** Seite `/profile`: Stammdaten, verknüpfte Konten und Passkeys (Port von `pages/profile.vue`). */
@@ -29,7 +30,7 @@ export class ProfileComponent implements OnInit {
   protected readonly initials = computed(() => `${this.firstName().charAt(0)}${this.lastName().charAt(0)}`);
 
   // Microsoft und Apple sind wie in Nuxt (noch) nicht freigeschaltet.
-  protected readonly providers: Provider[] = [{ id: 'google', name: 'Google', icon: 'bi-google' }];
+  protected readonly providers: Provider[] = [{ id: 'google', name: 'Google', icon: 'bi-google', color: 'text-danger' }];
   protected readonly linkedAccounts = signal<LinkedAccount[]>([]);
   protected readonly loadingLinked = signal(false);
   protected readonly unlinkingProvider = signal<string | null>(null);
