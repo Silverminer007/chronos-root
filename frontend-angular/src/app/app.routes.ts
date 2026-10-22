@@ -49,6 +49,15 @@ export const routes: Routes = [
           import('./features/friends/friends.component').then((m) => m.FriendsComponent),
       },
       {
+        path: 'groups',
+        loadComponent: () => import('./features/groups/groups.component').then((m) => m.GroupsComponent),
+      },
+      {
+        path: 'groups/:groupId',
+        loadComponent: () =>
+          import('./features/groups/group-detail.component').then((m) => m.GroupDetailComponent),
+      },
+      {
         path: 'appointment/:id',
         loadComponent: () =>
           import('./features/appointment/appointment-page.component').then((m) => m.AppointmentPageComponent),

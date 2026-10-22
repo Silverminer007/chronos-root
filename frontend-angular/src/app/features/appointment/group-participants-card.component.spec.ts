@@ -5,7 +5,7 @@ import { User } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
 import { GroupParticipantsCardComponent } from './group-participants-card.component';
-import { ParticipantLookupService } from './participant-lookup.service';
+import { GroupStore } from '../groups/group.store';
 import { appointment, buttonByText, click, participant } from './testing';
 
 describe('GroupParticipantsCardComponent', () => {
@@ -22,7 +22,7 @@ describe('GroupParticipantsCardComponent', () => {
         { provide: AppointmentStore, useValue: store },
         { provide: AuthService, useValue: { user } },
         { provide: ToastService, useValue: toast },
-        { provide: ParticipantLookupService, useValue: { searchGroups: vi.fn().mockResolvedValue([]) } },
+        { provide: GroupStore, useValue: { searchGroups: vi.fn().mockResolvedValue([]) } },
       ],
     });
     const fixture = TestBed.createComponent(GroupParticipantsCardComponent);

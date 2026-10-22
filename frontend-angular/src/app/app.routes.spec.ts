@@ -55,6 +55,12 @@ describe('routes', () => {
     expect(typeof friends?.loadComponent).toBe('function');
   });
 
+  it.each(['groups', 'groups/:groupId'])('hängt %s lazy unter das Default-Layout mit authGuard', (path) => {
+    const shell = routes.find((r) => r.component === DefaultLayoutComponent);
+    expect(shell?.canActivate).toContain(authGuard);
+    expect(typeof shell?.children?.find((r) => r.path === path)?.loadComponent).toBe('function');
+  });
+
   it('leitet unbekannte Pfade auf die Startseite um', async () => {
     await render('/gibt-es-nicht');
     expect(TestBed.inject(Router).url).toBe('/');
