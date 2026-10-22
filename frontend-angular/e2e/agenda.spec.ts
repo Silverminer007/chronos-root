@@ -88,9 +88,10 @@ test.describe('Agenda', () => {
   test('Zusagen schickt die Zusage ab und zeigt einen Toast', async ({ page, baseURL }) => {
     await mockBff(page, baseURL ?? '');
     let approved = false;
-    await page.route('**/api/v2/appointments/1/participants/approve', (route) => {
-      approved = true;
-      return route.fulfill({ status: 204 });
+    await page.route('**/api/v2/appointments/1/participation', (route) => {
+      const request = route.request();
+      approved = request.method() === 'POST' && request.postDataJSON()?.status === 'APPROVED';
+      return route.fulfill({ status: 200, json: {} });
     });
     await page.route('**/api/v2/appointments/1?**', (route) =>
       route.fulfill({
