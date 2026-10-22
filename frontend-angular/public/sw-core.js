@@ -323,9 +323,8 @@
     return data && data.appointment ? JSON.parse(data.appointment).id : undefined;
   }
 
-  function attendanceEndpoint(appointmentId, status) {
-    const action = status === 'APPROVED' ? 'approve' : 'reject';
-    return `/api/v2/appointments/${appointmentId}/participants/${action}`;
+  function attendanceEndpoint(appointmentId) {
+    return `/api/v2/appointments/${appointmentId}/participation`;
   }
 
   return {

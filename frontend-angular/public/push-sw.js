@@ -137,9 +137,10 @@ self.addEventListener('push', (event) => {
 // --- Klick --------------------------------------------------------------------------------
 
 async function updateAttendanceStatus(appointmentId, status) {
-  const response = await fetch(attendanceEndpoint(appointmentId, status), {
+  const response = await fetch(attendanceEndpoint(appointmentId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
     credentials: 'include',
   });
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
