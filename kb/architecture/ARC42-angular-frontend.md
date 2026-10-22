@@ -98,6 +98,7 @@ Umgebungsvariablen: `CHRONOS_AUTH_ISSUER`, `CHRONOS_AUTH_CLIENT_ID`, `CHRONOS_AU
 - ADR-2026-10-21-008: `/appointment/:id` mit Teilnehmer-, Gruppen-, Rollen- und Nachrichtenkarten, Mutationen im `AppointmentStore`, `AppointmentShareService`; Bearbeiten/Absagen bleiben bei F-06; Grid statt doppeltem Rendern.
 - ADR-2026-10-21-010: `/friends` mit `FriendshipStore` (Signals), `FriendCard`, `FriendRequestCard`, `SendFriendRequestDialog`; Freundessuche der Teilnehmer-Auswahl nutzt den Store statt `ParticipantLookupService.loadFriends`.
 - ADR-2026-10-21-011: `/groups` und `/groups/:groupId` mit `GroupStore` (Signals), `GroupCard`, `GroupMemberCard`, `CreateGroupDialog`, `AddGroupMemberDialog`; `ParticipantLookupService` entfällt, `GroupStore.searchGroups` bedient die Gruppen-Auswahl.
+- ADR-2026-10-21-012: `/settings` (`SettingsStore`, drei Benachrichtigungs-Karten), `/profile`, `/onboarding` (ohne Layout), `PushService` (Port von `usePush`) und `NewFeaturesService`; `PwaInstallDialog`, `PushPermissionModal` und `NewFeaturesDialog` im `DefaultLayout` (per `@defer`).
 
 ## 10. Qualitätsanforderungen
 

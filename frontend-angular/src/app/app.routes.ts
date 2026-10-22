@@ -34,6 +34,13 @@ export const routes: Routes = [
     ],
   },
   {
+    // Ohne Layout (Nuxt: `layout: false`), aber nur für angemeldete Nutzer.
+    path: 'onboarding',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/onboarding/onboarding.component').then((m) => m.OnboardingComponent),
+  },
+  {
     path: '',
     component: DefaultLayoutComponent,
     canActivate: [authGuard],
@@ -56,6 +63,15 @@ export const routes: Routes = [
         path: 'groups/:groupId',
         loadComponent: () =>
           import('./features/groups/group-detail.component').then((m) => m.GroupDetailComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },
       {
         path: 'appointment/:id',

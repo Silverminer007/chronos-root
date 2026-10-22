@@ -30,7 +30,12 @@ async function mockBff(page: Page, baseUrl: string, requests: string[] = []): Pr
       url: baseUrl,
     })),
   );
-  await page.addInitScript(() => localStorage.setItem('onboardingShownAt', '1'));
+  // Onboarding, Neuigkeiten und Push-Dialog würden die Seite sonst überdecken.
+  await page.addInitScript(() => {
+    localStorage.setItem('onboardingShownAt', '1');
+    localStorage.setItem('shownFeatureIds', JSON.stringify(['profile-page-v1', 'linked-accounts-v1', 'passkeys-v1', 'change-password-v1']));
+    localStorage.setItem('pushPromptAnswer', 'denied');
+  });
   await page.route('**/api/auth/isLoggedIn', (route) => route.fulfill({ status: 204 }));
   await page.route('**/api/v2/user', (route) => route.fulfill({ json: user }));
   await page.route('**/api/v2/appointments?**', (route) => {

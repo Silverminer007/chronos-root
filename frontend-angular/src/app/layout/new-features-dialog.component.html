@@ -1,0 +1,73 @@
+@if (visible()) {
+  <div class="modal-backdrop fade show"></div>
+  <div
+    class="modal fade show d-block"
+    [class.leaving]="leaving()"
+    tabindex="-1"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="new-features-title"
+    (click)="$event.target === $event.currentTarget && skipAll()"
+    (keydown.escape)="skipAll()"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content overflow-hidden">
+        <div class="strip bg-gradient-brand"></div>
+        <div class="modal-body p-4">
+          <div class="d-flex align-items-start justify-content-between mb-4">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge rounded-pill text-bg-primary-subtle d-inline-flex align-items-center gap-1">
+                <i class="bi bi-stars" aria-hidden="true"></i>
+                Neu in Chronos
+              </span>
+              <span class="small text-body-tertiary">{{ currentStep() + 1 }}/{{ features().length }}</span>
+            </div>
+            <button type="button" class="btn-close" aria-label="Schließen" title="Schließen" (click)="skipAll()"></button>
+          </div>
+
+          <div class="text-center mb-4">
+            <span class="icon-tile feature-icon mb-3" aria-hidden="true"><i class="bi fs-1" [class]="currentFeature()?.icon ?? 'bi-star'"></i></span>
+            <h2 class="h5 fw-bold mb-2" id="new-features-title">{{ currentFeature()?.title }}</h2>
+            <p class="small text-body-secondary mb-0">{{ currentFeature()?.description }}</p>
+          </div>
+
+          @if (currentFeature()?.link) {
+            <button type="button" class="btn btn-gradient w-100 mb-3 d-flex align-items-center justify-content-center gap-2" (click)="goToLink()">
+              <i class="bi bi-arrow-right" aria-hidden="true"></i>
+              <span>{{ currentFeature()?.linkLabel ?? 'Jetzt ansehen' }}</span>
+            </button>
+          }
+
+          <div class="d-flex align-items-center gap-3">
+            @if (!isFirst()) {
+              <button type="button" class="btn btn-outline-secondary" aria-label="Zurück" (click)="back()">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+              </button>
+            }
+            <div class="flex-grow-1 d-flex align-items-center justify-content-center gap-2">
+              @for (feature of features(); track feature.id; let i = $index) {
+                <button
+                  type="button"
+                  class="dot"
+                  [class.active]="i === currentStep()"
+                  [attr.aria-label]="'Neuigkeit ' + (i + 1)"
+                  (click)="currentStep.set(i)"
+                ></button>
+              }
+            </div>
+            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1" (click)="next()">
+              <span>{{ isLast() ? 'Fertig' : 'Weiter' }}</span>
+              <i class="bi" [class]="isLast() ? 'bi-check-lg' : 'bi-chevron-right'" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          @if (features().length > 1) {
+            <div class="text-center mt-3">
+              <button type="button" class="btn btn-link btn-sm text-body-tertiary" (click)="skipAll()">Alle überspringen</button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
