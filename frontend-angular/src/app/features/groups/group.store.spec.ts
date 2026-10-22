@@ -82,6 +82,21 @@ describe('GroupStore', () => {
       expect(store.currentGroup()).toBeNull();
     });
 
+    it('verwirft die bisherige currentGroup, wenn eine unbekannte Gruppe angefragt wird', async () => {
+      await loadGroups([group(1)]);
+      const first = store.fetchGroup(1);
+      http.expectOne('/api/v2/groups/1/users').flush([user(1)]);
+      await first;
+      expect(store.currentGroup()?.id).toBe(1);
+      const result = store.fetchGroup(999);
+      expect(store.currentGroup()).toBeNull();
+      http.expectOne('/api/v2/groups/999/users').flush([]);
+      await new Promise((resolve) => setTimeout(resolve));
+      http.expectOne('/api/v2/groups').flush([group(1)]);
+      expect(await result).toBeNull();
+      expect(store.currentGroup()).toBeNull();
+    });
+
     it('setzt bei Fehler die deutsche Meldung und wirft', async () => {
       const result = store.fetchGroup(1);
       http.expectOne('/api/v2/groups/1/users').flush(null, { status: 404, statusText: 'x' });

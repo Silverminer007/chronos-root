@@ -38,16 +38,19 @@ export class GroupStore {
   async fetchGroup(groupId: number): Promise<Group | null> {
     this.loading.set(true);
     this.error.set(null);
+    if (this.currentGroup()?.id !== groupId) this.currentGroup.set(null);
     try {
       const members = (await firstValueFrom(this.http.get<User[] | null>(`${API}/${groupId}/users`))) ?? [];
       if (!this.findGroup(groupId)) await this.fetchGroups();
       const group = this.findGroup(groupId);
-      if (group) {
-        const current = { ...group, members };
-        this.currentGroup.set(current);
-        this.groups.update((list) => list.map((g) => (g.id === groupId ? current : g)));
+      if (!group) {
+        this.currentGroup.set(null);
+        return null;
       }
-      return this.currentGroup();
+      const current = { ...group, members };
+      this.currentGroup.set(current);
+      this.groups.update((list) => list.map((g) => (g.id === groupId ? current : g)));
+      return current;
     } catch (err) {
       this.error.set(getErrorMessage(err, 'Fehler beim Laden der Gruppe'));
       throw err;
