@@ -1,8 +1,11 @@
 name: 🚀 Deploy to Kubernetes
 
+# A repository_dispatch event always runs the workflow file and the chart of the DEFAULT branch (main),
+# whatever commit built the image. develop therefore deploys staging itself on push: this file and the
+# chart of develop are used (the push event runs the workflow of the pushed ref).
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
     paths: [ 'deployment/**', '.github/workflows/deployment-ci.yml' ]
   repository_dispatch:
     types: [ deploy-staging, deploy-production ]
@@ -10,6 +13,10 @@ on:
 defaults:
   run:
     working-directory: deployment
+
+concurrency:
+  group: deploy-${{ github.ref }}-${{ github.event.action || 'push' }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -61,6 +68,10 @@ jobs:
               echo "namespace=chronos-staging" >> $GITHUB_OUTPUT
               echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
             fi
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "namespace=chronos-staging" >> $GITHUB_OUTPUT
+            echo "values_file=values-staging.yaml" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "namespace=chronos-prod" >> $GITHUB_OUTPUT
