@@ -14,7 +14,7 @@ import { isResponsible } from './participation';
     @if (responsible()) {
       <div class="card shadow-sm">
         <div class="card-body p-4">
-          <h3 class="h5 fw-bold mb-3">Organisator-Aktionen</h3>
+          <h3 class="card-heading fw-bold mb-3">Organisator-Aktionen</h3>
           <button
             type="button"
             class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2"

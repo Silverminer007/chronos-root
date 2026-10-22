@@ -13,7 +13,7 @@ import { AppointmentStore } from '../agenda/appointment.store';
   template: `
     <div class="card shadow-sm">
       <div class="card-header p-4 bg-transparent d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
-        <h3 class="h5 fw-bold mb-0">Nachrichten</h3>
+        <h3 class="card-heading fw-bold mb-0">Nachrichten</h3>
         <button type="button" class="btn btn-gradient d-flex align-items-center justify-content-center gap-2" (click)="showDialog.set(true)">
           <i class="bi bi-send" aria-hidden="true"></i><span>Nachricht senden</span>
         </button>
