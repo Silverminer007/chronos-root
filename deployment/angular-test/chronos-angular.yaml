@@ -1,0 +1,192 @@
+# Test-Umgebung: Angular-Frontend + Rust-Backend + Keycloak + PostgreSQL im Namespace chronos-angular (nur lokales k3s).
+# Siehe deployment/angular-test/README.md. Wegwerf-Zugangsdaten, nie für Staging/Produktion verwenden.
+# Hostnamen: keycloak.localhost:8180 und chronos.localhost:3300 gelten im Browser (über SSH-Tunnel) und im Cluster
+# (hostAliases auf die feste ClusterIP des Keycloak-Service) identisch, damit Issuer und Cookies übereinstimmen.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chronos-angular
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: chronos-secrets
+  namespace: chronos-angular
+stringData:
+  database_password: "angular-test"
+  backend_client_secret: "backend-secret"
+  vapid_public_key: "VAPID_PUBLIC_PLACEHOLDER"
+  vapid_private_key: "VAPID_PRIVATE_PLACEHOLDER"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: postgres-data, namespace: chronos-angular }
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources: { requests: { storage: 2Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: postgres, namespace: chronos-angular }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: POSTGRES_DB, value: chronos_rust }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: chronos-secrets, key: database_password } }
+          ports: [{ containerPort: 5432 }]
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres"] }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: postgres-data }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: chronos-angular }
+spec:
+  selector: { app: postgres }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: keycloak, namespace: chronos-angular }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: keycloak } }
+  template:
+    metadata: { labels: { app: keycloak } }
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0.7
+          imagePullPolicy: IfNotPresent
+          args: ["start-dev", "--import-realm"]
+          env:
+            - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin }
+            - { name: KC_BOOTSTRAP_ADMIN_PASSWORD, value: admin }
+            - { name: KC_HOSTNAME, value: "http://keycloak.localhost:8180" }
+            - { name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC, value: "true" }
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            - { name: KC_HEALTH_ENABLED, value: "true" }
+            - { name: JAVA_OPTS_KC_HEAP, value: "-Xms256m -Xmx512m" }
+          ports: [{ containerPort: 8080 }, { containerPort: 9000 }]
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 30
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          volumeMounts: [{ name: realm, mountPath: /opt/keycloak/data/import }]
+      volumes:
+        - name: realm
+          configMap: { name: keycloak-realm }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: keycloak, namespace: chronos-angular }
+spec:
+  type: NodePort
+  clusterIP: 10.43.77.77
+  selector: { app: keycloak }
+  ports: [{ name: http, port: 8180, targetPort: 8080, nodePort: 30180 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: chronos-rust-backend, namespace: chronos-angular }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: chronos-rust-backend } }
+  template:
+    metadata: { labels: { app: chronos-rust-backend } }
+    spec:
+      hostAliases: [{ ip: "10.43.77.77", hostnames: ["keycloak.localhost"] }]
+      containers:
+        - name: chronos-rust
+          image: chronos-rust-backend:parity
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8080 }]
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: chronos-secrets, key: database_password } }
+            - name: AUTH_SERVER_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: chronos-secrets, key: backend_client_secret } }
+            - name: VAPID_PUBLIC_KEY
+              valueFrom: { secretKeyRef: { name: chronos-secrets, key: vapid_public_key } }
+            - name: VAPID_PRIVATE_KEY
+              valueFrom: { secretKeyRef: { name: chronos-secrets, key: vapid_private_key } }
+            - { name: AUTH_SERVER_CLIENT_ID, value: chronos-backend }
+            - { name: VAPID_SUBJECT, value: "mailto:admin@example.org" }
+            - { name: APP_ENV, value: production }
+            - { name: DATABASE_URL, value: "postgres://postgres:$(DB_PASSWORD)@postgres:5432/chronos_rust" }
+            - { name: KEYCLOAK_URL, value: "http://keycloak.localhost:8180/realms/chronos" }
+            - { name: AUTH_SERVER_BASE_URL, value: "http://keycloak.localhost:8180" }
+            - { name: AUTH_SERVER_REALM, value: chronos }
+            - { name: RUST_LOG, value: "chronos_date_api=info" }
+          readinessProbe:
+            httpGet: { path: /q/health/ready, port: 8080 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: chronos-rust-backend, namespace: chronos-angular }
+spec:
+  selector: { app: chronos-rust-backend }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: chronos-frontend-angular, namespace: chronos-angular }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: chronos-frontend-angular } }
+  template:
+    metadata: { labels: { app: chronos-frontend-angular } }
+    spec:
+      hostAliases: [{ ip: "10.43.77.77", hostnames: ["keycloak.localhost"] }]
+      containers:
+        - name: frontend
+          image: chronos-frontend-angular:test
+          imagePullPolicy: Never
+          ports: [{ containerPort: 3000 }]
+          env:
+            - { name: CHRONOS_AUTH_ISSUER, value: "http://keycloak.localhost:8180/realms/chronos" }
+            - { name: CHRONOS_AUTH_CLIENT_ID, value: chronos-frontend }
+            - { name: CHRONOS_AUTH_REDIRECT_URI, value: "http://chronos.localhost:3300/api/auth/callback" }
+            - { name: CHRONOS_QUARKUS_URL, value: "http://chronos-rust-backend" }
+            - { name: CHRONOS_COOKIE_SECURE, value: "false" }
+          readinessProbe:
+            httpGet: { path: /api/config, port: 3000 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 192Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: chronos-frontend-angular, namespace: chronos-angular }
+spec:
+  type: NodePort
+  selector: { app: chronos-frontend-angular }
+  ports: [{ port: 80, targetPort: 3000, nodePort: 30300 }]
