@@ -287,7 +287,7 @@ describe('AppointmentStore', () => {
         call: (s) => s.addGroupParticipant(3, 4, 'ATTENDANT'),
         method: 'POST',
         url: '/api/v2/appointments/3/groups/4',
-        body: { role: 'ATTENDANT' },
+        body: { user_role: 'ATTENDANT' },
         error: 'Fehler beim Hinzufügen der Gruppe',
       },
       {

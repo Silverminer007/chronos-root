@@ -203,7 +203,7 @@ export class AppointmentStore {
       id,
       'POST',
       `groups/${groupId}`,
-      { role },
+      { user_role: role },
       'Fehler beim Hinzufügen der Gruppe',
     );
   }

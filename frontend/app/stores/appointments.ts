@@ -347,7 +347,7 @@ export const useAppointmentsStore = defineStore('appointments', {
             try {
                 await $fetch(`/api/v2/appointments/${appointmentId}/groups/${groupId}`, {
                     method: 'POST',
-                    body: {role}
+                    body: {user_role: role}
                 })
 
                 await this.fetchAppointment(appointmentId)
