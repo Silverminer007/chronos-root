@@ -22,14 +22,14 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
     <div class="card shadow-sm overflow-hidden">
       <div class="bg-gradient-brand p-4">
         <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
-          <h2 class="h3 fw-bold mb-0">{{ appointment().name }}</h2>
+          <h2 class="h3 fw-bold mb-0 text-white">{{ appointment().name }}</h2>
           <div class="d-flex align-items-center gap-2 flex-shrink-0">
             @if (status(); as s) {
               <span class="badge rounded-pill {{ s.css }}" data-testid="status">{{ s.label }}</span>
             }
             <button
               type="button"
-              class="btn btn-light bg-opacity-25 border-0 text-white"
+              class="btn btn-glass"
               title="Link teilen"
               aria-label="Link teilen"
               (click)="share()"
@@ -38,7 +38,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
             </button>
             <button
               type="button"
-              class="btn btn-light bg-opacity-25 border-0 text-white"
+              class="btn btn-glass"
               title="Termin bearbeiten"
               aria-label="Termin bearbeiten"
               (click)="editOpen.set(true)"
@@ -47,7 +47,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
             </button>
           </div>
         </div>
-        <div class="d-flex flex-wrap gap-3 small opacity-75">
+        <div class="d-flex flex-wrap gap-3 small text-white">
           <span class="d-flex align-items-center gap-2"
             ><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ date() }}</span
           >
