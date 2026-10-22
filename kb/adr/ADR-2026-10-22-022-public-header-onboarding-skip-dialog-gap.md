@@ -14,4 +14,8 @@
 
 ## Konsequenzen
 Neue Spalten-Layouts mit `margin: 0` auf Kindern brauchen `gap` am Container. Absicherung: `e2e/public-header-onboarding-parity.spec.ts`.
-Nicht Teil dieses Fixes: Onboarding-Icons/Verläufe, Impressum-Kartenabstand, Stepper-Symbol (weitere Punkte des Tickets).
+
+## Weitere Punkte des Tickets (ebenfalls in diesem Fix)
+- Onboarding: Konfetti-Symbol (Lucide `party-popper`) im ersten Schritt, satterer Diagonalverlauf (purple-600 → pink-500 → orange-400) und "Weiter"-Verlauf Lila → Magenta mit Schatten wie im alten Frontend.
+- Impressum/Datenschutz: Kartenabstand, Abschnittsüberschriften und Hinweis "nicht konfiguriert" (amber) wie im alten Frontend.
+- Stepper "Termin anlegen", Schritt 1: Lucide-`type`-Umriss-T statt fettem Buchstaben.
