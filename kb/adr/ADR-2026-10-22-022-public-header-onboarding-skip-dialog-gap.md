@@ -8,7 +8,7 @@
 - `.modal-footer > .btn { margin: 0 }` (ADR-021) entfernte Bootstraps Margin-Abstand, ohne ihn zu ersetzen; die gestapelten Buttons berührten sich.
 
 ## Entscheidung
-- Kopfzeile: 32-px-Logo, `fs-4`-Titel, `btn-sm`, "Anmelden" als `btn-outline-light` (wie im alten Frontend), Button-Gruppe `flex-shrink-0`.
+- Kopfzeile: 32-px-Logo, `fs-4`-Titel, `btn-sm`, "Anmelden" bleibt weiß mit lila Rahmen (Theme-Parität #210), nur als `btn-sm`, Button-Gruppe `flex-shrink-0`.
 - "Überspringen": `text-decoration-none`.
 - `.modal-footer` bekommt `gap: 0.75rem` (alt ca. 12 px) statt Margins; Abstand kommt vom Container, nicht von Kind-Margins.
 
