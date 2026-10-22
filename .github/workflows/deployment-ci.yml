@@ -94,6 +94,12 @@ jobs:
               image:
                 tag: $VERSION
                 repository: $REPOSITORY" >> overrides.yaml
+          elif [ "${{ github.event.client_payload.service }}" = "rust-backend" ]; then
+            echo "
+            rustBackend:
+              image:
+                tag: $VERSION
+                repository: $REPOSITORY" >> overrides.yaml
           fi
 
       - name: 🔍 Debug before deployment

@@ -106,6 +106,8 @@ frontend:
       secretKey: frontend_sentry_dsn
 
 backend:
+  # false: no Java backend (Deployment, Service, HPA, ServiceMonitor), e.g. when the Rust backend serves the environment
+  enabled: true
   replicaCount: 2
   autoscaling:
     enabled: false
@@ -215,6 +217,9 @@ postgresql:
     key: database_password
   # Extra databases created on first start of the volume (one per backend that must own its data)
   extraDatabases: []
+  # Databases created idempotently by a post-install/upgrade Job (for volumes that already exist and
+  # therefore never run /docker-entrypoint-initdb.d again)
+  ensureDatabases: []
   backup:
     enabled: true
     s3_path: ""

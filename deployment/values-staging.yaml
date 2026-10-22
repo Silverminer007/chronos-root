@@ -61,7 +61,7 @@ frontend:
   env:
     NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
     NUXT_AUTH_REDIRECT_URI: https://staging.chronos-live.de/api/auth/callback
-    NUXT_QUARKUS_URL: "http://chronos-backend"
+    NUXT_QUARKUS_URL: "http://chronos-rust-backend"
     NUXT_PUBLIC_IMPRESSUM_NAME: "Justus Henze"
     NUXT_PUBLIC_IMPRESSUM_STREET: "Malmedystraße 3"
     NUXT_PUBLIC_IMPRESSUM_CITY: "46145 Oberhausen"
@@ -75,6 +75,8 @@ frontend:
       secretKey: frontend_sentry_dsn
 
 backend:
+  # Replaced by the Rust backend on staging
+  enabled: false
   replicaCount: 1
   autoscaling:
     enabled: false
@@ -153,15 +155,20 @@ rustBackend:
       memory: "128Mi"
       cpu: "500m"
   env:
+    APP_ENV: production
     RUST_LOG: "chronos_date_api=info,tower_http=info"
-    ENVIRONMENT: "staging"
+    # The Rust backend owns its own database; the Java schema (Flyway) in "chronos" stays untouched
+    DATABASE_URL: "postgres://chronos:$(DB_PASSWORD)@postgres:5432/chronos_rust"
+    KEYCLOAK_URL: "https://auth.chronos-live.de/realms/chronos"
+    AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de"
+    AUTH_SERVER_REALM: "chronos"
   envFromSecrets:
-    - name: KEYCLOAK_URL
-      secretKey: keycloak_url
-    - name: KEYCLOAK_REALM
-      secretKey: keycloak_realm
-    - name: DATABASE_URL
-      secretKey: database_url
+    - name: DB_PASSWORD
+      secretKey: database_password
+    - name: AUTH_SERVER_CLIENT_ID
+      secretKey: backend_client_id
+    - name: AUTH_SERVER_CLIENT_SECRET
+      secretKey: backend_client_secret
     - name: VAPID_PUBLIC_KEY
       secretKey: vapid_public_key
     - name: VAPID_PRIVATE_KEY
@@ -187,6 +194,8 @@ postgresql:
     tag: "16"
   database: chronos
   user: chronos
+  ensureDatabases:
+    - chronos_rust
   storage:
     size: 10Gi
     storageClass: hcloud-volumes
