@@ -15,3 +15,14 @@ Bootstrap-Variablen gehören in diese Map. Kartenschatten und grau gefüllte Fel
 Lila-Pink-Verlauf (wie Nuxt). Damit die ersten `h2`/`p` auf hellem Grund liegen, sind der Hero-Lead und die Features-Einleitung `div`s
 (Features-Titel: `role="heading" aria-level="2"`, semantisch unverändert). `body-secondary-color` ist gray-600 (Bootstrap-Standard: 75 % transparent),
 damit Nebentexte exakt dem Nuxt-Grau entsprechen.
+
+**Weitere Ticket-Punkte (#210), Stand der Umsetzung:**
+- *Push-Schalter / Überschrift in den Einstellungen:* Der Textblock der drei Benachrichtigungskarten hat `min-width: 0` und `text-break`, Icon-Kachel und
+  Schalter sind `flex-shrink-0`. Damit ragt der Schalter nicht mehr über den Kartenrand und lange Überschriften wie „Terminbenachrichtigungen“
+  brechen um (Akzeptanzkriterium).
+- *Sekundärbuttons und Tab-Badges:* `.btn-outline-primary` (Verknüpfen, Rollenwahl, Agenda) erhält in `_theme.scss` Lila (Rahmen purple-200, transluzente
+  Füllung bei Hover/aktiv) über `--bs-btn-*`. Die Tab-Badges nutzen `.badge-soft` (transluzentes Lila) bzw. `.badge-on-brand` (transluzentes Weiß auf dem Verlauf).
+- *Google-Icon:* in `profile.component` bekommt jeder Provider eine Farbklasse (Google: `text-danger`). Bootstrap Icons kennt kein mehrfarbiges Google-Logo;
+  das Nuxt-Original ist mehrfarbig. Abweichung bewusst akzeptiert (einfarbig rot statt vierfarbig); ein Mehrfarben-SVG wäre ein Folgeticket.
+- *Avatar-Dropdown-Pfeil:* `search-header.component.html` enthält `bi-chevron-down` bereits (wie Nuxt ab `md`, auf Mobil ausgeblendet); keine Änderung nötig.
+- *Landing-Logo:* `rounded-3 shadow-lg` am Logo, Kopfzeilenbutton „Anmelden“ weiß mit lila Rahmen wie im Nuxt-Frontend.
