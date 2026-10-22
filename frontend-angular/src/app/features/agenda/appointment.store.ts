@@ -172,8 +172,8 @@ export class AppointmentStore {
     return this.mutate(
       id,
       'POST',
-      'participants/users',
-      { user_id: userId, user_role: role },
+      `participants/${userId}`,
+      { user_role: role },
       'Fehler beim Hinzufügen des Teilnehmers',
     );
   }
@@ -182,7 +182,7 @@ export class AppointmentStore {
     return this.mutate(
       id,
       'DELETE',
-      `participants/users/${userId}`,
+      `participants/${userId}`,
       null,
       'Fehler beim Entfernen des Teilnehmers',
     );
@@ -191,8 +191,8 @@ export class AppointmentStore {
   changeParticipantRole(id: number, userId: number, role: Role): Promise<void> {
     return this.mutate(
       id,
-      'PATCH',
-      `participants/users/${userId}`,
+      'PUT',
+      `participation/${userId}/role`,
       { role },
       'Fehler beim Ändern der Rolle',
     );
@@ -202,8 +202,8 @@ export class AppointmentStore {
     return this.mutate(
       id,
       'POST',
-      'participants/groups',
-      { group_id: groupId, user_role: role },
+      `groups/${groupId}`,
+      { role },
       'Fehler beim Hinzufügen der Gruppe',
     );
   }
@@ -212,7 +212,7 @@ export class AppointmentStore {
     return this.mutate(
       id,
       'DELETE',
-      `participants/groups/${groupId}`,
+      `groups/${groupId}`,
       null,
       'Fehler beim Entfernen der Gruppe',
     );
@@ -261,7 +261,7 @@ export class AppointmentStore {
   /** Sendet die Änderung und lädt den Termin neu; Fehler setzen `error()` und werden weitergeworfen. */
   private async mutate(
     id: number,
-    method: 'POST' | 'PATCH' | 'DELETE',
+    method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body: unknown,
     fallback: string,

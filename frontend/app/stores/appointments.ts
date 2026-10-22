@@ -301,9 +301,9 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Teilnehmer hinzufügen
         async addParticipant(appointmentId: number, userId: number, role: string) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/users`, {
+                await $fetch(`/api/v2/appointments/${appointmentId}/participants/${userId}`, {
                     method: 'POST',
-                    body: {user_id: userId, user_role: role}
+                    body: {user_role: role}
                 })
 
                 await this.fetchAppointment(appointmentId)
@@ -316,7 +316,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Teilnehmer entfernen
         async removeParticipant(appointmentId: number, userId: number) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/users/${userId}`, {
+                await $fetch(`/api/v2/appointments/${appointmentId}/participants/${userId}`, {
                     method: 'DELETE'
                 })
 
@@ -330,8 +330,8 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Teilnehmerrolle ändern
         async changeParticipantRole(appointmentId: number, userId: number, role: string) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/users/${userId}`, {
-                    method: 'PATCH',
+                await $fetch(`/api/v2/appointments/${appointmentId}/participation/${userId}/role`, {
+                    method: 'PUT',
                     body: {role}
                 })
 
@@ -345,9 +345,9 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Gruppe hinzufügen
         async addGroupParticipant(appointmentId: number, groupId: number, role: string) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/groups`, {
+                await $fetch(`/api/v2/appointments/${appointmentId}/groups/${groupId}`, {
                     method: 'POST',
-                    body: {group_id: groupId, user_role: role}
+                    body: {role}
                 })
 
                 await this.fetchAppointment(appointmentId)
@@ -360,7 +360,7 @@ export const useAppointmentsStore = defineStore('appointments', {
         // Gruppe entfernen
         async removeGroupParticipant(appointmentId: number, groupId: number) {
             try {
-                await $fetch(`/api/v2/appointments/${appointmentId}/participants/groups/${groupId}`, {
+                await $fetch(`/api/v2/appointments/${appointmentId}/groups/${groupId}`, {
                     method: 'DELETE'
                 })
 

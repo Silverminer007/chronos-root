@@ -14,11 +14,11 @@ export class AdminService {
   private readonly http = inject(HttpClient);
 
   statistics(): Promise<AdminStatistics> {
-    return firstValueFrom(this.http.get<AdminStatistics>(`${API}/statistics`));
+    return firstValueFrom(this.http.get<AdminStatistics>(`${API}/stats`));
   }
 
   users(size: number): Promise<AdminUserResponse> {
-    return firstValueFrom(this.http.get<AdminUserResponse>(`${API}/user/`, { params: { size } }));
+    return firstValueFrom(this.http.get<AdminUserResponse>(`${API}/users`, { params: { size } }));
   }
 
   pushLog(): Promise<PushLogEntry[]> {

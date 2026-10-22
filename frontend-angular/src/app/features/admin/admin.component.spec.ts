@@ -63,8 +63,8 @@ describe('AdminComponent', () => {
   };
 
   const load = async (users: AdminUser[] = []) => {
-    http.expectOne('/api/v2/admin/statistics').flush(statistics);
-    const req = http.expectOne((r) => r.url === '/api/v2/admin/user/');
+    http.expectOne('/api/v2/admin/stats').flush(statistics);
+    const req = http.expectOne((r) => r.url === '/api/v2/admin/users');
     expect(req.request.params.get('size')).toBe('20');
     req.flush({ items: users, page: 0, size: 20, total: users.length });
     await settle();
@@ -87,8 +87,8 @@ describe('AdminComponent', () => {
   });
 
   it('zeigt Nullen, solange keine Statistik vorliegt', async () => {
-    http.expectOne('/api/v2/admin/statistics').flush(null, { status: 403, statusText: 'Forbidden' });
-    http.expectOne((r) => r.url === '/api/v2/admin/user/').flush(null, { status: 403, statusText: 'Forbidden' });
+    http.expectOne('/api/v2/admin/stats').flush(null, { status: 403, statusText: 'Forbidden' });
+    http.expectOne((r) => r.url === '/api/v2/admin/users').flush(null, { status: 403, statusText: 'Forbidden' });
     await settle();
     expect(Array.from(el().querySelectorAll('.stat-value')).map((v) => v.textContent?.trim())).toEqual(['0', '0', '0', '0', '0', '0']);
     expect(el().querySelector('[role=alert]')?.textContent).toContain('Fehler beim Laden');
