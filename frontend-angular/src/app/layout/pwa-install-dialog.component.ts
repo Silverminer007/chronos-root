@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DialogQueueService } from './dialog-queue.service';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -36,13 +37,16 @@ interface BeforeInstallPromptEvent extends Event {
   `,
 })
 export class PwaInstallDialogComponent {
-  protected readonly visible = signal(false);
+  private readonly queue = inject(DialogQueueService);
+  private readonly wanted = signal(false);
+  protected readonly visible = computed(() => this.wanted() && this.queue.active() === 'pwaInstall');
   private deferredPrompt: BeforeInstallPromptEvent | null = null;
 
   protected onBeforeInstallPrompt(event: Event): void {
     event.preventDefault();
     this.deferredPrompt = event as BeforeInstallPromptEvent;
-    this.visible.set(true);
+    this.wanted.set(true);
+    this.queue.claim('pwaInstall');
   }
 
   protected async install(): Promise<void> {
@@ -51,10 +55,15 @@ export class PwaInstallDialogComponent {
     void deferred.prompt();
     await deferred.userChoice;
     this.deferredPrompt = null;
-    this.visible.set(false);
+    this.hide();
   }
 
   protected close(): void {
-    this.visible.set(false);
+    this.hide();
+  }
+
+  private hide(): void {
+    this.wanted.set(false);
+    this.queue.release('pwaInstall');
   }
 }

@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { PushService } from '../core/push.service';
+import { DialogQueueService } from './dialog-queue.service';
 
 /** Fragt einmalig (dann erneut nach 7 Tagen) nach der Push-Berechtigung (Port von `PushPermissionModal.vue`). */
 @Component({
@@ -31,16 +32,20 @@ import { PushService } from '../core/push.service';
 })
 export class PushPermissionModalComponent implements OnInit {
   private readonly push = inject(PushService);
+  private readonly queue = inject(DialogQueueService);
 
-  protected readonly visible = signal(false);
+  private readonly wanted = signal(false);
+  protected readonly visible = computed(() => this.wanted() && this.queue.active() === 'push');
 
   async ngOnInit(): Promise<void> {
+    this.queue.claim('push');
     try {
-      this.visible.set(await this.push.shouldAsk());
+      this.wanted.set(await this.push.shouldAsk());
     } catch (err) {
       // Die Abo-Prüfung darf die Seite nicht stören; beim nächsten Besuch läuft sie erneut.
       console.error('Push-Status konnte nicht geprüft werden', err);
     }
+    if (!this.wanted()) this.queue.release('push');
   }
 
   protected async enable(): Promise<void> {
@@ -51,16 +56,21 @@ export class PushPermissionModalComponent implements OnInit {
       // Der Browser hat die Berechtigung abgelehnt oder das Abo scheiterte.
       this.push.markAsked('denied');
     }
-    this.visible.set(false);
+    this.finish();
   }
 
   protected deny(): void {
     this.push.markAsked('denied');
-    this.visible.set(false);
+    this.finish();
   }
 
   protected dismiss(): void {
     this.push.markAsked('dismissed');
-    this.visible.set(false);
+    this.finish();
+  }
+
+  private finish(): void {
+    this.wanted.set(false);
+    this.queue.release('push');
   }
 }
