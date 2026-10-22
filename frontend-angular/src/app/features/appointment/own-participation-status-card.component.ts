@@ -11,7 +11,7 @@ import { AppointmentStore } from '../agenda/appointment.store';
   template: `
     <div class="card shadow-sm">
       <div class="card-body p-4">
-        <h3 class="h5 fw-bold mb-3">Deine Teilnahme</h3>
+        <h3 class="card-heading fw-bold mb-3">Deine Teilnahme</h3>
         <div class="d-flex flex-column flex-sm-row gap-3">
           <button
             type="button"

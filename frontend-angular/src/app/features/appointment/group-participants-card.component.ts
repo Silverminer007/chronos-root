@@ -23,7 +23,7 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
         <div class="d-flex align-items-center gap-3">
           <span class="icon-tile" aria-hidden="true"><i class="bi bi-people fs-5"></i></span>
           <div>
-            <h3 class="h5 fw-bold mb-0">Gruppen</h3>
+            <h3 class="card-heading fw-bold mb-0">Gruppen</h3>
             <p class="small text-body-secondary mb-0">
               {{ groups().length }} {{ groups().length === 1 ? 'Gruppe' : 'Gruppen' }} eingeladen
             </p>
