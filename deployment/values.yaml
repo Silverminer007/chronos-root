@@ -106,6 +106,8 @@ frontend:
       secretKey: frontend_sentry_dsn
 
 backend:
+  # false: no Java backend (Deployment, Service, HPA, ServiceMonitor), e.g. when the Rust backend serves the environment
+  enabled: true
   replicaCount: 2
   autoscaling:
     enabled: false

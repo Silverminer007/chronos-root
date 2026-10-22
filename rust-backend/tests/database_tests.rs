@@ -20,6 +20,7 @@ mod database_tests {
             acquire_timeout: Duration::from_secs(10),
             max_lifetime: Duration::from_secs(3600),
             run_migrations: true,
+            adopt_java_schema: false,
         };
 
         assert_eq!(config.max_connections, 8);

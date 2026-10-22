@@ -15,6 +15,9 @@ pub struct DatabaseConfig {
     pub acquire_timeout: Duration,
     pub max_lifetime: Duration,
     pub run_migrations: bool,
+    /// Take over an existing schema created by the Java backend's Flyway migrations instead of
+    /// failing on the baseline migration (`DATABASE_ADOPT_JAVA_SCHEMA`, default off)
+    pub adopt_java_schema: bool,
 }
 
 impl DatabaseConfig {
@@ -50,6 +53,11 @@ impl DatabaseConfig {
             .and_then(|v| v.to_lowercase().parse::<bool>().ok())
             .unwrap_or(true);
 
+        let adopt_java_schema = std::env::var("DATABASE_ADOPT_JAVA_SCHEMA")
+            .ok()
+            .and_then(|v| v.to_lowercase().parse::<bool>().ok())
+            .unwrap_or(false);
+
         Ok(Self {
             url,
             max_connections,
@@ -57,6 +65,7 @@ impl DatabaseConfig {
             acquire_timeout: Duration::from_secs(acquire_timeout_secs),
             max_lifetime: Duration::from_secs(1800),
             run_migrations,
+            adopt_java_schema,
         })
     }
 
@@ -86,6 +95,7 @@ impl Default for DatabaseConfig {
             acquire_timeout: Duration::from_secs(5),
             max_lifetime: Duration::from_secs(1800), // 30 minutes
             run_migrations: true,
+            adopt_java_schema: false,
         }
     }
 }
@@ -107,6 +117,9 @@ pub async fn init_pool(config: DatabaseConfig) -> Result<PgPool, Box<dyn std::er
         })?;
 
     if config.run_migrations {
+        if config.adopt_java_schema {
+            adopt_java_schema(&pool).await?;
+        }
         run_migrations(&pool).await?;
     }
 
@@ -126,6 +139,99 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), Box<dyn std::error::Err
         })?;
     info!("Migrations completed successfully");
     Ok(())
+}
+
+/// Final Java schema (ADR-2026-10-12-014): the query that describes a schema and the expected result
+const SCHEMA_SNAPSHOT_SQL: &str = include_str!("../../schema/snapshot.sql");
+const JAVA_SCHEMA_EXPECTED: &str = include_str!("../../schema/java_schema_expected.txt");
+/// Arbitrary constant key of the advisory lock that serialises concurrent adoptions
+const ADOPT_LOCK_KEY: i64 = 0x0063_6872_6f6e_6f73;
+
+/// Lets the Rust migrations take over a database created by the Java backend (Flyway).
+///
+/// Baseline migration `001` would fail on such a database (`CREATE TABLE` of existing tables). If the
+/// database has the Java tables but no `_sqlx_migrations` table, and its schema equals the expected
+/// Java schema exactly, `001` is recorded as applied (with the checksum of the embedded migration),
+/// so that `run_migrations` only applies the Rust-only migrations afterwards. Existing data is not
+/// touched. Returns `true` if the schema was adopted.
+///
+/// Does nothing on an empty database or one that Rust already manages (`_sqlx_migrations` has rows). A schema that deviates from
+/// the Java one is an error: nothing is changed, so a wrong database is never marked as migrated.
+pub async fn adopt_java_schema(pool: &PgPool) -> Result<bool, Box<dyn std::error::Error>> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("SELECT pg_advisory_xact_lock($1)")
+        .bind(ADOPT_LOCK_KEY)
+        .execute(&mut *tx)
+        .await?;
+
+    // sqlx creates `_sqlx_migrations` before applying anything, so a failed first start leaves it
+    // empty: only recorded migrations mean that Rust manages the database
+    let table_exists: bool =
+        sqlx::query_scalar("SELECT to_regclass('_sqlx_migrations') IS NOT NULL")
+            .fetch_one(&mut *tx)
+            .await?;
+    let managed: bool = table_exists
+        && sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM _sqlx_migrations)")
+            .fetch_one(&mut *tx)
+            .await?;
+    let has_java_tables: bool = sqlx::query_scalar("SELECT to_regclass('appointment') IS NOT NULL")
+        .fetch_one(&mut *tx)
+        .await?;
+    if managed || !has_java_tables {
+        return Ok(false);
+    }
+
+    let actual: std::collections::BTreeSet<String> = sqlx::query_scalar(SCHEMA_SNAPSHOT_SQL)
+        .fetch_all(&mut *tx)
+        .await?
+        .into_iter()
+        .collect();
+    let expected: std::collections::BTreeSet<String> =
+        JAVA_SCHEMA_EXPECTED.lines().map(str::to_string).collect();
+    if actual != expected {
+        let join = |a: &std::collections::BTreeSet<String>,
+                    b: &std::collections::BTreeSet<String>| {
+            a.difference(b).cloned().collect::<Vec<_>>().join("; ")
+        };
+        let message = format!(
+            "Cannot adopt the existing schema: it differs from the Java schema. missing: [{}], unexpected: [{}]",
+            join(&expected, &actual),
+            join(&actual, &expected)
+        );
+        error!("{}", message);
+        return Err(message.into());
+    }
+
+    let migrator = sqlx::migrate!("./migrations");
+    let baseline = migrator
+        .iter()
+        .find(|m| m.version == 1)
+        .ok_or("baseline migration 001 not found")?;
+    // Same table definition as sqlx creates itself
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS _sqlx_migrations (
+            version BIGINT PRIMARY KEY,
+            description TEXT NOT NULL,
+            installed_on TIMESTAMPTZ NOT NULL DEFAULT now(),
+            success BOOLEAN NOT NULL,
+            checksum BYTEA NOT NULL,
+            execution_time BIGINT NOT NULL
+        )",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time)
+         VALUES ($1, $2, TRUE, $3, 0)",
+    )
+    .bind(baseline.version)
+    .bind(baseline.description.as_ref())
+    .bind(baseline.checksum.as_ref())
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    info!("Adopted the existing Java schema: baseline migration 001 recorded as applied");
+    Ok(true)
 }
 
 /// Serialises tests that read or write process-wide environment variables (such as `DATABASE_URL`),

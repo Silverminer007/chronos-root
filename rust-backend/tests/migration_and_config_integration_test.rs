@@ -50,6 +50,7 @@ fn test_password_not_in_log_format() -> Result<(), AnyError> {
         acquire_timeout: Duration::from_secs(5),
         max_lifetime: Duration::from_secs(1800),
         run_migrations: false,
+        adopt_java_schema: false,
     };
 
     config.log_connection_info();
@@ -211,6 +212,7 @@ async fn test_run_migrations_false_skips_migrations() -> Result<(), AnyError> {
         acquire_timeout: Duration::from_secs(10),
         max_lifetime: Duration::from_secs(1800),
         run_migrations: false,
+        adopt_java_schema: false,
     };
 
     let pool = chronos_date_api::database::init_pool(config)
@@ -315,6 +317,7 @@ async fn test_migrations_apply_to_empty_database() -> Result<(), AnyError> {
         acquire_timeout: Duration::from_secs(10),
         max_lifetime: Duration::from_secs(1800),
         run_migrations: true,
+        adopt_java_schema: false,
     };
 
     // This should succeed — all migrations should apply to empty database
@@ -371,6 +374,7 @@ async fn test_concurrent_migrators_on_same_database() -> Result<(), AnyError> {
             acquire_timeout: Duration::from_secs(10),
             max_lifetime: Duration::from_secs(1800),
             run_migrations: true,
+            adopt_java_schema: false,
         };
 
         chronos_date_api::database::init_pool(config)
@@ -386,6 +390,7 @@ async fn test_concurrent_migrators_on_same_database() -> Result<(), AnyError> {
             acquire_timeout: Duration::from_secs(10),
             max_lifetime: Duration::from_secs(1800),
             run_migrations: true,
+            adopt_java_schema: false,
         };
 
         chronos_date_api::database::init_pool(config)
