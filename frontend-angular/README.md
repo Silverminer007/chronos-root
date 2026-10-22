@@ -42,6 +42,7 @@ src/
 
 Layouts und öffentliche Seiten: `kb/adr/ADR-2026-10-21-006-angular-layouts-public-pages.md`. E2E-Tests liegen in `e2e/`.
 `core/` im Detail: `kb/adr/ADR-2026-10-21-004-angular-core.md`. Toast-Container und Bestätigungsdialog sind in `App` eingebunden.
+Umfrage und Admin-Bereich: `kb/adr/ADR-2026-10-21-013-angular-survey-admin.md` (kein Rollen-Guard, Absicherung nur im Backend).
 
 ## Theming und Dark Mode
 
