@@ -35,3 +35,21 @@ export function formatDateTime(iso: string): string {
   const date = new Date(iso);
   return `${DATE.format(date)} ${TIME.format(date)} Uhr`;
 }
+
+const RELATIVE = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'always' });
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 86400],
+  ['month', 30 * 86400],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+/** `vor 3 Stunden` (Port von Luxon `toRelative` mit Locale `de`); leer bei ungültigem Datum. */
+export function formatRelativeTime(iso: string, now: Date = new Date()): string {
+  const seconds = Math.trunc((new Date(iso).getTime() - now.getTime()) / 1000);
+  if (Number.isNaN(seconds)) return '';
+  const [unit, size] = RELATIVE_UNITS.find(([, s]) => Math.abs(seconds) >= s) ?? ['second', 1];
+  const value = Math.trunc(seconds / size);
+  return RELATIVE.format(value === 0 ? -0 : value, unit);
+}

@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime, formatTime, formatTimeRange } from './date-format';
+import { formatDate, formatDateTime, formatRelativeTime, formatTime, formatTimeRange } from './date-format';
 
 describe('date-format', () => {
   it('formatiert ein Datum deutsch', () => {
@@ -21,5 +21,22 @@ describe('date-format', () => {
 
   it('formatiert Datum und Uhrzeit mit „Uhr“', () => {
     expect(formatDateTime('2026-10-21T18:05:00')).toBe('21.10.2026 18:05 Uhr');
+  });
+});
+
+describe('formatRelativeTime', () => {
+  const now = new Date('2026-10-21T12:00:00Z');
+
+  it.each([
+    ['2026-10-21T11:58:00Z', 'vor 2 Minuten'],
+    ['2026-10-21T09:00:00Z', 'vor 3 Stunden'],
+    ['2026-10-19T12:00:00Z', 'vor 2 Tagen'],
+    ['2026-10-21T12:30:00Z', 'in 30 Minuten'],
+  ])('%s → %s', (iso, expected) => {
+    expect(formatRelativeTime(iso, now)).toBe(expected);
+  });
+
+  it('liefert bei ungültigem Datum einen leeren Text', () => {
+    expect(formatRelativeTime('kaputt', now)).toBe('');
   });
 });

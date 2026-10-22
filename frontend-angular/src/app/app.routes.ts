@@ -74,6 +74,19 @@ export const routes: Routes = [
         loadComponent: () => import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },
       {
+        path: 'survey/:id',
+        loadComponent: () => import('./features/survey/survey.component').then((m) => m.SurveyComponent),
+      },
+      {
+        path: 'admin',
+        loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
+      },
+      {
+        path: 'admin/push',
+        loadComponent: () =>
+          import('./features/admin/admin-push.component').then((m) => m.AdminPushComponent),
+      },
+      {
         path: 'appointment/:id',
         loadComponent: () =>
           import('./features/appointment/appointment-page.component').then((m) => m.AppointmentPageComponent),

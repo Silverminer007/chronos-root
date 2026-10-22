@@ -1,0 +1,106 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="admin mx-auto pt-4">
+    <div class="mb-4">
+      <h1 class="h2 fw-bold mb-1">Administration</h1>
+      <p class="text-body-secondary mb-0">Übersicht über die Plattform</p>
+    </div>
+
+    @if (error(); as message) {
+      <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
+        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <div>
+          <p class="fw-semibold mb-0">Fehler beim Laden</p>
+          <p class="small mb-0">{{ message }}</p>
+        </div>
+      </div>
+    }
+
+    <div class="row row-cols-2 row-cols-lg-3 g-3 mb-4">
+      @for (stat of stats(); track stat.label) {
+        <div class="col">
+          @if (stat.link) {
+            <a class="stat-card card h-100 p-4 d-block" [routerLink]="stat.link">
+              <ng-container *ngTemplateOutlet="statBody; context: { $implicit: stat }" />
+            </a>
+          } @else {
+            <div class="stat-card card h-100 p-4">
+              <ng-container *ngTemplateOutlet="statBody; context: { $implicit: stat }" />
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <ng-template #statBody let-stat>
+      <div class="stat-icon icon-tile rounded-circle mb-3"><i class="bi fs-5" [class]="stat.icon" aria-hidden="true"></i></div>
+      <p class="stat-value h3 fw-bold mb-0">{{ stat.value }}</p>
+      <p class="small text-body-secondary mb-0">{{ stat.label }}</p>
+    </ng-template>
+
+    <section class="card p-4 mb-4">
+      <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon icon-tile rounded-circle flex-shrink-0"><i class="bi bi-clipboard-check fs-5" aria-hidden="true"></i></div>
+          <div>
+            <h2 class="h5 fw-semibold mb-0">Umfrage</h2>
+            <p class="small text-body-secondary mb-0">Push-Einladungen an alle noch nicht eingeladenen Nutzer senden</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-gradient fw-medium d-flex align-items-center gap-2" [disabled]="surveyLoading()" (click)="sendSurveyInvitations()">
+          @if (surveyLoading()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          } @else {
+            <i class="bi bi-send" aria-hidden="true"></i>
+          }
+          <span>Umfrage-Einladungen senden</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="card p-4 mb-4">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="stat-icon icon-tile rounded-circle flex-shrink-0"><i class="bi bi-flask fs-5" aria-hidden="true"></i></div>
+        <div>
+          <h2 class="h5 fw-semibold mb-0">A/B-Test Erstellungsmaske</h2>
+          <p class="small text-body-secondary mb-0">Zuweisung per <code>user.id % 3</code></p>
+        </div>
+      </div>
+      <div class="row g-3">
+        @for (v of variants; track v) {
+          <div class="col-4">
+            <div class="ab-variant border rounded overflow-hidden h-100">
+              <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-body-secondary">
+                <span class="small fw-bold text-uppercase">Variante {{ v }}</span>
+                <span class="badge rounded-pill text-bg-primary">{{ abGroups()[v].length }}</span>
+              </div>
+              <ul class="list-group list-group-flush">
+                @for (user of abGroups()[v]; track user.id) {
+                  <li class="list-group-item small text-truncate">{{ user.firstName }} {{ user.lastName }}</li>
+                } @empty {
+                  <li class="list-group-item small text-body-tertiary fst-italic">Keine Nutzer</li>
+                }
+              </ul>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h5 fw-semibold p-4 mb-0 border-bottom d-flex align-items-center gap-2">
+        <i class="bi bi-box-arrow-in-right text-primary" aria-hidden="true"></i>Letzte Anmeldungen
+      </h2>
+      <ul class="recent-logins list-group list-group-flush">
+        @for (user of users(); track user.id) {
+          <li class="list-group-item d-flex align-items-center gap-3 px-4 py-3">
+            <div class="icon-tile rounded-circle fw-semibold small flex-shrink-0 login-avatar">{{ initials(user) }}</div>
+            <p class="fw-medium mb-0 flex-grow-1 text-truncate">{{ user.firstName }} {{ user.lastName }}</p>
+            <span class="small text-body-secondary flex-shrink-0">{{ formatRelativeTime(user.lastSeen) }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+</main>

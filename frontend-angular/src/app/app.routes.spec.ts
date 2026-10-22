@@ -67,6 +67,14 @@ describe('routes', () => {
     expect(typeof shell?.children?.find((r) => r.path === path)?.loadComponent).toBe('function');
   });
 
+  it.each(['survey/:id', 'admin', 'admin/push'])('hängt %s lazy unter das Default-Layout mit authGuard, ohne Rollenprüfung', (path) => {
+    const shell = routes.find((r) => r.component === DefaultLayoutComponent);
+    expect(shell?.canActivate).toEqual([authGuard]);
+    const route = shell?.children?.find((r) => r.path === path);
+    expect(typeof route?.loadComponent).toBe('function');
+    expect(route?.canActivate).toBeUndefined();
+  });
+
   it('hängt das Onboarding lazy mit authGuard, aber ohne Layout ein', () => {
     const onboarding = routes.find((r) => r.path === 'onboarding');
     expect(onboarding?.canActivate).toEqual([authGuard]);
