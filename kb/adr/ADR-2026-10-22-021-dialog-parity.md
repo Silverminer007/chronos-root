@@ -13,4 +13,4 @@ gray-300. Globale statt je Dialog-Komponente, damit alle Dialoge einheitlich ble
 
 ## Konsequenzen
 Neue Dialoge nutzen die Standard-Bootstrap-Struktur ohne eigene Footer-Klassen; Primär-Button steht im DOM nach
-"Abbrechen". Absicherung: `e2e/dialog-parity.spec.ts`. Nicht umgesetzt: höhere Eingabefelder mit Icon, Stepper-Kachel/Fußleiste.
+"Abbrechen". Absicherung: `e2e/dialog-parity.spec.ts`. Zusätzlich umgesetzt: Dialog-Eingabefelder 52 px/2-px-grauer Rahmen (`.modal .form-control`, Icon links über `.input-group`), Stepper mit größerer Kachel (64 px, 12 px Rundung, Symbol "T"), lila dickerem Namens-Unterstrich, grauer "Abbrechen"-Schaltfläche, hellgrau deaktiviertem "Weiter" und grauem Schließen-Symbol/Schrittzähler.

@@ -319,6 +319,22 @@
   }
 }
 
+// Eingabefelder in Dialogen: 52 px hoch, 2-px-Rahmen in Grau (gray-200), Icon links über `.input-group`.
+.modal .form-control {
+  min-height: 3.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+}
+
+.modal .input-group-text {
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.modal .input-group > .form-control:not(:first-child) {
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
 // Platzhalter im Anlegen-/Bearbeiten-Stepper hellgrau wie im alten Frontend (gray-300).
 .line-input::placeholder {
   color: #d1d5db; // gray-300

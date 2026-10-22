@@ -21,6 +21,8 @@ test.describe('Dialoge und Stepper wie im alten Frontend (#222)', () => {
       const footer = el.querySelector('.modal-footer')!;
       const buttons = [...footer.querySelectorAll('button')].map((b) => b.getBoundingClientRect());
       return {
+        inputHeight: el.querySelector('.modal-body .form-control')!.getBoundingClientRect().height,
+        inputBorder: css(el.querySelector('.modal-body .form-control')!).borderTopWidth,
         weight: css(el.querySelector('.modal-title')!).fontWeight,
         direction: css(footer).flexDirection,
         footerWidth: footer.getBoundingClientRect().width,
@@ -29,6 +31,8 @@ test.describe('Dialoge und Stepper wie im alten Frontend (#222)', () => {
     });
 
     expect(res.weight, 'Schriftstärke des Dialogtitels (erwartet 700)').toBe('700');
+    expect(res.inputHeight, 'Höhe des Eingabefelds (erwartet ca. 52 px)').toBeGreaterThanOrEqual(52);
+    expect(res.inputBorder, 'Rahmen des Eingabefelds (erwartet 2 px)').toBe('2px');
     expect(res.direction, 'Anordnung der Footer-Buttons (erwartet column)').toBe('column');
     expect(res.buttons.length).toBeGreaterThanOrEqual(2);
     for (const b of res.buttons) {
@@ -48,5 +52,11 @@ test.describe('Dialoge und Stepper wie im alten Frontend (#222)', () => {
     await expect(input).toBeVisible();
     const color = await input.evaluate((el) => getComputedStyle(el, '::placeholder').color);
     expect(color, 'Platzhalterfarbe im Stepper (erwartet gray-300)').toBe('rgb(209, 213, 219)');
+    const line = await input.evaluate((el) => {
+      const c = getComputedStyle(el);
+      return { color: c.borderBottomColor, width: parseFloat(c.borderBottomWidth) };
+    });
+    expect(line.color, 'Unterstrich des Namensfelds (erwartet lila)').toBe('rgb(147, 51, 234)');
+    expect(line.width, 'Dicke des Unterstrichs (erwartet > 2 px)').toBeGreaterThan(2);
   });
 });
