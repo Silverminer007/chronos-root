@@ -21,8 +21,8 @@ import { DialogQueueService } from './dialog-queue.service';
               <p class="mb-0">Wir benötigen von dir die Erlaubnis der Benachrichtigungen zu senden</p>
             </div>
             <div class="modal-footer justify-content-start">
-              <button type="button" class="btn btn-gradient" (click)="enable()">Aktivieren</button>
               <button type="button" class="btn btn-link" (click)="deny()">Nicht jetzt</button>
+              <button type="button" class="btn btn-gradient" (click)="enable()">Aktivieren</button>
             </div>
           </div>
         </div>

@@ -78,7 +78,7 @@
       >
         <button
           type="button"
-          class="btn btn-link text-body-secondary fs-4 p-0 lh-1"
+          class="btn btn-link close-btn fs-5 p-0 lh-1"
           [attr.aria-label]="step() > 1 ? 'Zurück' : 'Schließen'"
           (click)="step() > 1 ? goBack() : close()"
         >
@@ -99,7 +99,7 @@
           }
         </div>
         <span class="d-none d-lg-block fw-semibold">{{ stepLabels[step() - 1] }}</span>
-        <span class="small text-body-secondary">{{ step() }} / {{ totalSteps }}</span>
+        <span class="small step-counter">{{ step() }} / {{ totalSteps }}</span>
       </header>
 
       <form class="flex-grow-1 overflow-y-auto" [formGroup]="form" (ngSubmit)="goNext()">
@@ -112,8 +112,8 @@
           >
             @switch (step()) {
               @case (1) {
-                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
-                  ><i class="bi bi-type fs-2"></i
+                <span class="icon-tile mb-4" aria-hidden="true"
+                  ><span class="fs-2 fw-bold lh-1">T</span
                 ></span>
                 <h1 class="h3 fw-bold">Wie heißt der Termin?</h1>
                 <p class="text-body-secondary mb-5">Gib deinem Termin einen Namen.</p>
@@ -128,7 +128,7 @@
                 />
               }
               @case (2) {
-                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                <span class="icon-tile mb-4" aria-hidden="true"
                   ><i class="bi bi-calendar-event fs-2"></i
                 ></span>
                 <h1 class="h3 fw-bold">Wann?</h1>
@@ -152,7 +152,7 @@
                 />
               }
               @case (3) {
-                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                <span class="icon-tile mb-4" aria-hidden="true"
                   ><i class="bi bi-stopwatch fs-2"></i
                 ></span>
                 <h1 class="h3 fw-bold">Wie lange?</h1>
@@ -217,7 +217,7 @@
                 }
               }
               @case (4) {
-                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                <span class="icon-tile mb-4" aria-hidden="true"
                   ><i class="bi bi-file-text fs-2"></i
                 ></span>
                 <h1 class="h3 fw-bold">Beschreibung</h1>
@@ -232,7 +232,7 @@
                 ></textarea>
               }
               @case (5) {
-                <span class="icon-tile rounded-4 mb-4" aria-hidden="true"
+                <span class="icon-tile mb-4" aria-hidden="true"
                   ><i class="bi bi-geo-alt fs-2"></i
                 ></span>
                 <h1 class="h3 fw-bold">Wo findet es statt?</h1>
@@ -322,14 +322,14 @@
       >
         <button
           type="button"
-          class="btn btn-light btn-lg"
+          class="btn btn-light btn-lg cancel-btn"
           (click)="step() > 1 ? goBack() : close()"
         >
           {{ step() > 1 ? 'Zurück' : 'Abbrechen' }}
         </button>
         <button
           type="button"
-          class="btn btn-gradient btn-lg flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+          class="btn btn-gradient btn-lg next-btn flex-grow-1 d-flex align-items-center justify-content-center gap-2"
           [disabled]="!canProceed() || saving()"
           (click)="goNext()"
         >

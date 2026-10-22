@@ -26,13 +26,45 @@
 .line-input {
   max-width: 24rem;
   border: 0;
-  border-bottom: 2px solid var(--bs-border-color);
+  border-bottom: 3px solid #9333ea; // purple-600, dicker als zuvor (alt: lila Unterstrich)
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 
   &:focus {
-    border-bottom-color: var(--bs-primary);
+    border-bottom-color: #9333ea;
+  }
+}
+
+// Kachel größer (64 px) mit 12 px Rundung wie im alten Frontend.
+.stepper .icon-tile {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.75rem;
+}
+
+// Kopfleiste: Schließen-Symbol und Schrittzähler grau.
+.close-btn,
+.step-counter {
+  color: #9ca3af; // gray-400
+}
+
+// Fußleiste: "Abbrechen" grau gefüllt mit Rundung, "Weiter" deaktiviert hellgrau.
+.cancel-btn {
+  background-color: #e5e7eb; // gray-200
+  border-color: #e5e7eb;
+  color: #374151; // gray-700
+  border-radius: 0.75rem;
+}
+
+.next-btn {
+  border-radius: 0.75rem;
+
+  &:disabled {
+    background: #e5e7eb;
+    border-color: #e5e7eb;
+    color: #9ca3af;
+    opacity: 1;
   }
 }
 
