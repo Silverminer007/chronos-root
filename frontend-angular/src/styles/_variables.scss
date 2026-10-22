@@ -12,6 +12,7 @@ $link-color: $brand-purple;
 $body-bg: $gray-50;
 $body-color: $gray-600;
 $headings-color: $gray-900;
+$body-secondary-color: $gray-600; // Nuxt: Nebentexte ebenfalls gray-600, nicht 75 % transparent
 $border-radius-lg: 0.75rem;
 $border-radius-xl: 1rem;
 $card-border-radius: 1rem;
@@ -31,6 +32,7 @@ $bootstrap-config: (
   'body-bg': $body-bg,
   'body-color': $body-color,
   'headings-color': $headings-color,
+  'body-secondary-color': $body-secondary-color,
   'border-radius-lg': $border-radius-lg,
   'border-radius-xl': $border-radius-xl,
   'card-border-radius': $card-border-radius,

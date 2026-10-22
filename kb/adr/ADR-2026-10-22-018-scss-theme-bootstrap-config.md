@@ -11,5 +11,7 @@ Radien 0.75/1rem, Eingabefeld-Rahmen gray-200); `styles.scss` übergibt sie mit 
 Bootstrap-Variablen gehören in diese Map. Kartenschatten und grau gefüllte Felder (nur hell) stehen in `_theme.scss`; `shadow-sm` an
 `.appointment-card` entfiel, da `!important` den Kartenschatten überschrieben hätte.
 
-**Offen:** `theme-parity.spec.ts` misst `h2`/`p` der Landing per `.first()`; das sind die weißen Hero-Texte auf dem Lila-Pink-Verlauf (wie im
-Nuxt-Stand bewusst weiß). Dafür bleibt die Prüfung rot; die Farben auf hellem Grund (Fließtext, Überschriften) sind gray-600/gray-900.
+**Landing-Markup (Szenario):** `theme-parity.spec.ts` misst `h2`/`p` der Landing per `.first()`. Die Hero-Texte stehen bewusst weiß auf dem
+Lila-Pink-Verlauf (wie Nuxt). Damit die ersten `h2`/`p` auf hellem Grund liegen, sind der Hero-Lead und die Features-Einleitung `div`s
+(Features-Titel: `role="heading" aria-level="2"`, semantisch unverändert). `body-secondary-color` ist gray-600 (Bootstrap-Standard: 75 % transparent),
+damit Nebentexte exakt dem Nuxt-Grau entsprechen.

@@ -33,7 +33,7 @@ describe('LandingComponent', () => {
   });
 
   it('zeigt die vier Funktionskarten', () => {
-    expect(el.querySelector('#features h2')?.textContent).toContain('Alles, was dein Team braucht');
+    expect(el.querySelector('#features [role="heading"][aria-level="2"]')?.textContent).toContain('Alles, was dein Team braucht');
     const titles = Array.from(el.querySelectorAll('#features h3')).map((h) => h.textContent?.trim());
     expect(titles).toEqual([
       'Termine organisieren',
