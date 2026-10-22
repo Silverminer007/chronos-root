@@ -1,0 +1,13 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && timeout 500 npx ng test --no-watch --include='src/app/features/admin/admin.service.spec.ts'",
+  "description": "AdminService muss die Backend-Pfade GET /api/v2/admin/stats und GET /api/v2/admin/users?size=20 aufrufen (Java AdminStatisticsResource/AdminUserResource, Rust rust-backend/src/admin/mod.rs). Der Service ruft stattdessen /admin/statistics und /admin/user/ auf (404).",
+  "kind": "unit",
+  "files": ["frontend-angular/src/app/features/admin/admin.service.spec.ts"],
+  "failure_signature": "Requests received are: GET /api/v2/admin/statistics",
+  "steps": [
+    "Als parity-admin /admin im Angular-Frontend öffnen",
+    "Die Seite lädt GET /api/v2/admin/statistics und GET /api/v2/admin/user/?size=20"
+  ],
+  "expected": "Requests gehen an /api/v2/admin/stats und /api/v2/admin/users?size=20; Statistik und Nutzerliste werden angezeigt.",
+  "actual": "Requests gehen an /api/v2/admin/statistics und /api/v2/admin/user/ und liefern 404 ('Fehler beim Laden – HTTP 404', alle Zähler 0)."
+}
