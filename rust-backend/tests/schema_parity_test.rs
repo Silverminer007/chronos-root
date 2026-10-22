@@ -165,3 +165,84 @@ async fn ids_are_bigint_and_users_are_oidc_strings() -> Result<(), AnyError> {
     assert!(users_table.is_none(), "there must be no users table");
     Ok(())
 }
+
+/// The Java schema (Flyway) can be taken over by the Rust migrations without losing data
+/// (`adopt_java_schema`): baseline is recorded, only Rust-only migrations are applied.
+#[tokio::test]
+async fn java_schema_with_data_is_adopted_by_rust_migrations() -> Result<(), AnyError> {
+    use chronos_date_api::database::{adopt_java_schema, run_migrations};
+
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../backend/src/main/resources/db/migration");
+    if !dir.exists() {
+        eprintln!("skipping: {} not available", dir.display());
+        return Ok(());
+    }
+    let mut files: Vec<_> = std::fs::read_dir(&dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|e| e == "sql"))
+        .collect();
+    files.sort_by_key(|p| {
+        let name = p.file_name().unwrap().to_string_lossy().to_string();
+        name.trim_start_matches('V')
+            .split("__")
+            .next()
+            .unwrap()
+            .split('.')
+            .map(|n| n.parse::<u32>().unwrap())
+            .collect::<Vec<_>>()
+    });
+
+    let container = Postgres::default().start().await?;
+    let port = container.get_host_port_ipv4(5432).await?;
+    let pool = connect(port, "postgres").await?;
+    for file in files {
+        pool.execute(std::fs::read_to_string(&file)?.as_str())
+            .await?;
+    }
+    sqlx::query("INSERT INTO groups (groupname, owner_oidcid) VALUES ('kept', 'owner-1')")
+        .execute(&pool)
+        .await?;
+
+    // Without adoption the baseline cannot be applied to the Java schema
+    assert!(run_migrations(&pool).await.is_err());
+
+    assert!(adopt_java_schema(&pool).await.map_err(|e| e.to_string())?);
+    run_migrations(&pool).await.map_err(|e| e.to_string())?;
+    assert!(
+        !adopt_java_schema(&pool).await.map_err(|e| e.to_string())?,
+        "second run is a no-op"
+    );
+    run_migrations(&pool).await.map_err(|e| e.to_string())?;
+
+    let kept: i64 = sqlx::query_scalar("SELECT count(*) FROM groups WHERE groupname = 'kept'")
+        .fetch_one(&pool)
+        .await?;
+    assert_eq!(kept, 1, "existing data must survive");
+    let versions: Vec<i64> =
+        sqlx::query_scalar("SELECT version FROM _sqlx_migrations ORDER BY version")
+            .fetch_all(&pool)
+            .await?;
+    assert_eq!(versions, vec![1, 2]);
+    assert_same("adopted schema", &snapshot(&pool).await?, &expected());
+    Ok(())
+}
+
+/// A database whose schema deviates from the Java one is never marked as migrated.
+#[tokio::test]
+async fn deviating_schema_is_not_adopted() -> Result<(), AnyError> {
+    use chronos_date_api::database::adopt_java_schema;
+
+    let container = Postgres::default().start().await?;
+    let port = container.get_host_port_ipv4(5432).await?;
+    let pool = connect(port, "postgres").await?;
+    pool.execute("CREATE TABLE appointment (id BIGINT PRIMARY KEY)")
+        .await?;
+
+    assert!(adopt_java_schema(&pool).await.is_err());
+    let managed: bool = sqlx::query_scalar("SELECT to_regclass('_sqlx_migrations') IS NOT NULL")
+        .fetch_one(&pool)
+        .await?;
+    assert!(!managed);
+    Ok(())
+}

@@ -15,6 +15,7 @@ RUN rustup target add x86_64-unknown-linux-musl
 # Copy the project files
 COPY Cargo.* ./
 COPY migrations ./migrations
+COPY schema ./schema
 COPY src ./src
 
 # Build the application with static linking

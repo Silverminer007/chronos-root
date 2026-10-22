@@ -145,6 +145,7 @@ async fn get_user_info(principal: PrincipalContext) -> Json<UserInfo> {
 |---|---|---|
 | `RUST_LOG` | Logging level | `info` |
 | `KEYCLOAK_URL` | Keycloak realm URL (token validation) | `http://localhost:8080/realms/chronos` |
+| `DATABASE_ADOPT_JAVA_SCHEMA` | `true`: a database with the exact Java (Flyway) schema and no recorded Rust migrations is taken over (baseline `001` recorded as applied, data kept); any other schema is an error | `false` |
 | `AUTH_SERVER_AUDIENCE` | Required `aud` of access tokens; unset or empty: `aud` is not validated (like Quarkus) | _unset_ |
 | `AUTH_SERVER_BASE_URL` | Keycloak base URL for the admin API and the account-action links (required) | – |
 | `AUTH_SERVER_REALM` | Realm of the admin client | `master` |
