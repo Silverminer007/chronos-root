@@ -289,3 +289,37 @@
   line-height: 1.75rem;
   overflow-wrap: break-word;
 }
+
+// Dialoge wie im Nuxt-Frontend: fetter Titel (18 px), Footer-Buttons untereinander in voller Breite
+// (Primäraktion oben), 16 px Rand links/rechts, größere Rundung. Gilt für alle Bootstrap-Modals.
+.modal {
+  --bs-modal-border-radius: 1rem;
+  --bs-modal-margin: 1rem;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.modal-footer {
+  flex-direction: column;
+  align-items: stretch;
+
+  > .btn {
+    width: 100%;
+    margin: 0;
+  }
+
+  // Primäraktion oben (steht im DOM nach "Abbrechen").
+  > .btn-gradient,
+  > .btn-primary,
+  > .btn-danger {
+    order: -1;
+  }
+}
+
+// Platzhalter im Anlegen-/Bearbeiten-Stepper hellgrau wie im alten Frontend (gray-300).
+.line-input::placeholder {
+  color: #d1d5db; // gray-300
+}
