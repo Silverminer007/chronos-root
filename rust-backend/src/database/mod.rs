@@ -155,6 +155,8 @@ const ADOPT_LOCK_KEY: i64 = 0x0063_6872_6f6e_6f73;
 /// so that `run_migrations` only applies the Rust-only migrations afterwards. Existing data is not
 /// touched. Returns `true` if the schema was adopted.
 ///
+/// Flyway's `flyway_schema_history` table is ignored in the comparison and stays untouched.
+///
 /// Does nothing on an empty database or one that Rust already manages (`_sqlx_migrations` has rows). A schema that deviates from
 /// the Java one is an error: nothing is changed, so a wrong database is never marked as migrated.
 pub async fn adopt_java_schema(pool: &PgPool) -> Result<bool, Box<dyn std::error::Error>> {
@@ -181,10 +183,13 @@ pub async fn adopt_java_schema(pool: &PgPool) -> Result<bool, Box<dyn std::error
         return Ok(false);
     }
 
+    // Flyway's own bookkeeping table (columns, key, index) is part of a Flyway-migrated database
+    // but not of the schema that the Rust migrations define
     let actual: std::collections::BTreeSet<String> = sqlx::query_scalar(SCHEMA_SNAPSHOT_SQL)
         .fetch_all(&mut *tx)
         .await?
         .into_iter()
+        .filter(|line: &String| !line.contains("flyway_schema_history"))
         .collect();
     let expected: std::collections::BTreeSet<String> =
         JAVA_SCHEMA_EXPECTED.lines().map(str::to_string).collect();
