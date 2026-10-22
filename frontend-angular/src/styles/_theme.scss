@@ -25,6 +25,11 @@
   }
 }
 
+// Blau-Violett-Variante (Nuxt: `bg-linear-to-r from-blue-600 to-indigo-500`), z. B. Gruppendetail.
+.btn-gradient-blue {
+  background: linear-gradient(90deg, #2563eb, #6366f1);
+}
+
 // Halbtransparente Karte der öffentlichen Seiten (Nuxt: `bg-white/90 border-2 border-purple-200 rounded-xl`).
 .glass-card {
   background-color: rgba(var(--bs-body-bg-rgb), 0.9);
@@ -51,6 +56,104 @@
 
 [data-bs-theme='dark'] .icon-tile {
   background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+}
+
+// Blaue Variante der Kachel (Nuxt: `from-blue-100 to-indigo-100`, Icon `text-blue-600`), z. B. Gruppendetail.
+.icon-tile-blue {
+  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+  color: #2563eb;
+}
+
+[data-bs-theme='dark'] .icon-tile-blue {
+  background: linear-gradient(135deg, rgba(#2563eb, 0.3), rgba(#6366f1, 0.3));
+}
+
+// Knöpfe im Verlaufskopf (Nuxt: `bg-white/20 text-white`, Glas-Optik).
+.btn-glass {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  --bs-btn-bg: rgba(255, 255, 255, 0.2);
+  --bs-btn-hover-bg: rgba(255, 255, 255, 0.3);
+  --bs-btn-active-bg: rgba(255, 255, 255, 0.3);
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-border-color: transparent;
+}
+
+// Zusagen/Absagen (Nuxt: `border-2 border-green-600 text-green-600 rounded-lg`, aktiv `bg-green-600 text-white`).
+@mixin participation-button($name, $color, $hover-bg, $dark-color) {
+  .btn-#{$name} {
+    --bs-btn-border-width: 2px;
+    --bs-btn-border-radius: 0.5rem;
+    --bs-btn-color: #{$color};
+    --bs-btn-border-color: #{$color};
+    --bs-btn-hover-color: #{$color};
+    --bs-btn-hover-bg: #{$hover-bg};
+    --bs-btn-hover-border-color: #{$color};
+    --bs-btn-active-color: #{$color};
+    --bs-btn-active-bg: #{$hover-bg};
+    --bs-btn-active-border-color: #{$color};
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #{$color};
+    --bs-btn-disabled-border-color: #{$color};
+    --bs-btn-disabled-opacity: 1;
+  }
+
+  [data-bs-theme='dark'] .btn-#{$name} {
+    --bs-btn-color: #{$dark-color};
+    --bs-btn-border-color: #{$dark-color};
+    --bs-btn-hover-color: #{$dark-color};
+    --bs-btn-hover-bg: #{rgba($color, 0.2)};
+    --bs-btn-hover-border-color: #{$dark-color};
+    --bs-btn-active-color: #{$dark-color};
+    --bs-btn-active-bg: #{rgba($color, 0.2)};
+    --bs-btn-active-border-color: #{$dark-color};
+  }
+}
+
+@include participation-button(approve, #16a34a, #f0fdf4, #22c55e);
+@include participation-button(reject, #dc2626, #fef2f2, #ef4444);
+
+// Hinweisbox „Bitte bestätige deine Teilnahme“ (Nuxt: `bg-yellow-50 border border-yellow-200 rounded-lg`, Text yellow-900/-700).
+.alert-pending {
+  --bs-alert-bg: #fefce8;
+  --bs-alert-border-color: #fef08a;
+  --bs-alert-color: #a16207;
+  --bs-alert-border-radius: 0.5rem;
+
+  .alert-pending-title {
+    color: #713f12;
+  }
+
+  .bi {
+    color: #ca8a04;
+  }
+}
+
+[data-bs-theme='dark'] .alert-pending {
+  --bs-alert-bg: #{rgba(#713f12, 0.2)};
+  --bs-alert-border-color: #854d0e;
+  --bs-alert-color: #fde047;
+
+  .alert-pending-title {
+    color: #fef08a;
+  }
+
+  .bi {
+    color: #facc15;
+  }
+}
+
+// Quadratischer Plus-Knopf (Nuxt: `w-8 h-8 rounded-lg bg-linear-to-r from-purple-600 to-pink-500`).
+.btn-icon-square {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  --bs-btn-border-radius: 0.5rem;
 }
 
 // Kleine Überschrift-Pille über den Seitentiteln.

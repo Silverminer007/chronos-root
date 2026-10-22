@@ -15,3 +15,8 @@
 .error-box {
   max-width: 28rem;
 }
+
+// Nuxt: Buttons `rounded-lg` (0.5rem), Bootstrap-Standard wäre 0.375rem.
+.btn:not(.rounded-circle) {
+  border-radius: 0.5rem;
+}
