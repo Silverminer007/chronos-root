@@ -286,6 +286,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [ADR-2026-10-20-027: Friend suggestions search Keycloak (Java parity)](adr/ADR-2026-10-20-027-friend-suggestions-keycloak-search.md)
 - [ADR-2026-10-20-028: Small parity deviations (health data, trailing slash, settings 400)](adr/ADR-2026-10-20-028-small-parity-deviations.md)
 - [ADR-2026-10-20-029: Final parity run fixes (names, move message, PATCH messages, bare settings 400) and explorative allowlist](adr/ADR-2026-10-20-029-final-parity-run-fixes.md)
+- [ADR-2026-10-22-030: Access token audience is not validated by default](adr/ADR-2026-10-22-030-token-audience-handling.md)
 
 ### Constraints
 - [C2025-09-28-001: All UI text in German](constraints/C2025-09-28-001-german-ui.md)
