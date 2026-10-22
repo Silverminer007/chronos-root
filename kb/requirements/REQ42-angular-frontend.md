@@ -35,7 +35,7 @@ Die gesamte Oberfläche bleibt Deutsch.
 | F-10 | Einstellungen: Benachrichtigungen je Termin/Gruppe, Push aktivieren, Profil |
 | F-11 | Onboarding, „Neue Funktionen“-Dialog, PWA-Installationsdialog |
 | F-12 | Umfrage-Seite `/survey/:id` |
-| F-13 | Admin-Bereich `/admin`, `/admin/push` (nur Admin-Rolle) |
+| F-13 | Admin-Bereich `/admin`, `/admin/push`; Rollenprüfung nur im Backend (`ADMIN_API`), kein Frontend-Guard, Parität zu Nuxt (ADR-2026-10-21-013) |
 | F-14 | Web-Push: Service Worker empfängt Push, zeigt Benachrichtigung, Klick öffnet Termin |
 
 ## 4. Qualitätsanforderungen
