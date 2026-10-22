@@ -398,7 +398,6 @@ describe('Klick-Ziel und Aktion', () => {
     assert.equal(core.appointmentIdOf({}), undefined);
   });
   test('attendanceEndpoint', () => {
-    assert.equal(core.attendanceEndpoint('a1', 'APPROVED'), '/api/v2/appointments/a1/participants/approve');
-    assert.equal(core.attendanceEndpoint('a1', 'REJECTED'), '/api/v2/appointments/a1/participants/reject');
+    assert.equal(core.attendanceEndpoint('a1'), '/api/v2/appointments/a1/participation');
   });
 });

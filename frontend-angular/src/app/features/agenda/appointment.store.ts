@@ -161,11 +161,11 @@ export class AppointmentStore {
   }
 
   approveAppointment(id: number): Promise<void> {
-    return this.setOwnParticipation(id, 'approve', 'Fehler beim Zusagen');
+    return this.setOwnParticipation(id, 'APPROVED', 'Fehler beim Zusagen');
   }
 
   rejectAppointment(id: number): Promise<void> {
-    return this.setOwnParticipation(id, 'reject', 'Fehler beim Absagen');
+    return this.setOwnParticipation(id, 'REJECTED', 'Fehler beim Absagen');
   }
 
   addParticipant(id: number, userId: number, role: Role): Promise<void> {
@@ -252,10 +252,10 @@ export class AppointmentStore {
 
   private setOwnParticipation(
     id: number,
-    action: 'approve' | 'reject',
+    status: 'APPROVED' | 'REJECTED',
     fallback: string,
   ): Promise<void> {
-    return this.mutate(id, 'POST', `participants/${action}`, null, fallback);
+    return this.mutate(id, 'POST', 'participation', { status }, fallback);
   }
 
   /** Sendet die Änderung und lädt den Termin neu; Fehler setzen `error()` und werden weitergeworfen. */
