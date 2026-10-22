@@ -216,7 +216,6 @@ jobs:
           docker tag $IMAGE:$VERSION $IMAGE:latest
           docker push $IMAGE:latest
 
-
       - name: 🚀 Trigger Production Deployment
         if: github.ref == 'refs/heads/main'
         run: |
@@ -232,6 +231,4 @@ jobs:
                 "image":"${{env.IMAGE}}"
               }
             }'
-        working-directory: ${{ github.workspace }}
-
         working-directory: ${{ github.workspace }}
