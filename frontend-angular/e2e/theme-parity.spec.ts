@@ -37,6 +37,8 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     const radius = parseFloat(await css(page, '.appointment-card', 'border-top-left-radius'));
     expect(radius, 'Kartenrundung in px (erwartet >= 16)').toBeGreaterThanOrEqual(16);
     expect(await css(page, '.appointment-card', 'box-shadow'), 'Kartenschatten (erwartet vorhanden)').not.toBe('none');
+    expect(await css(page, '.appointment-card', 'background-color'), 'Termin-Karte weiß auf gray-50-Seite').toBe('rgb(255, 255, 255)');
+    expect(await css(page, 'body', 'background-color'), 'Agenda: Seitenhintergrund gray-50').toBe('rgb(249, 250, 251)');
   });
 
   test('Markenfarbe: --bs-primary ist Lila statt Bootstrap-Blau und Eingabefelder sind grau gefüllt', async ({ page }) => {
@@ -53,6 +55,73 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     });
     expect(input.bg, 'Eingabefeld grau gefüllt (erwartet gray-50)').toBe('rgb(249, 250, 251)');
     expect(input.radius, 'Eingabefeld-Rundung (erwartet >= 12)').toBeGreaterThanOrEqual(12);
+  });
+
+  // Konkrete Sollwerte (Nuxt): Karte weiß, Eingabe gray-50 in der weißen Karte, Seite gray-50, Gradient-Button weiße Schrift.
+  const WHITE = 'rgb(255, 255, 255)';
+  const GRAY_50 = 'rgb(249, 250, 251)';
+
+  test('Profil: echte Eingabefelder gray-50 in weißer Karte mit Rundung >= 12', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/user/linked-accounts*', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/v2/user/passkeys*', (route) => route.fulfill({ json: [] }));
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    const input = page.locator('.card input.form-control').first();
+    await expect(input).toBeVisible();
+    expect(await css(page, 'body', 'background-color'), 'Profil: Seitenhintergrund').toBe(GRAY_50);
+    expect(await css(page, '.card', 'background-color'), 'Profil: Karte weiß').toBe(WHITE);
+    expect(await input.evaluate((el) => getComputedStyle(el).backgroundColor), 'Profil: Eingabe gray-50').toBe(GRAY_50);
+    expect(await input.evaluate((el) => getComputedStyle(el).borderTopColor), 'Profil: Eingaberahmen gray-200').toBe('rgb(229, 231, 235)');
+    expect(parseFloat(await input.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)), 'Profil: Eingaberundung').toBeGreaterThanOrEqual(12);
+    expect(parseFloat(await css(page, '.card', 'border-top-left-radius')), 'Profil: Kartenrundung').toBeGreaterThanOrEqual(16);
+    expect(await css(page, '.card', 'box-shadow'), 'Profil: Kartenschatten').not.toBe('none');
+  });
+
+  test('Gruppen: weiße Karte mit Rundung/Schatten auf gray-50, Gradient-Button mit weißer Schrift', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/groups', (route) => route.fulfill({ json: [{ id: 5, name: 'Leiterrunde', members: [] }] }));
+    await page.goto('/groups', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Leiterrunde').first()).toBeVisible();
+    expect(await css(page, 'body', 'background-color'), 'Gruppen: Seitenhintergrund').toBe(GRAY_50);
+    expect(await css(page, '.card', 'background-color'), 'Gruppen: Karte weiß').toBe(WHITE);
+    expect(parseFloat(await css(page, '.card', 'border-top-left-radius')), 'Gruppen: Kartenrundung').toBeGreaterThanOrEqual(16);
+    expect(await css(page, '.card', 'box-shadow'), 'Gruppen: Kartenschatten').not.toBe('none');
+    const gradient = page.locator('.btn-gradient:visible').first();
+    await expect(gradient).toBeVisible();
+    expect(await gradient.evaluate((el) => getComputedStyle(el).color), 'btn-gradient: weiße Schrift').toBe(WHITE);
+    expect(await gradient.evaluate((el) => getComputedStyle(el).backgroundImage), 'btn-gradient: Verlauf').toContain('linear-gradient');
+  });
+
+  test('Freunde: weiße Karte bzw. gray-50-Seite, Tab-Leiste mit Gradient', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/friendships*', (route) =>
+      route.fulfill({ json: [{ id: 1, status: 'ACCEPTED', friend: { id: 2, first_name: 'Erika', last_name: 'Muster' } }] }),
+    );
+    await page.goto('/friends', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[role=tab]').first()).toBeVisible();
+    expect(await css(page, 'body', 'background-color'), 'Freunde: Seitenhintergrund').toBe(GRAY_50);
+    const card = page.locator('.card').first();
+    if (await card.count()) {
+      expect(await card.evaluate((el) => getComputedStyle(el).backgroundColor), 'Freunde: Karte weiß').toBe(WHITE);
+      expect(parseFloat(await card.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)), 'Freunde: Kartenrundung').toBeGreaterThanOrEqual(16);
+    }
+    expect(await css(page, '[role=tab][aria-selected=true]', 'color'), 'Freunde: aktiver Tab weiße Schrift').toBe(WHITE);
+  });
+
+  test('Einstellungen: weiße Karte auf gray-50, Schalter lila wenn aktiv, Speichern-Button weiße Schrift', async ({ page, baseURL }) => {
+    await mockSession(page, baseURL ?? '');
+    await page.route('**/api/v2/settings', (route) => route.fulfill({ status: 404, json: {} }));
+    await page.goto('/settings', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Terminbenachrichtigungen' })).toBeVisible();
+    expect(await css(page, 'body', 'background-color'), 'Einstellungen: Seitenhintergrund').toBe(GRAY_50);
+    expect(await css(page, '.card', 'background-color'), 'Einstellungen: Karte weiß').toBe(WHITE);
+    expect(parseFloat(await css(page, '.card', 'border-top-left-radius')), 'Einstellungen: Kartenrundung').toBeGreaterThanOrEqual(16);
+    expect(await css(page, '.card', 'box-shadow'), 'Einstellungen: Kartenschatten').not.toBe('none');
+    expect(await css(page, 'h1', 'color'), 'Einstellungen: Überschrift gray-900').toBe('rgb(17, 24, 39)');
+    const gradient = page.locator('.btn-gradient').first();
+    if (await gradient.isVisible()) {
+      expect(await gradient.evaluate((el) => getComputedStyle(el).color), 'Speichern: weiße Schrift').toBe(WHITE);
+    }
   });
 
   test('Dunkelmodus: Eingabe-Rahmen adaptiv, Fokus- und Validierungsrahmen bleiben erhalten', async ({ page }) => {
