@@ -13,8 +13,8 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /Terminplanung/ })).toBeVisible();
     expect(await css(page, 'body', 'background-color'), 'Seitenhintergrund (erwartet gray-50)').toBe('rgb(249, 250, 251)');
-    expect(await css(page, 'h2', 'color'), 'Überschrift (erwartet gray-900)').toBe('rgb(17, 24, 39)');
-    expect(await css(page, 'p', 'color'), 'Fließtext (erwartet gray-600)').toBe('rgb(75, 85, 99)');
+    expect(await css(page, '.glass-card h2', 'color'), 'Überschrift (erwartet gray-900)').toBe('rgb(17, 24, 39)');
+    expect(await css(page, '.glass-card p.text-body-secondary', 'color'), 'Fließtext (erwartet gray-600)').toBe('rgb(75, 85, 99)');
   });
 
   test('Agenda: Karte mit großer Rundung und Schatten', async ({ page, baseURL }) => {
