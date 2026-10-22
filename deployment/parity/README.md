@@ -103,7 +103,7 @@ deployment/parity/run-contract.sh --explore    # multi-user flows and error path
 ```
 
 Both modes apply `contract-tests/allowlist.json`; only Java defects (`java-defect (#162)`) may be in it. Entries of explorative steps
-are reported as `NOTE unused allowlist entry` by the plain harness run and vice versa. Result of the final run: `kb/architecture/ARCH-2026-10-20-002-rust-port-final-proof.md`.
+are reported as `NOTE unused allowlist entry` by the plain harness run and vice versa. Results: `kb/architecture/ARCH-2026-10-20-002-rust-port-final-proof.md`, latest on fresh `main` images: `kb/architecture/ARCH-2026-10-22-003-rust-port-proof-on-fresh-main-images.md`.
 
 Both databases must be fresh for a run (the scenario creates groups, appointments etc. and expects no earlier
 data); reset with `deployment/parity/reset-databases.sh` (drops and recreates both databases, restarts Keycloak and both
