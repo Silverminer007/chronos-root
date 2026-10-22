@@ -200,6 +200,18 @@ async fn java_schema_with_data_is_adopted_by_rust_migrations() -> Result<(), Any
         pool.execute(std::fs::read_to_string(&file)?.as_str())
             .await?;
     }
+    // A database that Flyway migrated also has its bookkeeping table (same definition as Flyway creates)
+    pool.execute(
+        "CREATE TABLE flyway_schema_history (
+            installed_rank INT NOT NULL, version VARCHAR(50), description VARCHAR(200) NOT NULL,
+            type VARCHAR(20) NOT NULL, script VARCHAR(1000) NOT NULL, checksum INT,
+            installed_by VARCHAR(100) NOT NULL, installed_on TIMESTAMP NOT NULL DEFAULT now(),
+            execution_time INT NOT NULL, success BOOLEAN NOT NULL);
+         ALTER TABLE flyway_schema_history
+            ADD CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank);
+         CREATE INDEX flyway_schema_history_s_idx ON flyway_schema_history (success);",
+    )
+    .await?;
     sqlx::query("INSERT INTO groups (groupname, owner_oidcid) VALUES ('kept', 'owner-1')")
         .execute(&pool)
         .await?;
@@ -224,7 +236,16 @@ async fn java_schema_with_data_is_adopted_by_rust_migrations() -> Result<(), Any
             .fetch_all(&pool)
             .await?;
     assert_eq!(versions, vec![1, 2]);
-    assert_same("adopted schema", &snapshot(&pool).await?, &expected());
+    let adopted: BTreeSet<String> = snapshot(&pool)
+        .await?
+        .into_iter()
+        .filter(|line| !line.contains("flyway_schema_history"))
+        .collect();
+    assert_same("adopted schema", &adopted, &expected());
+    let history_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM flyway_schema_history")
+        .fetch_one(&pool)
+        .await?;
+    assert_eq!(history_rows, 0, "Flyway's table is left untouched");
     Ok(())
 }
 
