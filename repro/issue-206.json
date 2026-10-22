@@ -1,0 +1,13 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/rsvp.spec.ts --project=chromium --reporter=line",
+  "description": "Agenda-Karte (Angular, gemockter BFF): Zusagen/Absagen muss POST /api/v2/appointments/{id}/participation mit {\"status\":\"APPROVED|REJECTED\"} senden. Der Mock verhält sich wie das Backend und antwortet auf /participants/approve|reject mit 400.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/rsvp.spec.ts"],
+  "failure_signature": "Zusage bestätigt",
+  "steps": [
+    "Angemeldet die Agenda (/agenda) mit einem Termin öffnen, bei dem die eigene Teilnahme PENDING ist",
+    "Auf der Termin-Karte „Zusagen“ bzw. „Absagen“ klicken"
+  ],
+  "expected": "POST /api/v2/appointments/1/participation mit {\"status\":\"APPROVED\"} bzw. {\"status\":\"REJECTED\"}; Toast „Zusage bestätigt“ bzw. „Absage registriert“",
+  "actual": "POST /api/v2/appointments/1/participants/approve|reject wird gesendet, Backend antwortet 400 „Ungültiger Request-Body“, es erscheint der Fehler-Toast und kein Erfolgs-Toast"
+}
