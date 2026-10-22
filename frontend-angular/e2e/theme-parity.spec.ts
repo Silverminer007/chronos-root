@@ -246,4 +246,28 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     expect(overflow.cards, 'Karten: scrollWidth <= clientWidth').toBe(0);
     expect(overflow.heading, 'Überschriften: scrollWidth <= clientWidth').toBe(0);
   });
+
+  // #219: Header-Logo wie Nuxt (`w-8 h-8 sm:w-10 sm:h-10`), ohne weißen Kasten und ohne Schatten.
+  for (const { width, size } of [{ width: 390, size: '32px' }, { width: 640, size: '40px' }]) {
+    test(`Header-Logo bei ${width}px: ${size} groß, ohne Kasten und Schatten`, async ({ page, baseURL }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await mockSession(page, baseURL ?? '');
+      await page.route('**/api/v2/appointments?**', (route) =>
+        route.fulfill({ json: { data: [], meta: { page: 0, size: 20, total: 0 } } }),
+      );
+      await page.goto('/agenda', { waitUntil: 'domcontentloaded' });
+      const logo = page.locator('header img.header-logo').first();
+      await expect(logo).toBeVisible();
+      const s = await logo.evaluate((el) => {
+        const c = getComputedStyle(el);
+        return { w: c.width, h: c.height, bg: c.backgroundColor, shadow: c.boxShadow, padding: c.padding, border: c.borderTopWidth };
+      });
+      expect(s.w, 'Logo-Breite').toBe(size);
+      expect(s.h, 'Logo-Höhe').toBe(size);
+      expect(s.bg, 'Logo ohne Hintergrund (kein weißer Kasten)').toBe('rgba(0, 0, 0, 0)');
+      expect(s.shadow, 'Logo ohne Schatten').toBe('none');
+      expect(s.padding, 'Logo ohne Innenabstand').toBe('0px');
+      expect(s.border, 'Logo ohne Rahmen').toBe('0px');
+    });
+  }
 });
