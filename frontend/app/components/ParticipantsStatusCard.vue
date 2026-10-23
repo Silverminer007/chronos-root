@@ -14,7 +14,7 @@ const {appointment} = defineProps<{
 }>();
 
 const showAddDialog = ref(false);
-const participantMenuRefs = ref<Record<number, InstanceType<typeof Menu> | null>>({});
+const participantMenuRefs = ref<Record<string, InstanceType<typeof Menu> | null>>({});
 
 const isResponsible = computed(() => {
   if (!appointment || !authStore.user?.id) return false;
@@ -23,7 +23,7 @@ const isResponsible = computed(() => {
   );
 });
 
-const handleAddParticipant = async (data: { id: number; role: string }) => {
+const handleAddParticipant = async (data: { id: string; role: string }) => {
   try {
     await appointmentsStore.addParticipant(appointment.id, data.id, data.role);
     toast.add({
@@ -42,7 +42,7 @@ const handleAddParticipant = async (data: { id: number; role: string }) => {
   }
 };
 
-const toggleParticipantMenu = (event: Event, userId: number) => {
+const toggleParticipantMenu = (event: Event, userId: string) => {
   participantMenuRefs.value[userId]?.toggle(event);
 };
 
@@ -68,7 +68,7 @@ const getParticipantMenuItems = (participant: UserParticipant) => {
   ];
 };
 
-const handleChangeRole = async (userId: number, role: string) => {
+const handleChangeRole = async (userId: string, role: string) => {
   try {
     await appointmentsStore.changeParticipantRole(appointment.id, userId, role);
     toast.add({

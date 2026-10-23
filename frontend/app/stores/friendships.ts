@@ -86,7 +86,7 @@ export const useFriendshipsStore = defineStore('friendships', {
             }
         },
 
-        async endFriendship(friendId: number) {
+        async endFriendship(friendId: string) {
             try {
                 await $fetch(`/api/v2/friendships/friends/${friendId}`, {
                     method: 'DELETE'

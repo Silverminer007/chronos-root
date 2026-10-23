@@ -8,7 +8,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  remove: [friendId: number];
+  remove: [friendId: string];
 }>();
 
 const showConfirmDialog = ref(false);

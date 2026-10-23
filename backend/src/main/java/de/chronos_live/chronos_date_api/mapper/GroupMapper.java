@@ -14,6 +14,7 @@ import java.util.List;
 public interface GroupMapper {
 
     @Mapping(target = "name", source = "groupName")
+    @Mapping(target = "teamId", source = "team.id")
     @Mapping(target = "members", source = "members")
     GroupDto toDto(Group group);
 
@@ -21,5 +22,7 @@ public interface GroupMapper {
 
     @Mapping(target = "groupName", source = "name")
     @Mapping(target = "members", source = "members")
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "team", ignore = true)
     Group toEntity(GroupDto dto);
 }

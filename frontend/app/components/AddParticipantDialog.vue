@@ -10,7 +10,7 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   close: [];
-  add: [data: { id: number; role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER' }];
+  add: [data: { id: string; role: 'ATTENDANT' | 'RESPONSIBLE' | 'GUEST' | 'HELPER' }];
 }>();
 
 const {searchFriends, loading: searching} = useFriends();
