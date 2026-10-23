@@ -14,9 +14,13 @@ Eigene Klassen in `_theme.scss`: `.install-title` (30 px, schmale Breite → zwe
 Icon), `.install-steps` (24-px-Ziffernkreis `.step-num`, Link fett lila ohne Unterstreichung). Die Ziffern stehen im
 Template als `<span class="step-num">`, native Listenziffern sind aus.
 
-## Offen
-Hintergrund der öffentlichen Seiten (Verlauf/Lichtfleck) und Header-Rahmen sind nicht Teil dieses Fixes; der
-Verlauf in `landing-layout` ist bereits diagonal Lila → Pink → Orange.
+## Hintergrund (Review #240)
+Am alten Frontend (`chronos.localhost:3301`, 390x844, Landing und Install) gemessen: `linear-gradient(to right bottom,
+purple-600 0 %, pink-500 50 %, orange-400 100 %)` (oklch), darüber ein Wrapper mit `opacity: 0.2`, darin zwei weiße
+Blobs (`mix-blend-mode: overlay`, `blur(24px)`, Puls 0,2–0,4). Farbstopps und Richtung waren im Angular-Layout
+gleich bzw. gleichwertig; abweichend war nur der fehlende Wrapper (Blobs wirkten mit 0,2–0,4 statt 0,04–0,08 zu
+hell, das ergab den „Lichtfleck“). `landing-layout` hat nun `.blobs { opacity: .2 }` und `to bottom right`.
+Der Header-Rahmen ist weiterhin nicht Teil dieses Fixes.
 
 ## Test
 `frontend-angular/e2e/install-page-parity.spec.ts` (getComputedStyle, 390x844).

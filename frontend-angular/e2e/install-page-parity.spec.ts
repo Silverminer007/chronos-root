@@ -87,3 +87,30 @@ test('Abschnittsüberschriften: 18 px, fett, dunkles Slate, lila Icon', async ({
   const [r, g, b] = await rgbOf(page, 'h3 i', 'color');
   expect(r > g && b > g, `Icon soll lila sein, ist rgb(${r}, ${g}, ${b})`).toBe(true);
 });
+
+// Review #240: Hintergrund der öffentlichen Seiten gegen das alte Frontend (chronos.localhost:3301, gemessen):
+// linear-gradient(to right bottom, purple-600 0%, pink-500 50%, orange-400 100%), Blobs in Wrapper mit opacity 0.2,
+// overlay, blur 24px.
+for (const path of ['/', '/public/install']) {
+  test(`Hintergrund ${path}: diagonaler Verlauf Lila → Pink → Orange mit abgeschwächten Overlay-Blobs`, async ({ page }) => {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    const bg = await page.locator('.landing-bg').evaluate((el) => {
+      const blobs = el.querySelector('.blobs')!;
+      const blob = el.querySelector('.blob')!;
+      return {
+        image: getComputedStyle(el).backgroundImage,
+        wrapperOpacity: getComputedStyle(blobs).opacity,
+        blend: getComputedStyle(blob).mixBlendMode,
+        filter: getComputedStyle(blob).filter,
+      };
+    });
+    expect(bg.image, 'Verlauf').toMatch(/^linear-gradient\((to right bottom|to bottom right|135deg)/);
+    expect(bg.image.match(/(rgb|oklch)\([^)]*\)/g)?.length, 'Farbstopps').toBe(3);
+    expect(bg.image, 'Lila').toContain('rgb(147, 51, 234)');
+    expect(bg.image, 'Pink').toContain('rgb(236, 72, 153)');
+    expect(bg.image, 'Orange').toContain('rgb(251, 146, 60)');
+    expect(bg.wrapperOpacity, 'Blob-Wrapper Deckkraft').toBe('0.2');
+    expect(bg.blend).toBe('overlay');
+    expect(bg.filter).toBe('blur(24px)');
+  });
+}
