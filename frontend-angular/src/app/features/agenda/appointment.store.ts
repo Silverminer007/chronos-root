@@ -157,7 +157,10 @@ export class AppointmentStore {
   }
 
   cancelAppointment(id: number): Promise<void> {
-    return this.mutate(id, 'POST', 'cancel', null, 'Fehler beim Absagen des Appointments');
+    return this.mutate(id, 'POST', 'cancel', null, 'Fehler beim Absagen des Appointments', (a) => ({
+      ...a,
+      status: 'CANCELLED',
+    }));
   }
 
   approveAppointment(id: number): Promise<void> {
@@ -209,13 +212,7 @@ export class AppointmentStore {
   }
 
   removeGroupParticipant(id: number, groupId: number): Promise<void> {
-    return this.mutate(
-      id,
-      'DELETE',
-      `groups/${groupId}`,
-      null,
-      'Fehler beim Entfernen der Gruppe',
-    );
+    return this.mutate(id, 'DELETE', `groups/${groupId}`, null, 'Fehler beim Entfernen der Gruppe');
   }
 
   sendMessage(id: number, body: string): Promise<void> {
@@ -260,7 +257,8 @@ export class AppointmentStore {
 
   /**
    * Sendet die Änderung und lädt den Termin neu. Fehler der Änderung setzen `error()` und werden weitergeworfen;
-   * ein scheiternder Reload gilt nicht als Fehler der Aktion (sie gelang) und wird nur in `error()` vermerkt.
+   * ein scheiternder Reload gilt nicht als Fehler der Aktion (sie gelang): er wird einmal still wiederholt und
+   * schlägt auch das fehl, schreibt `applyLocally` (sofern angegeben) den Zustand lokal fort.
    */
   private async mutate(
     id: number,
@@ -268,6 +266,7 @@ export class AppointmentStore {
     path: string,
     body: unknown,
     fallback: string,
+    applyLocally?: (appointment: Appointment) => Appointment,
   ): Promise<void> {
     try {
       await firstValueFrom(this.http.request(method, `${API}/${id}/${path}`, { body }));
@@ -275,6 +274,20 @@ export class AppointmentStore {
       this.error.set(getErrorMessage(err, fallback));
       throw err;
     }
-    await this.fetchAppointment(id).catch(() => undefined);
+    try {
+      await this.fetchAppointment(id);
+    } catch {
+      try {
+        await this.fetchAppointment(id);
+      } catch {
+        if (applyLocally) this.patchLocally(id, applyLocally);
+      }
+    }
+  }
+
+  private patchLocally(id: number, apply: (appointment: Appointment) => Appointment): void {
+    this.appointments.update((list) => list.map((a) => (a.id === id ? apply(a) : a)));
+    const current = this.currentAppointment();
+    if (current?.id === id) this.currentAppointment.set(apply(current));
   }
 }

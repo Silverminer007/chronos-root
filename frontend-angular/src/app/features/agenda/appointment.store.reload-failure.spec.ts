@@ -1,6 +1,7 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Appointment } from '../../core/models';
 import { AppointmentStore } from './appointment.store';
 
 const DETAIL = '/api/v2/appointments/351?participants=true&messages=true&group_participants=true';
@@ -36,7 +37,9 @@ describe('AppointmentStore: Aktion gelingt, Neuladen scheitert (#246)', () => {
       http
         .expectOne({ method: 'POST', url: `/api/v2/appointments/351/${path}` })
         .flush(null, { status: 200, statusText: 'OK' });
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r));
+      http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
+      await new Promise((r) => setTimeout(r));
       http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
 
       let thrown: unknown = null;
@@ -49,4 +52,21 @@ describe('AppointmentStore: Aktion gelingt, Neuladen scheitert (#246)', () => {
       ).toBeNull();
     });
   }
+
+  it('cancelAppointment: schreibt den Status lokal fort, wenn auch der Retry scheitert', async () => {
+    const base = { id: 351, status: 'PLANNED' } as Appointment;
+    store.appointments.set([base]);
+    store.currentAppointment.set(base);
+    const result = store.cancelAppointment(351);
+    http
+      .expectOne({ method: 'POST', url: '/api/v2/appointments/351/cancel' })
+      .flush(null, { status: 200, statusText: 'OK' });
+    await new Promise((r) => setTimeout(r));
+    http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
+    await new Promise((r) => setTimeout(r));
+    http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
+    await result;
+    expect(store.currentAppointment()?.status).toBe('CANCELLED');
+    expect(store.appointments()[0].status).toBe('CANCELLED');
+  });
 });
