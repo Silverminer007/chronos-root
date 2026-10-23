@@ -1,0 +1,10 @@
+{
+  "command": "cd rust-backend && TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://postgres:postgres@localhost:5432} timeout 1200 cargo test --test cancelled_appointment_access_test -- --include-ignored",
+  "description": "Rust-Backend, Router-Integrationstest gegen PostgreSQL: Termin anlegen, absagen, dann GET (mit/ohne Einbettungen) und PATCH; zusätzlich Kontrolle, dass ein gelöschter Termin 404 liefert.",
+  "kind": "integration",
+  "files": ["rust-backend/tests/cancelled_appointment_access_test.rs"],
+  "failure_signature": "GET detail of CANCELLED",
+  "steps": ["Termin anlegen", "POST /api/v2/appointments/{id}/cancel (200)", "GET /api/v2/appointments/{id}?participants=true&messages=true&group_participants=true", "GET /api/v2/appointments/{id}", "PATCH /api/v2/appointments/{id}", "Kontrolle: nach DELETE liefert GET 404"],
+  "expected": "GET und PATCH auf CANCELLED-Termin: 200 (Status CANCELLED); auf DELETED-Termin: 404",
+  "actual": "GET und PATCH auf CANCELLED-Termin: 404 RESOURCE_NOT_FOUND"
+}
