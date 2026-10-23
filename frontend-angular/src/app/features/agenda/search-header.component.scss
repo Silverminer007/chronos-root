@@ -1,0 +1,33 @@
+.header-row {
+  height: 4rem;
+}
+
+.search-box {
+  max-width: 42rem;
+}
+
+.user-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.user-menu {
+  min-width: 14rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+// Wie Nuxt: `w-8 h-8 sm:w-10 sm:h-10 rounded-lg`, ohne Kasten.
+.header-logo {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+
+  @media (min-width: 576px) {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}

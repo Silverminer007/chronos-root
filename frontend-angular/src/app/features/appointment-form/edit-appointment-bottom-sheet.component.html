@@ -1,0 +1,187 @@
+@if (open()) {
+  <div
+    class="sheet-backdrop position-fixed top-0 start-0 w-100 h-100"
+    aria-hidden="true"
+    (click)="close()"
+  ></div>
+  <div
+    class="sheet position-fixed bottom-0 start-0 end-0 bg-body rounded-top-4 shadow-lg d-flex flex-column"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="edit-appointment-title"
+    (keydown.escape)="close()"
+  >
+    <div class="d-flex justify-content-center pt-3 pb-1 flex-shrink-0">
+      <div class="handle"></div>
+    </div>
+    <div
+      class="d-flex align-items-center justify-content-between px-4 py-2 border-bottom flex-shrink-0"
+    >
+      <h2 class="h5 fw-bold mb-0" id="edit-appointment-title">Termin bearbeiten</h2>
+      <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
+    </div>
+
+    <form
+      class="flex-grow-1 overflow-y-auto px-4 py-4 d-flex flex-column gap-3"
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+    >
+      <input
+        type="text"
+        class="form-control form-control-lg fw-bold"
+        aria-label="Terminname"
+        placeholder="Terminname…"
+        formControlName="name"
+      />
+      <textarea
+        rows="3"
+        class="form-control"
+        aria-label="Beschreibung"
+        placeholder="Beschreibung…"
+        formControlName="description"
+      ></textarea>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+        <input
+          type="text"
+          class="form-control"
+          aria-label="Ort"
+          placeholder="Ort…"
+          formControlName="venue"
+        />
+      </div>
+
+      <div>
+        <label
+          for="edit-start"
+          class="form-label small fw-semibold text-uppercase text-body-secondary"
+          >Start</label
+        >
+        <input id="edit-start" type="datetime-local" class="form-control" formControlName="start" />
+      </div>
+
+      <div>
+        <span class="form-label small fw-semibold text-uppercase text-body-secondary d-block"
+          >Dauer</span
+        >
+        <div class="d-flex flex-wrap gap-2">
+          @for (chip of durationChips; track chip.minutes) {
+            <button
+              type="button"
+              class="btn btn-sm rounded-pill"
+              [class]="
+                !form.controls.customDuration.value &&
+                form.controls.durationMinutes.value === chip.minutes
+                  ? 'btn-primary'
+                  : 'btn-outline-secondary'
+              "
+              (click)="selectDuration(chip.minutes)"
+            >
+              {{ chip.label }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn btn-sm rounded-pill"
+            [class]="form.controls.customDuration.value ? 'btn-primary' : 'btn-outline-secondary'"
+            (click)="toggleCustomDuration()"
+          >
+            Eigene…
+          </button>
+        </div>
+        @if (form.controls.customDuration.value) {
+          <div class="mt-3 d-flex flex-column gap-2">
+            <div class="btn-group" role="group" aria-label="Einheit">
+              @for (unit of durationUnits; track unit.value) {
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  [class]="
+                    form.controls.customUnit.value === unit.value
+                      ? 'btn-primary'
+                      : 'btn-outline-secondary'
+                  "
+                  (click)="form.controls.customUnit.setValue(unit.value)"
+                >
+                  {{ unit.label }}
+                </button>
+              }
+            </div>
+            <input
+              type="number"
+              min="1"
+              class="form-control"
+              aria-label="Eigene Dauer"
+              formControlName="customValue"
+            />
+          </div>
+        }
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="fw-medium mb-0">Teilnehmer</p>
+          <button
+            type="button"
+            class="btn btn-link p-0 small text-body-secondary text-decoration-none"
+            role="switch"
+            [attr.aria-checked]="form.controls.hasAttendees.value"
+            (click)="toggleAttendees()"
+          >
+            Mindestteilnehmer festlegen
+          </button>
+        </div>
+        <div class="form-check form-switch m-0">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            role="switch"
+            aria-label="Mindestteilnehmer festlegen"
+            formControlName="hasAttendees"
+          />
+        </div>
+      </div>
+      @if (form.controls.hasAttendees.value) {
+        <div class="d-flex align-items-center gap-3 px-3 py-2 rounded-3 bg-primary-subtle">
+          <span class="small fw-medium">Mindestteilnehmer</span>
+          <div class="d-flex align-items-center gap-3 ms-auto">
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-sm rounded-circle count-btn"
+              aria-label="Weniger"
+              (click)="changeMinimalAttendees(-1)"
+            >
+              −
+            </button>
+            <span class="fw-bold fs-5 count" aria-live="polite">{{
+              form.controls.minimalAttendees.value
+            }}</span>
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-sm rounded-circle count-btn"
+              aria-label="Mehr"
+              (click)="changeMinimalAttendees(1)"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      }
+    </form>
+
+    <div class="d-flex gap-3 px-4 py-3 border-top flex-shrink-0 footer-safe">
+      <button type="button" class="btn btn-light btn-lg" (click)="close()">Abbrechen</button>
+      <button
+        type="button"
+        class="btn btn-gradient btn-lg flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+        [disabled]="!isValid() || !hasChanges() || saving()"
+        (click)="submit()"
+      >
+        @if (saving()) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        }
+        <span>{{ saving() ? 'Speichere…' : 'Speichern' }}</span>
+      </button>
+    </div>
+  </div>
+}

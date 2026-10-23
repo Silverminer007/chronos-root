@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/install-page-parity.spec.ts --project=chromium --reporter=line",
+  "description": "Angular /public/install bei 390x844 gegen die berechneten Werte des alten Frontends prüfen: Überschrift (30 px, zweizeilig, Untertitel <= 340 px), helles Badge 'Dein Browser', runde Ziffernkreise statt nativer ol-Ziffern, App-Link fett ohne Unterstreichung, Abschnittsüberschriften 18 px mit lila Icon.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/install-page-parity.spec.ts"],
+  "failure_signature": "Überschrift Schriftgröße",
+  "steps": ["Viewport 390x844, /public/install öffnen (Chrome-User-Agent)", "h1, Untertitel, Badge 'Dein Browser', erste Schrittliste, App-Link und h3 per getComputedStyle auslesen"],
+  "expected": "h1 30 px in zwei Zeilen, Untertitel <= 340 px; Badge hell mit lila Schrift, Gewicht <= 500; 3 runde 24-px-Ziffernkreise ohne native Listenziffern; Link fett (>=600) ohne Unterstreichung; h3 18 px, fett, lila Icon",
+  "actual": "h1 30.99 px (display-5) statt 30 px; Badge volles Lila (dunkel) mit weißer fetter Schrift; keine Ziffernkreise, native ol-Ziffern; App-Link unterstrichen, normales Gewicht; h3 16 px statt 18 px, Icon nicht lila"
+}

@@ -1,0 +1,87 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="admin mx-auto pt-4">
+    <div class="mb-4">
+      <a routerLink="/admin" class="small d-inline-flex align-items-center gap-1 mb-2">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>Zurück
+      </a>
+      <h1 class="h2 fw-bold mb-1">Push-Benachrichtigungen</h1>
+      <p class="text-body-secondary mb-0">Protokoll aller gesendeten Push-Nachrichten</p>
+    </div>
+
+    <div class="card p-4 mb-4">
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-6">
+          <label for="filter-user" class="form-label small fw-medium">User ID</label>
+          <input id="filter-user" class="form-control" type="number" placeholder="User ID" [ngModel]="filterUserId()" (ngModelChange)="filterUserId.set($event)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label for="filter-type" class="form-label small fw-medium">Benachrichtigungstyp</label>
+          <input id="filter-type" class="form-control" placeholder="z.B. appointment" [ngModel]="filterType()" (ngModelChange)="filterType.set($event)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label for="filter-from" class="form-label small fw-medium">Von</label>
+          <input id="filter-from" class="form-control" type="date" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label for="filter-to" class="form-label small fw-medium">Bis</label>
+          <input id="filter-to" class="form-control" type="date" [min]="filterFrom() || null" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" />
+        </div>
+      </div>
+      <div>
+        <span class="form-label small fw-medium d-block">Status</span>
+        <div class="btn-group" role="group" aria-label="Status">
+          @for (option of statusFilters; track option.value) {
+            <button type="button" class="btn btn-sm" [class]="filterStatus() === option.value ? 'btn-primary' : 'btn-outline-secondary'" [attr.aria-pressed]="filterStatus() === option.value" (click)="filterStatus.set(option.value)">{{ option.label }}</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="text-center py-5" role="status">
+        <span class="spinner-border text-primary mb-3" aria-hidden="true"></span>
+        <p class="text-body-secondary mb-0">Wird geladen...</p>
+      </div>
+    } @else if (error(); as message) {
+      <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
+        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <div>
+          <p class="fw-semibold mb-0">Fehler beim Laden</p>
+          <p class="small mb-0">{{ message }}</p>
+        </div>
+      </div>
+    } @else if (filtered().length > 0) {
+      <ul class="card list-group list-group-flush">
+        @for (entry of filtered(); track entry.id) {
+          @let payload = parsePayload(entry.payload);
+          <li class="log-entry list-group-item d-flex align-items-start gap-3 px-4 py-3">
+            <i class="bi fs-5" [class]="entry.success ? 'bi-check-circle text-success' : 'bi-x-circle text-danger'" aria-hidden="true"></i>
+            <div class="flex-grow-1 min-w-0">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <p class="fw-medium mb-0 text-truncate">{{ payload.title || 'Ohne Titel' }}</p>
+                <span class="badge rounded-pill text-bg-primary">User {{ entry.user_id }}</span>
+                <span class="badge rounded-pill text-bg-secondary">{{ entry.notification_type ?? '—' }}</span>
+                <span class="badge rounded-pill" [class]="entry.success ? 'text-bg-success' : 'text-bg-danger'">{{ entry.status_code }}</span>
+              </div>
+              @if (payload.body) {
+                <p class="small text-body-secondary mt-1 mb-0 text-truncate">{{ payload.body }}</p>
+              }
+              @if (entry.error_message) {
+                <p class="small text-danger mt-1 mb-0">{{ entry.error_message }}</p>
+              }
+            </div>
+            <span class="small text-body-secondary flex-shrink-0">{{ formatRelativeTime(entry.created_at) }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="text-center py-5 px-3">
+        <div class="icon-tile rounded-circle mx-auto mb-3 empty-icon"><i class="bi bi-bell-slash fs-2" aria-hidden="true"></i></div>
+        <h3 class="h4 fw-bold mb-2">Keine Einträge</h3>
+        <p class="text-body-secondary mb-0">Es wurden keine Push-Benachrichtigungen gefunden.</p>
+      </div>
+    }
+  </div>
+</main>

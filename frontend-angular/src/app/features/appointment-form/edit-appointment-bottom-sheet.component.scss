@@ -1,0 +1,50 @@
+:host {
+  display: contents;
+}
+
+.sheet-backdrop {
+  z-index: 1050;
+  background: rgb(0 0 0 / 50%);
+  backdrop-filter: blur(2px);
+}
+
+.sheet {
+  z-index: 1055;
+  max-height: 90dvh;
+  animation: slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  border-radius: 1rem;
+  background: var(--bs-secondary-bg);
+}
+
+.count-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.count {
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.footer-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}

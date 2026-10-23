@@ -1,0 +1,70 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="settings mx-auto pt-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h1 class="h2 fw-bold mb-1">Einstellungen</h1>
+        <p class="text-body-secondary mb-0">
+          {{ pushAvailable ? 'Verwalte deine Benachrichtigungseinstellungen' : 'Push Benachrichtigungen sind in deinem Browser nicht verfügbar' }}
+        </p>
+      </div>
+      @if (pushAvailable) {
+        <button
+          type="button"
+          class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2"
+          [disabled]="store.saving()"
+          (click)="save()"
+        >
+          @if (store.saving()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          } @else {
+            <i class="bi bi-floppy" aria-hidden="true"></i>
+          }
+          <span>Speichern</span>
+        </button>
+      }
+    </div>
+
+    @if (pushAvailable) {
+      @if (store.loading()) {
+        <div class="text-center py-5" role="status">
+          <span class="spinner-border text-primary mb-3" aria-hidden="true"></span>
+          <p class="text-body-secondary mb-0">Wird geladen...</p>
+        </div>
+      } @else if (store.error() && !store.settings()) {
+        <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
+          <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+          <div>
+            <p class="fw-semibold mb-0">Fehler beim Laden</p>
+            <p class="small mb-0">{{ store.error() }}</p>
+          </div>
+        </div>
+      } @else {
+        <div class="d-flex flex-column gap-4">
+          <app-notification-push-card [enabled]="pushEnabled()" [permission]="push.permission()" (toggled)="togglePush()" />
+          @if (store.settings(); as settings) {
+            <app-notification-appointment-settings-card [settings]="settings" (update)="updateSetting($event)" />
+            <app-notification-group-settings-card [settings]="settings" (update)="updateSetting($event)" />
+          }
+        </div>
+      }
+    }
+  </div>
+</main>
+
+@if (pushAvailable) {
+  <button
+    type="button"
+    class="btn btn-gradient rounded-circle shadow-lg d-sm-none fab"
+    aria-label="Speichern"
+    [disabled]="store.saving()"
+    (click)="save()"
+  >
+    @if (store.saving()) {
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    } @else {
+      <i class="bi bi-floppy fs-5" aria-hidden="true"></i>
+    }
+  </button>
+}

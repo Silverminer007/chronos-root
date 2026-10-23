@@ -1,0 +1,14 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && timeout 500 npx ng build && (npx playwright install chromium >/dev/null 2>&1; timeout 300 npx playwright test e2e/agenda-message-button.spec.ts --project=chromium --reporter=line)",
+  "description": "Die Agenda-Karte hat nur Zusagen und Absagen, aber keinen Nachricht-Button (Papierflieger), der den MessageDialog des Termins öffnet.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/agenda-message-button.spec.ts"],
+  "failure_signature": "getByRole('button', { name: /Nachricht/ })",
+  "steps": [
+    "Mit gemockter Sitzung /agenda öffnen",
+    "Auf der Karte 'Zeltlager' nach einem Button 'Nachricht' suchen und klicken",
+    "Im Dialog Text eingeben und senden"
+  ],
+  "expected": "Karte zeigt Zusagen, Nachricht, Absagen; der Nachricht-Button öffnet den MessageDialog für den Termin der Karte und sendet POST /appointments/2/messages {\"body\":...}.",
+  "actual": "Auf der Karte existiert kein Nachricht-Button; der Klick läuft in den Timeout."
+}

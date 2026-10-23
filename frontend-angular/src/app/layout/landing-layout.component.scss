@@ -1,0 +1,71 @@
+@use '../../styles/variables' as *;
+
+// Animierter Farbverlauf-Hintergrund der öffentlichen Seiten (Hell: purple-600 → pink-500 → orange-400).
+.landing {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom right, $brand-purple, $brand-pink, #fb923c);
+}
+
+:host-context([data-bs-theme='dark']) .landing-bg {
+  background: linear-gradient(to bottom right, #581c87, #831843, #7c2d12);
+}
+
+// Wie im alten Frontend: Blobs liegen in einem Wrapper mit Deckkraft 0,2 (effektiv 0,04–0,08).
+.blobs {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  filter: blur(24px);
+  mix-blend-mode: overlay;
+  opacity: 0.2;
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.blob-left {
+  top: 5rem;
+  left: 2.5rem;
+  width: 18rem;
+  height: 18rem;
+}
+
+.blob-right {
+  bottom: 5rem;
+  right: 2.5rem;
+  width: 24rem;
+  height: 24rem;
+  animation-delay: 1s;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    animation: none;
+  }
+}
+
+.landing-content {
+  position: relative;
+  z-index: 1;
+}

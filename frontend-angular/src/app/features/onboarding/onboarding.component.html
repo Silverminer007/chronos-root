@@ -1,0 +1,55 @@
+<div class="blob blob-top" aria-hidden="true"></div>
+<div class="blob blob-bottom" aria-hidden="true"></div>
+
+<main class="content d-flex flex-column align-items-center justify-content-center px-3 py-5">
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <img src="/icons/icon.png" alt="Chronos Logo" class="logo rounded shadow" />
+    <span class="fs-4 fw-bold text-white">Chronos</span>
+  </div>
+
+  <div class="d-flex gap-2 mb-4" role="group" aria-label="Schritte">
+    @for (s of steps; track $index) {
+      <button
+        type="button"
+        class="dot"
+        [class.active]="$index === currentStep()"
+        [attr.aria-label]="'Schritt ' + ($index + 1)"
+        [attr.aria-current]="$index === currentStep() ? 'step' : null"
+        (click)="currentStep.set($index)"
+      ></button>
+    }
+  </div>
+
+  <div class="glass-card step-card shadow-lg text-center p-4 p-sm-5">
+    <span class="icon-tile step-icon mx-auto mb-4" aria-hidden="true">@if (step().icon === 'party-popper') {
+      <!-- Konfetti-Symbol (Lucide `party-popper`, wie im alten Frontend); Bootstrap Icons hat keins. -->
+      <svg class="confetti-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.8 11.3 2 22l10.7-3.79" /><path d="M4 3h.01" /><path d="M22 8h.01" /><path d="M15 2h.01" /><path d="M22 20h.01" />
+        <path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" />
+        <path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17" />
+        <path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7" />
+        <path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />
+      </svg>
+    } @else {
+      <i class="bi fs-2" [class]="step().icon"></i>
+    }
+    </span>
+    <h1 class="h2 fw-bold mb-3">{{ step().title }}</h1>
+    <p class="fs-5 text-body-secondary mb-0">{{ step().description }}</p>
+  </div>
+
+  <div class="d-flex align-items-center gap-3 mt-4">
+    @if (currentStep() > 0) {
+      <button type="button" class="btn btn-outline-light" (click)="previous()">Zurück</button>
+    }
+    @if (isLast()) {
+      <button type="button" class="btn btn-onboarding fw-semibold px-4 shadow-lg" (click)="complete()">Loslegen</button>
+    } @else {
+      <button type="button" class="btn btn-onboarding fw-semibold px-4 shadow-lg" (click)="next()">Weiter</button>
+    }
+  </div>
+
+  @if (!isLast()) {
+    <button type="button" class="btn btn-link btn-sm text-white-50 text-decoration-none mt-3" (click)="complete()">Überspringen</button>
+  }
+</main>

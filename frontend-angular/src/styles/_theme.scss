@@ -1,0 +1,455 @@
+@use 'variables' as *;
+
+// Markenfarbe als Gradient (Lila → Pink).
+.text-gradient {
+  background: $brand-gradient;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-gradient-brand {
+  background: $brand-gradient;
+  color: #fff;
+}
+
+.btn-gradient {
+  background: $brand-gradient;
+  border: 0;
+  color: #fff;
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+    filter: brightness(1.1);
+  }
+}
+
+// Blau-Violett-Variante (Nuxt: `bg-linear-to-r from-blue-600 to-indigo-500`), z. B. Gruppendetail.
+.btn-gradient-blue {
+  background: linear-gradient(90deg, #2563eb, #6366f1);
+}
+
+// Halbtransparente Karte der öffentlichen Seiten (Nuxt: `bg-white/90 border-2 border-purple-200 rounded-xl`).
+.glass-card {
+  background-color: rgba(var(--bs-body-bg-rgb), 0.9);
+  border: 2px solid #e9d5ff; // purple-200
+  border-radius: var(--bs-border-radius-xxl);
+  backdrop-filter: blur(4px);
+}
+
+// Hinweis auf fehlende Konfiguration (Nuxt: `text-amber-600`).
+.config-missing {
+  color: #d97706;
+}
+
+[data-bs-theme='dark'] .glass-card {
+  border-color: $brand-purple;
+}
+
+// Hervorgehobenes Icon-Feld (Nuxt: `bg-linear-to-br from-purple-100 to-pink-100`).
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--bs-border-radius-lg);
+  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+  color: $brand-purple;
+}
+
+[data-bs-theme='dark'] .icon-tile {
+  background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+}
+
+// Blaue Variante der Kachel (Nuxt: `from-blue-100 to-indigo-100`, Icon `text-blue-600`), z. B. Gruppendetail.
+.icon-tile-blue {
+  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+  color: #2563eb;
+}
+
+[data-bs-theme='dark'] .icon-tile-blue {
+  background: linear-gradient(135deg, rgba(#2563eb, 0.3), rgba(#6366f1, 0.3));
+}
+
+// Knöpfe im Verlaufskopf (Nuxt: `bg-white/20 text-white`, Glas-Optik).
+.btn-glass {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  --bs-btn-bg: rgba(255, 255, 255, 0.2);
+  --bs-btn-hover-bg: rgba(255, 255, 255, 0.3);
+  --bs-btn-active-bg: rgba(255, 255, 255, 0.3);
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-border-color: transparent;
+}
+
+// Zusagen/Absagen (Nuxt: `border-2 border-green-600 text-green-600 rounded-lg`, aktiv `bg-green-600 text-white`).
+@mixin participation-button($name, $color, $hover-bg, $dark-color) {
+  .btn-#{$name} {
+    --bs-btn-border-width: 2px;
+    --bs-btn-border-radius: 0.5rem;
+    --bs-btn-color: #{$color};
+    --bs-btn-border-color: #{$color};
+    --bs-btn-hover-color: #{$color};
+    --bs-btn-hover-bg: #{$hover-bg};
+    --bs-btn-hover-border-color: #{$color};
+    --bs-btn-active-color: #{$color};
+    --bs-btn-active-bg: #{$hover-bg};
+    --bs-btn-active-border-color: #{$color};
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #{$color};
+    --bs-btn-disabled-border-color: #{$color};
+    --bs-btn-disabled-opacity: 1;
+  }
+
+  [data-bs-theme='dark'] .btn-#{$name} {
+    --bs-btn-color: #{$dark-color};
+    --bs-btn-border-color: #{$dark-color};
+    --bs-btn-hover-color: #{$dark-color};
+    --bs-btn-hover-bg: #{rgba($color, 0.2)};
+    --bs-btn-hover-border-color: #{$dark-color};
+    --bs-btn-active-color: #{$dark-color};
+    --bs-btn-active-bg: #{rgba($color, 0.2)};
+    --bs-btn-active-border-color: #{$dark-color};
+  }
+}
+
+@include participation-button(approve, #16a34a, #f0fdf4, #22c55e);
+@include participation-button(reject, #dc2626, #fef2f2, #ef4444);
+
+// Hinweisbox „Bitte bestätige deine Teilnahme“ (Nuxt: `bg-yellow-50 border border-yellow-200 rounded-lg`, Text yellow-900/-700).
+.alert-pending {
+  --bs-alert-bg: #fefce8;
+  --bs-alert-border-color: #fef08a;
+  --bs-alert-color: #a16207;
+  --bs-alert-border-radius: 0.5rem;
+
+  .alert-pending-title {
+    color: #713f12;
+  }
+
+  .bi {
+    color: #ca8a04;
+  }
+}
+
+[data-bs-theme='dark'] .alert-pending {
+  --bs-alert-bg: #{rgba(#713f12, 0.2)};
+  --bs-alert-border-color: #854d0e;
+  --bs-alert-color: #fde047;
+
+  .alert-pending-title {
+    color: #fef08a;
+  }
+
+  .bi {
+    color: #facc15;
+  }
+}
+
+// Quadratischer Plus-Knopf (Nuxt: `w-8 h-8 rounded-lg bg-linear-to-r from-purple-600 to-pink-500`).
+.btn-icon-square {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  --bs-btn-border-radius: 0.5rem;
+}
+
+// Kleine Überschrift-Pille über den Seitentiteln.
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 50rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+// Inhaltsbreite der öffentlichen Textseiten (Nuxt: `max-w-4xl`).
+.page-width {
+  max-width: 56rem;
+}
+
+// Termin-Karten (Landing-Demo und Agenda): zwei Zeilen Beschreibung, überlappende Avatare.
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.avatar-stack .avatar + .avatar {
+  margin-left: -0.5rem;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 2px solid var(--bs-body-bg);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+  color: $brand-purple;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.avatar-more {
+  background: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+}
+
+[data-bs-theme='dark'] .avatar:not(.avatar-more) {
+  background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+}
+
+// Deaktivierte Zu-/Absage-Schaltfläche bleibt voll sichtbar (Nuxt: `opacity: 1`), sie zeigt den gewählten Stand.
+.appointment-actions .btn:disabled {
+  opacity: 1;
+}
+
+// Zeilenumbrüche in Freitexten (Beschreibung, Nachrichten) erhalten.
+.text-pre-wrap {
+  white-space: pre-wrap;
+}
+
+// Weiße Flächen (Karte, Modal, Dropdown, Offcanvas) auf grauem Seitenhintergrund; Bootstrap leitet sie sonst von
+// `$body-bg` (gray-50) ab. Nur hell; dunkel bleibt bei `--bs-body-bg`.
+:root:not([data-bs-theme='dark']) .card,
+:root:not([data-bs-theme='dark']) .modal,
+:root:not([data-bs-theme='dark']) .dropdown-menu,
+:root:not([data-bs-theme='dark']) .offcanvas {
+  --bs-card-bg: #fff;
+  --bs-modal-bg: #fff;
+  --bs-dropdown-bg: #fff;
+  --bs-offcanvas-bg: #fff;
+}
+
+// Karten und Eingabefelder wie im Nuxt-Frontend: Schatten, grau gefüllte Felder (nur hell; dunkel bleibt Bootstrap).
+.card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.form-control,
+.form-select {
+  background-color: $gray-50;
+}
+
+[data-bs-theme='dark'] .form-control,
+[data-bs-theme='dark'] .form-select {
+  background-color: var(--bs-body-bg);
+}
+
+// Sekundär-/Auswahlbuttons wie im Nuxt-Frontend: Markenlila, Rahmen purple-200, transluzente Füllung bei Hover.
+// Ausgewählt (`.active`, `.btn-check:checked + .btn`, `:active`) nutzt dieselben Bootstrap-Variablen: lila Rahmen
+// und transluzente lila Füllung. Gesetzt wird nur über `--bs-btn-*` von `.btn-outline-primary`; gefüllte Buttons
+// (`.btn-primary`, `.btn-success`, ...) bleiben unberührt.
+.btn-outline-primary {
+  --bs-btn-color: #{$brand-purple};
+  --bs-btn-border-color: #e9d5ff; // purple-200
+  --bs-btn-hover-color: #{$brand-purple};
+  --bs-btn-hover-bg: #{rgba($brand-purple, 0.1)};
+  --bs-btn-hover-border-color: #{$brand-purple};
+  --bs-btn-focus-shadow-rgb: 147, 51, 234;
+  --bs-btn-active-color: #{$brand-purple};
+  --bs-btn-active-bg: #{rgba($brand-purple, 0.1)};
+  --bs-btn-active-border-color: #{$brand-purple};
+  --bs-btn-disabled-color: #{$brand-purple};
+  --bs-btn-disabled-border-color: #e9d5ff;
+}
+
+// Tab-Badges (Freunde/Anfragen): transluzent lila bzw. transluzent weiß auf dem Gradient-Tab.
+.badge-soft {
+  background-color: rgba($brand-purple, 0.1);
+  color: $brand-purple;
+}
+
+.badge-on-brand {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+// Kartenüberschriften: 18 px wie Nuxt `text-lg` (Bootstrap `.h5` wäre 20 px und bricht auf 390 px mitten im Wort um).
+.card-heading {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  overflow-wrap: break-word;
+}
+
+// Dialoge wie im Nuxt-Frontend: fetter Titel (18 px), Footer-Buttons untereinander in voller Breite
+// (Primäraktion oben), 16 px Rand links/rechts, größere Rundung. Gilt für alle Bootstrap-Modals.
+.modal {
+  --bs-modal-border-radius: 1rem;
+  --bs-modal-margin: 1rem;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.modal-footer {
+  // DOM-Reihenfolge: Abbrechen, Primäraktion; umgekehrt dargestellt steht die Primäraktion oben (unabhängig von der Farbvariante).
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 0.75rem;
+
+  > .btn {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+// Eingabefelder in Dialogen: 52 px hoch, 2-px-Rahmen in Grau (gray-200), Icon links über `.input-group`.
+.modal .form-control {
+  min-height: 3.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+}
+
+.modal .input-group-text {
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.modal .input-group > .form-control:not(:first-child) {
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+// Platzhalter im Anlegen-/Bearbeiten-Stepper hellgrau wie im alten Frontend (gray-300).
+.line-input::placeholder {
+  color: #d1d5db; // gray-300
+}
+
+// Rechtstext-Karten (Impressum/Datenschutz): 16 px Rundung wie im alten Frontend (Nuxt: `rounded-2xl`, `p-6`).
+.glass-card.legal-card {
+  border-radius: var(--bs-border-radius-xl);
+}
+
+// Abschnittsüberschrift mit Icon: Icon oben links, Text darf umbrechen (Nuxt: `text-gray-800`, Icon `text-purple-600`).
+.legal-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1f2937; // gray-800
+
+  > .bi {
+    flex-shrink: 0;
+    align-self: flex-start;
+    color: $brand-purple;
+  }
+
+  > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+// 'Anmelden' in der Kopfzeile (#241): weiß gefüllt, lila Schrift und Rahmen, abgerundet (Nuxt: bg-white text-purple-600
+// border-2 border-purple-600 rounded-lg).
+.btn-outline-white {
+  --bs-btn-color: #{$brand-purple};
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #{$brand-purple};
+  --bs-btn-hover-color: #{$brand-purple};
+  --bs-btn-hover-bg: #faf5ff; // purple-50
+  --bs-btn-hover-border-color: #{$brand-purple};
+  --bs-btn-active-color: #{$brand-purple};
+  --bs-btn-active-bg: #faf5ff;
+  --bs-btn-active-border-color: #{$brand-purple};
+  border-radius: 0.5rem; // rounded-lg
+}
+
+// Install-Seite (#239): Maße aus dem alten Frontend (390 px: h1 30 px/2 Zeilen, Untertitel max. 330 px).
+.install-title {
+  font-size: 1.875rem; // text-3xl
+  line-height: 2.25rem;
+  max-width: 11rem;
+  margin-inline: auto;
+}
+
+.install-subtitle {
+  font-size: 1.125rem;
+  max-width: 20.625rem;
+}
+
+// 'Dein Browser': helles Lila, lila Schrift, Gewicht 500.
+.install-badge {
+  background: #f3e8ff; // purple-100
+  color: #7e22ce; // purple-700
+  font-weight: 500;
+}
+
+// Abschnittsüberschrift 18 px fett, gray-800, Icon lila.
+.install-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937; // gray-800
+
+  > .bi {
+    color: $brand-purple;
+  }
+}
+
+[data-bs-theme='dark'] .install-heading {
+  color: #f3f4f6;
+}
+
+// Schritte: lila Ziffernkreis (24 px) links, Text eingerückt statt nativer ol-Ziffern.
+.install-steps {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+
+  > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  a {
+    color: $brand-purple;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: #f3e8ff; // purple-100
+    color: $brand-purple;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
