@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 import { getErrorMessage } from '../../core/errors';
 import { Appointment, Role } from '../../core/models';
 import { AppointmentPayload } from '../appointment-form/appointment-form';
@@ -34,6 +35,7 @@ export interface AppointmentFilters {
 @Injectable({ providedIn: 'root' })
 export class AppointmentStore {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
 
   readonly appointments = signal<Appointment[]>([]);
   /** Termin der Detailseite; wird von `fetchAppointment` und damit nach jeder Mutation aktualisiert. */
@@ -252,7 +254,11 @@ export class AppointmentStore {
     status: 'APPROVED' | 'REJECTED',
     fallback: string,
   ): Promise<void> {
-    return this.mutate(id, 'POST', 'participation', { status }, fallback);
+    const userId = this.auth.user()?.id;
+    return this.mutate(id, 'POST', 'participation', { status }, fallback, (a) => ({
+      ...a,
+      participants: a.participants?.map((p) => (p.user_id === userId ? { ...p, status } : p)),
+    }));
   }
 
   /**
@@ -281,6 +287,8 @@ export class AppointmentStore {
         await this.fetchAppointment(id);
       } catch {
         if (applyLocally) this.patchLocally(id, applyLocally);
+        // Die Aktion gelang: der Reload-Fehler soll in Views, die error() binden, nicht als Fehler erscheinen.
+        this.error.set(null);
       }
     }
   }

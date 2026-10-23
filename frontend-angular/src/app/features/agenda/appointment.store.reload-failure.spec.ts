@@ -1,6 +1,7 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AuthService } from '../../core/auth.service';
 import { Appointment } from '../../core/models';
 import { AppointmentStore } from './appointment.store';
 
@@ -68,5 +69,31 @@ describe('AppointmentStore: Aktion gelingt, Neuladen scheitert (#246)', () => {
     await result;
     expect(store.currentAppointment()?.status).toBe('CANCELLED');
     expect(store.appointments()[0].status).toBe('CANCELLED');
+  });
+  it('approveAppointment: schreibt die eigene Teilnahme lokal fort und lässt error() leer', async () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'user').mockReturnValue({ id: 7 } as never);
+    const base = {
+      id: 351,
+      status: 'PLANNED',
+      participants: [
+        { user_id: 7, status: 'PENDING' },
+        { user_id: 8, status: 'PENDING' },
+      ],
+    } as unknown as Appointment;
+    store.appointments.set([base]);
+    store.currentAppointment.set(base);
+    const result = store.approveAppointment(351);
+    http
+      .expectOne({ method: 'POST', url: '/api/v2/appointments/351/participation' })
+      .flush(null, { status: 200, statusText: 'OK' });
+    await new Promise((r) => setTimeout(r));
+    http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
+    await new Promise((r) => setTimeout(r));
+    http.expectOne(DETAIL).flush(null, { status: 404, statusText: 'Not Found' });
+    await result;
+    const statuses = store.currentAppointment()?.participants.map((p) => p.status);
+    expect(statuses).toEqual(['APPROVED', 'PENDING']);
+    expect(store.error()).toBeNull();
   });
 });
