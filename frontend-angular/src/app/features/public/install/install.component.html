@@ -1,8 +1,8 @@
 <section class="container py-4 text-center">
   <div class="mx-auto page-width">
     <div class="pill mb-3"><i class="bi bi-download" aria-hidden="true"></i> App installieren</div>
-    <h1 class="display-5 fw-bold text-white mb-3">Chronos installieren</h1>
-    <p class="fs-5 text-white mb-4">
+    <h1 class="install-title fw-bold text-white mb-3">Chronos installieren</h1>
+    <p class="install-subtitle text-white mb-4 mx-auto">
       Installiere Chronos als App auf deinem Gerät für schnellen Zugriff und Push-Benachrichtigungen.
     </p>
   </div>
@@ -38,43 +38,43 @@
             </p>
           </div>
           @if (detected === browser) {
-            <span class="badge text-bg-primary">Dein Browser</span>
+            <span class="badge install-badge">Dein Browser</span>
           }
         </div>
 
         @switch (browser) {
           @case ('chrome') {
-            <h3 class="h6 fw-semibold"><i class="bi bi-display me-2" aria-hidden="true"></i>Desktop (Windows, macOS, Linux)</h3>
-            <ol class="text-body-secondary mb-4">
-              <li>Öffne <a [href]="origin">{{ host }}</a> in Chrome oder Edge</li>
-              <li>Klicke auf das <strong>Installieren-Symbol</strong> <i class="bi bi-plus-square" aria-hidden="true"></i> in der Adressleiste (rechts)</li>
-              <li>Klicke auf <strong>„Installieren“</strong> im Dialog</li>
+            <h3 class="install-heading"><i class="bi bi-display" aria-hidden="true"></i>Desktop (Windows, macOS, Linux)</h3>
+            <ol class="install-steps text-body-secondary mb-4">
+              <li><span class="step-num" aria-hidden="true">1</span><span>Öffne <a [href]="origin">{{ host }}</a> in Chrome oder Edge</span></li>
+              <li><span class="step-num" aria-hidden="true">2</span><span>Klicke auf das <strong>Installieren-Symbol</strong> <i class="bi bi-plus-square" aria-hidden="true"></i> in der Adressleiste (rechts)</span></li>
+              <li><span class="step-num" aria-hidden="true">3</span><span>Klicke auf <strong>„Installieren“</strong> im Dialog</span></li>
             </ol>
-            <h3 class="h6 fw-semibold"><i class="bi bi-phone me-2" aria-hidden="true"></i>Android</h3>
-            <ol class="text-body-secondary mb-0">
-              <li>Öffne <a [href]="origin">{{ host }}</a> in Chrome</li>
-              <li>Tippe auf das <strong>Drei-Punkte-Menü</strong> <i class="bi bi-three-dots-vertical" aria-hidden="true"></i> oben rechts</li>
-              <li>Wähle <strong>„Zum Startbildschirm hinzufügen“</strong> oder <strong>„App installieren“</strong></li>
-              <li>Bestätige mit <strong>„Installieren“</strong></li>
+            <h3 class="install-heading"><i class="bi bi-phone" aria-hidden="true"></i>Android</h3>
+            <ol class="install-steps text-body-secondary mb-0">
+              <li><span class="step-num" aria-hidden="true">1</span><span>Öffne <a [href]="origin">{{ host }}</a> in Chrome</span></li>
+              <li><span class="step-num" aria-hidden="true">2</span><span>Tippe auf das <strong>Drei-Punkte-Menü</strong> <i class="bi bi-three-dots-vertical" aria-hidden="true"></i> oben rechts</span></li>
+              <li><span class="step-num" aria-hidden="true">3</span><span>Wähle <strong>„Zum Startbildschirm hinzufügen“</strong> oder <strong>„App installieren“</strong></span></li>
+              <li><span class="step-num" aria-hidden="true">4</span><span>Bestätige mit <strong>„Installieren“</strong></span></li>
             </ol>
           }
           @case ('safari') {
-            <h3 class="h6 fw-semibold"><i class="bi bi-phone me-2" aria-hidden="true"></i>iPhone &amp; iPad</h3>
-            <ol class="text-body-secondary">
-              <li>Öffne <a [href]="origin">{{ host }}</a> in Safari</li>
-              <li>Tippe auf das <strong>Teilen-Symbol</strong> <i class="bi bi-box-arrow-up" aria-hidden="true"></i> unten in der Mitte</li>
-              <li>Scrolle nach unten und tippe auf <strong>„Zum Home-Bildschirm“</strong></li>
-              <li>Tippe auf <strong>„Hinzufügen“</strong> oben rechts</li>
+            <h3 class="install-heading"><i class="bi bi-phone" aria-hidden="true"></i>iPhone &amp; iPad</h3>
+            <ol class="install-steps text-body-secondary">
+              <li><span class="step-num" aria-hidden="true">1</span><span>Öffne <a [href]="origin">{{ host }}</a> in Safari</span></li>
+              <li><span class="step-num" aria-hidden="true">2</span><span>Tippe auf das <strong>Teilen-Symbol</strong> <i class="bi bi-box-arrow-up" aria-hidden="true"></i> unten in der Mitte</span></li>
+              <li><span class="step-num" aria-hidden="true">3</span><span>Scrolle nach unten und tippe auf <strong>„Zum Home-Bildschirm“</strong></span></li>
+              <li><span class="step-num" aria-hidden="true">4</span><span>Tippe auf <strong>„Hinzufügen“</strong> oben rechts</span></li>
             </ol>
             <div class="alert alert-warning d-flex gap-2 mb-4" role="note">
               <i class="bi bi-info-circle" aria-hidden="true"></i>
               <span><strong>Wichtig:</strong> Auf iOS muss Safari verwendet werden. Andere Browser unterstützen keine PWA-Installation.</span>
             </div>
-            <h3 class="h6 fw-semibold"><i class="bi bi-display me-2" aria-hidden="true"></i>macOS (Safari 17+)</h3>
-            <ol class="text-body-secondary mb-0">
-              <li>Öffne <a [href]="origin">{{ host }}</a> in Safari</li>
-              <li>Klicke in der Menüleiste auf <strong>Ablage → Zum Dock hinzufügen</strong></li>
-              <li>Bestätige im Dialog mit <strong>„Hinzufügen“</strong></li>
+            <h3 class="install-heading"><i class="bi bi-display" aria-hidden="true"></i>macOS (Safari 17+)</h3>
+            <ol class="install-steps text-body-secondary mb-0">
+              <li><span class="step-num" aria-hidden="true">1</span><span>Öffne <a [href]="origin">{{ host }}</a> in Safari</span></li>
+              <li><span class="step-num" aria-hidden="true">2</span><span>Klicke in der Menüleiste auf <strong>Ablage → Zum Dock hinzufügen</strong></span></li>
+              <li><span class="step-num" aria-hidden="true">3</span><span>Bestätige im Dialog mit <strong>„Hinzufügen“</strong></span></li>
             </ol>
           }
           @case ('firefox') {
@@ -82,14 +82,14 @@
               <i class="bi bi-info-circle" aria-hidden="true"></i>
               <span>Firefox unterstützt PWAs nur eingeschränkt. Für das beste Erlebnis empfehlen wir Chrome, Edge oder Safari.</span>
             </div>
-            <h3 class="h6 fw-semibold"><i class="bi bi-phone me-2" aria-hidden="true"></i>Android</h3>
-            <ol class="text-body-secondary mb-4">
-              <li>Öffne <a [href]="origin">{{ host }}</a> in Firefox</li>
-              <li>Tippe auf das <strong>Drei-Punkte-Menü</strong> <i class="bi bi-three-dots-vertical" aria-hidden="true"></i></li>
-              <li>Wähle <strong>„Zum Startbildschirm hinzufügen“</strong></li>
-              <li>Bestätige mit <strong>„Hinzufügen“</strong></li>
+            <h3 class="install-heading"><i class="bi bi-phone" aria-hidden="true"></i>Android</h3>
+            <ol class="install-steps text-body-secondary mb-4">
+              <li><span class="step-num" aria-hidden="true">1</span><span>Öffne <a [href]="origin">{{ host }}</a> in Firefox</span></li>
+              <li><span class="step-num" aria-hidden="true">2</span><span>Tippe auf das <strong>Drei-Punkte-Menü</strong> <i class="bi bi-three-dots-vertical" aria-hidden="true"></i></span></li>
+              <li><span class="step-num" aria-hidden="true">3</span><span>Wähle <strong>„Zum Startbildschirm hinzufügen“</strong></span></li>
+              <li><span class="step-num" aria-hidden="true">4</span><span>Bestätige mit <strong>„Hinzufügen“</strong></span></li>
             </ol>
-            <h3 class="h6 fw-semibold"><i class="bi bi-display me-2" aria-hidden="true"></i>Desktop</h3>
+            <h3 class="install-heading"><i class="bi bi-display" aria-hidden="true"></i>Desktop</h3>
             <p class="text-body-secondary mb-0">
               Firefox Desktop unterstützt derzeit keine PWA-Installation. Du kannst Chronos als Lesezeichen speichern oder
               einen anderen Browser wie Chrome oder Edge verwenden.
