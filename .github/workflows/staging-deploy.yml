@@ -3,6 +3,7 @@ name: 🧪 Staging (develop)
 # Every push to develop builds all three images with the short commit SHA as tag and deploys exactly
 # these images to chronos-staging. The deployment runs as a reusable workflow of THIS ref, so it uses
 # the workflow file and the Helm chart of develop (a repository_dispatch would use those of main).
+# The chronos-frontend image is built from frontend-angular (cutover step 2, kb/architecture/ARC42-angular-cutover.md).
 # Tests run on the pull request; main keeps its own pipelines (Backend CI, Frontend CI, Rust Backend CI).
 on:
   push:
@@ -35,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { image: chronos-frontend, context: frontend, file: Dockerfile }
+          - { image: chronos-frontend, context: frontend-angular, file: Dockerfile }
           - { image: chronos-backend, context: backend, file: src/main/docker/Dockerfile.jvm }
           - { image: chronos-rust-backend, context: rust-backend, file: Dockerfile }
     steps:
