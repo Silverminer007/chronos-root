@@ -1,0 +1,15 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && timeout 600 npx ng test --no-watch --include src/app/features/agenda/appointment.store.reload-failure.spec.ts",
+  "description": "AppointmentStore: Gelingt die Aktion (POST 200), scheitert aber das anschließende Neuladen des Termins (GET 404), wirft cancelAppointment/approveAppointment/rejectAppointment/sendMessage den Fehler weiter; die Komponenten zeigen dann einen Fehler-Toast, obwohl die Aktion gelang.",
+  "kind": "unit",
+  "files": ["frontend-angular/src/app/features/agenda/appointment.store.reload-failure.spec.ts"],
+  "failure_signature": "meldet Fehler, obwohl die Aktion gelang",
+  "steps": [
+    "AppointmentStore mit HttpTestingController erzeugen",
+    "cancelAppointment(351), approveAppointment(351), rejectAppointment(351) bzw. sendMessage(351, 'Hallo') aufrufen",
+    "Das POST (…/cancel, …/participation, …/messages) mit 200 beantworten",
+    "Das folgende GET /api/v2/appointments/351?participants=true&messages=true&group_participants=true mit 404 beantworten"
+  ],
+  "expected": "Das Promise der Aktion wird ohne Fehler aufgelöst (Aktion gelang), sodass keine Fehler-Toast erscheint; ein scheiternder Reload wird nicht als Fehler der Aktion gemeldet.",
+  "actual": "mutate() wirft den 404-HttpErrorResponse des Reloads weiter; die Komponenten fangen ihn und zeigen 'Termin konnte nicht abgesagt werden' / 'Teilnahmestatus konnte nicht aktualisiert werden' / 'Fehler beim Senden'."
+}
