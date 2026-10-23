@@ -12,9 +12,12 @@ use std::collections::HashMap;
 pub const APPOINTMENT_COLUMNS: &str = "id, name, description, start_time, end_time, venue, COALESCE(status, 0)::smallint AS status, minimalattendees AS minimal_attendees, createdat AS created_at, lastupdate AS last_update";
 const APPOINTMENT_COLUMNS_ALIASED: &str = "a.id, a.name, a.description, a.start_time, a.end_time, a.venue, COALESCE(a.status, 0)::smallint AS status, a.minimalattendees AS minimal_attendees, a.createdat AS created_at, a.lastupdate AS last_update";
 
-/// Appointments that are neither DELETED (2) nor CANCELLED (1)
+/// Appointments that are neither DELETED (2) nor CANCELLED (1); only for the reminder scheduler
 const ACTIVE: &str = "COALESCE(status, 0) NOT IN (1, 2)";
-const ACTIVE_ALIASED: &str = "COALESCE(a.status, 0) NOT IN (1, 2)";
+
+/// Appointments that are not DELETED (2); CANCELLED ones stay visible (Java `status != DELETED`)
+const NOT_DELETED: &str = "COALESCE(status, 0) <> 2";
+const NOT_DELETED_ALIASED: &str = "COALESCE(a.status, 0) <> 2";
 
 /// Errors that can occur in the repository layer
 #[derive(Debug)]
@@ -61,7 +64,7 @@ impl AppointmentRepository {
     pub async fn find_by_id(&self, id: i64) -> Result<Option<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(&format!(
             "SELECT {} FROM appointment WHERE id = $1 AND {}",
-            APPOINTMENT_COLUMNS, ACTIVE
+            APPOINTMENT_COLUMNS, NOT_DELETED
         ))
         .bind(id)
         .fetch_optional(&self.pool)
@@ -143,7 +146,7 @@ impl AppointmentRepository {
              JOIN appointment_participation ap ON a.id = ap.appointment_id
              WHERE ap.user_oidcid = $1 AND ap.role = 'RESPONSIBLE' AND {}
              ORDER BY a.start_time DESC",
-            APPOINTMENT_COLUMNS_ALIASED, ACTIVE_ALIASED
+            APPOINTMENT_COLUMNS_ALIASED, NOT_DELETED_ALIASED
         ))
         .bind(creator_id)
         .fetch_all(&self.pool)
@@ -228,7 +231,7 @@ impl AppointmentRepository {
     ) -> Result<Vec<Appointment>, RepositoryError> {
         sqlx::query_as::<_, Appointment>(&format!(
             "SELECT {} FROM appointment WHERE start_time >= $1 AND end_time <= $2 AND {} ORDER BY start_time ASC",
-            APPOINTMENT_COLUMNS, ACTIVE
+            APPOINTMENT_COLUMNS, NOT_DELETED
         ))
         .bind(start)
         .bind(end)
