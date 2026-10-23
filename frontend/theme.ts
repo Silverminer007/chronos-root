@@ -15,9 +15,6 @@ export const ChronosTheme = definePreset(Aura, {
             800: '{indigo.800}',
             900: '{indigo.900}',
             950: '{indigo.950}'
-        },
-        surface: {
-            ground: '{surface.700}'
         }
     },
     components: {

@@ -17,7 +17,6 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.Collections;
 import java.util.List;
@@ -67,7 +66,9 @@ class AppointmentParticipationResourceTest {
         // Mock the principal to return acting user
         when(principalContext.getPrincipal()).thenAnswer(invocation ->
             new Object() {
-                public String oidcId() { return ACTING_USER_OIDC_ID; }
+                public String oidcId() {
+                    return ACTING_USER_OIDC_ID;
+                }
             });
     }
 
