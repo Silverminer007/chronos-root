@@ -10,11 +10,18 @@
 .landing-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, $brand-purple, $brand-pink, #fb923c);
+  background: linear-gradient(to bottom right, $brand-purple, $brand-pink, #fb923c);
 }
 
 :host-context([data-bs-theme='dark']) .landing-bg {
-  background: linear-gradient(135deg, #581c87, #831843, #7c2d12);
+  background: linear-gradient(to bottom right, #581c87, #831843, #7c2d12);
+}
+
+// Wie im alten Frontend: Blobs liegen in einem Wrapper mit Deckkraft 0,2 (effektiv 0,04–0,08).
+.blobs {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
 }
 
 .blob {
