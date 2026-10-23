@@ -43,9 +43,7 @@ async fn test_get_and_patch_on_cancelled_appointment_answer_200() {
     let (status, body) = app.get(OWNER, &uri).await;
     assert_eq!(status, StatusCode::OK, "GET plain of CANCELLED: {body}");
 
-    let (status, body) = app
-        .patch(OWNER, &uri, Some(json!({"venue": "Heim"})))
-        .await;
+    let (status, body) = app.patch(OWNER, &uri, Some(json!({"venue": "Heim"}))).await;
     assert_eq!(status, StatusCode::OK, "PATCH of CANCELLED: {body}");
 }
 
