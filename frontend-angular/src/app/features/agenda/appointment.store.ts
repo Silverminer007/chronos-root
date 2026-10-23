@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 import { getErrorMessage } from '../../core/errors';
 import { Appointment, Role } from '../../core/models';
 import { AppointmentPayload } from '../appointment-form/appointment-form';
@@ -34,6 +35,7 @@ export interface AppointmentFilters {
 @Injectable({ providedIn: 'root' })
 export class AppointmentStore {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
 
   readonly appointments = signal<Appointment[]>([]);
   /** Termin der Detailseite; wird von `fetchAppointment` und damit nach jeder Mutation aktualisiert. */
@@ -157,7 +159,10 @@ export class AppointmentStore {
   }
 
   cancelAppointment(id: number): Promise<void> {
-    return this.mutate(id, 'POST', 'cancel', null, 'Fehler beim Absagen des Appointments');
+    return this.mutate(id, 'POST', 'cancel', null, 'Fehler beim Absagen des Appointments', (a) => ({
+      ...a,
+      status: 'CANCELLED',
+    }));
   }
 
   approveAppointment(id: number): Promise<void> {
@@ -209,13 +214,7 @@ export class AppointmentStore {
   }
 
   removeGroupParticipant(id: number, groupId: number): Promise<void> {
-    return this.mutate(
-      id,
-      'DELETE',
-      `groups/${groupId}`,
-      null,
-      'Fehler beim Entfernen der Gruppe',
-    );
+    return this.mutate(id, 'DELETE', `groups/${groupId}`, null, 'Fehler beim Entfernen der Gruppe');
   }
 
   sendMessage(id: number, body: string): Promise<void> {
@@ -255,23 +254,48 @@ export class AppointmentStore {
     status: 'APPROVED' | 'REJECTED',
     fallback: string,
   ): Promise<void> {
-    return this.mutate(id, 'POST', 'participation', { status }, fallback);
+    const userId = this.auth.user()?.id;
+    return this.mutate(id, 'POST', 'participation', { status }, fallback, (a) => ({
+      ...a,
+      participants: a.participants?.map((p) => (p.user_id === userId ? { ...p, status } : p)),
+    }));
   }
 
-  /** Sendet die Änderung und lädt den Termin neu; Fehler setzen `error()` und werden weitergeworfen. */
+  /**
+   * Sendet die Änderung und lädt den Termin neu. Fehler der Änderung setzen `error()` und werden weitergeworfen;
+   * ein scheiternder Reload gilt nicht als Fehler der Aktion (sie gelang): er wird einmal still wiederholt und
+   * schlägt auch das fehl, schreibt `applyLocally` (sofern angegeben) den Zustand lokal fort.
+   */
   private async mutate(
     id: number,
     method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body: unknown,
     fallback: string,
+    applyLocally?: (appointment: Appointment) => Appointment,
   ): Promise<void> {
     try {
       await firstValueFrom(this.http.request(method, `${API}/${id}/${path}`, { body }));
-      await this.fetchAppointment(id);
     } catch (err) {
       this.error.set(getErrorMessage(err, fallback));
       throw err;
     }
+    try {
+      await this.fetchAppointment(id);
+    } catch {
+      try {
+        await this.fetchAppointment(id);
+      } catch {
+        if (applyLocally) this.patchLocally(id, applyLocally);
+        // Die Aktion gelang: der Reload-Fehler soll in Views, die error() binden, nicht als Fehler erscheinen.
+        this.error.set(null);
+      }
+    }
+  }
+
+  private patchLocally(id: number, apply: (appointment: Appointment) => Appointment): void {
+    this.appointments.update((list) => list.map((a) => (a.id === id ? apply(a) : a)));
+    const current = this.currentAppointment();
+    if (current?.id === id) this.currentAppointment.set(apply(current));
   }
 }

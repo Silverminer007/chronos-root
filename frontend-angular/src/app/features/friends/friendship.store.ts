@@ -71,7 +71,7 @@ export class FriendshipStore {
       () => firstValueFrom(this.http.post(`${API}/requests`, null, { params: { email } })),
       'Fehler beim Senden der Anfrage',
     );
-    await this.fetchOutgoingRequests();
+    await this.fetchOutgoingRequests().catch(() => undefined); // Aktion gelang; Reload-Fehler steht in error()
   }
 
   async acceptRequest(requestId: number): Promise<void> {
@@ -80,7 +80,7 @@ export class FriendshipStore {
       'Fehler beim Annehmen der Anfrage',
     );
     this.incomingRequests.update((list) => list.filter((r) => r.requestId !== requestId));
-    await this.fetchFriends();
+    await this.fetchFriends().catch(() => undefined); // Aktion gelang; Reload-Fehler steht in error()
   }
 
   async declineRequest(requestId: number): Promise<void> {

@@ -72,12 +72,12 @@ export class GroupStore {
 
   async addMember(groupId: number, userId: number): Promise<void> {
     await this.mutate(() => firstValueFrom(this.http.post(`${API}/${groupId}/user/${userId}`, null)), 'Fehler beim Hinzufügen des Mitglieds');
-    await this.refresh(groupId);
+    await this.refresh(groupId).catch(() => undefined); // Aktion gelang; Reload-Fehler steht in error()
   }
 
   async removeMember(groupId: number, userId: number): Promise<void> {
     await this.mutate(() => firstValueFrom(this.http.delete(`${API}/${groupId}/user/${userId}`)), 'Fehler beim Entfernen des Mitglieds');
-    await this.refresh(groupId);
+    await this.refresh(groupId).catch(() => undefined); // Aktion gelang; Reload-Fehler steht in error()
   }
 
   /** Wie `removeMember` für die eigene Person; die Navigation übernimmt der Aufrufer. */
