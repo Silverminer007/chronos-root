@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/install-header-circles-parity.spec.ts --project=chromium --reporter=line",
+  "description": "Angular bei 390x844: Ziffernkreise auf /public/install und 'Anmelden'-Button der Kopfzeile (/ und /public/install) gegen die berechneten Farben des alten Frontends prüfen.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/install-header-circles-parity.spec.ts"],
+  "failure_signature": "soll sehr hell sein (purple-100)",
+  "steps": ["Viewport 390x844, /public/install öffnen", "Hintergrund und Farbe der Schritt-Ziffernkreise per getComputedStyle auslesen", "Hintergrund und Farbe des 'Anmelden'-Links in der Kopfzeile von / und /public/install auslesen"],
+  "expected": "Ziffernkreise: sehr helles Lila (min. RGB-Kanal >= 220) mit lila Zahl; 'Anmelden': weißer Hintergrund (rgb(255,255,255)), lila Schrift",
+  "actual": "Ziffernkreise voll violett gefüllt mit weißer Zahl; 'Anmelden' transparent mit weißer Schrift und weißem Rahmen"
+}

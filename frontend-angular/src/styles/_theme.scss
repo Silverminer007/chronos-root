@@ -364,16 +364,19 @@
   }
 }
 
-// 'Anmelden' in der Kopfzeile: transparent, 2 px reines Weiß (Bootstrap-Light wäre #f8f9fa).
+// 'Anmelden' in der Kopfzeile (#241): weiß gefüllt, lila Schrift und Rahmen, abgerundet (Nuxt: bg-white text-purple-600
+// border-2 border-purple-600 rounded-lg).
 .btn-outline-white {
-  --bs-btn-color: #fff;
-  --bs-btn-border-color: #fff;
+  --bs-btn-color: #{$brand-purple};
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #{$brand-purple};
   --bs-btn-hover-color: #{$brand-purple};
-  --bs-btn-hover-bg: #fff;
-  --bs-btn-hover-border-color: #fff;
+  --bs-btn-hover-bg: #faf5ff; // purple-50
+  --bs-btn-hover-border-color: #{$brand-purple};
   --bs-btn-active-color: #{$brand-purple};
-  --bs-btn-active-bg: #fff;
-  --bs-btn-active-border-color: #fff;
+  --bs-btn-active-bg: #faf5ff;
+  --bs-btn-active-border-color: #{$brand-purple};
+  border-radius: 0.5rem; // rounded-lg
 }
 
 // Install-Seite (#239): Maße aus dem alten Frontend (390 px: h1 30 px/2 Zeilen, Untertitel max. 330 px).
@@ -441,10 +444,10 @@
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    background: $brand-purple;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
+    background: #f3e8ff; // purple-100
+    color: $brand-purple;
+    font-size: 0.875rem;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;

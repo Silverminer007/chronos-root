@@ -7,7 +7,7 @@ test.use({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
 const GRAY_800 = 'rgb(31, 41, 55)';
 const PAGES = ['/public/impressum', '/public/datenschutz'];
 
-test("Kopfzeile: 'Anmelden' ist transparent mit weißem 2-px-Rahmen und weißer Schrift", async ({ page }) => {
+test("Kopfzeile: 'Anmelden' ist weiß gefüllt mit lila 2-px-Rahmen und lila Schrift (#241)", async ({ page }) => {
   await page.goto('/public/impressum', { waitUntil: 'domcontentloaded' });
   const login = page.locator('header a[href="/api/auth/login"]');
   await expect(login).toBeVisible();
@@ -15,10 +15,10 @@ test("Kopfzeile: 'Anmelden' ist transparent mit weißem 2-px-Rahmen und weißer 
     const c = getComputedStyle(el);
     return { bg: c.backgroundColor, border: c.borderTopColor, width: c.borderTopWidth, color: c.color };
   });
-  expect(s.bg, "'Anmelden' Hintergrund soll transparent sein").toBe('rgba(0, 0, 0, 0)');
-  expect(s.border, "'Anmelden' Rahmenfarbe soll weiß sein").toBe('rgb(255, 255, 255)');
+  expect(s.bg, "'Anmelden' Hintergrund soll weiß sein").toBe('rgb(255, 255, 255)');
+  expect(s.border, "'Anmelden' Rahmenfarbe soll lila sein").toBe('rgb(147, 51, 234)');
   expect(s.width, "'Anmelden' Rahmenbreite").toBe('2px');
-  expect(s.color, "'Anmelden' Schriftfarbe soll weiß sein").toBe('rgb(255, 255, 255)');
+  expect(s.color, "'Anmelden' Schriftfarbe soll lila sein").toBe('rgb(147, 51, 234)');
 });
 
 for (const path of PAGES) {
