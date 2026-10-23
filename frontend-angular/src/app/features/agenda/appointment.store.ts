@@ -258,7 +258,10 @@ export class AppointmentStore {
     return this.mutate(id, 'POST', 'participation', { status }, fallback);
   }
 
-  /** Sendet die Änderung und lädt den Termin neu; Fehler setzen `error()` und werden weitergeworfen. */
+  /**
+   * Sendet die Änderung und lädt den Termin neu. Fehler der Änderung setzen `error()` und werden weitergeworfen;
+   * ein scheiternder Reload gilt nicht als Fehler der Aktion (sie gelang) und wird nur in `error()` vermerkt.
+   */
   private async mutate(
     id: number,
     method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
@@ -268,10 +271,10 @@ export class AppointmentStore {
   ): Promise<void> {
     try {
       await firstValueFrom(this.http.request(method, `${API}/${id}/${path}`, { body }));
-      await this.fetchAppointment(id);
     } catch (err) {
       this.error.set(getErrorMessage(err, fallback));
       throw err;
     }
+    await this.fetchAppointment(id).catch(() => undefined);
   }
 }
