@@ -1,0 +1,118 @@
+<app-search-header />
+
+<main class="container pb-5">
+  <div class="survey mx-auto">
+    @if (submitted()) {
+      <div class="state d-flex flex-column align-items-center justify-content-center text-center px-3">
+        <div class="state-icon icon-tile rounded-circle mb-4"><i class="bi bi-check-lg fs-1" aria-hidden="true"></i></div>
+        <h2 class="h3 fw-bold mb-2">Danke!</h2>
+        <p class="text-body-secondary mb-0">Dein Feedback hilft uns, Chronos zu verbessern.</p>
+      </div>
+    } @else if (alreadyCompleted()) {
+      <div class="state d-flex flex-column align-items-center justify-content-center text-center px-3">
+        <div class="state-icon icon-tile rounded-circle mb-4"><i class="bi bi-check-circle fs-1" aria-hidden="true"></i></div>
+        <h2 class="h3 fw-bold mb-2">Danke, du hast bereits geantwortet!</h2>
+        <p class="text-body-secondary mb-4">Du hast diese Umfrage bereits ausgefüllt. Dein Feedback hilft uns.</p>
+        <a routerLink="/agenda" class="btn btn-gradient fw-medium px-4">Zur Übersicht</a>
+      </div>
+    } @else {
+      <div class="pt-4 mb-4">
+        <div class="d-flex align-items-center gap-2 small fw-medium text-primary mb-2">
+          <i class="bi bi-list-check" aria-hidden="true"></i><span>5 kurze Fragen</span>
+        </div>
+        <h1 class="h2 fw-bold mb-1">Kurze Umfrage</h1>
+        <p class="text-body-secondary mb-0">Alle Fragen sind optional – du kannst jederzeit überspringen.</p>
+      </div>
+
+      <div class="d-flex flex-column gap-3">
+        <section class="question card p-4">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">1</span>
+            <p class="fw-semibold mb-0">Was wolltest du beim letzten Öffnen von Chronos tun?</p>
+          </div>
+          <div class="ms-5">
+            @for (opt of q1Options; track opt.value) {
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="q1" [id]="'q1-' + opt.value" [value]="opt.value" [checked]="q1() === opt.value" (change)="q1.set(opt.value)" />
+                <label class="form-check-label" [for]="'q1-' + opt.value">{{ opt.label }}</label>
+              </div>
+            }
+            @if (q1() === 'other') {
+              <input type="text" class="form-control mt-2" placeholder="Bitte kurz beschreiben..." aria-label="Bitte kurz beschreiben" [ngModel]="q1Other()" (ngModelChange)="q1Other.set($event)" />
+            }
+          </div>
+        </section>
+
+        <section class="question card p-4">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">2</span>
+            <p class="fw-semibold mb-0">Wie hast du die letzten Terminabstimmungen gemacht? Was hat gut geklappt und was nicht?
+              <span class="fw-normal text-body-secondary"> (Muss nicht in Chronos gewesen sein)</span></p>
+          </div>
+          <div class="ms-5">
+            <textarea class="form-control" rows="3" placeholder="Optional – du kannst diese Frage auch überspringen..." aria-label="Antwort auf Frage 2" [ngModel]="q2()" (ngModelChange)="q2.set($event)"></textarea>
+            <div class="text-end small mt-1" [class]="q2Words() > q2Max ? 'text-danger fw-medium' : 'text-body-tertiary'">{{ q2Words() }} / {{ q2Max }} Wörter</div>
+          </div>
+        </section>
+
+        <section class="question card p-4">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">3</span>
+            <p class="fw-semibold mb-0">Was davon hast du in Chronos schon genutzt? Tippe alles an, was du kennst.</p>
+          </div>
+          <div class="ms-5">
+            @for (opt of q3Options; track opt.value) {
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" [id]="'q3-' + opt.value" [checked]="q3().includes(opt.value)" (change)="toggleQ3(opt.value)" />
+                <label class="form-check-label" [for]="'q3-' + opt.value">{{ opt.label }}</label>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="question card p-4">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">4</span>
+            <p class="fw-semibold mb-0">Was wäre beim Rückmelden zu Terminen für dich nützlich? Wähle alles aus, was passt.</p>
+          </div>
+          <div class="ms-5">
+            <p class="small fw-semibold text-uppercase text-body-tertiary mb-2">Als Teilnehmer beim Rückmelden</p>
+            @for (opt of q4Responding; track opt.value) {
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" [id]="'q4-' + opt.value" [checked]="q4().includes(opt.value)" (change)="toggleQ4(opt.value)" />
+                <label class="form-check-label" [for]="'q4-' + opt.value">{{ opt.label }}</label>
+              </div>
+            }
+            <p class="small fw-semibold text-uppercase text-body-tertiary mt-4 mb-2">Als Person, die einen Termin organisiert</p>
+            @for (opt of q4Organizing; track opt.value) {
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" [id]="'q4-' + opt.value" [checked]="q4().includes(opt.value)" (change)="toggleQ4(opt.value)" />
+                <label class="form-check-label" [for]="'q4-' + opt.value">{{ opt.label }}</label>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="question card p-4">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">5</span>
+            <p class="fw-semibold mb-0">Wenn du eine Sache an Chronos ändern könntest – was wäre das?</p>
+          </div>
+          <div class="ms-5">
+            <textarea class="form-control" rows="2" placeholder="Optional – du kannst diese Frage auch überspringen..." aria-label="Antwort auf Frage 5" [ngModel]="q5()" (ngModelChange)="q5.set($event)"></textarea>
+            <div class="text-end small mt-1" [class]="q5Words() > q5Max ? 'text-danger fw-medium' : 'text-body-tertiary'">{{ q5Words() }} / {{ q5Max }} Wörter</div>
+          </div>
+        </section>
+
+        <button type="button" class="btn btn-gradient btn-lg fw-semibold d-flex align-items-center justify-content-center gap-2" [disabled]="submitting()" (click)="submit()">
+          @if (submitting()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          } @else {
+            <i class="bi bi-send" aria-hidden="true"></i>
+          }
+          <span>{{ submitting() ? 'Wird gesendet...' : 'Absenden' }}</span>
+        </button>
+      </div>
+    }
+  </div>
+</main>

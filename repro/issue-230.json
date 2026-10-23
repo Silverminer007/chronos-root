@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/public-header-onboarding-parity.spec.ts --project=chromium --reporter=line",
+  "description": "Angular bei 390x844: Kopfzeile der öffentlichen Seiten (Landing, Impressum, Datenschutz) darf nicht überlaufen; 'Überspringen' im Onboarding ohne Unterstreichung; gestapelte Dialog-Buttons mit >= 8 px Abstand. Geprüft per getBoundingClientRect/getComputedStyle.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/public-header-onboarding-parity.spec.ts"],
+  "failure_signature": "Kopfzeilen-Buttons ragen über den Viewport hinaus",
+  "steps": ["Viewport 390x844, /, /public/impressum und /public/datenschutz öffnen und die Buttons der Kopfzeile messen", "Angemeldet (gemockt) /onboarding öffnen und text-decoration von 'Überspringen' lesen", "/friends öffnen, 'Hinzufügen' klicken und Abstand der Footer-Buttons im Dialog messen"],
+  "expected": "Alle Kopfzeilen-Buttons innerhalb des Viewports (scrollWidth <= clientWidth); 'Überspringen' text-decoration none; Abstand der gestapelten Dialog-Buttons >= 8 px",
+  "actual": "'Registrieren' ragt über den rechten Rand; 'Überspringen' ist unterstrichen; Abstand der Dialog-Buttons < 8 px (negativ)"
+}

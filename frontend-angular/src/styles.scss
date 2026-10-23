@@ -1,0 +1,7 @@
+@use 'sass:meta';
+@use 'styles/variables' as *;
+@use 'bootstrap-icons/font/bootstrap-icons';
+
+// Reihenfolge ist wichtig: Bootstrap zuerst, danach das Theme, damit dessen Overrides bei gleicher Spezifität gewinnen.
+@include meta.load-css('bootstrap/scss/bootstrap', $with: $bootstrap-config);
+@include meta.load-css('styles/theme');

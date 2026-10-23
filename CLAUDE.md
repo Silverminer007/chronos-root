@@ -222,3 +222,8 @@ cd deployment
 helm upgrade chronos . -f values-prod.yaml --namespace chronos-prod --install
 helm upgrade chronos . -f values-staging.yaml --namespace chronos-staging --install
 ```
+---
+
+## Branch `angular-frontend` (Frontend-Migration)
+
+Auf diesem Branch liegt unter `frontend-angular/` das Angular-Frontend (Angular, SCSS, Bootstrap 5, Node-BFF); `frontend/` (Nuxt) bleibt bis zum Cutover unverändert. Anforderungen und Architektur: `kb/requirements/REQ42-angular-frontend.md`, `kb/architecture/ARC42-angular-frontend.md`; Cutover-Schritte und Paritätsliste siehe `kb/architecture/`. Alle PRs für diese Migration zielen auf `angular-frontend`, nicht auf `main` (Orchestrator: `AGENTFLOW_BASE_BRANCH=angular-frontend`).

@@ -1,0 +1,20 @@
+# ADR-2026-10-22-020: Farben im Verlaufskopf und Icon-Kachel (Angular, #221)
+
+## Ursache
+- Der Termindetail-Titel ist ein `h2.h3`; Bootstraps Überschriftenregel (`--bs-heading-color`) überschreibt das vom
+  Container geerbte `color: #fff` von `.bg-gradient-brand`. Datum/Uhrzeit hatten zusätzlich `opacity-75`.
+- `btn-light` setzt Hintergrund über `--bs-btn-bg`; `bg-opacity-25` greift dort nicht, die Knöpfe blieben deckend weiß.
+- `.icon-tile` kannte nur die lila Variante, das Gruppendetail nutzt in Nuxt blue-100→indigo-100 / blue-600.
+
+## Entscheidung
+- Text im Kopf explizit `text-white`; Knöpfe über die neue Klasse `.btn-glass` (Bootstrap-Button-Variablen, Nuxt `bg-white/20`).
+- Neue Variante `.icon-tile-blue` in `_theme.scss`, im Gruppendetail verwendet.
+- Regel: Farben auf Bootstrap-Komponenten (Überschriften, Buttons) über deren CSS-Variablen/Klassen setzen, nicht über Utility-Opacity.
+- Abgesichert durch `e2e/detail-colors.spec.ts` (`getComputedStyle`).
+- Gruppendetail (Review): schwebender Plus-/Header-Button `.btn-gradient-blue` (blue-600→indigo-500), Mitglied-entfernen-Symbol grau (gray-400, Hover red-500), Buttons `0.5rem` (Nuxt `rounded-lg`). Karten bleiben bei 1rem (≥ Nuxt `rounded-xl` 0.75rem), daher keine Änderung.
+- Termindetail, weitere Punkte des Tickets (Review, umgesetzt gegen die Nuxt-Klassen des alten Frontends, in `_theme.scss`):
+  - Zusagen/Absagen `.btn-approve`/`.btn-reject`: Rahmen 2 px, green-600/red-600, Radius `0.5rem` (Nuxt `border-2 … rounded-lg`), aktiv gefüllt.
+  - Hinweisbox „Bitte bestätige deine Teilnahme“ `.alert-pending`: yellow-50, dünner Rahmen yellow-200, Text yellow-700, Titel yellow-900.
+  - Plus-Knopf im Teilnehmerbereich: `.btn-gradient` mit `.btn-icon-square` (2 rem, Radius `0.5rem`).
+  - Abgesichert in `e2e/detail-colors.spec.ts` (`getComputedStyle`: Zusagen/Absagen, Hinweisbox, Plus-Knopf).
+- Bewusst nicht umgesetzt: Kartenradien (siehe oben, bereits ≥ Nuxt). Es gibt keine weiteren zurückgestellten Punkte aus #221, daher kein Folgeticket.

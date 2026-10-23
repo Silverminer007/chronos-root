@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/detail-colors.spec.ts --project=chromium --reporter=line",
+  "description": "Angular bei 390x844 (gemockte Sitzung): Termindetail-Kopf muss weißen Text haben, die Knöpfe Link teilen/Termin bearbeiten halbtransparent weiß mit weißen Icons (Nuxt bg-white/20); die Icon-Kachel im Gruppendetail muss blau/indigo sein (Nuxt from-blue-100 to-indigo-100, Icon blue-600). Geprüft per getComputedStyle.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/detail-colors.spec.ts"],
+  "failure_signature": "(erwartet weiß)",
+  "steps": ["Angemeldet /appointment/1 bei 390x844 öffnen (Backend gemockt)", "Berechnete Farben von Titel, Datum und der Knöpfe im Verlaufskopf lesen", "/groups/1 öffnen und Verlauf/Icon-Farbe der Icon-Kachel lesen"],
+  "expected": "Kopftext rgb(255,255,255); Knopf-Hintergrund rgba(255,255,255,a<1), Icon weiß; Kachel-Verlauf blue-100→indigo-100, Icon rgb(37,99,235)",
+  "actual": "Kopftext dunkel (Bootstrap-Überschriftenfarbe), Knöpfe deckend weiß (btn-light), Kachel lila (#f3e8ff→#fce7f3)"
+}

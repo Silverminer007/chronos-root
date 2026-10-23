@@ -1,0 +1,59 @@
+name: Frontend Angular CI
+
+on:
+  push:
+    branches: [ main, develop, angular-frontend ]
+    paths: [ 'frontend-angular/**', '.github/workflows/frontend-angular.yml' ]
+  pull_request:
+    branches: [ main, develop, angular-frontend ]
+    paths: [ 'frontend-angular/**', '.github/workflows/frontend-angular.yml' ]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend-angular
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend-angular/package-lock.json
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit-Tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: E2E-Tests (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - name: Chrome-Pfad für Lighthouse
+        id: chrome
+        run: node -e "console.log('path=' + require('@playwright/test').chromium.executablePath())" >> "$GITHUB_OUTPUT"
+      - name: Lighthouse
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.path }}
+          CHRONOS_PORT: 4400
+          CHRONOS_COOKIE_SECURE: 'false'
+          CHRONOS_AUTH_ISSUER: http://localhost:1/realms/e2e
+          CHRONOS_AUTH_CLIENT_ID: e2e
+          CHRONOS_AUTH_REDIRECT_URI: http://localhost:4400/api/auth/callback
+          CHRONOS_QUARKUS_URL: http://localhost:1
+        run: npm run test:lhci
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Container-Image bauen (ohne Push)
+        run: docker build -t chronos-frontend-angular:ci .

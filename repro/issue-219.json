@@ -1,0 +1,10 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/card-headings.spec.ts --project=chromium --reporter=line",
+  "description": "Angular /settings bei 390x844 (gemockte Sitzung): Überschriften der Karten (Push-, Termin-, Gruppenbenachrichtigungen) müssen berechnet 18px groß sein (Nuxt text-lg) und dürfen nicht mitten im Wort umbrechen. Bootstrap .h5 liefert 20px.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/card-headings.spec.ts"],
+  "failure_signature": "(erwartet 18px)",
+  "steps": ["Angemeldet /settings bei 390x844 öffnen", "Berechnete Schriftgröße und Zeilenumbrüche der Kartenüberschriften messen"],
+  "expected": "Kartenüberschriften 18px, kein Umbruch mitten im Wort",
+  "actual": "Kartenüberschriften 20px (z. B. Push-Benachrichtigungen)"
+}

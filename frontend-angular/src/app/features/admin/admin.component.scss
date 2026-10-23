@@ -1,0 +1,28 @@
+.admin {
+  max-width: 56rem;
+}
+
+.stat-card {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.stat-card:hover {
+  border-color: var(--bs-primary);
+  box-shadow: var(--bs-box-shadow);
+}
+
+.stat-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+.login-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.empty-icon {
+  width: 5rem;
+  height: 5rem;
+}

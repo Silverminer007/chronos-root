@@ -362,32 +362,18 @@ async function getOwnAttendanceStatus(appointmentId) {
 
 // Funktion zum Aktualisieren des Attendance-Status
 async function updateAttendanceStatus(appointmentId, status) {
-    if (status === 'APPROVED') {
-        const response = await fetch(`${API_BASE_URL}/api/v2/appointments/${appointmentId}/participants/approve`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
+    const response = await fetch(`${API_BASE_URL}/api/v2/appointments/${appointmentId}/participation`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status }),
+        credentials: 'include'
+    });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-    } else {
-        const response = await fetch(`${API_BASE_URL}/api/v2/appointments/${appointmentId}/participants/reject`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
     }
-
 }
 
 // Optional: Installation und Aktivierung des Service Workers
