@@ -32,7 +32,6 @@ import java.util.List;
  * - Only users can RSVP to appointments they're invited to
  * - Only appointment organizers can add/remove participants or change roles
  */
-@Path("/api/v2/appointments")
 @PermitAll
 @Timed("api.participation")
 public class AppointmentParticipationResource {
@@ -61,7 +60,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK on success
      */
     @POST
-    @Path("/{id}/participation")
+    @Path("/api/v2/appointments/{id}/participation")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response rsvpToAppointment(@PathParam("id") Long appointmentId,
@@ -91,7 +90,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK on success
      */
     @PUT
-    @Path("/{id}/participation/{userId}/role")
+    @Path("/api/v2/appointments/{id}/participation/{userId}/role")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response changeParticipationRole(@PathParam("id") Long appointmentId,
@@ -121,7 +120,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK on success
      */
     @POST
-    @Path("/{id}/participants/{userId}")
+    @Path("/api/v2/appointments/{id}/participants/{userId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response addParticipant(@PathParam("id") Long appointmentId,
@@ -149,7 +148,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK on success
      */
     @DELETE
-    @Path("/{id}/participants/{userId}")
+    @Path("/api/v2/appointments/{id}/participants/{userId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response removeParticipant(@PathParam("id") Long appointmentId,
                                       @PathParam("userId") String targetUserOidcId) {
@@ -177,7 +176,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK on success
      */
     @POST
-    @Path("/{id}/groups/{groupId}")
+    @Path("/api/v2/appointments/{id}/groups/{groupId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response addGroup(@PathParam("id") Long appointmentId,
@@ -206,7 +205,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK on success
      */
     @DELETE
-    @Path("/{id}/groups/{groupId}")
+    @Path("/api/v2/appointments/{id}/groups/{groupId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response removeGroup(@PathParam("id") Long appointmentId,
                                 @PathParam("groupId") Long groupId) {
@@ -227,7 +226,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK with list of UserParticipantDto objects
      */
     @GET
-    @Path("/{id}/participants")
+    @Path("/api/v2/appointments/{id}/participants")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getParticipants(@PathParam("id") Long appointmentId) {
         String oidcId = principalContext.getPrincipal().oidcId();
@@ -249,7 +248,7 @@ public class AppointmentParticipationResource {
      * @return 200 OK with participation status in response body
      */
     @GET
-    @Path("/{id}/participation/status")
+    @Path("/api/v2/appointments/{id}/participation/status")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getParticipationStatus(@PathParam("id") Long appointmentId) {
         String oidcId = principalContext.getPrincipal().oidcId();
