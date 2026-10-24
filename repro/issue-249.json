@@ -1,0 +1,14 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/min-attendees-question.spec.ts --project=chromium --reporter=line",
+  "description": "Anlege-Stepper, Schritt „Teilnehmer“ bei 390 px (gemockter BFF): Die Mindestanzahl muss als ausformulierte Frage „Soll es eine Mindestanzahl geben?“ gestellt werden; stattdessen steht nur die Überschrift „Mindestanzahl Teilnehmer“ über Ja/Nein.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/min-attendees-question.spec.ts"],
+  "failure_signature": "Frage nach der Mindestanzahl fehlt",
+  "steps": [
+    "Viewport 390×844, angemeldet /agenda öffnen und „Termin erstellen“ wählen",
+    "Name, Datum, Dauer, Beschreibung (überspringen) und Ort durchklicken bis zum Schritt „Teilnehmer“",
+    "Die Auswahl der Mindestanzahl ansehen"
+  ],
+  "expected": "Eine ausformulierte Frage („Soll es eine Mindestanzahl geben?“) mit eindeutig gekennzeichneter Auswahl.",
+  "actual": "Nur die Überschrift „Mindestanzahl Teilnehmer“ über den Buttons „Ja“/„Nein“; „Nein“ ist schwarz gefüllt."
+}
