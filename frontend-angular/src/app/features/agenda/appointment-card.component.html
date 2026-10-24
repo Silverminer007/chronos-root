@@ -61,7 +61,7 @@
     <div class="d-flex flex-wrap gap-2 appointment-actions">
       <button
         type="button"
-        class="btn fw-medium d-flex align-items-center justify-content-center gap-2"
+        class="btn fw-medium flex-grow-1 flex-sm-grow-0 d-flex align-items-center justify-content-center gap-2"
         [class.btn-success]="hasApproved()"
         [class.btn-outline-success]="!hasApproved()"
         [disabled]="hasApproved()"
@@ -74,7 +74,7 @@
 
       <button
         type="button"
-        class="btn btn-outline-primary fw-medium d-flex align-items-center justify-content-center gap-2"
+        class="btn btn-outline-primary fw-medium flex-grow-1 flex-sm-grow-0 d-flex align-items-center justify-content-center gap-2"
         (click)="showMessageDialog.set(true)"
       >
         <i class="bi bi-send" aria-hidden="true"></i>
@@ -84,7 +84,7 @@
 
       <button
         type="button"
-        class="btn fw-medium d-flex align-items-center justify-content-center gap-2"
+        class="btn fw-medium flex-grow-1 flex-sm-grow-0 d-flex align-items-center justify-content-center gap-2"
         [class.btn-danger]="hasRejected()"
         [class.btn-outline-danger]="!hasRejected()"
         [disabled]="hasRejected()"
