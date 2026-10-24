@@ -1,0 +1,13 @@
+{
+  "command": "cd frontend-angular && npm ci --no-audit --no-fund && npx playwright install chromium && npm run build && timeout 300 npx playwright test e2e/agenda-card-actions-width.spec.ts --project=chromium --reporter=line",
+  "description": "Agenda-Karte bei 390 px Viewport (gemockter BFF): Die drei Aktions-Buttons (Zusagen, Nachricht, Absagen) müssen die Breite der Aktionszeile zu gleichen Teilen füllen; sie sind stattdessen kleine, linksbündige Icon-Buttons.",
+  "kind": "playwright",
+  "files": ["frontend-angular/e2e/agenda-card-actions-width.spec.ts"],
+  "failure_signature": "Buttons belegen",
+  "steps": [
+    "Viewport 390×844, angemeldet die Agenda (/agenda) mit einem Termin öffnen",
+    "Die Aktionszeile der Karte (Zusagen ✓, Nachricht, Absagen ✕) ansehen"
+  ],
+  "expected": "Die drei Buttons sind gleich breit und füllen die gesamte Breite der Aktionszeile (wie im Nuxt-Frontend: flex-1 bis sm).",
+  "actual": "Drei kleine Icon-Buttons (~42 px) stehen linksbündig, die rechte Hälfte der Zeile bleibt leer."
+}
