@@ -2,6 +2,7 @@ package de.chronos_live.chronos_date_api.presentation;
 
 import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
 import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -31,7 +32,7 @@ public abstract class BaseIntegrationTest {
     @Inject
     IdentityPort identityPort;
 
-    @Inject
+    @InjectMock
     JsonWebToken jwt;
 
     @BeforeEach
