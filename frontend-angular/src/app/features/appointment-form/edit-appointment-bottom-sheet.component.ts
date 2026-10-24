@@ -87,10 +87,6 @@ export class EditAppointmentBottomSheetComponent {
     });
   }
 
-  protected toggleAttendees(): void {
-    this.form.controls.hasAttendees.setValue(!this.form.controls.hasAttendees.value);
-  }
-
   protected changeMinimalAttendees(delta: number): void {
     const control = this.form.controls.minimalAttendees;
     control.setValue(Math.max(MIN_ATTENDEES_FLOOR, control.value + delta));

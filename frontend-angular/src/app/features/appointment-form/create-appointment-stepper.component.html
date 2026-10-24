@@ -264,24 +264,39 @@
             <p class="small text-body-secondary mb-0">Mindestanzahl und Einladungen festlegen.</p>
           </div>
           <div class="option-grid w-100">
-            <p class="small fw-semibold text-uppercase text-body-secondary text-center mb-3">
-              Mindestanzahl Teilnehmer
+            <p id="min-attendees-question" class="fw-semibold text-center mb-1">
+              Soll es eine Mindestanzahl geben?
             </p>
-            <div class="d-flex gap-3 justify-content-center mb-3">
+            <p class="small text-body-secondary text-center mb-3">
+              {{
+                form.controls.hasAttendees.value
+                  ? 'Der Termin braucht mindestens so viele Zusagen.'
+                  : 'Ohne Mindestanzahl findet der Termin immer statt.'
+              }}
+            </p>
+            <div class="d-flex gap-3 justify-content-center mb-3" role="group" aria-labelledby="min-attendees-question">
               <button
                 type="button"
                 class="btn btn-lg flex-fill"
-                [class]="form.controls.hasAttendees.value ? 'btn-success' : 'btn-outline-secondary'"
+                [class]="form.controls.hasAttendees.value ? 'btn-primary' : 'btn-outline-secondary'"
+                [attr.aria-pressed]="form.controls.hasAttendees.value"
                 (click)="setAttendees(true)"
               >
+                @if (form.controls.hasAttendees.value) {
+                  <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                }
                 Ja
               </button>
               <button
                 type="button"
                 class="btn btn-lg flex-fill"
-                [class]="!form.controls.hasAttendees.value ? 'btn-dark' : 'btn-outline-secondary'"
+                [class]="!form.controls.hasAttendees.value ? 'btn-primary' : 'btn-outline-secondary'"
+                [attr.aria-pressed]="!form.controls.hasAttendees.value"
                 (click)="setAttendees(false)"
               >
+                @if (!form.controls.hasAttendees.value) {
+                  <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                }
                 Nein
               </button>
             </div>

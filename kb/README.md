@@ -325,3 +325,4 @@ grep -r "relates_to.*backend" kb/constraints/
 
 **Last updated**: 2026-10-05
 - [ADR-2026-10-24-034: Karten-Aktions-Buttons füllen die Zeile bis sm](adr/ADR-2026-10-24-034-card-action-buttons-fill-row-on-mobile.md)
+- [ADR-2026-10-24-035: Mindestanzahl als ausformulierte Frage, ein Schalter im Bearbeiten-Dialog](adr/ADR-2026-10-24-035-min-attendees-question-and-single-switch.md)
