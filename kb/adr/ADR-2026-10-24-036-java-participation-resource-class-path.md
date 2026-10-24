@@ -24,3 +24,7 @@ Der übrige Java-Testbaum kompiliert auf diesem Stand nicht (`BaseIntegrationTes
 `GroupIntegrationTest` verweisen auf entfernte Klassen `User`, `UserRepository`, `Friendship`, `GroupMembership…`;
 `AppointmentParticipationResourceTest` auf `UserRole.ORGANIZER`), und `./mvnw verify` scheitert an 5 Checkstyle-Fehlern
 in fremden Dateien. Der neue Test wurde deshalb mit temporär entfernten Altdateien und `-Dcheckstyle.skip` ausgeführt.
+
+Der Test ist damit **kein CI-Gate**, bis die Altlast behoben ist. Das Folgeticket
+[#256](https://github.com/Silverminer007/chronos-root/issues/256) (Testbaum kompilierbar machen, Checkstyle-Fehler beheben,
+danach läuft `./mvnw test`/`verify` inklusive `ParticipationRoutesIntegrationTest` in der CI) hält das fest.
