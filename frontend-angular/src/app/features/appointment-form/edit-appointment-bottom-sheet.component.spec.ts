@@ -115,7 +115,7 @@ describe('EditAppointmentBottomSheetComponent', () => {
 
   it('setzt die Mindestteilnehmerzahl auf 0, wenn sie abgeschaltet wird', async () => {
     render();
-    button('Mindestteilnehmer festlegen').click();
+    (fixture.nativeElement.querySelector('#edit-has-attendees') as HTMLInputElement).click();
     fixture.detectChanges();
     button('Speichern').click();
     await fixture.whenStable();
