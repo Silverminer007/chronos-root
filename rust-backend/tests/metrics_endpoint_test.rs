@@ -5,7 +5,7 @@ use chronos_date_api::app::build_router;
 use chronos_date_api::appointments::handlers::AppState;
 use chronos_date_api::event_bus::{Event, EventPublisher};
 use chronos_date_api::security::TokenValidator;
-use chronos_date_api::test_utils::user_state_for_tests;
+use chronos_date_api::test_utils::{user_state_for_tests, TestDb, TestDbConfig};
 use http::StatusCode;
 use std::sync::Arc;
 use std::time::Duration;
@@ -153,22 +153,17 @@ async fn health_endpoints_use_quarkus_json_bodies() -> Result<(), AnyError> {
     Ok(())
 }
 
-/// Live PostgreSQL (Testcontainers): readiness is UP and the pool gauges reflect a real pool.
+/// Live PostgreSQL (TEST_DATABASE_URL / DATABASE_URL, no Docker): readiness is UP and the pool
+/// gauges reflect a real pool.
 #[tokio::test]
 async fn readiness_up_and_pool_metrics_with_live_database() -> Result<(), AnyError> {
-    use testcontainers::runners::AsyncRunner;
-    use testcontainers_modules::postgres::Postgres;
-
-    let container = Postgres::default().start().await?;
-    let port = container.get_host_port_ipv4(5432).await?;
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(3)
-        .min_connections(1)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&format!(
-            "postgres://postgres:postgres@127.0.0.1:{port}/postgres"
-        ))
-        .await?;
+    let db = TestDb::with_config(TestDbConfig {
+        max_connections: 3,
+        connection_timeout: Duration::from_secs(5),
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    let pool = db.pool().clone();
     sqlx::query("SELECT 1").execute(&pool).await?;
 
     let app_state = Arc::new(AppState {
