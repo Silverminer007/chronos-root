@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @ApplicationScoped
 @Transactional
@@ -77,21 +78,49 @@ public class MessageService {
     public void onAppointmentMoved(@Observes AppointmentMovedEvent event) {
         Appointment appointment = appointmentRepository.findById(event.appointmentId());
         UserIdentity user = identityPort.findById(event.actingUserOidcId());
-        long hourDelta = event.oldStartTime().until(appointment.getStartTime(), ChronoUnit.HOURS);
-        String text;
-        if (hourDelta > 0) {
-            text = "%s hat diesen Termin um %s Stunden verschoben".formatted(user.getName(), hourDelta);
-        } else if (hourDelta < 0) {
-            text = "%s hat diesen Termin um %s Stunden vor verlegt".formatted(user.getName(), hourDelta * -1);
-        } else {
-            hourDelta = event.oldEndTime().until(appointment.getEndTime(), ChronoUnit.HOURS);
-            if (hourDelta > 0) {
-                text = "%s hat das Ende dieses Termins um %s Stunden verschoben".formatted(user.getName(), hourDelta);
-            } else {
-                text = "%s hat das Ende dieses Termins um %s Stunden vor verlegt".formatted(user.getName(), hourDelta * -1);
-            }
+        Optional<String> text = movedText(user.getName(), event.oldStartTime(), appointment.getStartTime(),
+                event.oldEndTime(), appointment.getEndTime());
+        if (text.isEmpty()) {
+            return;
         }
-        persistMessage(text, event.actingUserOidcId(), appointment);
+        persistMessage(text.get(), event.actingUserOidcId(), appointment);
+    }
+
+    /**
+     * Builds the system message for a moved appointment. The start time takes precedence; the end time is only
+     * considered if the start is unchanged. Returns empty if neither changed by at least one minute.
+     */
+    static Optional<String> movedText(String userName, Instant oldStart, Instant newStart,
+                                      Instant oldEnd, Instant newEnd) {
+        long startMinutes = oldStart.until(newStart, ChronoUnit.MINUTES);
+        if (startMinutes != 0) {
+            return Optional.of("%s hat diesen Termin um %s %s".formatted(
+                    userName, formatDuration(Math.abs(startMinutes)), direction(startMinutes)));
+        }
+        long endMinutes = oldEnd.until(newEnd, ChronoUnit.MINUTES);
+        if (endMinutes != 0) {
+            return Optional.of("%s hat das Ende dieses Termins um %s %s".formatted(
+                    userName, formatDuration(Math.abs(endMinutes)), direction(endMinutes)));
+        }
+        return Optional.empty();
+    }
+
+    private static String direction(long deltaMinutes) {
+        return deltaMinutes > 0 ? "nach hinten verschoben" : "vorverlegt";
+    }
+
+    private static String formatDuration(long minutes) {
+        long hours = minutes / 60;
+        long rest = minutes % 60;
+        if (hours == 0) {
+            return minutesText(rest);
+        }
+        String hourText = hours == 1 ? "1 Stunde" : hours + " Stunden";
+        return rest == 0 ? hourText : hourText + " " + minutesText(rest);
+    }
+
+    private static String minutesText(long minutes) {
+        return minutes == 1 ? "1 Minute" : minutes + " Minuten";
     }
 
     public Message sendMessage(Long appointmentId, String messageText, String actingUserOidcId) {
