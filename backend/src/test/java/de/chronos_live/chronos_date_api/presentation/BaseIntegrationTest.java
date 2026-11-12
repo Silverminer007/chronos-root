@@ -1,7 +1,8 @@
 package de.chronos_live.chronos_date_api.presentation;
 
-import de.chronos_live.chronos_date_api.domain.User;
-import de.chronos_live.chronos_date_api.infrastructure.UserRepository;
+import de.chronos_live.chronos_date_api.application.ports.IdentityPort;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -9,8 +10,6 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
-
-import java.time.Instant;
 
 import static org.mockito.Mockito.when;
 
@@ -31,9 +30,10 @@ public abstract class BaseIntegrationTest {
     protected static final String ADMIN_USER_OIDC = "admin-oidc-789";
 
     @Inject
-    UserRepository userRepository;
+    IdentityPort identityPort;
 
-    @Inject
+    // The JsonWebToken is request-scoped; only a Quarkus mock is visible to the HTTP worker threads.
+    @InjectMock
     JsonWebToken jwt;
 
     @BeforeEach
@@ -46,15 +46,7 @@ public abstract class BaseIntegrationTest {
     }
 
     protected void createTestUser(String oidcId, String name) {
-        User existing = userRepository.findByOidcId(oidcId).orElse(null);
-        if (existing == null) {
-            User user = new User();
-            user.setOidcId(oidcId);
-            user.setName(name);
-            user.setEmail(oidcId + "@test.local");
-            user.setCreatedAt(Instant.now());
-            userRepository.persist(user);
-        }
+        identityPort.upsert(new UserIdentity(oidcId, name, null, oidcId + "@test.local", null));
     }
 
     protected void mockJwtForUser(String oidcId) {
