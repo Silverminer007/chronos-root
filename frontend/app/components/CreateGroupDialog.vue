@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {useGroupsStore} from '~/stores/groups';
+import type {Group} from '~/types';
 import {useToast} from 'primevue/usetoast';
 
 const props = defineProps<{
@@ -8,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
+  created: [group: Group];
 }>();
 
 const groupsStore = useGroupsStore();
@@ -35,16 +37,18 @@ const createGroup = async () => {
   error.value = '';
 
   try {
-    await groupsStore.createGroup(groupName.value.trim());
+    const group = await groupsStore.createGroup(groupName.value.trim());
     toast.add({
       severity: 'success',
       summary: 'Gruppe erstellt',
-      detail: `Die Gruppe "${groupName.value}" wurde erstellt`,
+      detail: `Die Gruppe "${group.name}" wurde erstellt`,
       life: 3000
     });
+    emit('created', group);
     close();
   } catch (err) {
     error.value = getErrorMessage(err, 'Fehler beim Erstellen der Gruppe');
+    toast.add({severity: 'error', summary: 'Fehler', detail: error.value, life: 5000});
   } finally {
     loading.value = false;
   }

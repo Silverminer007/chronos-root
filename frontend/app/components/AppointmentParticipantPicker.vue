@@ -13,6 +13,7 @@ const emit = defineEmits<{ change: [userCount: number, groupMemberCount: number]
 const { searchFriends, loading: friendsLoading } = useFriends()
 const { searchGroups, loading: groupsLoading } = useGroups()
 
+const showCreateGroup = ref(false)
 const tab = ref<'users' | 'groups'>('users')
 const query = ref('')
 const userResults = ref<Friend[]>([])
@@ -70,6 +71,11 @@ function selectGroup(group: Group) {
   selectedGroups.value.push({ id: group.id, name: group.name, role: 'ATTENDANT', memberCount: group.members?.length ?? 0 })
   query.value = ''
   groupResults.value = []
+}
+
+function onGroupCreated(group: Group) {
+  if (selectedGroups.value.some(g => g.id === group.id)) return
+  selectedGroups.value.push({ id: group.id, name: group.name, role: 'ATTENDANT', memberCount: group.members?.length ?? 0 })
 }
 
 function removeUser(id: number) {
@@ -210,6 +216,21 @@ defineExpose({
     <p v-else-if="noResults" class="text-center text-sm text-gray-400 dark:text-neutral-500 py-1">
       Keine Ergebnisse
     </p>
+
+    <button
+      type="button"
+      class="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-blue-300 dark:border-blue-700 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+      @click="showCreateGroup = true"
+    >
+      <Icon name="lucide:plus" class="text-xs" />
+      Neue Gruppe erstellen
+    </button>
+
+    <CreateGroupDialog
+      :visible="showCreateGroup"
+      @close="showCreateGroup = false"
+      @created="onGroupCreated"
+    />
 
     <!-- Selected chips -->
     <div
