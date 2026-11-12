@@ -1,0 +1,1 @@
+- [2026-11-12 17:12](2026-11-12-1712.md) – automatisch: 0 gemergt, 1 Phasen laufen, 3 bereit
