@@ -1,0 +1,1 @@
+- Regeln und Bereiche: `kb/status/steward.md`. Arbeitsweise des Repos: `CLAUDE.md`.
