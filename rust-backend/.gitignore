@@ -14,3 +14,7 @@ target/
 # Environment
 .env
 .env.local
+
+# Generated coverage artifacts
+lcov.info
+coverage-report.txt
