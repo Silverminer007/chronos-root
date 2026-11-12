@@ -22,6 +22,9 @@ export interface FetchOptions {
     headers?: Record<string, string>
 }
 
+// Zähler je fetchAgenda-Aufruf: Antworten überholter Ladevorgänge werden verworfen.
+let agendaRequestCounter = 0
+
 export const useAppointmentsStore = defineStore('appointments', {
     state: () => ({
         appointments: [] as Appointment[],
@@ -130,6 +133,7 @@ export const useAppointmentsStore = defineStore('appointments', {
     actions: {
         // Agenda abrufen
         async fetchAgenda(filters: AppointmentFilters = {}, options: FetchOptions = {}) {
+            const requestId = ++agendaRequestCounter
             this.loading = true
             this.error = null
 
@@ -155,8 +159,8 @@ export const useAppointmentsStore = defineStore('appointments', {
                     headers: options.headers
                 })
 
-                if (filters.page === 0 || filters.page == null) {
-                    this.appointments = [];
+                if (requestId !== agendaRequestCounter) {
+                    return this.appointments
                 }
                 const items = Array.isArray(response) ? response : response.data;
                 const meta = Array.isArray(response) ? undefined : response.meta;
@@ -165,12 +169,16 @@ export const useAppointmentsStore = defineStore('appointments', {
                     this.pagination.size = meta.size;
                     this.pagination.total = meta.total;
                 }
-                this.appointments = this.appointments.concat(items);
+                this.appointments = mergeAgendaPage(this.appointments, items, filters.page);
             } catch (err) {
-                this.error = getErrorMessage(err, 'Fehler beim Laden der Appointments')
+                if (requestId === agendaRequestCounter) {
+                    this.error = getErrorMessage(err, 'Fehler beim Laden der Appointments')
+                }
                 throw err
             } finally {
-                this.loading = false
+                if (requestId === agendaRequestCounter) {
+                    this.loading = false
+                }
             }
             return this.appointments;
         },
