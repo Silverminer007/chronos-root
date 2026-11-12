@@ -60,23 +60,57 @@ fn moved_text(
     name: &str,
     old: (DateTime<Utc>, DateTime<Utc>),
     new: (DateTime<Utc>, DateTime<Utc>),
-) -> String {
-    let start_hours = (new.0 - old.0).num_hours();
-    let end_hours = (new.1 - old.1).num_hours();
-    match (start_hours, end_hours) {
-        (hours, _) if hours > 0 => {
-            format!("{name} hat diesen Termin um {hours} Stunden verschoben")
-        }
-        (hours, _) if hours < 0 => {
-            format!("{name} hat diesen Termin um {} Stunden vor verlegt", -hours)
-        }
-        (_, hours) if hours > 0 => {
-            format!("{name} hat das Ende dieses Termins um {hours} Stunden verschoben")
-        }
-        (_, hours) => format!(
-            "{name} hat das Ende dieses Termins um {} Stunden vor verlegt",
-            -hours
-        ),
+) -> Option<String> {
+    let start_minutes = (new.0 - old.0).num_minutes();
+    if start_minutes != 0 {
+        return Some(format!(
+            "{name} hat diesen Termin um {} {}",
+            format_duration(start_minutes.abs()),
+            direction(start_minutes)
+        ));
+    }
+    let end_minutes = (new.1 - old.1).num_minutes();
+    if end_minutes != 0 {
+        return Some(format!(
+            "{name} hat das Ende dieses Termins um {} {}",
+            format_duration(end_minutes.abs()),
+            direction(end_minutes)
+        ));
+    }
+    None
+}
+
+fn direction(delta_minutes: i64) -> &'static str {
+    if delta_minutes > 0 {
+        "nach hinten verschoben"
+    } else {
+        "vorverlegt"
+    }
+}
+
+fn format_duration(minutes: i64) -> String {
+    let hours = minutes / 60;
+    let rest = minutes % 60;
+    if hours == 0 {
+        return minutes_text(rest);
+    }
+    let hour_text = if hours == 1 {
+        "1 Stunde".to_string()
+    } else {
+        format!("{hours} Stunden")
+    };
+    if rest == 0 {
+        hour_text
+    } else {
+        format!("{hour_text} {}", minutes_text(rest))
+    }
+}
+
+fn minutes_text(minutes: i64) -> String {
+    if minutes == 1 {
+        "1 Minute".to_string()
+    } else {
+        format!("{minutes} Minuten")
     }
 }
 
@@ -659,7 +693,7 @@ impl AppointmentService {
         &self,
         appointment_id: i64,
         user_id: &str,
-        text: impl FnOnce(&str) -> String,
+        text: impl FnOnce(&str) -> Option<String>,
     ) -> Result<(), ServiceError> {
         let db_err = |e: RepositoryError| ServiceError::DatabaseError(e.to_string());
         let name = self
@@ -670,8 +704,11 @@ impl AppointmentService {
             .remove(user_id)
             .unwrap_or_else(|| UserIdentity::deleted(user_id))
             .name();
+        let Some(text) = text(&name) else {
+            return Ok(());
+        };
         self.repo
-            .persist_message(appointment_id, user_id, Some(&text(&name)))
+            .persist_message(appointment_id, user_id, Some(&text))
             .await
             .map_err(db_err)?;
         Ok(())
@@ -690,7 +727,9 @@ impl AppointmentService {
             .ok_or(ServiceError::NotFound)?;
 
         self.persist_system_message(id, acting_user_id, |name| {
-            format!("{name} hat diesen Termin abgesagt. Er wird nicht stattfinden!")
+            Some(format!(
+                "{name} hat diesen Termin abgesagt. Er wird nicht stattfinden!"
+            ))
         })
         .await?;
 
@@ -962,7 +1001,7 @@ impl AppointmentService {
             } else {
                 "abgesagt"
             };
-            format!("{name} hat {verb}")
+            Some(format!("{name} hat {verb}"))
         })
         .await?;
 
@@ -1212,5 +1251,119 @@ impl AppointmentService {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod moved_text_tests {
+    use super::moved_text;
+    use chrono::{DateTime, Duration, TimeZone, Utc};
+
+    fn base() -> (DateTime<Utc>, DateTime<Utc>) {
+        (
+            Utc.with_ymd_and_hms(2026, 5, 1, 18, 0, 0).unwrap(),
+            Utc.with_ymd_and_hms(2026, 5, 1, 20, 0, 0).unwrap(),
+        )
+    }
+
+    fn start_shift(minutes: i64) -> Option<String> {
+        let (s, e) = base();
+        moved_text("Anna", (s, e), (s + Duration::minutes(minutes), e))
+    }
+
+    fn end_shift(minutes: i64) -> Option<String> {
+        let (s, e) = base();
+        moved_text("Anna", (s, e), (s, e + Duration::minutes(minutes)))
+    }
+
+    #[test]
+    fn start_plus_one_hour() {
+        assert_eq!(
+            start_shift(60).as_deref(),
+            Some("Anna hat diesen Termin um 1 Stunde nach hinten verschoben")
+        );
+    }
+
+    #[test]
+    fn start_minus_one_hour() {
+        assert_eq!(
+            start_shift(-60).as_deref(),
+            Some("Anna hat diesen Termin um 1 Stunde vorverlegt")
+        );
+    }
+
+    #[test]
+    fn start_plus_thirty_minutes() {
+        assert_eq!(
+            start_shift(30).as_deref(),
+            Some("Anna hat diesen Termin um 30 Minuten nach hinten verschoben")
+        );
+    }
+
+    #[test]
+    fn start_minus_thirty_minutes() {
+        assert_eq!(
+            start_shift(-30).as_deref(),
+            Some("Anna hat diesen Termin um 30 Minuten vorverlegt")
+        );
+    }
+
+    #[test]
+    fn start_plus_ninety_minutes() {
+        assert_eq!(
+            start_shift(90).as_deref(),
+            Some("Anna hat diesen Termin um 1 Stunde 30 Minuten nach hinten verschoben")
+        );
+    }
+
+    #[test]
+    fn singular_and_plural_edges() {
+        assert_eq!(
+            start_shift(1).as_deref(),
+            Some("Anna hat diesen Termin um 1 Minute nach hinten verschoben")
+        );
+        assert_eq!(
+            start_shift(59).as_deref(),
+            Some("Anna hat diesen Termin um 59 Minuten nach hinten verschoben")
+        );
+        assert_eq!(
+            start_shift(-121).as_deref(),
+            Some("Anna hat diesen Termin um 2 Stunden 1 Minute vorverlegt")
+        );
+    }
+
+    #[test]
+    fn end_only_plus_two_hours() {
+        assert_eq!(
+            end_shift(120).as_deref(),
+            Some("Anna hat das Ende dieses Termins um 2 Stunden nach hinten verschoben")
+        );
+    }
+
+    #[test]
+    fn end_only_minus_two_hours() {
+        assert_eq!(
+            end_shift(-120).as_deref(),
+            Some("Anna hat das Ende dieses Termins um 2 Stunden vorverlegt")
+        );
+    }
+
+    #[test]
+    fn start_takes_precedence_over_end() {
+        let (s, e) = base();
+        let text = moved_text(
+            "Anna",
+            (s, e),
+            (s + Duration::hours(1), e + Duration::hours(3)),
+        );
+        assert_eq!(
+            text.as_deref(),
+            Some("Anna hat diesen Termin um 1 Stunde nach hinten verschoben")
+        );
+    }
+
+    #[test]
+    fn unchanged_gives_no_message() {
+        assert_eq!(start_shift(0), None);
     }
 }

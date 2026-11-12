@@ -202,7 +202,7 @@ async fn patch_times(app: &TestApp, id: i64, start: &str, end: &str) {
 
 /// Final parity run (#169): Java's `MessageService#onAppointmentMoved` writes a message when the times change
 #[tokio::test]
-async fn test_moving_an_appointment_writes_a_system_message_with_the_hours() {
+async fn test_moving_an_appointment_writes_a_system_message_with_hours_and_minutes() {
     let app = app().await;
     let id = appointment(&app).await; // 10:00 - 11:00
 
@@ -215,10 +215,10 @@ async fn test_moving_an_appointment_writes_a_system_message_with_the_hours() {
     assert_eq!(
         bodies(&app, id).await,
         vec![
-            "Olga Owner hat das Ende dieses Termins um 1 Stunden vor verlegt",
-            "Olga Owner hat das Ende dieses Termins um 2 Stunden verschoben",
-            "Olga Owner hat diesen Termin um 2 Stunden vor verlegt",
-            "Olga Owner hat diesen Termin um 1 Stunden verschoben",
+            "Olga Owner hat das Ende dieses Termins um 1 Stunde vorverlegt",
+            "Olga Owner hat das Ende dieses Termins um 2 Stunden nach hinten verschoben",
+            "Olga Owner hat diesen Termin um 2 Stunden vorverlegt",
+            "Olga Owner hat diesen Termin um 1 Stunde nach hinten verschoben",
         ]
     );
 }
