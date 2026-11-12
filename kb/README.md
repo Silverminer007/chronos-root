@@ -299,6 +299,7 @@ grep -r "relates_to.*backend" kb/constraints/
 - [C2026-10-20-002: LiteLLM key in git history is leaked and must be rotated](constraints/C2026-10-20-002-leaked-litellm-key-in-history.md)
 
 ### Architecture
+- [Architekturübersicht (Komponenten, Datenfluss, Schema-Identität)](architecture/overview.md)
 - [ARCH-2025-09-28-001: Frontend authentication flow](architecture/ARCH-2025-09-28-001-auth-flow.md)
 - [ARCH-2025-09-28-002: Service Worker token refresh](architecture/ARCH-2025-09-28-002-service-worker.md)
 - [ARCH-2025-09-28-003: Layered backend structure](architecture/ARCH-2025-09-28-003-layered-backend.md)
