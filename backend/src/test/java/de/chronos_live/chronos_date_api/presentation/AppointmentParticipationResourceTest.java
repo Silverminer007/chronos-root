@@ -3,6 +3,7 @@ package de.chronos_live.chronos_date_api.presentation;
 import de.chronos_live.chronos_date_api.application.AppointmentParticipationQueryService;
 import de.chronos_live.chronos_date_api.application.AppointmentParticipationService;
 import de.chronos_live.chronos_date_api.domain.ParticipationStatus;
+import de.chronos_live.chronos_date_api.domain.UserIdentity;
 import de.chronos_live.chronos_date_api.domain.UserRole;
 import de.chronos_live.chronos_date_api.dto.AddGroupParticipantDto;
 import de.chronos_live.chronos_date_api.dto.AddParticipantDto;
@@ -17,7 +18,6 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.Collections;
 import java.util.List;
@@ -64,11 +64,8 @@ class AppointmentParticipationResourceTest {
     // ── Setup ─────────────────────────────────────────────────────────────────
     @BeforeEach
     void setUp() {
-        // Mock the principal to return acting user
-        when(principalContext.getPrincipal()).thenAnswer(invocation ->
-            new Object() {
-                public String oidcId() { return ACTING_USER_OIDC_ID; }
-            });
+        when(principalContext.getPrincipal()).thenReturn(
+                new UserIdentity(ACTING_USER_OIDC_ID, "Acting", "User", "acting@test.local", null));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -124,7 +121,7 @@ class AppointmentParticipationResourceTest {
         void should_returnOk_and_fireRoleChangedEvent_when_changingUserRole() {
             // Arrange
             ParticipantRoleDto roleDto = new ParticipantRoleDto();
-            roleDto.setRole("ORGANIZER");
+            roleDto.setRole("RESPONSIBLE");
 
             // Act
             Response response = resource.changeParticipationRole(APPOINTMENT_ID, TARGET_USER_OIDC_ID, roleDto);
@@ -134,14 +131,14 @@ class AppointmentParticipationResourceTest {
 
             // Verify service was called with correct parameters
             verify(appointmentParticipationService).changeUserRole(
-                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.ORGANIZER);
+                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.RESPONSIBLE);
         }
 
         @Test
         void should_returnOk_when_changingToParticipantRole() {
             // Arrange
             ParticipantRoleDto roleDto = new ParticipantRoleDto();
-            roleDto.setRole("PARTICIPANT");
+            roleDto.setRole("ATTENDANT");
 
             // Act
             Response response = resource.changeParticipationRole(APPOINTMENT_ID, TARGET_USER_OIDC_ID, roleDto);
@@ -151,7 +148,7 @@ class AppointmentParticipationResourceTest {
 
             // Verify service was called with correct parameters
             verify(appointmentParticipationService).changeUserRole(
-                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.PARTICIPANT);
+                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.ATTENDANT);
         }
     }
 
@@ -167,7 +164,7 @@ class AppointmentParticipationResourceTest {
             // Arrange
             AddParticipantDto addDto = new AddParticipantDto();
             addDto.setUser_id(TARGET_USER_OIDC_ID);
-            addDto.setUser_role("PARTICIPANT");
+            addDto.setUser_role("ATTENDANT");
 
             // Act
             Response response = resource.addParticipant(APPOINTMENT_ID, TARGET_USER_OIDC_ID, addDto);
@@ -177,7 +174,7 @@ class AppointmentParticipationResourceTest {
 
             // Verify service was called with correct parameters
             verify(appointmentParticipationService).addUserToAppointment(
-                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.PARTICIPANT);
+                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.ATTENDANT);
         }
 
         @Test
@@ -185,7 +182,7 @@ class AppointmentParticipationResourceTest {
             // Arrange
             AddParticipantDto addDto = new AddParticipantDto();
             addDto.setUser_id(TARGET_USER_OIDC_ID);
-            addDto.setUser_role("ORGANIZER");
+            addDto.setUser_role("RESPONSIBLE");
 
             // Act
             Response response = resource.addParticipant(APPOINTMENT_ID, TARGET_USER_OIDC_ID, addDto);
@@ -195,7 +192,7 @@ class AppointmentParticipationResourceTest {
 
             // Verify service was called with correct parameters
             verify(appointmentParticipationService).addUserToAppointment(
-                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.ORGANIZER);
+                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, TARGET_USER_OIDC_ID, UserRole.RESPONSIBLE);
         }
     }
 
@@ -232,7 +229,7 @@ class AppointmentParticipationResourceTest {
             // Arrange
             AddGroupParticipantDto addDto = new AddGroupParticipantDto();
             addDto.setGroup_id(GROUP_ID);
-            addDto.setUser_role("PARTICIPANT");
+            addDto.setUser_role("ATTENDANT");
 
             // Act
             Response response = resource.addGroup(APPOINTMENT_ID, GROUP_ID, addDto);
@@ -242,7 +239,7 @@ class AppointmentParticipationResourceTest {
 
             // Verify service was called with correct parameters
             verify(appointmentParticipationService).addGroupToAppointment(
-                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.PARTICIPANT);
+                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.ATTENDANT);
         }
 
         @Test
@@ -250,7 +247,7 @@ class AppointmentParticipationResourceTest {
             // Arrange
             AddGroupParticipantDto addDto = new AddGroupParticipantDto();
             addDto.setGroup_id(GROUP_ID);
-            addDto.setUser_role("ORGANIZER");
+            addDto.setUser_role("RESPONSIBLE");
 
             // Act
             Response response = resource.addGroup(APPOINTMENT_ID, GROUP_ID, addDto);
@@ -260,7 +257,7 @@ class AppointmentParticipationResourceTest {
 
             // Verify service was called with correct parameters
             verify(appointmentParticipationService).addGroupToAppointment(
-                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.ORGANIZER);
+                    ACTING_USER_OIDC_ID, APPOINTMENT_ID, GROUP_ID, UserRole.RESPONSIBLE);
         }
     }
 
@@ -298,7 +295,7 @@ class AppointmentParticipationResourceTest {
             UserParticipantDto participant = new UserParticipantDto();
             participant.setUser_id(TARGET_USER_OIDC_ID);
             participant.setName("Test User");
-            participant.setRole(UserRole.PARTICIPANT);
+            participant.setRole(UserRole.ATTENDANT);
             participant.setStatus(ParticipationStatus.APPROVED);
 
             List<UserParticipantDto> participants = List.of(participant);
