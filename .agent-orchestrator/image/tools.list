@@ -1,0 +1,7 @@
+# Projektwerkzeuge, die selftest.sh im Image prüft (ohne Befehl: `<name> --version`).
+java java -version
+node
+npm
+cargo
+rustc
+psql
