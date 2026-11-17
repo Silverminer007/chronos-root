@@ -45,7 +45,7 @@ frontend:
     targetMemoryUtilizationPercentage: 80
   image:
     repository: ghcr.io/silverminer007/chronos-frontend
-    tag: develop
+    tag: latest
     pullPolicy: Always
   containerPort: 3000
   service:
@@ -61,7 +61,7 @@ frontend:
   env:
     NUXT_AUTH_ISSUER: "https://auth.chronos-live.de/realms/chronos"
     NUXT_AUTH_REDIRECT_URI: https://staging.chronos-live.de/api/auth/callback
-    NUXT_QUARKUS_URL: "http://chronos-rust-backend"
+    NUXT_QUARKUS_URL: "http://chronos-backend"
     NUXT_PUBLIC_IMPRESSUM_NAME: "Justus Henze"
     NUXT_PUBLIC_IMPRESSUM_STREET: "Malmedystraße 3"
     NUXT_PUBLIC_IMPRESSUM_CITY: "46145 Oberhausen"
@@ -75,9 +75,8 @@ frontend:
       secretKey: frontend_sentry_dsn
 
 backend:
-  # The Rust backend replaces the Java backend on staging (Flyway migrated the database to V2.1.0
-  # once, the Rust backend adopted that schema)
-  enabled: false
+  # Staging replicates production (Java backend) as the test bed for the Rust takeover
+  enabled: true
   replicaCount: 1
   autoscaling:
     enabled: false
@@ -87,7 +86,7 @@ backend:
     targetMemoryUtilizationPercentage: 80
   image:
     repository: ghcr.io/silverminer007/chronos-backend
-    tag: develop
+    tag: latest
     pullPolicy: Always
   containerPort: 8080
   service:
@@ -103,8 +102,10 @@ backend:
   env:
     DB_URL: "jdbc:postgresql://postgres:5432/chronos"
     DB_USER: "chronos"
+    AUTH_SERVER_URL: "https://auth.chronos-live.de/realms/chronos"
     AUTH_SERVER_BASE_URL: "https://auth.chronos-live.de"
     AUTH_SERVER_REALM: "chronos"
+    QUARKUS_LOG_LEVEL: "DEBUG"
   envFromSecrets:
     - name: DB_PASSWORD
       secretKey: database_password
@@ -132,7 +133,7 @@ backend:
     periodSeconds: 5
 
 rustBackend:
-  enabled: true
+  enabled: false
   replicaCount: 1
   autoscaling:
     enabled: false
