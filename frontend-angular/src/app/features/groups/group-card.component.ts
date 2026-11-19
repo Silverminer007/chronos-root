@@ -14,7 +14,7 @@ const MAX_AVATARS = 5;
   template: `
     <a class="card shadow-sm text-reset text-decoration-none group-card" [routerLink]="['/groups', group().id]">
       <div class="card-body d-flex align-items-start gap-3">
-        <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="users" class="fs-4" /></span>
+        <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="users" /></span>
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex align-items-center justify-content-between gap-2">
             <h3 class="h6 fw-semibold mb-0 text-truncate">{{ group().name }}</h3>

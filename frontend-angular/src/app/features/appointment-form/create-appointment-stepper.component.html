@@ -106,7 +106,7 @@
           >
             @switch (step()) {
               @case (1) {
-                <span class="icon-tile mb-4" aria-hidden="true"
+                <span class="icon-tile icon-tile-lg mb-4" aria-hidden="true"
                   ><!-- Lucide `type` (Umriss-T, wie im alten Frontend) -->
                   <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16" /><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" /><path d="M9 20h6" /></svg
                 ></span>
@@ -123,8 +123,8 @@
                 />
               }
               @case (2) {
-                <span class="icon-tile mb-4" aria-hidden="true"
-                  ><app-icon name="calendar" class="fs-2" /></span>
+                <span class="icon-tile icon-tile-lg mb-4" aria-hidden="true"
+                  ><app-icon name="calendar" /></span>
                 <h1 class="h3 fw-bold">Wann?</h1>
                 <p class="text-body-secondary mb-4">Wähle Datum und Uhrzeit.</p>
                 <div class="d-flex gap-2 mb-4">
@@ -146,8 +146,8 @@
                 />
               }
               @case (3) {
-                <span class="icon-tile mb-4" aria-hidden="true"
-                  ><app-icon name="timer" class="fs-2" /></span>
+                <span class="icon-tile icon-tile-lg mb-4" aria-hidden="true"
+                  ><app-icon name="timer" /></span>
                 <h1 class="h3 fw-bold">Wie lange?</h1>
                 <p class="text-body-secondary mb-4">Wähle die Dauer des Termins.</p>
                 <div class="row row-cols-2 g-3 option-grid">
@@ -210,8 +210,8 @@
                 }
               }
               @case (4) {
-                <span class="icon-tile mb-4" aria-hidden="true"
-                  ><app-icon name="file-text" class="fs-2" /></span>
+                <span class="icon-tile icon-tile-lg mb-4" aria-hidden="true"
+                  ><app-icon name="file-text" /></span>
                 <h1 class="h3 fw-bold">Beschreibung</h1>
                 <p class="text-body-secondary mb-4">Optional – überspringe einfach mit „Weiter".</p>
                 <textarea
@@ -224,8 +224,8 @@
                 ></textarea>
               }
               @case (5) {
-                <span class="icon-tile mb-4" aria-hidden="true"
-                  ><app-icon name="map-pin" class="fs-2" /></span>
+                <span class="icon-tile icon-tile-lg mb-4" aria-hidden="true"
+                  ><app-icon name="map-pin" /></span>
                 <h1 class="h3 fw-bold">Wo findet es statt?</h1>
                 <p class="text-body-secondary mb-4">Optional – überspringe einfach mit „Weiter".</p>
                 <input
@@ -247,8 +247,8 @@
           [class.d-none]="step() !== 6"
         >
           <div class="text-center">
-            <span class="icon-tile rounded-4 mb-3" aria-hidden="true"
-              ><app-icon name="users" class="fs-2" /></span>
+            <span class="icon-tile icon-tile-lg mb-3" aria-hidden="true"
+              ><app-icon name="users" /></span>
             <h1 class="h3 fw-bold mb-1">Teilnehmer</h1>
             <p class="small text-body-secondary mb-0">Mindestanzahl und Einladungen festlegen.</p>
           </div>

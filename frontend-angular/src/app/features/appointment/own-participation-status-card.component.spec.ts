@@ -39,6 +39,7 @@ describe('OwnParticipationStatusCardComponent', () => {
     expect(el.textContent).toContain('Bitte bestätige deine Teilnahme');
     expect(buttonByText(el, 'Zusagen')?.disabled).toBe(false);
     expect(buttonByText(el, 'Absagen')?.disabled).toBe(false);
+    expect(el.querySelector('.alert.alert-amber .alert-title')?.textContent).toContain('Bitte bestätige');
   });
 
   it('behandelt fehlende eigene Teilnahme wie „ausstehend“', () => {

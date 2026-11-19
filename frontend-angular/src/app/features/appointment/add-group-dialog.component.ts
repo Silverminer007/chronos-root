@@ -17,7 +17,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="users" class="fs-4" /></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="users" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="add-group-title">Gruppe hinzufügen</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="closed.emit()"></button>
             </div>
@@ -80,7 +80,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
               }
 
               @if (selected(); as group) {
-                <div class="alert alert-primary d-flex align-items-center justify-content-between mb-0">
+                <div class="alert alert-brand justify-content-between align-items-center mb-0">
                   <div class="d-flex align-items-center gap-3">
                     <span class="avatar" aria-hidden="true"><app-icon name="users" /></span>
                     <div>

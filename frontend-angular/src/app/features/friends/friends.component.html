@@ -23,7 +23,7 @@
         (click)="activeTab.set('friends')"
       >
         <app-icon name="users" class="me-2" />Freunde
-        <span class="badge rounded-pill ms-2" [class]="activeTab() === 'friends' ? 'badge-on-brand' : 'badge-soft'">{{ store.friendsCount() }}</span>
+        <span class="badge ms-2" [class]="activeTab() === 'friends' ? 'badge-on-brand' : 'badge-brand'">{{ store.friendsCount() }}</span>
       </button>
       <button
         type="button"
@@ -35,7 +35,7 @@
       >
         <app-icon name="inbox" class="me-2" />Anfragen
         @if (store.totalRequestsCount() > 0) {
-          <span class="badge rounded-pill ms-2" [class]="activeTab() === 'requests' ? 'badge-on-brand' : 'bg-danger-subtle text-danger-emphasis'">{{ store.totalRequestsCount() }}</span>
+          <span class="badge ms-2" [class]="activeTab() === 'requests' ? 'badge-on-brand' : 'badge-danger'">{{ store.totalRequestsCount() }}</span>
         }
       </button>
     </div>
@@ -46,7 +46,7 @@
         <p class="text-body-secondary mb-0">Wird geladen...</p>
       </div>
     } @else if (store.error(); as error) {
-      <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
+      <div class="alert alert-danger align-items-center mb-0" role="alert">
         <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
@@ -61,7 +61,7 @@
 
         @if (store.friends().length === 0) {
           <div class="text-center py-5 px-3">
-            <div class="icon-tile rounded-circle empty-icon mb-3">
+            <div class="icon-tile icon-tile-round mb-3">
               <app-icon name="users" class="fs-2" />
             </div>
             <h3 class="h4 fw-bold mb-2">Noch keine Freunde</h3>

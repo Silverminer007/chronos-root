@@ -68,7 +68,7 @@ test.describe('Farben der Detailseiten (#221)', () => {
         const b = [...document.querySelectorAll('button')].find((e) => e.textContent?.includes(text))!;
         return { border: css(b).borderTopWidth, color: css(b).color, borderColor: css(b).borderTopColor, radius: css(b).borderTopLeftRadius };
       };
-      const note = document.querySelector('.alert-pending')!;
+      const note = document.querySelector('.alert-amber')!;
       const plus = document.querySelector('button[aria-label="Teilnehmer hinzufügen"]')!;
       return {
         approve: btn('Zusagen'),
@@ -76,7 +76,7 @@ test.describe('Farben der Detailseiten (#221)', () => {
         noteBg: css(note).backgroundColor,
         noteBorder: css(note).borderTopColor,
         noteBorderWidth: css(note).borderTopWidth,
-        noteTitle: css(note.querySelector('.alert-pending-title')!).color,
+        noteTitle: css(note.querySelector('.alert-title')!).color,
         noteText: css(note.querySelector('p.small')!).color,
         plusBg: css(plus).backgroundImage,
         plusRadius: css(plus).borderTopLeftRadius,
@@ -87,19 +87,19 @@ test.describe('Farben der Detailseiten (#221)', () => {
     // Nuxt: `border-2 border-green-600 text-green-600 rounded-lg` / red-600
     expect(res.approve).toMatchObject({ border: '2px', color: 'rgb(22, 163, 74)', borderColor: 'rgb(22, 163, 74)', radius: '8px' });
     expect(res.reject).toMatchObject({ border: '2px', color: 'rgb(220, 38, 38)', borderColor: 'rgb(220, 38, 38)', radius: '8px' });
-    // Nuxt: `bg-yellow-50 border border-yellow-200 rounded-lg`, Titel yellow-900, Text yellow-700
-    expect(res.noteBg, 'Hintergrund der Hinweisbox (erwartet yellow-50)').toBe('rgb(254, 252, 232)');
-    expect(res.noteBorder).toBe('rgb(254, 240, 138)');
+    // Figma Alert (Amber): bg/warning-subtle, 1 px border/default, Titel text/primary, Text text/secondary
+    expect(res.noteBg, 'Hintergrund der Hinweisbox (erwartet bg/warning-subtle)').toBe('rgb(254, 252, 232)');
+    expect(res.noteBorder).toBe('rgb(229, 231, 235)');
     expect(res.noteBorderWidth).toBe('1px');
-    expect(res.noteTitle, 'Titel der Hinweisbox (erwartet yellow-900)').toBe('rgb(113, 63, 18)');
-    expect(res.noteText, 'Text der Hinweisbox (erwartet yellow-700)').toBe('rgb(161, 98, 7)');
+    expect(res.noteTitle, 'Titel der Hinweisbox (erwartet text/primary)').toBe('rgb(17, 24, 39)');
+    expect(res.noteText, 'Text der Hinweisbox (erwartet text/secondary)').toBe('rgb(55, 65, 81)');
     // Nuxt: `w-8 h-8 rounded-lg bg-linear-to-r from-purple-600 to-pink-500`
     expect(res.plusBg, 'Verlauf des Plus-Knopfs').toContain('linear-gradient');
     expect(res.plusRadius).toBe('8px');
     expect(res.plusWidth).toBe('32px');
   });
 
-  test('Gruppendetail: Icon-Kachel blau/indigo statt lila', async ({ page, baseURL }) => {
+  test('Gruppendetail: einfarbige Icon-Kachel (Figma)', async ({ page, baseURL }) => {
     await mockSession(page, baseURL ?? '');
     await page.route('**/api/v2/groups', (route) => route.fulfill({ json: [{ id: 1, name: 'Leiterrunde', members: [] }] }));
     await page.route('**/api/v2/groups/1/users', (route) => route.fulfill({ json: [user] }));
@@ -108,12 +108,12 @@ test.describe('Farben der Detailseiten (#221)', () => {
 
     const tile = await page.evaluate(() => {
       const el = document.querySelector('.icon-tile')!;
-      return { bg: getComputedStyle(el).backgroundImage, icon: getComputedStyle(el).color };
+      return { bg: getComputedStyle(el).backgroundImage, bgColor: getComputedStyle(el).backgroundColor, icon: getComputedStyle(el).color };
     });
-    // Nuxt: Verlauf blue-100 (#dbeafe) → indigo-100 (#e0e7ff), Icon blue-600 (#2563eb)
-    expect(tile.bg, 'Verlauf der Icon-Kachel (erwartet blue-100 → indigo-100)').toContain('rgb(219, 234, 254)');
-    expect(tile.bg, 'Verlauf der Icon-Kachel (erwartet blue-100 → indigo-100)').toContain('rgb(224, 231, 255)');
-    expect(tile.icon, 'Icon-Farbe der Icon-Kachel (erwartet blue-600)').toBe('rgb(37, 99, 235)');
+    // Figma: einfarbig bg/brand-subtle (#faf5ff), Icon text/brand (#9333ea)
+    expect(tile.bg, 'Icon-Kachel ohne Verlauf').toBe('none');
+    expect(tile.bgColor, 'Fläche der Icon-Kachel (erwartet bg/brand-subtle)').toBe('rgb(250, 245, 255)');
+    expect(tile.icon, 'Icon-Farbe der Icon-Kachel (erwartet text/brand)').toBe('rgb(147, 51, 234)');
 
     const fab = await page.evaluate(() => {
       const el = document.querySelector('.fab')!;

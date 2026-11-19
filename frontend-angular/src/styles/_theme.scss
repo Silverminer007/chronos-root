@@ -1,5 +1,72 @@
 @use 'variables' as *;
 
+// Figma-Farb-Tokens als CSS Custom Properties (`--chronos-bg-page`, `--chronos-text-muted`, ...), Light in :root, Dark unter
+// `[data-bs-theme='dark']`. Bootstrap-Variablen sind in `_variables.scss` auf dieselben Werte gesetzt.
+:root {
+  @each $name, $values in $chronos-colors {
+    --chronos-#{$name}: #{chronos-color($name, 0)};
+  }
+
+  --chronos-overlay-tint: #{$overlay-tint};
+  --chronos-gradient-brand: #{$brand-gradient};
+  --chronos-gradient-landing: #{$landing-gradient};
+  --chronos-shadow-sm: #{$box-shadow-sm};
+  --chronos-shadow-md: #{$box-shadow};
+  --chronos-shadow-lg: #{$box-shadow-lg};
+}
+
+[data-bs-theme='dark'] {
+  @each $name, $values in $chronos-colors {
+    --chronos-#{$name}: #{chronos-color($name, 1)};
+  }
+}
+
+// Typografie-Skala (Größe/Zeilenhöhe/Gewicht) nach Figma. Überschriften-Elemente tragen dieselben Werte.
+h1,
+.h1 {
+  line-height: 2.375rem; // 38 px
+}
+
+h2,
+.h2 {
+  line-height: 2rem; // 32 px
+}
+
+h3,
+.h3 {
+  font-weight: 600;
+  line-height: 1.6875rem; // 27 px
+}
+
+.text-display {
+  font-size: 3rem;
+  line-height: 3.4375rem; // 55 px
+  font-weight: 700;
+}
+
+.text-body-m {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+}
+
+.text-body-s {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+.text-body-m.fw-semibold,
+.text-body-s.fw-semibold {
+  font-weight: 600;
+}
+
 // Markenfarbe als Gradient (Lila → Pink).
 .text-gradient {
   background: $brand-gradient;
@@ -30,12 +97,17 @@
   background: linear-gradient(90deg, #2563eb, #6366f1);
 }
 
-// Halbtransparente Karte der öffentlichen Seiten (Nuxt: `bg-white/90 border-2 border-purple-200 rounded-xl`).
+// Karte der öffentlichen Seiten (Figma Glass-Card): bg/surface, 2-px-Rand, Radius 12, Padding 24, großer Schatten.
 .glass-card {
-  background-color: rgba(var(--bs-body-bg-rgb), 0.9);
-  border: 2px solid #e9d5ff; // purple-200
-  border-radius: var(--bs-border-radius-xxl);
-  backdrop-filter: blur(4px);
+  padding: 1.5rem;
+  background-color: var(--chronos-bg-surface);
+  border: 2px solid var(--chronos-border-default);
+  border-radius: var(--bs-border-radius-lg); // 12 px
+  box-shadow: 0 25px 25px rgba(0, 0, 0, 0.25);
+}
+
+.glass-card-highlight {
+  border-color: var(--chronos-border-brand);
 }
 
 // Hinweis auf fehlende Konfiguration (Nuxt: `text-amber-600`).
@@ -43,34 +115,56 @@
   color: #d97706;
 }
 
-[data-bs-theme='dark'] .glass-card {
-  border-color: $brand-purple;
-}
-
-// Hervorgehobenes Icon-Feld (Nuxt: `bg-linear-to-br from-purple-100 to-pink-100`).
+// Icon-Kachel (Figma): einfarbige Fläche bg/brand-subtle. Größen sm 40/md 48/lg 64/round 80; das Icon folgt der Kachelgröße.
+// Tönungen für Dialoge: `-danger`, `-success` (ohne Zusatz: Brand).
 .icon-tile {
+  --icon-tile-size: 3rem;
+  --icon-tile-icon: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
+  flex-shrink: 0;
+  width: var(--icon-tile-size);
+  height: var(--icon-tile-size);
   border-radius: var(--bs-border-radius-lg);
-  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
-  color: $brand-purple;
+  background: var(--chronos-bg-brand-subtle);
+  color: var(--chronos-text-brand);
+
+  > .app-icon {
+    font-size: var(--icon-tile-icon);
+  }
 }
 
-[data-bs-theme='dark'] .icon-tile {
-  background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+.icon-tile-sm {
+  --icon-tile-size: 2.5rem;
+  --icon-tile-icon: 1.25rem;
+  border-radius: var(--bs-border-radius);
 }
 
-// Blaue Variante der Kachel (Nuxt: `from-blue-100 to-indigo-100`, Icon `text-blue-600`), z. B. Gruppendetail.
-.icon-tile-blue {
-  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
-  color: #2563eb;
+.icon-tile-md {
+  --icon-tile-size: 3rem;
+  --icon-tile-icon: 1.5rem;
 }
 
-[data-bs-theme='dark'] .icon-tile-blue {
-  background: linear-gradient(135deg, rgba(#2563eb, 0.3), rgba(#6366f1, 0.3));
+.icon-tile-lg {
+  --icon-tile-size: 4rem;
+  --icon-tile-icon: 2rem;
+}
+
+.icon-tile-round {
+  --icon-tile-size: 5rem;
+  --icon-tile-icon: 2rem;
+  border-radius: 50%;
+}
+
+.icon-tile-danger {
+  background: var(--chronos-bg-danger-subtle);
+  color: var(--chronos-text-danger);
+}
+
+.icon-tile-success {
+  background: var(--chronos-bg-success-subtle);
+  color: var(--chronos-text-success);
 }
 
 // Knöpfe im Verlaufskopf (Nuxt: `bg-white/20 text-white`, Glas-Optik).
@@ -78,9 +172,9 @@
   --bs-btn-color: #fff;
   --bs-btn-hover-color: #fff;
   --bs-btn-active-color: #fff;
-  --bs-btn-bg: rgba(255, 255, 255, 0.2);
-  --bs-btn-hover-bg: rgba(255, 255, 255, 0.3);
-  --bs-btn-active-bg: rgba(255, 255, 255, 0.3);
+  --bs-btn-bg: #{$overlay-tint};
+  --bs-btn-hover-bg: rgba(0, 0, 0, 0.25);
+  --bs-btn-active-bg: rgba(0, 0, 0, 0.25);
   --bs-btn-border-color: transparent;
   --bs-btn-hover-border-color: transparent;
   --bs-btn-active-border-color: transparent;
@@ -120,33 +214,65 @@
 @include participation-button(approve, #16a34a, #f0fdf4, #22c55e);
 @include participation-button(reject, #dc2626, #fef2f2, #ef4444);
 
-// Hinweisbox „Bitte bestätige deine Teilnahme“ (Nuxt: `bg-yellow-50 border border-yellow-200 rounded-lg`, Text yellow-900/-700).
-.alert-pending {
-  --bs-alert-bg: #fefce8;
-  --bs-alert-border-color: #fef08a;
-  --bs-alert-color: #a16207;
-  --bs-alert-border-radius: 0.5rem;
+// Alert (Figma): *-subtle-Fläche, 1-px-Rand border/default, Radius 12, Padding 16, Gap 12; Titel 16/24 SemiBold, Text 14/20.
+// Töne: `alert-danger` (Error), `alert-warning`, `alert-info`, `alert-brand`, `alert-amber`.
+.alert {
+  --bs-alert-padding-x: 1rem;
+  --bs-alert-padding-y: 1rem;
+  --bs-alert-border-radius: var(--bs-border-radius-lg);
+  --bs-alert-border-color: var(--chronos-border-default);
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 
-  .alert-pending-title {
-    color: #713f12;
-  }
-
-  .app-icon {
-    color: #ca8a04;
+  > .app-icon {
+    font-size: 1.25rem;
   }
 }
 
-[data-bs-theme='dark'] .alert-pending {
-  --bs-alert-bg: #{rgba(#713f12, 0.2)};
-  --bs-alert-border-color: #854d0e;
-  --bs-alert-color: #fde047;
+.alert-title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
 
-  .alert-pending-title {
-    color: #fef08a;
+.alert-danger {
+  --bs-alert-bg: var(--chronos-bg-danger-subtle);
+  --bs-alert-color: var(--chronos-text-danger);
+}
+
+.alert-warning {
+  --bs-alert-bg: var(--chronos-bg-warning-subtle);
+  --bs-alert-color: var(--chronos-text-secondary);
+
+  .alert-title {
+    color: var(--chronos-text-primary);
+  }
+}
+
+.alert-info,
+.alert-brand {
+  --bs-alert-bg: var(--chronos-bg-brand-subtle);
+  --bs-alert-color: var(--chronos-text-secondary);
+
+  .alert-title,
+  > .app-icon {
+    color: var(--chronos-text-brand);
+  }
+}
+
+.alert-amber {
+  --bs-alert-bg: var(--chronos-bg-warning-subtle);
+  --bs-alert-color: var(--chronos-text-secondary);
+
+  .alert-title {
+    color: var(--chronos-text-primary);
   }
 
-  .app-icon {
-    color: #facc15;
+  > .app-icon {
+    color: var(--chronos-status-warning);
   }
 }
 
@@ -168,7 +294,7 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-radius: 50rem;
-  background: rgba(255, 255, 255, 0.2);
+  background: $overlay-tint;
   color: #fff;
   font-size: 0.875rem;
   font-weight: 500;
@@ -265,37 +391,61 @@
   line-height: 1.25rem;
 }
 
-.avatar-stack .avatar + .avatar {
-  margin-left: -0.5rem;
-}
-
+// Avatar (Figma): Fläche bg/brand-subtle, Text text/brand, kein Verlauf. Größen sm 32/md 40/lg 48/xl 64.
 .avatar {
-  display: flex;
+  --avatar-size: 2.5rem;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: 2px solid var(--bs-body-bg);
+  flex-shrink: 0;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
   border-radius: 50%;
-  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
-  color: $brand-purple;
-  font-size: 0.75rem;
+  background: var(--chronos-bg-brand-subtle);
+  color: var(--chronos-text-brand);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
   font-weight: 600;
-  transition: transform 0.15s;
+}
 
-  &:hover {
-    transform: scale(1.1);
+.avatar-sm {
+  --avatar-size: 2rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+.avatar-md {
+  --avatar-size: 2.5rem;
+}
+
+.avatar-lg {
+  --avatar-size: 3rem;
+}
+
+.avatar-xl {
+  --avatar-size: 4rem;
+}
+
+// Avatar-Stack: 32 px, 2-px-Rand bg/surface, Überlappung −8 px.
+.avatar-stack .avatar {
+  --avatar-size: 2rem;
+  border: 2px solid var(--chronos-bg-surface);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+
+  + .avatar {
+    margin-left: -0.5rem;
   }
 }
 
 .avatar-more {
-  background: var(--bs-secondary-bg);
-  color: var(--bs-secondary-color);
+  background: var(--chronos-bg-muted);
+  color: var(--chronos-text-secondary);
   font-size: 0.75rem;
-}
-
-[data-bs-theme='dark'] .avatar:not(.avatar-more) {
-  background: linear-gradient(135deg, rgba($brand-purple, 0.3), rgba($brand-pink, 0.3));
+  line-height: 1rem;
+  font-weight: 400;
 }
 
 // Antwort-Buttons: drei gleich breite Schaltflächen, Label immer sichtbar. Der gewählte Stand (`is-selected`, deaktiviert)
@@ -371,9 +521,14 @@
   --bs-offcanvas-bg: #fff;
 }
 
-// Karten und Eingabefelder wie im Nuxt-Frontend: Schatten, grau gefüllte Felder (nur hell; dunkel bleibt Bootstrap).
+// Karten und Eingabefelder: Figma-Schatten sm, grau gefüllte Felder (nur hell; dunkel bleibt Bootstrap).
 .card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --bs-card-spacer-x: 1.5rem;
+  --bs-card-spacer-y: 1.5rem;
+  --bs-card-cap-padding-x: 1.5rem;
+  --bs-card-border-color: var(--chronos-border-default);
+  --bs-card-border-radius: var(--bs-border-radius-lg);
+  box-shadow: $box-shadow-sm;
 }
 
 .form-control,
@@ -404,34 +559,66 @@
   --bs-btn-disabled-border-color: #e9d5ff;
 }
 
-// Tab-Badges (Freunde/Anfragen): transluzent lila bzw. transluzent weiß auf dem Gradient-Tab.
-.badge-soft {
-  background-color: rgba($brand-purple, 0.1);
-  color: $brand-purple;
+// Badge (Figma): Padding 2/8 px, Radius 8, Gap 4, Caption 12/16 Regular, Icon 12 px. Töne: success, danger, warning, brand,
+// info, neutral. Dunkel: Flächen sind #262626 (reiner Text-Look), Brand-subtle #581c87.
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--bs-border-radius);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+  text-align: start;
+  white-space: normal;
+  background: var(--chronos-bg-muted);
+  color: var(--chronos-text-secondary);
+
+  > .app-icon {
+    font-size: 0.75rem;
+  }
 }
 
+@mixin badge-tone($name, $bg, $color) {
+  .badge-#{$name} {
+    background: var(--chronos-bg-#{$bg});
+    color: var(--chronos-text-#{$color});
+  }
+}
+
+@include badge-tone(success, success-subtle, success);
+@include badge-tone(danger, danger-subtle, danger);
+@include badge-tone(warning, warning-subtle, secondary);
+@include badge-tone(brand, brand-subtle, brand);
+@include badge-tone(info, brand-subtle, brand);
+@include badge-tone(neutral, muted, secondary);
+
+// Badge auf dem Verlauf-Tab: transluzent weiß.
 .badge-on-brand {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: $overlay-tint;
   color: #fff;
 }
 
 // Kartenüberschriften: 18 px wie Nuxt `text-lg` (Bootstrap `.h5` wäre 20 px und bricht auf 390 px mitten im Wort um).
 .card-heading {
   font-size: 1.125rem;
-  line-height: 1.75rem;
+  line-height: 1.6875rem;
+  font-weight: 600;
   overflow-wrap: break-word;
 }
 
 // Dialoge wie im Nuxt-Frontend: fetter Titel (18 px), Footer-Buttons untereinander in voller Breite
 // (Primäraktion oben), 16 px Rand links/rechts, größere Rundung. Gilt für alle Bootstrap-Modals.
 .modal {
-  --bs-modal-border-radius: 1rem;
+  --bs-modal-border-radius: #{$modal-content-border-radius};
   --bs-modal-margin: 1rem;
 }
 
 .modal-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  line-height: 1.6875rem;
+  font-weight: 600;
 }
 
 .modal-footer {
@@ -462,14 +649,9 @@
   border-radius: 0 0.75rem 0.75rem 0;
 }
 
-// Platzhalter im Anlegen-/Bearbeiten-Stepper hellgrau wie im alten Frontend (gray-300).
+// Platzhalter im Anlegen-/Bearbeiten-Stepper: text/muted (ausreichender Kontrast).
 .line-input::placeholder {
-  color: #d1d5db; // gray-300
-}
-
-// Rechtstext-Karten (Impressum/Datenschutz): 16 px Rundung wie im alten Frontend (Nuxt: `rounded-2xl`, `p-6`).
-.glass-card.legal-card {
-  border-radius: var(--bs-border-radius-xl);
+  color: var(--chronos-text-muted);
 }
 
 // Abschnittsüberschrift mit Icon: Icon oben links, Text darf umbrechen (Nuxt: `text-gray-800`, Icon `text-purple-600`).
@@ -517,13 +699,6 @@
 .install-subtitle {
   font-size: 1.125rem;
   max-width: 20.625rem;
-}
-
-// 'Dein Browser': helles Lila, lila Schrift, Gewicht 500.
-.install-badge {
-  background: #f3e8ff; // purple-100
-  color: #7e22ce; // purple-700
-  font-weight: 500;
 }
 
 // Abschnittsüberschrift 18 px fett, gray-800, Icon lila.

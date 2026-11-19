@@ -22,7 +22,7 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
     <div class="card shadow-sm">
       <div class="card-header p-4 bg-transparent d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-3">
-          <span class="icon-tile" aria-hidden="true"><app-icon name="users" class="fs-5" /></span>
+          <span class="icon-tile" aria-hidden="true"><app-icon name="users" /></span>
           <div>
             <h3 class="card-heading fw-bold mb-0">Gruppen</h3>
             <p class="small text-body-secondary mb-0">
@@ -39,7 +39,7 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
 
       @if (groups().length === 0) {
         <div class="card-body text-center p-4">
-          <div class="icon-tile rounded-circle empty-icon mb-3" aria-hidden="true"><app-icon name="users" class="fs-3" /></div>
+          <div class="icon-tile icon-tile-round mb-3" aria-hidden="true"><app-icon name="users" /></div>
           <p class="text-body-secondary mb-0">Keine Gruppen eingeladen</p>
           <p class="small text-body-tertiary mt-1">Teilnehmer wurden einzeln hinzugefügt</p>
           @if (responsible()) {
@@ -89,7 +89,6 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
 
     <app-add-group-dialog [visible]="showAddDialog()" [adding]="adding()" (closed)="showAddDialog.set(false)" (added)="add($event)" />
   `,
-  styles: '.empty-icon { width: 4rem; height: 4rem; } .avatar-sm { width: 2rem; height: 2rem; font-size: 0.75rem; }',
 })
 export class GroupParticipantsCardComponent {
   private readonly store = inject(AppointmentStore);
