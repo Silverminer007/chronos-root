@@ -39,7 +39,7 @@ interface RoleOption {
             <div class="d-flex align-items-start gap-3 mb-3">
               <app-icon [name]="type.icon" class="text-body-tertiary mt-1" />
               <div>
-                <p class="fw-medium mb-0">{{ type.label }}</p>
+                <p class="fw-semibold mb-0">{{ type.label }}</p>
                 <p class="small text-body-secondary mb-0">{{ type.description }}</p>
               </div>
             </div>
@@ -55,7 +55,7 @@ interface RoleOption {
                     (click)="update.emit({ key: type.key, value: option.value })"
                   >
                     <app-icon [name]="option.icon" />
-                    <span class="small fw-medium d-none d-sm-block">{{ option.label }}</span>
+                    <span class="option-label">{{ option.label }}</span>
                   </button>
                 </div>
               }
@@ -84,8 +84,8 @@ export class NotificationAppointmentSettingsCardComponent {
   protected readonly roleOptions: RoleOption[] = [
     { value: 'DISABLED', label: 'Aus', icon: 'ban', tone: 'secondary' },
     { value: 'ALL', label: 'Alle', icon: 'users', tone: 'primary' },
-    { value: 'ATTENDANT', label: 'Teiln.', icon: 'user', tone: 'info' },
+    { value: 'ATTENDANT', label: 'Teiln.', icon: 'user', tone: 'primary' },
     { value: 'HELPER', label: 'Helfer', icon: 'wrench', tone: 'success' },
-    { value: 'RESPONSIBLE', label: 'Orga.', icon: 'star', tone: 'warning' },
+    { value: 'RESPONSIBLE', label: 'Orga.', icon: 'star', tone: 'primary' },
   ];
 }

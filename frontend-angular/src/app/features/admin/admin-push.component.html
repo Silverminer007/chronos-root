@@ -60,7 +60,7 @@
             <app-icon [name]="entry.success ? 'check-circle' : 'x-circle'" class="fs-5" [class.text-success]="entry.success" [class.text-danger]="!entry.success" />
             <div class="flex-grow-1 min-w-0">
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <p class="fw-medium mb-0 text-truncate">{{ payload.title || 'Ohne Titel' }}</p>
+                <p class="fw-semibold mb-0 text-truncate">{{ payload.title || 'Ohne Titel' }}</p>
                 <span class="badge rounded-pill text-bg-primary">User {{ entry.user_id }}</span>
                 <span class="badge rounded-pill text-bg-secondary">{{ entry.notification_type ?? '—' }}</span>
                 <span class="badge rounded-pill" [class]="entry.success ? 'text-bg-success' : 'text-bg-danger'">{{ entry.status_code }}</span>

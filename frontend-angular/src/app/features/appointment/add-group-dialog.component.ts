@@ -84,7 +84,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
                   <div class="d-flex align-items-center gap-3">
                     <span class="avatar" aria-hidden="true"><app-icon name="users" /></span>
                     <div>
-                      <p class="fw-medium mb-0">{{ group.name }}</p>
+                      <p class="fw-semibold mb-0">{{ group.name }}</p>
                       <p class="small mb-0">Als {{ label(role()) }}</p>
                     </div>
                   </div>

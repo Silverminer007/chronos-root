@@ -96,7 +96,7 @@
         @for (user of users(); track user.id) {
           <li class="list-group-item d-flex align-items-center gap-3 px-4 py-3">
             <div class="icon-tile rounded-circle fw-semibold small flex-shrink-0 login-avatar">{{ initials(user) }}</div>
-            <p class="fw-medium mb-0 flex-grow-1 text-truncate">{{ user.firstName }} {{ user.lastName }}</p>
+            <p class="fw-semibold mb-0 flex-grow-1 text-truncate">{{ user.firstName }} {{ user.lastName }}</p>
             <span class="small text-body-secondary flex-shrink-0">{{ formatRelativeTime(user.lastSeen) }}</span>
           </li>
         }

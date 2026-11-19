@@ -11,7 +11,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
     <div class="card">
       <div class="card-body d-flex align-items-center gap-3 p-3">
         <span class="avatar flex-shrink-0" aria-hidden="true">{{ initials() }}</span>
-        <p class="fw-medium mb-0 flex-grow-1 min-w-0 text-truncate">{{ fullName() }}</p>
+        <p class="fw-semibold mb-0 flex-grow-1 min-w-0 text-truncate">{{ fullName() }}</p>
         @if (canRemove()) {
           <button
             type="button"

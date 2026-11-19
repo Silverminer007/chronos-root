@@ -38,7 +38,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
           <div class="alert alert-pending d-flex gap-3 mt-3 mb-0" role="note">
             <app-icon name="triangle-alert" />
             <div>
-              <p class="alert-pending-title fw-medium mb-1">Bitte bestätige deine Teilnahme</p>
+              <p class="alert-pending-title fw-semibold mb-1">Bitte bestätige deine Teilnahme</p>
               <p class="small mb-0">Deine Rückmeldung hilft bei der Planung des Termins.</p>
             </div>
           </div>
