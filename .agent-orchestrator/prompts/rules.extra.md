@@ -5,3 +5,4 @@ Projektregeln chronos-root (Rust-Backend `rust-backend/`, Quarkus-Backend `backe
   aus (Ausgabe in eine Datei, nur das Ende zeigen). Frontend: `cd frontend && npm ci && npm run lint && npm run typecheck && npm run build`.
   Java: `cd backend && ./mvnw -B -q -DskipTests verify`; Quarkus-Tests brauchen Docker und laufen im Pod nicht: nenne das im PR, die GitHub-Actions prüfen sie.
 - PR-Titel `Resolve #<Ticket>: <Titel>`, Body beginnt mit `Closes #<Ticket>`.
+- `docs/` ist menschlich freigegeben (Vision, req42, arc42): nie ändern. Wissen und Änderungsvorschläge gehören nach `wiki/` (siehe `wiki/README.md`, Vorschläge in `wiki/proposals/`).

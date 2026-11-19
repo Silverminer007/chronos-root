@@ -1,0 +1,4 @@
+# Verbindliche Dokumentation: jede Änderung braucht die Freigabe eines Menschen.
+# Zusammen mit dem Branch-Schutz "Require review from Code Owners" auf main (und develop) erzwingt das die Freigabe.
+/docs/                  @Silverminer007
+/.github/CODEOWNERS     @Silverminer007

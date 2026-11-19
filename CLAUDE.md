@@ -10,6 +10,7 @@ Chronos is a group scheduling and appointment management app for youth organisat
 
 - **Never commit directly to `main`.** Always create a new branch and open a draft PR for every change — no matter how small.
 - Before making any change, consider its long-term sustainability: will this decision add complexity that's hard to reverse? Does it fit the existing architecture?
+- **Wissensbasis:** `docs/` (Produktvision, req42, arc42) ist verbindlich und braucht menschliche Freigabe; Agenten schreiben dort nie selbst, sondern legen Vorschläge in `wiki/proposals/` ab. `wiki/` ist das LLM-Wiki der Agenten: vor der Arbeit `wiki/index.md` lesen, danach Gelerntes eintragen (Regeln: `wiki/README.md`, Skill `chronos-wiki`).
 - When an assumption is unclear, stop and ask rather than guessing. It is better to clarify upfront than to undo a wrong implementation.
 
 ## Repository Layout
