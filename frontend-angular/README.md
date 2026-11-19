@@ -37,8 +37,8 @@ src/
 │   ├── features/<name>/   je Feature eine lazy geladene Komponente
 │   └── app.routes.ts      Routing (loadComponent je Route, Wildcard → Startseite)
 └── styles/
-    ├── _variables.scss    Bootstrap-Variablen und Markenfarben (Lila/Pink), vor Bootstrap eingebunden
-    └── _theme.scss        Gradient-Klassen (`text-gradient`, `bg-gradient-brand`, `btn-gradient`)
+    ├── _variables.scss    Figma-Foundations: Bootstrap-Variablen, Farb-Tokens, Verläufe, Schatten, Radien, Abstände; vor Bootstrap eingebunden
+    └── _theme.scss        Custom Properties (`--chronos-*`), Typografie-Klassen, Gradient-Klassen (`text-gradient`, `bg-gradient-brand`, `btn-gradient`)
 ```
 
 Container-Image (`Dockerfile`), E2E, Lighthouse, Parität und Cutover: `kb/adr/ADR-2026-10-21-014-angular-image-e2e-cutover.md`,
@@ -52,6 +52,22 @@ Umfrage und Admin-Bereich: `kb/adr/ADR-2026-10-21-013-angular-survey-admin.md` (
 
 Bootstrap-Variablen werden in `_variables.scss` überschrieben und über `@use` vor Bootstrap geladen (`src/styles.scss`).
 Der `ThemeService` setzt `data-bs-theme` (`light`/`dark`) auf `<html>` nach `prefers-color-scheme` und folgt Änderungen.
+
+### Design-Grundlagen (Figma „Foundations“)
+
+- **Schrift:** Inter 400/600/700, selbst gehostet über `@fontsource/inter` (nur `latin`-Schnitte, in `angular.json` unter `styles`);
+  `$font-family-sans-serif` fällt auf `system-ui` zurück.
+- **Typografie:** Display 48/55 Bold (`.text-display`), H1 30/38 Bold, H2 24/32 Bold, H3 18/27 SemiBold, Body-M 16/24 (`.text-body-m`),
+  Body-S 14/20 (`.text-body-s`), Caption 12/16 (`.text-caption`); SemiBold über `.fw-semibold`. `.modal-title` und `.card-heading` sind 18/27 SemiBold.
+- **Farben:** Die Map `$chronos-colors` in `_variables.scss` enthält je Token Light und Dark. `_theme.scss` gibt sie als
+  `--chronos-<token>` aus (z. B. `--chronos-bg-surface`, `--chronos-border-control`, `--chronos-text-muted`); `[data-bs-theme='dark']`
+  überschreibt sie. Bootstrap-Variablen (`$body-bg`, `$success`, `*-dark`, ...) sind auf dieselben Werte gesetzt. Neue Farben zuerst dort ergänzen.
+- **Verläufe:** `$brand-gradient` (Lila → Pink-700, `to right`), `$landing-gradient` (156,4°, ohne Dark-Variante), Overlay `$overlay-tint` (`rgba(0,0,0,.15)`);
+  auch als `--chronos-gradient-brand`, `--chronos-gradient-landing`, `--chronos-overlay-tint`.
+- **Schatten:** `$box-shadow-sm/-/-lg` (Figma sm/md/lg), `.card` nutzt sm; `--chronos-shadow-sm|md|lg`.
+- **Radien:** `$border-radius`, `$btn-border-radius`, `$input-border-radius` 8 px; `$card-border-radius`, `$modal-content-border-radius`, `.glass-card` 12 px.
+- **Abstände:** `$spacers` behält die Bootstrap-Stufen 0–5 (0/4/8/16/24/48 px) und ergänzt 6 = 12 px, 7 = 20 px, 8 = 32 px, 9 = 40 px,
+  10 = 64 px, 11 = 80 px (z. B. `gap-6`, `p-7`).
 
 ## Bundle-Budgets
 

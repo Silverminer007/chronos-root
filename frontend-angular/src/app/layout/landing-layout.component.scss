@@ -1,6 +1,6 @@
 @use '../../styles/variables' as *;
 
-// Animierter Farbverlauf-Hintergrund der öffentlichen Seiten (Hell: purple-600 → pink-500 → orange-400).
+// Animierter Farbverlauf-Hintergrund der öffentlichen Seiten (Figma: purple-700 → pink-700 → orange-700).
 .landing {
   position: relative;
   min-height: 100vh;
@@ -10,11 +10,7 @@
 .landing-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom right, $brand-purple, $brand-pink, #fb923c);
-}
-
-:host-context([data-bs-theme='dark']) .landing-bg {
-  background: linear-gradient(to bottom right, #581c87, #831843, #7c2d12);
+  background: $landing-gradient; // Figma kennt keinen eigenen Dark-Verlauf
 }
 
 // Wie im alten Frontend: Blobs liegen in einem Wrapper mit Deckkraft 0,2 (effektiv 0,04–0,08).
