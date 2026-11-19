@@ -37,7 +37,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
             </button>
           </div>
         } @else {
-          <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" [disabled]="loading()" (click)="act(cancelled)">
+          <button type="button" class="btn btn-secondary btn-sm flex-shrink-0" [disabled]="loading()" (click)="act(cancelled)">
             Zurückziehen
           </button>
         }

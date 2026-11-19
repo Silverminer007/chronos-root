@@ -7,7 +7,7 @@
         <h1 class="h2 fw-bold mb-1">Gruppen</h1>
         <p class="text-body-secondary mb-0">Verwalte deine Gruppen für Termine</p>
       </div>
-      <button type="button" class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showCreateDialog.set(true)">
+      <button type="button" class="btn btn-gradient d-none d-sm-inline-flex align-items-center gap-2" (click)="showCreateDialog.set(true)">
         <app-icon name="plus" />
         <span>Neue Gruppe</span>
       </button>
@@ -39,7 +39,7 @@
             </div>
             <h3 class="h4 fw-bold mb-2">Noch keine Gruppen</h3>
             <p class="text-body-secondary mb-4">Erstelle Gruppen, um mehrere Personen gleichzeitig zu Terminen einzuladen.</p>
-            <button type="button" class="btn btn-gradient fw-medium px-4" (click)="showCreateDialog.set(true)">
+            <button type="button" class="btn btn-gradient px-4" (click)="showCreateDialog.set(true)">
               <app-icon name="plus" class="me-2" />Erste Gruppe erstellen
             </button>
           </div>
@@ -51,11 +51,11 @@
 
 <button
   type="button"
-  class="fab btn btn-gradient rounded-circle shadow-lg d-flex align-items-center justify-content-center d-sm-none"
+  class="btn btn-fab btn-gradient d-sm-none"
   aria-label="Neue Gruppe"
   (click)="showCreateDialog.set(true)"
 >
-  <app-icon name="plus" class="fs-3" />
+  <app-icon name="plus" />
 </button>
 
 <app-create-group-dialog [visible]="showCreateDialog()" (closed)="showCreateDialog.set(false)" />

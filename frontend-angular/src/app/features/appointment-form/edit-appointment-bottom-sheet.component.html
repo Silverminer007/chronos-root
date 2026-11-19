@@ -28,14 +28,14 @@
     >
       <input
         type="text"
-        class="form-control form-control-lg fw-bold"
+        class="form-control form-control-lg form-control-soft fw-bold"
         aria-label="Terminname"
         placeholder="Terminname…"
         formControlName="name"
       />
       <textarea
         rows="3"
-        class="form-control"
+        class="form-control form-control-soft"
         aria-label="Beschreibung"
         placeholder="Beschreibung…"
         formControlName="description"
@@ -44,7 +44,7 @@
         <span class="input-group-text"><app-icon name="map-pin" /></span>
         <input
           type="text"
-          class="form-control"
+          class="form-control form-control-soft"
           aria-label="Ort"
           placeholder="Ort…"
           formControlName="venue"
@@ -57,7 +57,7 @@
           class="form-label small fw-semibold text-uppercase text-body-secondary"
           >Start</label
         >
-        <input id="edit-start" type="datetime-local" class="form-control" formControlName="start" />
+        <input id="edit-start" type="datetime-local" class="form-control form-control-soft" formControlName="start" />
       </div>
 
       <div>
@@ -73,7 +73,7 @@
                 !form.controls.customDuration.value &&
                 form.controls.durationMinutes.value === chip.minutes
                   ? 'btn-primary'
-                  : 'btn-outline-secondary'
+                  : 'btn-secondary'
               "
               (click)="selectDuration(chip.minutes)"
             >
@@ -83,7 +83,7 @@
           <button
             type="button"
             class="btn btn-sm rounded-pill"
-            [class]="form.controls.customDuration.value ? 'btn-primary' : 'btn-outline-secondary'"
+            [class]="form.controls.customDuration.value ? 'btn-primary' : 'btn-secondary'"
             (click)="toggleCustomDuration()"
           >
             Eigene…
@@ -99,7 +99,7 @@
                   [class]="
                     form.controls.customUnit.value === unit.value
                       ? 'btn-primary'
-                      : 'btn-outline-secondary'
+                      : 'btn-secondary'
                   "
                   (click)="form.controls.customUnit.setValue(unit.value)"
                 >
@@ -110,7 +110,7 @@
             <input
               type="number"
               min="1"
-              class="form-control"
+              class="form-control form-control-soft"
               aria-label="Eigene Dauer"
               formControlName="customValue"
             />
@@ -170,7 +170,7 @@
     </form>
 
     <div class="d-flex gap-3 px-4 py-3 border-top flex-shrink-0 footer-safe">
-      <button type="button" class="btn btn-light btn-lg" (click)="close()">Abbrechen</button>
+      <button type="button" class="btn btn-secondary btn-lg" (click)="close()">Abbrechen</button>
       <button
         type="button"
         class="btn btn-gradient btn-lg flex-grow-1 d-flex align-items-center justify-content-center gap-2"

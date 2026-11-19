@@ -22,7 +22,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
         </div>
         <button
           type="button"
-          class="btn btn-outline-danger border-0"
+          class="btn btn-icon btn-ghost text-danger"
           title="Freundschaft beenden"
           aria-label="Freundschaft beenden"
           (click)="confirmRemove()"

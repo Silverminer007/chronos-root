@@ -23,7 +23,7 @@ const ICONS: Record<string, string> = {
             type="button"
             class="btn w-100 py-3 border-2"
             role="radio"
-            [class]="value() === role ? 'btn-outline-primary active' : 'btn-outline-secondary'"
+            [class]="value() === role ? 'btn-outline-primary active' : 'btn-secondary'"
             [attr.aria-checked]="value() === role"
             (click)="value.set(role)"
           >

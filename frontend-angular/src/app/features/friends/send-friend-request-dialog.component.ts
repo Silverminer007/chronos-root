@@ -23,7 +23,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
             <div class="modal-body">
-              <label for="friend-email" class="form-label fw-medium">E-Mail-Adresse</label>
+              <label for="friend-email" class="form-label">E-Mail-Adresse</label>
               <div class="input-group">
                 <span class="input-group-text"><app-icon name="mail" /></span>
                 <input
@@ -44,7 +44,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               }
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" (click)="close()">Abbrechen</button>
+              <button type="button" class="btn btn-secondary" (click)="close()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!valid() || loading()" (click)="send()">
                 @if (loading()) {
                   <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>

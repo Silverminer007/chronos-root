@@ -40,7 +40,7 @@
 
           <div class="d-flex align-items-center gap-3">
             @if (!isFirst()) {
-              <button type="button" class="btn btn-outline-secondary" aria-label="Zurück" (click)="back()">
+              <button type="button" class="btn btn-secondary" aria-label="Zurück" (click)="back()">
                 <app-icon name="chevron-left" />
               </button>
             }
@@ -55,7 +55,7 @@
                 ></button>
               }
             </div>
-            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1" (click)="next()">
+            <button type="button" class="btn btn-secondary d-flex align-items-center gap-1" (click)="next()">
               <span>{{ isLast() ? 'Fertig' : 'Weiter' }}</span>
               <app-icon [name]="isLast() ? 'check' : 'chevron-right'" />
             </button>

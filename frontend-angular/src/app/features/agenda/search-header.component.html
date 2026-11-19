@@ -11,7 +11,7 @@
           <app-icon name="search" class="position-absolute top-50 translate-middle-y ms-3 text-body-tertiary" />
           <input
             type="search"
-            class="form-control ps-5"
+            class="form-control form-control-soft ps-5"
             placeholder="Termine durchsuchen..."
             aria-label="Termine durchsuchen"
             (input)="search($any($event.target).value)"
@@ -54,7 +54,7 @@
           </div>
         </div>
       } @else {
-        <a href="/api/auth/login" class="btn btn-gradient fw-medium flex-shrink-0">Anmelden</a>
+        <a href="/api/auth/login" class="btn btn-gradient flex-shrink-0">Anmelden</a>
       }
     </div>
   </div>

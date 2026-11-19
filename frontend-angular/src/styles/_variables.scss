@@ -84,6 +84,9 @@ $box-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1
 $box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 $box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 
+// Schatten des Primärbuttons.
+$button-shadow: 0 4px 3px rgba(0, 0, 0, 0.1), 0 2px 2px rgba(0, 0, 0, 0.1);
+
 // Radien: md 8 px (Buttons, Inputs, Badges), lg 12 px (Karten, Dialoge, Icon-Kacheln).
 $border-radius: 0.5rem;
 $border-radius-lg: 0.75rem;
@@ -118,6 +121,31 @@ $h2-font-size: 1.5rem;
 $h3-font-size: 1.125rem;
 $input-placeholder-color: var(--chronos-text-muted);
 $input-border-color: var(--chronos-border-control);
+
+// Buttons (Figma „Buttons“): md 10/16 px, lg 16/32 px, SemiBold, Rahmen 2 px; Landing-Nav mobil = sm (14/20, 8/12 px).
+$btn-padding-y: 0.625rem;
+$btn-padding-x: 1rem;
+$btn-font-weight: 600;
+$btn-padding-y-lg: 1rem;
+$btn-padding-x-lg: 2rem;
+$btn-font-size-lg: 1.125rem;
+$btn-padding-y-sm: 0.5rem;
+$btn-padding-x-sm: 0.75rem;
+$btn-font-size-sm: 0.875rem;
+$btn-border-width: 2px;
+
+// Formularelemente (Figma „Formular“): Feld bg/surface, Rahmen 2 px border/control, Fokus border/brand, Padding 12 px.
+$input-bg: #fff;
+$input-border-width: 2px;
+$input-focus-border-color: $brand-purple;
+$input-padding-y: 0.75rem;
+$input-padding-x: 0.75rem;
+$form-label-font-size: 0.875rem;
+$form-label-font-weight: 600;
+$form-label-color: var(--chronos-text-secondary);
+$form-switch-width: 3.5rem;
+$form-switch-padding-start: 4.25rem;
+$form-check-input-border: 2px solid #6b7280;
 $enable-dark-mode: true;
 
 // Muss per `meta.load-css(..., $with:)` an Bootstrap übergeben werden: ein bloßes `@use ... as *` konfiguriert
@@ -145,6 +173,27 @@ $bootstrap-config: (
   'input-border-radius': $input-border-radius,
   'input-border-color': $input-border-color,
   'input-placeholder-color': $input-placeholder-color,
+  'btn-padding-y': $btn-padding-y,
+  'btn-padding-x': $btn-padding-x,
+  'btn-font-weight': $btn-font-weight,
+  'btn-padding-y-lg': $btn-padding-y-lg,
+  'btn-padding-x-lg': $btn-padding-x-lg,
+  'btn-font-size-lg': $btn-font-size-lg,
+  'btn-padding-y-sm': $btn-padding-y-sm,
+  'btn-padding-x-sm': $btn-padding-x-sm,
+  'btn-font-size-sm': $btn-font-size-sm,
+  'btn-border-width': $btn-border-width,
+  'input-bg': $input-bg,
+  'input-border-width': $input-border-width,
+  'input-focus-border-color': $input-focus-border-color,
+  'input-padding-y': $input-padding-y,
+  'input-padding-x': $input-padding-x,
+  'form-label-font-size': $form-label-font-size,
+  'form-label-font-weight': $form-label-font-weight,
+  'form-label-color': $form-label-color,
+  'form-switch-width': $form-switch-width,
+  'form-switch-padding-start': $form-switch-padding-start,
+  'form-check-input-border': $form-check-input-border,
   'border-color': $border-color,
   'primary-bg-subtle': $primary-bg-subtle,
   'success-bg-subtle': $success-bg-subtle,

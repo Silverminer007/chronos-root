@@ -20,7 +20,7 @@ const MAX_AVATARS = 5;
             <h3 class="h6 fw-semibold mb-0 text-truncate">{{ group().name }}</h3>
             <button
               type="button"
-              class="btn btn-outline-danger border-0 flex-shrink-0"
+              class="btn btn-icon btn-ghost text-danger flex-shrink-0"
               title="Gruppe löschen"
               aria-label="Gruppe löschen"
               (click)="confirmDelete($event)"

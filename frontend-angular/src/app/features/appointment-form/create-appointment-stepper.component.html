@@ -131,7 +131,7 @@
                   @for (chip of todayChips; track chip.days) {
                     <button
                       type="button"
-                      class="btn btn-outline-secondary rounded-pill"
+                      class="btn btn-secondary rounded-pill"
                       (click)="setToday(chip.days)"
                     >
                       {{ chip.label }}
@@ -160,7 +160,7 @@
                           !form.controls.customDuration.value &&
                           form.controls.durationMinutes.value === chip.minutes
                             ? 'btn-primary'
-                            : 'btn-outline-secondary'
+                            : 'btn-secondary'
                         "
                         (click)="selectDuration(chip.minutes)"
                       >
@@ -173,7 +173,7 @@
                       type="button"
                       class="btn btn-lg w-100"
                       [class]="
-                        form.controls.customDuration.value ? 'btn-primary' : 'btn-outline-secondary'
+                        form.controls.customDuration.value ? 'btn-primary' : 'btn-secondary'
                       "
                       (click)="toggleCustomDuration()"
                     >
@@ -191,7 +191,7 @@
                           [class]="
                             form.controls.customUnit.value === unit.value
                               ? 'btn-primary'
-                              : 'btn-outline-secondary'
+                              : 'btn-secondary'
                           "
                           (click)="form.controls.customUnit.setValue(unit.value)"
                         >
@@ -260,7 +260,7 @@
               <button
                 type="button"
                 class="btn btn-lg flex-fill"
-                [class]="form.controls.hasAttendees.value ? 'btn-success' : 'btn-outline-secondary'"
+                [class]="form.controls.hasAttendees.value ? 'btn-success' : 'btn-secondary'"
                 (click)="setAttendees(true)"
               >
                 Ja
@@ -268,7 +268,7 @@
               <button
                 type="button"
                 class="btn btn-lg flex-fill"
-                [class]="!form.controls.hasAttendees.value ? 'btn-dark' : 'btn-outline-secondary'"
+                [class]="!form.controls.hasAttendees.value ? 'btn-dark' : 'btn-secondary'"
                 (click)="setAttendees(false)"
               >
                 Nein
@@ -278,7 +278,7 @@
               <div class="d-flex align-items-center justify-content-center gap-4">
                 <button
                   type="button"
-                  class="btn btn-outline-secondary rounded-circle count-btn"
+                  class="btn btn-secondary rounded-circle count-btn"
                   aria-label="Weniger"
                   (click)="changeMinimalAttendees(-1)"
                 >
@@ -289,7 +289,7 @@
                 }}</span>
                 <button
                   type="button"
-                  class="btn btn-outline-secondary rounded-circle count-btn"
+                  class="btn btn-secondary rounded-circle count-btn"
                   aria-label="Mehr"
                   (click)="changeMinimalAttendees(1)"
                 >
@@ -312,7 +312,7 @@
       >
         <button
           type="button"
-          class="btn btn-light btn-lg cancel-btn"
+          class="btn btn-secondary btn-lg cancel-btn"
           (click)="step() > 1 ? goBack() : close()"
         >
           {{ step() > 1 ? 'Zurück' : 'Abbrechen' }}

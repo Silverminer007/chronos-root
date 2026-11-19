@@ -80,13 +80,26 @@ h3,
   color: #fff;
 }
 
-.btn-gradient {
+.btn-gradient,
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-focus-shadow-rgb: 147, 51, 234;
   background: $brand-gradient;
-  border: 0;
+  background-origin: border-box;
+  border-color: transparent;
   color: #fff;
+  box-shadow: $button-shadow;
 
   &:hover,
-  &:focus-visible {
+  &:focus-visible,
+  &:active {
     color: #fff;
     filter: brightness(1.1);
   }
@@ -153,6 +166,66 @@ h3,
   --bs-btn-active-border-color: transparent;
 }
 
+// Icon-Button (Figma): 40×40, Radius 8. Varianten: Ghost (`.btn-ghost`), Brand Tint, Glass (`.btn-glass`), Bordered.
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  --bs-btn-border-radius: 0.5rem;
+
+  > .app-icon {
+    font-size: 1.25rem;
+  }
+}
+
+.btn-icon-tint {
+  --bs-btn-color: var(--chronos-text-brand);
+  --bs-btn-bg: var(--chronos-bg-brand-subtle);
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: var(--chronos-text-brand);
+  --bs-btn-hover-bg: #{rgba($brand-purple, 0.2)};
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-color: var(--chronos-text-brand);
+  --bs-btn-active-bg: #{rgba($brand-purple, 0.2)};
+  --bs-btn-active-border-color: transparent;
+}
+
+.btn-icon-bordered {
+  --bs-btn-color: var(--chronos-text-secondary);
+  --bs-btn-bg: var(--chronos-bg-surface);
+  --bs-btn-border-color: var(--chronos-border-default);
+  --bs-btn-hover-color: var(--chronos-text-secondary);
+  --bs-btn-hover-bg: var(--chronos-bg-muted);
+  --bs-btn-hover-border-color: var(--chronos-border-default);
+  --bs-btn-active-color: var(--chronos-text-secondary);
+  --bs-btn-active-bg: var(--chronos-bg-muted);
+  --bs-btn-active-border-color: var(--chronos-border-default);
+}
+
+// Floating Action Button (Figma): 56×56 rund, Brand-Verlauf (`.btn-gradient`), Schatten lg, Plus-Icon 24 px.
+.btn-fab {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: $box-shadow-lg;
+
+  > .app-icon {
+    font-size: 1.5rem;
+  }
+}
+
 // Zusagen/Absagen (Nuxt: `border-2 border-green-600 text-green-600 rounded-lg`, aktiv `bg-green-600 text-white`).
 @mixin participation-button($name, $color, $hover-bg, $dark-color) {
   .btn-#{$name} {
@@ -217,7 +290,7 @@ h3,
   }
 }
 
-// Quadratischer Plus-Knopf (Nuxt: `w-8 h-8 rounded-lg bg-linear-to-r from-purple-600 to-pink-500`).
+// Quadratischer Plus-Knopf (32×32, Listenköpfe; `.btn-icon` ist der 40-px-Icon-Button; Nuxt: `w-8 h-8 rounded-lg bg-linear-to-r from-purple-600 to-pink-500`).
 .btn-icon-square {
   width: 2rem;
   height: 2rem;
@@ -443,32 +516,234 @@ h3,
   box-shadow: $box-shadow-sm;
 }
 
+// Eingabefelder (Figma): bg/surface, 2 px border/control, Radius 8, Padding 12; Fokus 2 px border/brand ohne Glow,
+// Fehler 2 px border/danger. Platzhalter text/muted, Hilfetext text/secondary, Fehlertext text/danger.
 .form-control,
 .form-select {
-  background-color: $gray-50;
+  background-color: var(--chronos-bg-surface);
+  color: var(--chronos-text-primary);
+  line-height: 1.5rem;
+
+  &:focus {
+    border-color: var(--chronos-border-brand);
+    box-shadow: none;
+  }
+
+ }
+
+.form-control.is-invalid,
+.form-control.is-invalid:focus {
+  border-color: var(--chronos-border-danger);
+  box-shadow: none;
+  background-image: none;
 }
 
-[data-bs-theme='dark'] .form-control,
-[data-bs-theme='dark'] .form-select {
-  background-color: var(--bs-body-bg);
+.form-text {
+  color: var(--chronos-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 
-// Sekundär-/Auswahlbuttons wie im Nuxt-Frontend: Markenlila, Rahmen purple-200, transluzente Füllung bei Hover.
-// Ausgewählt (`.active`, `.btn-check:checked + .btn`, `:active`) nutzt dieselben Bootstrap-Variablen: lila Rahmen
-// und transluzente lila Füllung. Gesetzt wird nur über `--bs-btn-*` von `.btn-outline-primary`; gefüllte Buttons
-// (`.btn-primary`, `.btn-success`, ...) bleiben unberührt.
+.invalid-feedback {
+  color: var(--chronos-text-danger);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+// Filled Soft: bg/muted, 1 px border/control (Suchfeld im Header, Profil, Bottom-Sheet).
+.form-control-soft {
+  background-color: var(--chronos-bg-muted);
+  border-width: 1px;
+}
+
+.form-control-soft:focus {
+  background-color: var(--chronos-bg-muted);
+}
+
+// Checkbox/Radio 16×16, Umriss border/control, aktiv bg/brand; Toggle 56×32.
+.form-check-input {
+  width: 1rem;
+  height: 1rem;
+  border-color: var(--chronos-border-control);
+  background-color: var(--chronos-bg-surface);
+
+  &:checked {
+    background-color: var(--chronos-brand-primary);
+    border-color: var(--chronos-brand-primary);
+  }
+
+  &:focus {
+    border-color: var(--chronos-border-brand);
+    box-shadow: 0 0 0 0.25rem rgba($brand-purple, 0.25);
+  }
+}
+
+.form-switch .form-check-input {
+  width: 3.5rem;
+  height: 2rem;
+  border-radius: 2rem;
+
+  &:checked {
+    background-color: var(--chronos-brand-primary);
+  }
+}
+
+// Outline (Figma): Hintergrund bg/surface, 2 px border/brand, Text text/brand. Ausgewählt (`.active`,
+// `.btn-check:checked + .btn`, `:active`) nutzt dieselben Bootstrap-Variablen mit transluzenter lila Füllung.
 .btn-outline-primary {
-  --bs-btn-color: #{$brand-purple};
-  --bs-btn-border-color: #e9d5ff; // purple-200
-  --bs-btn-hover-color: #{$brand-purple};
+  --bs-btn-bg: var(--chronos-bg-surface);
+  --bs-btn-color: var(--chronos-text-brand);
+  --bs-btn-border-color: var(--chronos-border-brand);
+  --bs-btn-hover-color: var(--chronos-text-brand);
   --bs-btn-hover-bg: #{rgba($brand-purple, 0.1)};
-  --bs-btn-hover-border-color: #{$brand-purple};
+  --bs-btn-hover-border-color: var(--chronos-border-brand);
   --bs-btn-focus-shadow-rgb: 147, 51, 234;
-  --bs-btn-active-color: #{$brand-purple};
+  --bs-btn-active-color: var(--chronos-text-brand);
   --bs-btn-active-bg: #{rgba($brand-purple, 0.1)};
-  --bs-btn-active-border-color: #{$brand-purple};
-  --bs-btn-disabled-color: #{$brand-purple};
-  --bs-btn-disabled-border-color: #e9d5ff;
+  --bs-btn-active-border-color: var(--chronos-border-brand);
+  --bs-btn-disabled-color: var(--chronos-text-brand);
+  --bs-btn-disabled-border-color: var(--chronos-border-brand);
+}
+
+// Success: gefüllt #15803d mit Rahmen #16a34a (dunkel #22c55e); Outline: Rahmen #16a34a, Text #15803d, transparent.
+.btn-success {
+  --bs-btn-bg: #15803d;
+  --bs-btn-border-color: #16a34a;
+  --bs-btn-hover-bg: #166534;
+  --bs-btn-hover-border-color: #16a34a;
+  --bs-btn-active-bg: #166534;
+  --bs-btn-active-border-color: #16a34a;
+  --bs-btn-disabled-bg: #15803d;
+  --bs-btn-disabled-border-color: #16a34a;
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  --bs-btn-focus-shadow-rgb: 22, 163, 74;
+}
+
+.btn-outline-success {
+  --bs-btn-color: #15803d;
+  --bs-btn-border-color: #16a34a;
+  --bs-btn-hover-color: #15803d;
+  --bs-btn-hover-bg: #f0fdf4;
+  --bs-btn-hover-border-color: #16a34a;
+  --bs-btn-active-color: #15803d;
+  --bs-btn-active-bg: #f0fdf4;
+  --bs-btn-active-border-color: #16a34a;
+  --bs-btn-disabled-color: #15803d;
+  --bs-btn-disabled-border-color: #16a34a;
+  --bs-btn-focus-shadow-rgb: 22, 163, 74;
+}
+
+[data-bs-theme='dark'] .btn-success {
+  --bs-btn-border-color: #22c55e;
+  --bs-btn-hover-border-color: #22c55e;
+  --bs-btn-active-border-color: #22c55e;
+  --bs-btn-disabled-border-color: #22c55e;
+}
+
+[data-bs-theme='dark'] .btn-outline-success {
+  --bs-btn-color: #22c55e;
+  --bs-btn-border-color: #22c55e;
+  --bs-btn-hover-color: #22c55e;
+  --bs-btn-hover-bg: #{rgba(#16a34a, 0.2)};
+  --bs-btn-hover-border-color: #22c55e;
+  --bs-btn-active-color: #22c55e;
+  --bs-btn-active-bg: #{rgba(#16a34a, 0.2)};
+  --bs-btn-active-border-color: #22c55e;
+  --bs-btn-disabled-color: #22c55e;
+  --bs-btn-disabled-border-color: #22c55e;
+}
+
+// Danger: gefüllt #dc2626 mit Rahmen #dc2626; Outline: Rahmen #dc2626, Text #b91c1c, transparent.
+.btn-danger {
+  --bs-btn-bg: #dc2626;
+  --bs-btn-border-color: #dc2626;
+  --bs-btn-hover-bg: #b91c1c;
+  --bs-btn-hover-border-color: #b91c1c;
+  --bs-btn-active-bg: #b91c1c;
+  --bs-btn-active-border-color: #b91c1c;
+  --bs-btn-disabled-bg: #dc2626;
+  --bs-btn-disabled-border-color: #dc2626;
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  --bs-btn-focus-shadow-rgb: 220, 38, 38;
+}
+
+.btn-outline-danger {
+  --bs-btn-color: #b91c1c;
+  --bs-btn-border-color: #dc2626;
+  --bs-btn-hover-color: #b91c1c;
+  --bs-btn-hover-bg: #fef2f2;
+  --bs-btn-hover-border-color: #dc2626;
+  --bs-btn-active-color: #b91c1c;
+  --bs-btn-active-bg: #fef2f2;
+  --bs-btn-active-border-color: #dc2626;
+  --bs-btn-disabled-color: #b91c1c;
+  --bs-btn-disabled-border-color: #dc2626;
+  --bs-btn-focus-shadow-rgb: 220, 38, 38;
+}
+
+[data-bs-theme='dark'] .btn-outline-danger {
+  --bs-btn-color: #f87171;
+  --bs-btn-border-color: #ef4444;
+  --bs-btn-hover-color: #f87171;
+  --bs-btn-hover-bg: #{rgba(#dc2626, 0.2)};
+  --bs-btn-hover-border-color: #ef4444;
+  --bs-btn-active-color: #f87171;
+  --bs-btn-active-bg: #{rgba(#dc2626, 0.2)};
+  --bs-btn-active-border-color: #ef4444;
+  --bs-btn-disabled-color: #f87171;
+  --bs-btn-disabled-border-color: #ef4444;
+}
+
+// Secondary (Figma): bg/surface, 2 px border/default, Text text/secondary; „Abbrechen“ in Dialogen.
+.btn-secondary {
+  --bs-btn-color: var(--chronos-text-secondary);
+  --bs-btn-bg: var(--chronos-bg-surface);
+  --bs-btn-border-color: var(--chronos-border-default);
+  --bs-btn-hover-color: var(--chronos-text-secondary);
+  --bs-btn-hover-bg: var(--chronos-bg-muted);
+  --bs-btn-hover-border-color: var(--chronos-border-default);
+  --bs-btn-active-color: var(--chronos-text-secondary);
+  --bs-btn-active-bg: var(--chronos-bg-muted);
+  --bs-btn-active-border-color: var(--chronos-border-default);
+  --bs-btn-disabled-color: var(--chronos-text-secondary);
+  --bs-btn-disabled-bg: var(--chronos-bg-surface);
+  --bs-btn-disabled-border-color: var(--chronos-border-default);
+  --bs-btn-focus-shadow-rgb: 107, 114, 128;
+}
+
+// Ghost (Figma): ohne Hintergrund und Rahmen, Text text/secondary.
+.btn-ghost {
+  --bs-btn-color: var(--chronos-text-secondary);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: var(--chronos-text-secondary);
+  --bs-btn-hover-bg: var(--chronos-bg-muted);
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-color: var(--chronos-text-secondary);
+  --bs-btn-active-bg: var(--chronos-bg-muted);
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-color: var(--chronos-text-secondary);
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-focus-shadow-rgb: 107, 114, 128;
+}
+
+// Icon im Button: Abstand 8 px, 16 px (md/sm) bzw. 20 px (lg).
+.btn {
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  > .app-icon {
+    font-size: 1rem;
+  }
+}
+
+.btn-lg > .app-icon {
+  font-size: 1.25rem;
 }
 
 // Tab-Badges (Freunde/Anfragen): transluzent lila bzw. transluzent weiß auf dem Gradient-Tab.
@@ -515,20 +790,15 @@ h3,
   }
 }
 
-// Eingabefelder in Dialogen: 52 px hoch, 2-px-Rahmen in Grau (gray-200), Icon links über `.input-group`.
-.modal .form-control {
-  min-height: 3.25rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.75rem;
-}
-
+// Eingabefelder in Dialogen: dieselben Werte wie überall (2 px border/control, Radius 8, Padding 12), Icon links über `.input-group`.
 .modal .input-group-text {
-  border: 2px solid #e5e7eb;
-  border-radius: 0.75rem 0 0 0.75rem;
+  border: 2px solid var(--chronos-border-control);
+  border-radius: 0.5rem 0 0 0.5rem;
+  color: var(--chronos-text-muted);
 }
 
 .modal .input-group > .form-control:not(:first-child) {
-  border-radius: 0 0.75rem 0.75rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
 }
 
 // Platzhalter im Anlegen-/Bearbeiten-Stepper: text/muted (ausreichender Kontrast).

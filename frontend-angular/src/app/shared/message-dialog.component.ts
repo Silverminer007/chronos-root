@@ -30,7 +30,7 @@ const MAX_LENGTH = 500;
                   <p class="mb-0 small">Alle Teilnehmer dieses Termins ({{ recipientCount() }} Personen)</p>
                 </div>
               </div>
-              <label for="message-dialog-text" class="form-label fw-medium">Nachricht</label>
+              <label for="message-dialog-text" class="form-label">Nachricht</label>
               <textarea
                 id="message-dialog-text"
                 class="form-control"
@@ -47,7 +47,7 @@ const MAX_LENGTH = 500;
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" (click)="closed.emit()">Abbrechen</button>
+              <button type="button" class="btn btn-secondary" (click)="closed.emit()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!isValid()" (click)="send()">
                 <app-icon name="send" class="me-2" />Nachricht senden
               </button>
