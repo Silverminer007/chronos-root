@@ -4,7 +4,7 @@ title: "Stakeholder"
 status: entwurf
 typ: einfuehrung
 quellen:
-  - docs/req42/01-ziele-und-stakeholder.md
+  - docs/req42/02-stakeholder/README.md
   - kb/status/steward.md
 verknuepft: [Z-001]
 ---

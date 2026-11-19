@@ -4,7 +4,7 @@ title: "Wesentliche Features"
 status: entwurf
 typ: einfuehrung
 quellen:
-  - docs/req42/02-anforderungen.md
+  - docs/req42/04-anforderungen/README.md
 verknuepft: [FA-001, FA-002, FA-003, FA-004, FA-005, FA-006, FA-007]
 ---
 

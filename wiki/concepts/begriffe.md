@@ -10,7 +10,7 @@ last-verified: 2026-11-12
 
 # Begriffe Deutsch ↔ Code-Namen
 
-Die Oberfläche ist deutsch, Code und Tickets mischen Begriffe. Diese Tabelle ordnet die Fachbegriffe den Namen in Java (`backend/.../chronos_date_api/domain`), Rust (`rust-backend/src`) und Frontend (`frontend/app/types/index.ts`) zu. Allgemeine und technische Begriffe stehen in [glossary.md](glossary.md).
+Die Oberfläche ist deutsch, Code und Tickets mischen Begriffe. Diese Tabelle ordnet die Fachbegriffe den Namen in Java (`backend/.../chronos_date_api/domain`), Rust (`rust-backend/src`) und Frontend (`frontend/app/types/index.ts`) zu. Allgemeine und technische Begriffe stehen in [glossary.md](../../kb/glossary/glossary.md).
 
 | Deutsch | Code-Name (Java / Rust / Frontend) | Kurzdefinition |
 |---|---|---|

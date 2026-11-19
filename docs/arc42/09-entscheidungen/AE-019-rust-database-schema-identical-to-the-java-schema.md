@@ -46,8 +46,8 @@ so nothing noticed the design mismatch with Java.
   with role `RESPONSIBLE`. Rust inserts the appointment and the creator's participation in one
   transaction. Authorization that used `creator_id` (delete, cancel) now requires the
   `RESPONSIBLE` participation; update requires `ATTENDANT` or above (unchanged). View access was
-  amended by [ADR-2026-10-20-025](ADR-2026-10-20-025-appointment-invite-parity.md): every participant
+  amended by [ADR-2026-10-20-025](../../../kb/adr/ADR-2026-10-20-025-appointment-invite-parity.md): every participant
   whose role is not `NONE` may read, not only `RESPONSIBLE`.
   This supersedes sections 4 (status storage, fourth value) and 5 (creator participation via event after
-  commit) of [ADR-2026-10-03-011](ADR-2026-10-03-011-appointment-mutations.md); the event example and DTO
+  commit) of [ADR-2026-10-03-011](../../../kb/adr/ADR-2026-10-03-011-appointment-mutations.md); the event example and DTO
   example there (`creator_id` column semantics, `id: String`) are superseded as well. …

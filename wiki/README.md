@@ -33,7 +33,7 @@ Das Wiki ist **nicht verbindlich**. Was gilt, steht in [docs/](../docs/README.md
 title: Kurzer Titel
 type: concept | code | decision | lesson | ticket
 sources:                # woher stammt das? mindestens eine Angabe
-  - docs/arc42/03-kontext.md
+  - docs/arc42/03-kontext/README.md
   - rust-backend/src/events/mod.rs@0e7a609
   - issue:#346
 confidence: hoch | mittel | niedrig

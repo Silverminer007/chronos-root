@@ -16,7 +16,7 @@ Quelle: `kb/adr/ADR-2026-10-20-019-groups-friendships-endpoints.md` (Status im A
 
 ## Kontext
 
-Issue #97 ports `GroupsResource` and `FriendshipResource` of the Java backend to the Rust backend. The handlers in `rust-backend/src/groups/` existed but were not registered, and their contract differed from Java (paths, status codes, bodies, authorization, events, errors). The ticket asks for the Java contract 1:1: the same random requests are later sent to both backends and the responses diffed. The Java code is the reference ([ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md) already aligned the schema).
+Issue #97 ports `GroupsResource` and `FriendshipResource` of the Java backend to the Rust backend. The handlers in `rust-backend/src/groups/` existed but were not registered, and their contract differed from Java (paths, status codes, bodies, authorization, events, errors). The ticket asks for the Java contract 1:1: the same random requests are later sent to both backends and the responses diffed. The Java code is the reference ([ADR-2026-10-12-014](../../../kb/adr/ADR-2026-10-12-014-rust-schema-identical-to-java.md) already aligned the schema).
 
 ## Entscheidung
 

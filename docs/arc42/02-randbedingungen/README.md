@@ -9,7 +9,7 @@ verknuepft: [RB-001, RB-002, RB-003, RB-004, RB-005]
 
 # 2 Randbedingungen
 
-Die fachlichen und grundlegenden Randbedingungen RB-001 bis RB-005 stehen in `docs/req42/` (`04-randbedingungen.md` bzw. dort einzeln geführt) und werden hier nicht wiederholt. Diese Datei listet nur die zusätzlichen technischen und organisatorischen Randbedingungen (`RA-nnn`).
+Die fachlichen und grundlegenden Randbedingungen RB-001 bis RB-005 stehen in `docs/req42/` (`06-randbedingungen/`) und werden hier nicht wiederholt. Diese Datei listet nur die zusätzlichen technischen und organisatorischen Randbedingungen (`RA-nnn`).
 
 | ID | Titel |
 |---|---|

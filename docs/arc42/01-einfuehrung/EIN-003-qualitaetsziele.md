@@ -4,7 +4,7 @@ title: "Qualitätsziele"
 status: entwurf
 typ: einfuehrung
 quellen:
-  - docs/req42/03-qualitaetsanforderungen.md
+  - docs/req42/05-qualitaet/README.md
 verknuepft: [QA-001, QA-002, QA-003, QA-004]
 ---
 

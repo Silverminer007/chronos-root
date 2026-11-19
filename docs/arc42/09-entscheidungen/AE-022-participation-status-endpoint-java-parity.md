@@ -32,7 +32,7 @@ Match the Java backend exactly:
 ### 2. No existence or soft-delete check
 
 - The query reads `appointment_participation` only. It does not join `appointments` and does not filter on `status`.
-- **Deliberate exception** to the read-filter rule in [ADR-2026-10-03-011](ADR-2026-10-03-011-appointment-mutations.md) (which excludes CANCELLED and DELETED from read endpoints). This endpoint returns the caller's status for cancelled and deleted appointments too, because Java does.
+- **Deliberate exception** to the read-filter rule in [ADR-2026-10-03-011](../../../kb/adr/ADR-2026-10-03-011-appointment-mutations.md) (which excludes CANCELLED and DELETED from read endpoints). This endpoint returns the caller's status for cancelled and deleted appointments too, because Java does.
 
 ### 3. Caller's own status only
 

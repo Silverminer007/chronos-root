@@ -14,7 +14,7 @@ status: offen
 
 | Bisher | Neu | Bemerkung |
 |---|---|---|
-| `kb/constraints/C*` | `docs/req42/04-randbedingungen.md` | Mensch bestätigt; C2026-10-20-002 (geleakter Key) → Risiko in `docs/arc42/11` |
+| `kb/constraints/C*` | `docs/req42/06-randbedingungen/` | Mensch bestätigt; C2026-10-20-002 (geleakter Key) → Risiko in `docs/arc42/11` |
 | `kb/adr/ADR-2025-09-28-*` (Grundsatz) | `docs/arc42/09-entscheidungen.md` | Mensch wählt, welche gelten |
 | übrige `kb/adr/*` (Rust-Port-Details) | `wiki/decisions/` | Agenten dürfen weiterschreiben |
 | `kb/architecture/*` | Struktur → `docs/arc42/03–07`, Läufe/Belege → `wiki/lessons/` | |

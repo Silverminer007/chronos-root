@@ -16,12 +16,12 @@ Quelle: `kb/adr/ADR-2026-10-20-022-list-participants-endpoint.md` (Status im ADR
 
 ## Kontext
 
-Issue #119 requires `GET /api/v2/appointments/{id}/participants` in the Rust backend. The Java reference is `AppointmentParticipationResource#getParticipants` and `AppointmentParticipationService#getParticipants`. The ticket thread left two questions open (`profile_picture_url` source, `via_group_*` tracking) and answered the delete question in favour of hard delete ([ADR-2026-10-14-017](ADR-2026-10-14-017-participant-removal.md)).
+Issue #119 requires `GET /api/v2/appointments/{id}/participants` in the Rust backend. The Java reference is `AppointmentParticipationResource#getParticipants` and `AppointmentParticipationService#getParticipants`. The ticket thread left two questions open (`profile_picture_url` source, `via_group_*` tracking) and answered the delete question in favour of hard delete ([ADR-2026-10-14-017](../../../kb/adr/ADR-2026-10-14-017-participant-removal.md)).
 
 The open questions are resolved by what the Rust backend already has:
 
-- `user_profiles` (the identity cache, [ADR-2026-10-20-019](ADR-2026-10-20-019-groups-friendships-endpoints.md) / `users::identity`) holds names and `profile_picture_url`.
-- `appointment_participation.group_participation_id` exists in the schema that is identical to Java ([ADR-2026-10-12-014](ADR-2026-10-12-014-rust-schema-identical-to-java.md)).
+- `user_profiles` (the identity cache, [ADR-2026-10-20-019](../../../kb/adr/ADR-2026-10-20-019-groups-friendships-endpoints.md) / `users::identity`) holds names and `profile_picture_url`.
+- `appointment_participation.group_participation_id` exists in the schema that is identical to Java ([ADR-2026-10-12-014](../../../kb/adr/ADR-2026-10-12-014-rust-schema-identical-to-java.md)).
 
 ## Entscheidung
 
