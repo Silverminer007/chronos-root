@@ -3,12 +3,13 @@ import { Role } from '../../core/models';
 import { GroupStore, GroupSearchResult } from '../groups/group.store';
 import { roleLabel } from './participation';
 import { RolePickerComponent } from './role-picker.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Dialog zum Hinzufügen einer Gruppe mit Rolle für alle Mitglieder (Teil von `GroupParticipantsCard.vue`). */
 @Component({
   selector: 'app-add-group-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RolePickerComponent],
+  imports: [IconComponent, RolePickerComponent],
   template: `
     @if (visible()) {
       <div class="modal-backdrop fade show"></div>
@@ -16,7 +17,7 @@ import { RolePickerComponent } from './role-picker.component';
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><i class="bi bi-people fs-4"></i></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="users" class="fs-4" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="add-group-title">Gruppe hinzufügen</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="closed.emit()"></button>
             </div>
@@ -24,7 +25,7 @@ import { RolePickerComponent } from './role-picker.component';
               <div>
                 <label for="add-group-search" class="form-label fw-medium">Gruppe suchen</label>
                 <div class="input-group">
-                  <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                  <span class="input-group-text"><app-icon name="search" /></span>
                   <input
                     id="add-group-search"
                     type="text"
@@ -51,7 +52,7 @@ import { RolePickerComponent } from './role-picker.component';
                     </div>
                   } @else if (results().length === 0) {
                     <div class="text-center py-4 text-body-secondary">
-                      <i class="bi bi-search fs-3 d-block mb-2" aria-hidden="true"></i>
+                      <app-icon name="search" class="fs-3 d-block mb-2" />
                       <p class="mb-0">Keine Gruppen gefunden</p>
                     </div>
                   } @else {
@@ -64,7 +65,7 @@ import { RolePickerComponent } from './role-picker.component';
                           [class.active]="selected()?.id === result.id"
                           (click)="selected.set(result)"
                         >
-                          <span class="avatar flex-shrink-0" aria-hidden="true"><i class="bi bi-people"></i></span>
+                          <span class="avatar flex-shrink-0" aria-hidden="true"><app-icon name="users" /></span>
                           <span class="min-w-0">
                             <span class="d-block fw-medium text-truncate">{{ result.name }}</span>
                             @if (result.member_count) {
@@ -81,7 +82,7 @@ import { RolePickerComponent } from './role-picker.component';
               @if (selected(); as group) {
                 <div class="alert alert-primary d-flex align-items-center justify-content-between mb-0">
                   <div class="d-flex align-items-center gap-3">
-                    <span class="avatar" aria-hidden="true"><i class="bi bi-people"></i></span>
+                    <span class="avatar" aria-hidden="true"><app-icon name="users" /></span>
                     <div>
                       <p class="fw-medium mb-0">{{ group.name }}</p>
                       <p class="small mb-0">Als {{ label(role()) }}</p>
@@ -97,7 +98,7 @@ import { RolePickerComponent } from './role-picker.component';
                 @if (adding()) {
                   <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 } @else {
-                  <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>
+                  <app-icon name="plus" class="me-2" />
                 }
                 Hinzufügen
               </button>

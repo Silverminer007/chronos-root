@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { formatDateTime } from '../../core/date-format';
 import { FriendshipRequest } from '../../core/models';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Karte einer ein- oder ausgehenden Freundschaftsanfrage (Port von `FriendRequestCard.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-friend-request-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -28,10 +30,10 @@ import { FriendshipRequest } from '../../core/models';
         @if (type() === 'incoming') {
           <div class="d-flex align-items-center gap-2 flex-shrink-0">
             <button type="button" class="btn btn-success btn-sm" [disabled]="loading()" (click)="act(accepted)">
-              <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Annehmen
+              <app-icon name="check" class="me-1" />Annehmen
             </button>
             <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="loading()" (click)="act(declined)">
-              <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Ablehnen
+              <app-icon name="x" class="me-1" />Ablehnen
             </button>
           </div>
         } @else {

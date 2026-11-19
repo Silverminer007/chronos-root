@@ -10,15 +10,17 @@ import {
   inject,
 } from '@angular/core';
 import { ConfirmColor, ModalService } from './modal.service';
+import { IconComponent } from '../shared/icon/icon.component';
 
 const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirmIcon: string }> = {
-  red: { variant: 'danger', icon: 'bi-exclamation-triangle-fill', confirmIcon: 'bi-x-circle' },
-  purple: { variant: 'primary', icon: 'bi-question-circle-fill', confirmIcon: 'bi-check-lg' },
-  green: { variant: 'success', icon: 'bi-check-circle-fill', confirmIcon: 'bi-check-lg' },
+  red: { variant: 'danger', icon: 'triangle-alert', confirmIcon: 'x-circle' },
+  purple: { variant: 'primary', icon: 'circle-help', confirmIcon: 'check' },
+  green: { variant: 'success', icon: 'check-circle', confirmIcon: 'check' },
 };
 
 /** Bootstrap-Modal für `ModalService.confirm`; einmal in `App` einbinden. */
 @Component({
+  imports: [IconComponent],
   selector: 'app-confirm-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -34,7 +36,7 @@ const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirm
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
             <div class="modal-header">
-              <i class="bi fs-3 me-3" [class]="v.style.icon + ' text-' + v.style.variant" aria-hidden="true"></i>
+              <app-icon [name]="v.style.icon" [class]="'fs-3 me-3 text-' + v.style.variant" />
               <h2 class="modal-title fs-5" id="confirm-dialog-title">{{ v.request.title }}</h2>
             </div>
             <div class="modal-body">{{ v.request.message }}</div>
@@ -47,7 +49,7 @@ const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirm
                 [class]="v.request.confirmColor === 'purple' ? 'btn-gradient' : 'btn-' + v.style.variant"
                 (click)="modal.resolve(true)"
               >
-                <i class="bi me-2" [class]="v.style.confirmIcon" aria-hidden="true"></i>{{ v.request.confirmText }}
+                <app-icon [name]="v.style.confirmIcon" class="me-2" />{{ v.request.confirmText }}
               </button>
             </div>
           </div>

@@ -4,7 +4,7 @@
   <div class="admin mx-auto pt-4">
     <div class="mb-4">
       <a routerLink="/admin" class="small d-inline-flex align-items-center gap-1 mb-2">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i>Zurück
+        <app-icon name="arrow-left" />Zurück
       </a>
       <h1 class="h2 fw-bold mb-1">Push-Benachrichtigungen</h1>
       <p class="text-body-secondary mb-0">Protokoll aller gesendeten Push-Nachrichten</p>
@@ -46,7 +46,7 @@
       </div>
     } @else if (error(); as message) {
       <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
-        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
           <p class="small mb-0">{{ message }}</p>
@@ -57,7 +57,7 @@
         @for (entry of filtered(); track entry.id) {
           @let payload = parsePayload(entry.payload);
           <li class="log-entry list-group-item d-flex align-items-start gap-3 px-4 py-3">
-            <i class="bi fs-5" [class]="entry.success ? 'bi-check-circle text-success' : 'bi-x-circle text-danger'" aria-hidden="true"></i>
+            <app-icon [name]="entry.success ? 'check-circle' : 'x-circle'" class="fs-5" [class.text-success]="entry.success" [class.text-danger]="!entry.success" />
             <div class="flex-grow-1 min-w-0">
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <p class="fw-medium mb-0 text-truncate">{{ payload.title || 'Ohne Titel' }}</p>
@@ -78,7 +78,7 @@
       </ul>
     } @else {
       <div class="text-center py-5 px-3">
-        <div class="icon-tile rounded-circle mx-auto mb-3 empty-icon"><i class="bi bi-bell-slash fs-2" aria-hidden="true"></i></div>
+        <div class="icon-tile rounded-circle mx-auto mb-3 empty-icon"><app-icon name="bell-off" class="fs-2" /></div>
         <h3 class="h4 fw-bold mb-2">Keine Einträge</h3>
         <p class="text-body-secondary mb-0">Es wurden keine Push-Benachrichtigungen gefunden.</p>
       </div>

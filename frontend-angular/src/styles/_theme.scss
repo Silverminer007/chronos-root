@@ -131,7 +131,7 @@
     color: #713f12;
   }
 
-  .bi {
+  .app-icon {
     color: #ca8a04;
   }
 }
@@ -145,7 +145,7 @@
     color: #fef08a;
   }
 
-  .bi {
+  .app-icon {
     color: #facc15;
   }
 }
@@ -352,7 +352,7 @@
   gap: 0.5rem;
   color: #1f2937; // gray-800
 
-  > .bi {
+  > .app-icon {
     flex-shrink: 0;
     align-self: flex-start;
     color: $brand-purple;
@@ -409,7 +409,7 @@
   font-weight: 700;
   color: #1f2937; // gray-800
 
-  > .bi {
+  > .app-icon {
     color: $brand-purple;
   }
 }
@@ -452,4 +452,12 @@
     align-items: center;
     justify-content: center;
   }
+}
+
+// Lucide-Icons (`<app-icon>`): Größe folgt der Schrift, bündig zur Textzeile.
+.app-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+  line-height: 1;
 }

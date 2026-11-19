@@ -2,12 +2,14 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { Router } from '@angular/router';
 import { DialogQueueService } from './dialog-queue.service';
 import { NewFeature, NewFeaturesService } from '../core/new-features.service';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Dauer des Ausblendens, bevor der Dialog entfernt wird. */
 export const LEAVE_DELAY_MS = 200;
 
 /** Zeigt Neuigkeiten, die der Nutzer noch nicht gesehen hat (Port von `NewFeaturesDialog.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-new-features-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './new-features-dialog.component.html',

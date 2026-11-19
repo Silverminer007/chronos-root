@@ -1,16 +1,18 @@
 import { ChangeDetectionStrategy, Component, model } from '@angular/core';
 import { Role } from '../../core/models';
 import { ASSIGNABLE_ROLES, roleLabel } from './participation';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const ICONS: Record<string, string> = {
-  RESPONSIBLE: 'bi-star',
-  ATTENDANT: 'bi-person',
-  HELPER: 'bi-wrench',
-  GUEST: 'bi-eye',
+  RESPONSIBLE: 'star',
+  ATTENDANT: 'user',
+  HELPER: 'wrench',
+  GUEST: 'eye',
 };
 
 /** Auswahl der Rolle in den Hinzufügen-Dialogen (je Rolle eine Kachel). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-role-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -25,7 +27,7 @@ const ICONS: Record<string, string> = {
             [attr.aria-checked]="value() === role"
             (click)="value.set(role)"
           >
-            <i class="bi {{ icons[role] }} d-block mb-1" aria-hidden="true"></i>
+            <app-icon [name]="icons[role]" class="d-block mb-1" />
             <span class="small fw-medium">{{ label(role) }}</span>
           </button>
         </div>

@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { Friend } from '../../core/models';
 import { FriendshipStore } from '../friends/friendship.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const MIN_QUERY_LENGTH = 2;
 
 /** Dialog zum Hinzufügen eines Freundes zur Gruppe (Port von `AddGroupMemberDialog.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-add-group-member-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -15,7 +17,7 @@ const MIN_QUERY_LENGTH = 2;
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><i class="bi bi-person-plus fs-4"></i></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="user-plus" class="fs-4" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="add-member-title">Mitglied hinzufügen</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
@@ -23,7 +25,7 @@ const MIN_QUERY_LENGTH = 2;
               <div>
                 <label for="add-member-search" class="form-label fw-medium">Freund suchen</label>
                 <div class="input-group">
-                  <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                  <span class="input-group-text"><app-icon name="search" /></span>
                   <input
                     id="add-member-search"
                     type="text"
@@ -46,7 +48,7 @@ const MIN_QUERY_LENGTH = 2;
                     </div>
                   } @else if (filteredResults().length === 0) {
                     <div class="text-center py-4 text-body-secondary">
-                      <i class="bi bi-search fs-3 d-block mb-2" aria-hidden="true"></i>
+                      <app-icon name="search" class="fs-3 d-block mb-2" />
                       <p class="mb-0 small">Keine Freunde gefunden</p>
                     </div>
                   } @else {
@@ -89,7 +91,7 @@ const MIN_QUERY_LENGTH = 2;
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" (click)="close()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!selected()" (click)="add()">
-                <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Hinzufügen
+                <app-icon name="plus" class="me-2" />Hinzufügen
               </button>
             </div>
           </div>

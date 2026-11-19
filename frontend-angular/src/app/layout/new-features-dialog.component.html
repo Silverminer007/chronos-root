@@ -17,7 +17,7 @@
           <div class="d-flex align-items-start justify-content-between mb-4">
             <div class="d-flex align-items-center gap-2">
               <span class="badge rounded-pill text-bg-primary-subtle d-inline-flex align-items-center gap-1">
-                <i class="bi bi-stars" aria-hidden="true"></i>
+                <app-icon name="sparkles" />
                 Neu in Chronos
               </span>
               <span class="small text-body-tertiary">{{ currentStep() + 1 }}/{{ features().length }}</span>
@@ -26,14 +26,14 @@
           </div>
 
           <div class="text-center mb-4">
-            <span class="icon-tile feature-icon mb-3" aria-hidden="true"><i class="bi fs-1" [class]="currentFeature()?.icon ?? 'bi-star'"></i></span>
+            <span class="icon-tile feature-icon mb-3" aria-hidden="true"><app-icon [name]="currentFeature()?.icon ?? 'star'" class="fs-1" /></span>
             <h2 class="h5 fw-bold mb-2" id="new-features-title">{{ currentFeature()?.title }}</h2>
             <p class="small text-body-secondary mb-0">{{ currentFeature()?.description }}</p>
           </div>
 
           @if (currentFeature()?.link) {
             <button type="button" class="btn btn-gradient w-100 mb-3 d-flex align-items-center justify-content-center gap-2" (click)="goToLink()">
-              <i class="bi bi-arrow-right" aria-hidden="true"></i>
+              <app-icon name="arrow-right" />
               <span>{{ currentFeature()?.linkLabel ?? 'Jetzt ansehen' }}</span>
             </button>
           }
@@ -41,7 +41,7 @@
           <div class="d-flex align-items-center gap-3">
             @if (!isFirst()) {
               <button type="button" class="btn btn-outline-secondary" aria-label="Zurück" (click)="back()">
-                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                <app-icon name="chevron-left" />
               </button>
             }
             <div class="flex-grow-1 d-flex align-items-center justify-content-center gap-2">
@@ -57,7 +57,7 @@
             </div>
             <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1" (click)="next()">
               <span>{{ isLast() ? 'Fertig' : 'Weiter' }}</span>
-              <i class="bi" [class]="isLast() ? 'bi-check-lg' : 'bi-chevron-right'" aria-hidden="true"></i>
+              <app-icon [name]="isLast() ? 'check' : 'chevron-right'" />
             </button>
           </div>
 

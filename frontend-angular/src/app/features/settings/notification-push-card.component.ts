@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Schalter für Push-Benachrichtigungen auf diesem Gerät (Port von `NotificationPushCard.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-notification-push-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="card shadow-sm">
       <div class="card-body p-3 p-sm-4">
         <div class="d-flex align-items-center gap-3">
-          <span class="icon-tile flex-shrink-0" aria-hidden="true"><i class="bi bi-bell fs-4"></i></span>
+          <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="bell" class="fs-4" /></span>
           <div class="flex-grow-1 text-break" style="min-width: 0">
             <h3 class="card-heading fw-bold mb-0">Push-Benachrichtigungen</h3>
             <p class="small text-body-secondary mb-0">Erhalte Benachrichtigungen auf diesem Gerät</p>
@@ -29,7 +31,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 
         @if (permission() === 'denied') {
           <div class="alert alert-warning small mt-3 mb-0" role="alert">
-            <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+            <app-icon name="info" class="me-2" />
             Push-Benachrichtigungen wurden im Browser blockiert. Bitte ändere die Berechtigung in den Browsereinstellungen.
           </div>
         }

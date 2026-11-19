@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { demoAppointments } from './demo-appointments';
 import { AppointmentDemoCardComponent } from './appointment-demo-card.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 interface Feature {
   icon: string;
@@ -12,7 +13,7 @@ interface Feature {
 @Component({
   selector: 'app-landing',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AppointmentDemoCardComponent],
+  imports: [IconComponent, AppointmentDemoCardComponent],
   templateUrl: './landing.component.html',
 })
 export class LandingComponent {
@@ -20,22 +21,22 @@ export class LandingComponent {
 
   protected readonly features: Feature[] = [
     {
-      icon: 'bi-calendar-event',
+      icon: 'calendar',
       title: 'Termine organisieren',
       description: 'Erstelle und verwalte alle Team-Termine an einem zentralen Ort. Nie wieder durcheinander.',
     },
     {
-      icon: 'bi-people',
+      icon: 'users',
       title: 'Verfügbarkeit abfragen',
       description: 'Sehe auf einen Blick, wer teilnehmen kann und ob genug Helfer dabei sind.',
     },
     {
-      icon: 'bi-bell',
+      icon: 'bell',
       title: 'Push-Benachrichtigungen',
       description: 'Automatische Erinnerungen an wichtige Termine und laufende Abfragen.',
     },
     {
-      icon: 'bi-check-circle',
+      icon: 'check-circle',
       title: 'Einfache Zusagen',
       description: 'Schnell und unkompliziert zu- oder absagen – in Sekunden erledigt.',
     },

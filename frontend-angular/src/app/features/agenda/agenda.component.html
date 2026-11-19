@@ -14,7 +14,7 @@
 
     @if (store.error(); as error) {
       <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
-        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
           <p class="small mb-0">{{ error }}</p>
@@ -25,7 +25,7 @@
     @if (!store.loading() && store.appointments().length === 0 && !store.error()) {
       <div class="text-center py-5 px-3">
         <div class="icon-tile rounded-circle empty-icon mb-3">
-          <i class="bi bi-calendar-event fs-2" aria-hidden="true"></i>
+          <app-icon name="calendar" class="fs-2" />
         </div>
         <h3 class="h4 fw-bold mb-2">Keine Termine vorhanden</h3>
         <p class="text-body-secondary mb-0">
@@ -41,7 +41,7 @@
           class="btn btn-outline-primary fw-medium d-flex align-items-center gap-2"
           (click)="loadMore()"
         >
-          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+          <app-icon name="refresh-cw" />
           <span>Mehr laden</span>
         </button>
       </div>
@@ -55,7 +55,7 @@
   aria-label="Termin erstellen"
   (click)="stepperOpen.set(true)"
 >
-  <i class="bi bi-plus-lg fs-3" aria-hidden="true"></i>
+  <app-icon name="plus" class="fs-3" />
 </button>
 
 <app-create-appointment-stepper [(open)]="stepperOpen" (created)="onCreated($event)" />

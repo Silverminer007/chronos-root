@@ -2,9 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { formatDate } from '../../core/date-format';
 import { Friend } from '../../core/models';
 import { ModalService } from '../../core/modal.service';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Karte eines Freundes mit „Freundschaft beenden“ (Port von `FriendCard.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-friend-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -25,7 +27,7 @@ import { ModalService } from '../../core/modal.service';
           aria-label="Freundschaft beenden"
           (click)="confirmRemove()"
         >
-          <i class="bi bi-trash" aria-hidden="true"></i>
+          <app-icon name="trash-2" />
         </button>
       </div>
     </div>

@@ -8,7 +8,7 @@
         <p class="text-body-secondary mb-0">Verwalte deine Freundschaften</p>
       </div>
       <button type="button" class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddDialog.set(true)">
-        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <app-icon name="plus" />
         <span>Hinzufügen</span>
       </button>
     </div>
@@ -22,7 +22,7 @@
         [attr.aria-selected]="activeTab() === 'friends'"
         (click)="activeTab.set('friends')"
       >
-        <i class="bi bi-people me-2" aria-hidden="true"></i>Freunde
+        <app-icon name="users" class="me-2" />Freunde
         <span class="badge rounded-pill ms-2" [class]="activeTab() === 'friends' ? 'badge-on-brand' : 'badge-soft'">{{ store.friendsCount() }}</span>
       </button>
       <button
@@ -33,7 +33,7 @@
         [attr.aria-selected]="activeTab() === 'requests'"
         (click)="activeTab.set('requests')"
       >
-        <i class="bi bi-inbox me-2" aria-hidden="true"></i>Anfragen
+        <app-icon name="inbox" class="me-2" />Anfragen
         @if (store.totalRequestsCount() > 0) {
           <span class="badge rounded-pill ms-2" [class]="activeTab() === 'requests' ? 'badge-on-brand' : 'bg-danger-subtle text-danger-emphasis'">{{ store.totalRequestsCount() }}</span>
         }
@@ -47,7 +47,7 @@
       </div>
     } @else if (store.error(); as error) {
       <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
-        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
           <p class="small mb-0">{{ error }}</p>
@@ -62,12 +62,12 @@
         @if (store.friends().length === 0) {
           <div class="text-center py-5 px-3">
             <div class="icon-tile rounded-circle empty-icon mb-3">
-              <i class="bi bi-people fs-2" aria-hidden="true"></i>
+              <app-icon name="users" class="fs-2" />
             </div>
             <h3 class="h4 fw-bold mb-2">Noch keine Freunde</h3>
             <p class="text-body-secondary mb-4">Füge Freunde hinzu, um Termine gemeinsam zu planen.</p>
             <button type="button" class="btn btn-gradient fw-medium px-4" (click)="showAddDialog.set(true)">
-              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Freund hinzufügen
+              <app-icon name="plus" class="me-2" />Freund hinzufügen
             </button>
           </div>
         }
@@ -76,7 +76,7 @@
       <div class="d-flex flex-column gap-4">
         <section>
           <h2 class="card-heading fw-semibold mb-3 d-flex align-items-center gap-2">
-            <i class="bi bi-arrow-down text-success" aria-hidden="true"></i>
+            <app-icon name="arrow-down" class="text-success" />
             Eingehende Anfragen
             <span class="small fw-normal text-body-secondary">({{ store.incomingRequestsCount() }})</span>
           </h2>
@@ -97,7 +97,7 @@
 
         <section>
           <h2 class="card-heading fw-semibold mb-3 d-flex align-items-center gap-2">
-            <i class="bi bi-arrow-up text-primary" aria-hidden="true"></i>
+            <app-icon name="arrow-up" class="text-primary" />
             Ausgehende Anfragen
             <span class="small fw-normal text-body-secondary">({{ store.outgoingRequestsCount() }})</span>
           </h2>
@@ -121,7 +121,7 @@
   aria-label="Freund hinzufügen"
   (click)="showAddDialog.set(true)"
 >
-  <i class="bi bi-plus-lg fs-3" aria-hidden="true"></i>
+  <app-icon name="plus" class="fs-3" />
 </button>
 
 <app-send-friend-request-dialog [visible]="showAddDialog()" (closed)="showAddDialog.set(false)" />

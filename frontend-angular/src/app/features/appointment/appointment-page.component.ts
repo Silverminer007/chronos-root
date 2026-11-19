@@ -10,12 +10,13 @@ import { GroupParticipantsCardComponent } from './group-participants-card.compon
 import { MessagesCardComponent } from './messages-card.component';
 import { OwnParticipationStatusCardComponent } from './own-participation-status-card.component';
 import { ParticipantsStatusCardComponent } from './participants-status-card.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Seite `/appointment/:id` (Port von `pages/appointment/[appointmentId].vue`). */
 @Component({
   selector: 'app-appointment-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [IconComponent, 
     AppointmentHeaderComponent,
     AppointmentDetailsCardComponent,
     OwnParticipationStatusCardComponent,

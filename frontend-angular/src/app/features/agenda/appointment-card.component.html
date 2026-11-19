@@ -2,13 +2,13 @@
   @switch (appointment().status) {
     @case ('CANCELLED') {
       <div class="status-banner bg-danger text-white px-3 py-2 d-flex align-items-center gap-2">
-        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <app-icon name="triangle-alert" />
         <span class="fw-medium small">Termin abgesagt</span>
       </div>
     }
     @case ('NOT_ENOUGH_ATTENDEES') {
       <div class="status-banner bg-warning text-white px-3 py-2 d-flex align-items-center gap-2">
-        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <app-icon name="triangle-alert" />
         <span class="fw-medium small">Zu wenig Teilnehmende</span>
       </div>
     }
@@ -20,12 +20,12 @@
         <div class="flex-grow-1 text-start min-w-0">
           <h3 class="h4 fw-bold mb-1 title">{{ appointment().name }}</h3>
           <div class="d-flex align-items-center gap-2 small text-body-secondary">
-            <i class="bi bi-calendar-event" aria-hidden="true"></i>
+            <app-icon name="calendar" />
             <span>{{ timeRange() }}</span>
           </div>
           @if (appointment().venue) {
             <div class="d-flex align-items-center gap-2 small text-body-secondary mt-1">
-              <i class="bi bi-geo-alt" aria-hidden="true"></i>
+              <app-icon name="map-pin" />
               <span>{{ appointment().venue }}</span>
             </div>
           }
@@ -67,7 +67,7 @@
         [disabled]="hasApproved()"
         (click)="approve()"
       >
-        <i class="bi bi-check-lg" aria-hidden="true"></i>
+        <app-icon name="check" />
         <span class="d-none d-sm-inline">Zusagen</span>
         <span class="visually-hidden d-sm-none">Zusagen</span>
       </button>
@@ -77,7 +77,7 @@
         class="btn btn-outline-primary fw-medium d-flex align-items-center justify-content-center gap-2"
         (click)="showMessageDialog.set(true)"
       >
-        <i class="bi bi-send" aria-hidden="true"></i>
+        <app-icon name="send" />
         <span class="d-none d-sm-inline">Nachricht</span>
         <span class="visually-hidden d-sm-none">Nachricht</span>
       </button>
@@ -90,7 +90,7 @@
         [disabled]="hasRejected()"
         (click)="reject()"
       >
-        <i class="bi bi-x-lg" aria-hidden="true"></i>
+        <app-icon name="x" />
         <span class="d-none d-sm-inline">Absagen</span>
         <span class="visually-hidden d-sm-none">Absagen</span>
       </button>

@@ -3,6 +3,7 @@ import { Friend, Role } from '../../core/models';
 import { FriendshipStore } from '../friends/friendship.store';
 import { roleLabel } from './participation';
 import { RolePickerComponent } from './role-picker.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const MIN_QUERY_LENGTH = 2;
 
@@ -10,7 +11,7 @@ const MIN_QUERY_LENGTH = 2;
 @Component({
   selector: 'app-add-participant-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RolePickerComponent],
+  imports: [IconComponent, RolePickerComponent],
   template: `
     @if (visible()) {
       <div class="modal-backdrop fade show"></div>
@@ -18,7 +19,7 @@ const MIN_QUERY_LENGTH = 2;
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><i class="bi bi-person-plus fs-4"></i></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="user-plus" class="fs-4" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="add-participant-title">Teilnehmer hinzufügen</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
@@ -26,7 +27,7 @@ const MIN_QUERY_LENGTH = 2;
               <div>
                 <label for="add-participant-search" class="form-label fw-medium">Person suchen</label>
                 <div class="input-group">
-                  <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                  <span class="input-group-text"><app-icon name="search" /></span>
                   <input
                     id="add-participant-search"
                     type="text"
@@ -53,7 +54,7 @@ const MIN_QUERY_LENGTH = 2;
                     </div>
                   } @else if (results().length === 0) {
                     <div class="text-center py-4 text-body-secondary">
-                      <i class="bi bi-search fs-3 d-block mb-2" aria-hidden="true"></i>
+                      <app-icon name="search" class="fs-3 d-block mb-2" />
                       <p class="mb-0">Keine Ergebnisse gefunden</p>
                     </div>
                   } @else {
@@ -66,7 +67,7 @@ const MIN_QUERY_LENGTH = 2;
                           [class.active]="selected()?.user_id === result.user_id"
                           (click)="selected.set(result)"
                         >
-                          <span class="avatar flex-shrink-0" aria-hidden="true"><i class="bi bi-person"></i></span>
+                          <span class="avatar flex-shrink-0" aria-hidden="true"><app-icon name="user" /></span>
                           <span class="min-w-0">
                             <span class="d-block fw-medium text-truncate">{{ result.name }}</span>
                             @if (result.email) {
@@ -83,7 +84,7 @@ const MIN_QUERY_LENGTH = 2;
               @if (selected(); as person) {
                 <div class="alert alert-primary d-flex align-items-center justify-content-between mb-0">
                   <div class="d-flex align-items-center gap-3">
-                    <span class="avatar" aria-hidden="true"><i class="bi bi-person"></i></span>
+                    <span class="avatar" aria-hidden="true"><app-icon name="user" /></span>
                     <div>
                       <p class="fw-medium mb-0">{{ person.name }}</p>
                       <p class="small mb-0">Als {{ label(role()) }}</p>
@@ -96,7 +97,7 @@ const MIN_QUERY_LENGTH = 2;
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" (click)="close()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!selected()" (click)="add()">
-                <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Hinzufügen
+                <app-icon name="plus" class="me-2" />Hinzufügen
               </button>
             </div>
           </div>

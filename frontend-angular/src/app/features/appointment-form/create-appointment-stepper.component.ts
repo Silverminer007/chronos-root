@@ -32,6 +32,7 @@ import {
   AppointmentParticipantPickerComponent,
   PickerChange,
 } from './appointment-participant-picker.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const STEP_LABELS = ['Name', 'Datum & Zeit', 'Dauer', 'Beschreibung', 'Ort', 'Teilnehmer'];
 const TOTAL_STEPS = STEP_LABELS.length;
@@ -54,7 +55,7 @@ const SUMMARY_DATE: Intl.DateTimeFormatOptions = {
 @Component({
   selector: 'app-create-appointment-stepper',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, AppointmentParticipantPickerComponent],
+  imports: [IconComponent, ReactiveFormsModule, AppointmentParticipantPickerComponent],
   templateUrl: './create-appointment-stepper.component.html',
   styleUrl: './create-appointment-stepper.component.scss',
 })

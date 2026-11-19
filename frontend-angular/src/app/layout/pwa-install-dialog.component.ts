@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DialogQueueService } from './dialog-queue.service';
+import { IconComponent } from '../shared/icon/icon.component';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -8,6 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 /** Bietet die Installation der PWA an, sobald der Browser `beforeinstallprompt` sendet (Port von `PwaInstallDialog.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-pwa-install-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(window:beforeinstallprompt)': 'onBeforeInstallPrompt($event)' },
@@ -19,7 +21,7 @@ interface BeforeInstallPromptEvent extends Event {
           <div class="modal-content">
             <div class="modal-body p-4">
               <div class="d-flex align-items-center gap-3 mb-3">
-                <span class="icon-tile flex-shrink-0" aria-hidden="true"><i class="bi bi-download fs-4"></i></span>
+                <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="download" class="fs-4" /></span>
                 <h2 class="h5 fw-bold mb-0" id="pwa-install-title">App installieren</h2>
               </div>
               <p class="small text-body-secondary mb-4">

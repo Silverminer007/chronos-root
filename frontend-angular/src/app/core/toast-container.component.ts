@@ -1,15 +1,17 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ToastService, ToastSeverity } from './toast.service';
+import { IconComponent } from '../shared/icon/icon.component';
 
 const SEVERITY_STYLE: Record<ToastSeverity, { background: string; icon: string }> = {
-  success: { background: 'text-bg-success', icon: 'bi-check-circle-fill' },
-  info: { background: 'text-bg-info', icon: 'bi-info-circle-fill' },
-  warn: { background: 'text-bg-warning', icon: 'bi-exclamation-triangle-fill' },
-  error: { background: 'text-bg-danger', icon: 'bi-x-octagon-fill' },
+  success: { background: 'text-bg-success', icon: 'check-circle' },
+  info: { background: 'text-bg-info', icon: 'info' },
+  warn: { background: 'text-bg-warning', icon: 'triangle-alert' },
+  error: { background: 'text-bg-danger', icon: 'ban' },
 };
 
 /** Rendert die aktiven Meldungen des `ToastService` als Bootstrap-Toasts. Einmal in `App` einbinden. */
 @Component({
+  imports: [IconComponent],
   selector: 'app-toast-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -23,7 +25,7 @@ const SEVERITY_STYLE: Record<ToastSeverity, { background: string; icon: string }
         >
           <div class="d-flex">
             <div class="toast-body">
-              <i class="bi me-2" [class]="style(toast.severity).icon" aria-hidden="true"></i>
+              <app-icon [name]="style(toast.severity).icon" class="me-2" />
               <strong>{{ toast.summary }}</strong>
               @if (toast.detail) {
                 <div>{{ toast.detail }}</div>

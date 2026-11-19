@@ -5,23 +5,24 @@ import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
 import { AddGroupDialogComponent } from './add-group-dialog.component';
 import { isResponsible, sortByStatusThenName } from './participation';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = {
-  APPROVED: { icon: 'bi-check-lg', css: 'text-success' },
-  REJECTED: { icon: 'bi-x-lg', css: 'text-danger' },
-  PENDING: { icon: 'bi-clock', css: 'text-warning' },
+  APPROVED: { icon: 'check', css: 'text-success' },
+  REJECTED: { icon: 'x', css: 'text-danger' },
+  PENDING: { icon: 'clock', css: 'text-warning' },
 };
 
 /** Eingeladene Gruppen mit aufklappbaren Mitgliedern und Hinzufügen (Port von `GroupParticipantsCard.vue`). */
 @Component({
   selector: 'app-group-participants-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AddGroupDialogComponent],
+  imports: [IconComponent, AddGroupDialogComponent],
   template: `
     <div class="card shadow-sm">
       <div class="card-header p-4 bg-transparent d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-3">
-          <span class="icon-tile" aria-hidden="true"><i class="bi bi-people fs-5"></i></span>
+          <span class="icon-tile" aria-hidden="true"><app-icon name="users" class="fs-5" /></span>
           <div>
             <h3 class="card-heading fw-bold mb-0">Gruppen</h3>
             <p class="small text-body-secondary mb-0">
@@ -31,19 +32,19 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
         </div>
         @if (responsible()) {
           <button type="button" class="btn btn-gradient btn-sm" title="Gruppe hinzufügen" aria-label="Gruppe hinzufügen" (click)="showAddDialog.set(true)">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <app-icon name="plus" />
           </button>
         }
       </div>
 
       @if (groups().length === 0) {
         <div class="card-body text-center p-4">
-          <div class="icon-tile rounded-circle empty-icon mb-3" aria-hidden="true"><i class="bi bi-people fs-3"></i></div>
+          <div class="icon-tile rounded-circle empty-icon mb-3" aria-hidden="true"><app-icon name="users" class="fs-3" /></div>
           <p class="text-body-secondary mb-0">Keine Gruppen eingeladen</p>
           <p class="small text-body-tertiary mt-1">Teilnehmer wurden einzeln hinzugefügt</p>
           @if (responsible()) {
             <button type="button" class="btn btn-outline-primary mt-3" (click)="showAddDialog.set(true)">
-              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Gruppe hinzufügen
+              <app-icon name="plus" class="me-2" />Gruppe hinzufügen
             </button>
           }
         </div>
@@ -59,13 +60,13 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
                 (click)="toggle(group.id)"
               >
                 <span class="d-flex align-items-center gap-3">
-                  <span class="avatar" aria-hidden="true"><i class="bi bi-people"></i></span>
+                  <span class="avatar" aria-hidden="true"><app-icon name="users" /></span>
                   <span>
                     <span class="d-block fw-medium">{{ group.name }}</span>
                     <span class="d-block small text-body-secondary">{{ approved(group.id) }}/{{ members(group.id).length }} zugesagt</span>
                   </span>
                 </span>
-                <i class="bi" [class.bi-chevron-up]="isExpanded(group.id)" [class.bi-chevron-down]="!isExpanded(group.id)" aria-hidden="true"></i>
+                <app-icon [name]="isExpanded(group.id) ? 'chevron-up' : 'chevron-down'" />
               </button>
               @if (isExpanded(group.id)) {
                 <ul class="list-group list-group-flush bg-body-tertiary border-top">
@@ -75,7 +76,7 @@ const STATUS_ICON: Record<ParticipationStatus, { icon: string; css: string }> = 
                         <span class="avatar avatar-sm" aria-hidden="true">{{ member.name.charAt(0).toUpperCase() || '?' }}</span>
                         <span class="small">{{ member.name }}</span>
                       </span>
-                      <i class="bi {{ statusIcon[member.status].icon }} {{ statusIcon[member.status].css }}" aria-hidden="true"></i>
+                      <app-icon [name]="statusIcon[member.status].icon" [class]="statusIcon[member.status].css" />
                     </li>
                   }
                 </ul>

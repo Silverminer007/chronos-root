@@ -3,9 +3,11 @@ import { AuthService } from '../../core/auth.service';
 import { Appointment, ParticipationStatus } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** „Deine Teilnahme“: eigene Zu-/Absage auf der Detailseite (Port von `OwnParticipationStatusCard.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-own-participation-status-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -20,7 +22,7 @@ import { AppointmentStore } from '../agenda/appointment.store';
             [disabled]="status() === 'APPROVED' || updating()"
             (click)="update('approve')"
           >
-            <i class="bi bi-check-lg" aria-hidden="true"></i><span>Zusagen</span>
+            <app-icon name="check" /><span>Zusagen</span>
           </button>
           <button
             type="button"
@@ -29,12 +31,12 @@ import { AppointmentStore } from '../agenda/appointment.store';
             [disabled]="status() === 'REJECTED' || updating()"
             (click)="update('reject')"
           >
-            <i class="bi bi-x-lg" aria-hidden="true"></i><span>Absagen</span>
+            <app-icon name="x" /><span>Absagen</span>
           </button>
         </div>
         @if (status() === 'PENDING') {
           <div class="alert alert-pending d-flex gap-3 mt-3 mb-0" role="note">
-            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <app-icon name="triangle-alert" />
             <div>
               <p class="alert-pending-title fw-medium mb-1">Bitte bestätige deine Teilnahme</p>
               <p class="small mb-0">Deine Rückmeldung hilft bei der Planung des Termins.</p>

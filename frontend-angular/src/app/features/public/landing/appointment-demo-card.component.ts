@@ -4,6 +4,7 @@ import { Appointment } from '../../../core/models';
 import { ToastService } from '../../../core/toast.service';
 import { MessageDialogComponent } from '../../../shared/message-dialog.component';
 import { DEMO_OWN_USER_ID } from './demo-appointments';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 const MAX_AVATARS = 4;
 const SEND_DELAY_MS = 500;
@@ -12,7 +13,7 @@ const SEND_DELAY_MS = 500;
 @Component({
   selector: 'app-appointment-demo-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MessageDialogComponent],
+  imports: [IconComponent, MessageDialogComponent],
   templateUrl: './appointment-demo-card.component.html',
 })
 export class AppointmentDemoCardComponent {

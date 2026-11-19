@@ -8,7 +8,7 @@
 
       <div class="flex-grow-1 search-box">
         <div class="position-relative">
-          <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-body-tertiary" aria-hidden="true"></i>
+          <app-icon name="search" class="position-absolute top-50 translate-middle-y ms-3 text-body-tertiary" />
           <input
             type="search"
             class="form-control ps-5"
@@ -30,7 +30,7 @@
           >
             <span class="avatar user-avatar">{{ initials() }}</span>
             <span class="d-none d-md-block fw-medium">{{ user()?.first_name }}</span>
-            <i class="bi bi-chevron-down small text-body-tertiary d-none d-md-block" aria-hidden="true"></i>
+            <app-icon name="chevron-down" class="small text-body-tertiary d-none d-md-block" />
           </button>
 
           <div class="dropdown-menu dropdown-menu-end user-menu" [class.show]="menuOpen()">
@@ -44,12 +44,12 @@
             <hr class="dropdown-divider" />
             @for (link of links; track link.path) {
               <a class="dropdown-item d-flex align-items-center gap-3 py-2" [routerLink]="link.path" (click)="menuOpen.set(false)">
-                <i class="bi" [class]="link.icon" aria-hidden="true"></i>{{ link.label }}
+                <app-icon [name]="link.icon" />{{ link.label }}
               </a>
             }
             <hr class="dropdown-divider" />
             <button type="button" class="dropdown-item d-flex align-items-center gap-3 py-2" (click)="logout()">
-              <i class="bi bi-box-arrow-right" aria-hidden="true"></i>Abmelden
+              <app-icon name="log-out" />Abmelden
             </button>
           </div>
         </div>

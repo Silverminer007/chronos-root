@@ -53,7 +53,7 @@
           </div>
           <div class="col-12 d-flex justify-content-between pt-2">
             <button type="button" class="btn btn-gradient fw-medium d-inline-flex align-items-center gap-2" (click)="changePassword()">
-              <i class="bi bi-key" aria-hidden="true"></i>
+              <app-icon name="key" />
               <span>Passwort ändern</span>
             </button>
             <button
@@ -65,7 +65,7 @@
               @if (savingProfile()) {
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
               } @else {
-                <i class="bi bi-floppy" aria-hidden="true"></i>
+                <app-icon name="save" />
               }
               <span>Speichern</span>
             </button>
@@ -77,7 +77,7 @@
     <section class="card shadow-sm mb-4" aria-label="Verknüpfte Konten">
       <div class="card-body p-4">
         <div class="d-flex align-items-center gap-3 mb-4">
-          <span class="icon-tile" aria-hidden="true"><i class="bi bi-link-45deg"></i></span>
+          <span class="icon-tile" aria-hidden="true"><app-icon name="link" /></span>
           <div>
             <p class="fw-semibold mb-0">Verknüpfte Konten</p>
             <p class="small text-body-secondary mb-0">Melde dich mit einem externen Anbieter an</p>
@@ -93,7 +93,7 @@
             @for (provider of providers; track provider.id) {
               <li class="list-group-item px-0 d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
-                  <i class="bi fs-4" [class]="provider.icon + ' ' + provider.color" aria-hidden="true"></i>
+                  <app-icon [name]="provider.icon" [class]="'fs-4 ' + provider.color" />
                   <div>
                     <p class="fw-medium mb-0">{{ provider.name }}</p>
                     <p class="small text-body-secondary mb-0">{{ isLinked(provider.id) ? 'Verknüpft' : 'Nicht verknüpft' }}</p>
@@ -109,13 +109,13 @@
                     @if (unlinkingProvider() === provider.id) {
                       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                     } @else {
-                      <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                      <app-icon name="link" />
                     }
                     <span>Trennen</span>
                   </button>
                 } @else {
                   <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" (click)="link(provider.id)">
-                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                    <app-icon name="link" />
                     <span>Verknüpfen</span>
                   </button>
                 }
@@ -130,14 +130,14 @@
       <div class="card-body p-4">
         <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
           <div class="d-flex align-items-center gap-3">
-            <span class="icon-tile" aria-hidden="true"><i class="bi bi-fingerprint"></i></span>
+            <span class="icon-tile" aria-hidden="true"><app-icon name="fingerprint" /></span>
             <div>
               <p class="fw-semibold mb-0">Passkeys</p>
               <p class="small text-body-secondary mb-0">Passwortlos anmelden mit Fingerabdruck oder Gesicht</p>
             </div>
           </div>
           <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 flex-shrink-0" (click)="createPasskey()">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <app-icon name="plus" />
             <span>Hinzufügen</span>
           </button>
         </div>
@@ -155,7 +155,7 @@
           <ul class="list-group list-group-flush">
             @for (passkey of passkeys(); track passkey.id) {
               <li class="list-group-item px-0 d-flex align-items-center gap-3">
-                <i class="bi bi-key fs-5 text-body-secondary" aria-hidden="true"></i>
+                <app-icon name="key" class="fs-5 text-body-secondary" />
                 <div class="flex-grow-1 min-w-0">
                   <p class="fw-medium text-truncate mb-0">{{ passkey.name }}</p>
                   <p class="small text-body-secondary mb-0">
@@ -166,7 +166,7 @@
                   </p>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" (click)="deletePasskey(passkey.id)">
-                  <i class="bi bi-x-lg" aria-hidden="true"></i>
+                  <app-icon name="x" />
                   <span>Entfernen</span>
                 </button>
               </li>

@@ -5,6 +5,7 @@ import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
 import { AddParticipantDialogComponent } from './add-participant-dialog.component';
 import { ASSIGNABLE_ROLES, isResponsible, roleLabel, sortByRoleThenStatusThenName, statusLabel } from './participation';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface OpenMenu {
   participant: UserParticipant;
@@ -24,16 +25,16 @@ const ROLE_BADGE: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
-  APPROVED: { css: 'bg-success-subtle text-success-emphasis', icon: 'bi-check-lg' },
-  REJECTED: { css: 'bg-danger-subtle text-danger-emphasis', icon: 'bi-x-lg' },
-  PENDING: { css: 'bg-warning-subtle text-warning-emphasis', icon: 'bi-clock' },
+  APPROVED: { css: 'bg-success-subtle text-success-emphasis', icon: 'check' },
+  REJECTED: { css: 'bg-danger-subtle text-danger-emphasis', icon: 'x' },
+  PENDING: { css: 'bg-warning-subtle text-warning-emphasis', icon: 'clock' },
 };
 
 /** Teilnehmerliste mit Fortschritt, Rollenmenü und Hinzufügen (Port von `ParticipantsStatusCard.vue`). */
 @Component({
   selector: 'app-participants-status-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AddParticipantDialogComponent],
+  imports: [IconComponent, AddParticipantDialogComponent],
   host: { '(document:click)': 'closeMenu()', '(window:resize)': 'closeMenu()' },
   template: `
     <div class="card shadow-sm">
@@ -42,7 +43,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
           <h3 class="card-heading fw-bold mb-0">Teilnehmer</h3>
           @if (responsible()) {
             <button type="button" class="btn btn-gradient btn-icon-square" aria-label="Teilnehmer hinzufügen" (click)="showAddDialog.set(true)">
-              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              <app-icon name="plus" />
             </button>
           }
         </div>
@@ -64,16 +65,16 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
                     <span class="badge {{ roleBadge(p.role) }}">{{ label(p.role) }}</span>
                   }
                   @if (p.via_group_name) {
-                    <span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-people me-1" aria-hidden="true"></i>{{ p.via_group_name }}</span>
+                    <span class="badge bg-primary-subtle text-primary-emphasis"><app-icon name="users" class="me-1" />{{ p.via_group_name }}</span>
                   }
                   <span class="badge {{ statusBadge(p.status).css }}">
-                    <i class="bi {{ statusBadge(p.status).icon }} me-1" aria-hidden="true"></i>{{ statusText(p.status) }}
+                    <app-icon [name]="statusBadge(p.status).icon" class="me-1" />{{ statusText(p.status) }}
                   </span>
                 </div>
               </div>
               @if (responsible() && p.role !== 'RESPONSIBLE') {
                 <button type="button" class="btn btn-outline-secondary border-0 btn-sm flex-shrink-0" [attr.aria-label]="'Aktionen für ' + p.name" aria-haspopup="menu" (click)="toggleMenu($event, p)">
-                  <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                  <app-icon name="more-vertical" />
                 </button>
               }
             </div>
@@ -91,7 +92,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
         <li><hr class="dropdown-divider" /></li>
         <li>
           <button type="button" class="dropdown-item text-danger" role="menuitem" (click)="remove(m.participant)">
-            <i class="bi bi-trash me-2" aria-hidden="true"></i>Entfernen
+            <app-icon name="trash-2" class="me-2" />Entfernen
           </button>
         </li>
       </ul>

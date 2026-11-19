@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { BrowserType, browserOrder, detectBrowser } from './detect-browser';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /** `/public/install` (Port von `pages/public/install.vue`): Installationsanleitung je Browser, der erkannte zuerst. */
 @Component({
+  imports: [IconComponent],
   selector: 'app-install',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './install.component.html',
