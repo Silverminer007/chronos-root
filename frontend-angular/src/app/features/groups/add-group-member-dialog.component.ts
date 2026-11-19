@@ -80,7 +80,7 @@ const MIN_QUERY_LENGTH = 2;
                   <div class="d-flex align-items-center gap-3">
                     <span class="avatar" aria-hidden="true">{{ person.name.charAt(0).toUpperCase() || '?' }}</span>
                     <div>
-                      <p class="fw-medium mb-0">{{ person.name }}</p>
+                      <p class="fw-semibold mb-0">{{ person.name }}</p>
                       <p class="small mb-0">Wird zur Gruppe hinzugefügt</p>
                     </div>
                   </div>

@@ -441,8 +441,8 @@
 
   .step-num {
     flex-shrink: 0;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.75rem; // Number Circle 28×28
+    height: 1.75rem;
     border-radius: 50%;
     background: #f3e8ff; // purple-100
     color: $brand-purple;
@@ -452,6 +452,13 @@
     align-items: center;
     justify-content: center;
   }
+}
+
+// Progress Bar: 8px hoch, Hintergrund bg/muted, Füllung Brand-Verlauf.
+.progress-slim {
+  --bs-progress-height: 0.5rem;
+  --bs-progress-bg: var(--bs-secondary-bg);
+  --bs-progress-border-radius: 0.25rem;
 }
 
 // Lucide-Icons (`<app-icon>`): Größe folgt der Schrift, bündig zur Textzeile.

@@ -31,7 +31,7 @@ interface GroupOption {
           <div class="d-flex align-items-start gap-3">
             <app-icon name="user-plus" class="text-body-tertiary mt-1" />
             <div>
-              <p class="fw-medium mb-0">Mitglied hinzugefügt</p>
+              <p class="fw-semibold mb-0">Mitglied hinzugefügt</p>
               <p class="small text-body-secondary mb-0">Wenn ein neues Mitglied einer Gruppe beitritt</p>
             </div>
           </div>

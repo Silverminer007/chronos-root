@@ -2,8 +2,9 @@
   display: block;
 }
 
-.placeholder {
+.skeleton {
   display: inline-block;
+  background: var(--bs-secondary-bg);
 }
 
 .title {
@@ -11,7 +12,7 @@
   height: 2rem;
 }
 
-.placeholder-avatar {
+.skeleton-avatar {
   width: 2rem;
   height: 2rem;
   margin: -0.25rem;

@@ -5,6 +5,11 @@
   border-radius: var(--bs-border-radius-lg);
   color: var(--bs-secondary-color);
 
+  .option-label {
+    font-size: 0.75rem; // 12px, auf allen Breiten sichtbar
+    font-weight: 500;
+  }
+
   &:hover {
     border-color: var(--bs-secondary-color);
   }

@@ -48,7 +48,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
           }
         </div>
         <p class="small text-body-secondary mt-1 mb-0">{{ approvedCount() }} / {{ participants().length }} zugesagt</p>
-        <div class="progress mt-3" role="progressbar" aria-label="Zusagen" [attr.aria-valuenow]="approvedCount()" aria-valuemin="0" [attr.aria-valuemax]="progressMax()">
+        <div class="progress mt-3 progress-slim" role="progressbar" aria-label="Zusagen" [attr.aria-valuenow]="approvedCount()" aria-valuemin="0" [attr.aria-valuemax]="progressMax()">
           <div class="progress-bar bg-gradient-brand" [style.width.%]="progress()"></div>
         </div>
       </div>
@@ -59,7 +59,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
             <div class="d-flex align-items-start gap-3">
               <span class="avatar flex-shrink-0" aria-hidden="true">{{ p.name.charAt(0).toUpperCase() || '?' }}</span>
               <div class="flex-grow-1 min-w-0">
-                <p class="fw-medium mb-1 text-truncate" data-testid="name">{{ p.name }}</p>
+                <p class="fw-semibold mb-1 text-truncate" data-testid="name">{{ p.name }}</p>
                 <div class="d-flex flex-wrap align-items-center gap-2">
                   @if (p.role && p.role !== 'NONE') {
                     <span class="badge {{ roleBadge(p.role) }}">{{ label(p.role) }}</span>

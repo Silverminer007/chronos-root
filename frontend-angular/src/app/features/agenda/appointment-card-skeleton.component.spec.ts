@@ -6,8 +6,8 @@ describe('AppointmentCardSkeletonComponent', () => {
     const fixture = TestBed.createComponent(AppointmentCardSkeletonComponent);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelectorAll('.placeholder-avatar')).toHaveLength(4);
-    expect(el.querySelectorAll('.placeholder').length).toBeGreaterThan(8);
+    expect(el.querySelectorAll('.skeleton-avatar')).toHaveLength(4);
+    expect(el.querySelectorAll('.skeleton').length).toBeGreaterThan(8);
     expect(el.querySelector('.card')?.getAttribute('aria-hidden')).toBe('true');
   });
 });

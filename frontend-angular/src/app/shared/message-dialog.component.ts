@@ -26,7 +26,7 @@ const MAX_LENGTH = 500;
               <div class="alert alert-primary d-flex gap-3" role="note">
                 <app-icon name="info" />
                 <div>
-                  <p class="fw-medium mb-1">Empfänger</p>
+                  <p class="fw-semibold mb-1">Empfänger</p>
                   <p class="mb-0 small">Alle Teilnehmer dieses Termins ({{ recipientCount() }} Personen)</p>
                 </div>
               </div>

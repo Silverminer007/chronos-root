@@ -95,7 +95,7 @@
                 <div class="d-flex align-items-center gap-3">
                   <app-icon [name]="provider.icon" [class]="'fs-4 ' + provider.color" />
                   <div>
-                    <p class="fw-medium mb-0">{{ provider.name }}</p>
+                    <p class="fw-semibold mb-0">{{ provider.name }}</p>
                     <p class="small text-body-secondary mb-0">{{ isLinked(provider.id) ? 'Verknüpft' : 'Nicht verknüpft' }}</p>
                   </div>
                 </div>
@@ -148,7 +148,7 @@
           </div>
         } @else if (passkeys().length === 0) {
           <div class="text-center py-4">
-            <p class="small fw-medium text-body-secondary mb-1">Keine Passkeys hinterlegt</p>
+            <p class="small fw-semibold text-body-secondary mb-1">Keine Passkeys hinterlegt</p>
             <p class="small text-body-tertiary mb-0">Füge einen Passkey hinzu, um dich ohne Passwort anzumelden</p>
           </div>
         } @else {
@@ -157,7 +157,7 @@
               <li class="list-group-item px-0 d-flex align-items-center gap-3">
                 <app-icon name="key" class="fs-5 text-body-secondary" />
                 <div class="flex-grow-1 min-w-0">
-                  <p class="fw-medium text-truncate mb-0">{{ passkey.name }}</p>
+                  <p class="fw-semibold text-truncate mb-0">{{ passkey.name }}</p>
                   <p class="small text-body-secondary mb-0">
                     Erstellt am {{ formatDate(passkey.created_at) }}
                     @if (passkey.last_used_at) {
