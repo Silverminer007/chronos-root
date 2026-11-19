@@ -3,6 +3,7 @@ import { formatDate, formatTime } from '../../core/date-format';
 import { Appointment, AppointmentStatus } from '../../core/models';
 import { EditAppointmentBottomSheetComponent } from '../appointment-form/edit-appointment-bottom-sheet.component';
 import { AppointmentShareService } from './appointment-share.service';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>> = {
   CANCELLED: { label: 'Abgesagt', css: 'bg-danger-subtle text-danger-emphasis' },
@@ -17,7 +18,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
 @Component({
   selector: 'app-appointment-details-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EditAppointmentBottomSheetComponent],
+  imports: [IconComponent, EditAppointmentBottomSheetComponent],
   template: `
     <div class="card shadow-sm overflow-hidden">
       <div class="bg-gradient-brand p-4">
@@ -34,7 +35,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
               aria-label="Link teilen"
               (click)="share()"
             >
-              <i class="bi bi-share" aria-hidden="true"></i>
+              <app-icon name="share-2" />
             </button>
             <button
               type="button"
@@ -43,20 +44,20 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
               aria-label="Termin bearbeiten"
               (click)="editOpen.set(true)"
             >
-              <i class="bi bi-pencil" aria-hidden="true"></i>
+              <app-icon name="pencil" />
             </button>
           </div>
         </div>
         <div class="d-flex flex-wrap gap-3 small text-white">
           <span class="d-flex align-items-center gap-2"
-            ><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ date() }}</span
+            ><app-icon name="calendar" />{{ date() }}</span
           >
           <span class="d-flex align-items-center gap-2"
-            ><i class="bi bi-clock" aria-hidden="true"></i>{{ time() }}</span
+            ><app-icon name="clock" />{{ time() }}</span
           >
           @if (appointment().venue) {
             <span class="d-flex align-items-center gap-2"
-              ><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ appointment().venue }}</span
+              ><app-icon name="map-pin" />{{ appointment().venue }}</span
             >
           }
         </div>
@@ -69,7 +70,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
           </div>
         }
         <div class="d-flex align-items-center gap-2 small text-body-secondary">
-          <i class="bi bi-people" aria-hidden="true"></i>
+          <app-icon name="users" />
           <span>Mindestens {{ appointment().minimal_attendees }} Teilnehmer erforderlich</span>
         </div>
       </div>

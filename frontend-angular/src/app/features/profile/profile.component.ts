@@ -3,6 +3,7 @@ import { AuthService } from '../../core/auth.service';
 import { LinkedAccount, Passkey } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { SearchHeaderComponent } from '../agenda/search-header.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface Provider {
   id: string;
@@ -15,7 +16,7 @@ interface Provider {
 @Component({
   selector: 'app-profile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent],
+  imports: [IconComponent, SearchHeaderComponent],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
 })
@@ -30,7 +31,7 @@ export class ProfileComponent implements OnInit {
   protected readonly initials = computed(() => `${this.firstName().charAt(0)}${this.lastName().charAt(0)}`);
 
   // Microsoft und Apple sind wie in Nuxt (noch) nicht freigeschaltet.
-  protected readonly providers: Provider[] = [{ id: 'google', name: 'Google', icon: 'bi-google', color: 'text-danger' }];
+  protected readonly providers: Provider[] = [{ id: 'google', name: 'Google', icon: 'google', color: 'text-danger' }];
   protected readonly linkedAccounts = signal<LinkedAccount[]>([]);
   protected readonly loadingLinked = signal(false);
   protected readonly unlinkingProvider = signal<string | null>(null);

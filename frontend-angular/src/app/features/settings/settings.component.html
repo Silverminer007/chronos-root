@@ -19,7 +19,7 @@
           @if (store.saving()) {
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
           } @else {
-            <i class="bi bi-floppy" aria-hidden="true"></i>
+            <app-icon name="save" />
           }
           <span>Speichern</span>
         </button>
@@ -34,7 +34,7 @@
         </div>
       } @else if (store.error() && !store.settings()) {
         <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
-          <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+          <app-icon name="triangle-alert" class="fs-5" />
           <div>
             <p class="fw-semibold mb-0">Fehler beim Laden</p>
             <p class="small mb-0">{{ store.error() }}</p>
@@ -64,7 +64,7 @@
     @if (store.saving()) {
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
     } @else {
-      <i class="bi bi-floppy fs-5" aria-hidden="true"></i>
+      <app-icon name="save" class="fs-5" />
     }
   </button>
 }

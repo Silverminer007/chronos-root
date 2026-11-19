@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 
 export interface NewFeature {
   id: string;
-  /** Bootstrap-Icons-Klasse, z. B. `bi-person`. */
+  /** Lucide-Icon-Name, z. B. `user`. */
   icon: string;
   title: string;
   description: string;
@@ -16,7 +16,7 @@ const STORAGE_KEY = 'shownFeatureIds';
 const ALL_FEATURES: NewFeature[] = [
   {
     id: 'profile-page-v1',
-    icon: 'bi-person',
+    icon: 'user',
     title: 'Dein Profil',
     description: 'Ab sofort kannst du deinen Namen und deine E-Mail-Adresse direkt in der App bearbeiten.',
     link: '/profile',
@@ -24,7 +24,7 @@ const ALL_FEATURES: NewFeature[] = [
   },
   {
     id: 'linked-accounts-v1',
-    icon: 'bi-link-45deg',
+    icon: 'link',
     title: 'Verknüpfte Konten',
     description: 'Verbinde dein Konto mit Google, Microsoft oder Apple – für eine schnellere Anmeldung ohne Passwort.',
     link: '/profile',
@@ -32,7 +32,7 @@ const ALL_FEATURES: NewFeature[] = [
   },
   {
     id: 'passkeys-v1',
-    icon: 'bi-fingerprint',
+    icon: 'fingerprint',
     title: 'Passkeys',
     description: 'Melde dich per Fingerabdruck, Gesichtserkennung oder Geräte-PIN an – ganz ohne Passwort.',
     link: '/profile',
@@ -40,7 +40,7 @@ const ALL_FEATURES: NewFeature[] = [
   },
   {
     id: 'change-password-v1',
-    icon: 'bi-lock',
+    icon: 'lock',
     title: 'Passwort ändern',
     description: 'Dein Passwort kannst du jetzt direkt in Chronos ändern – ohne Umwege über externe Seiten.',
     link: '/profile',

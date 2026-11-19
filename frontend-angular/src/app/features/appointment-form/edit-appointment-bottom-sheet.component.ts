@@ -25,12 +25,13 @@ import {
   patchFormFromAppointment,
   toPayload,
 } from './appointment-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Bottom-Sheet zum Bearbeiten eines Termins (Port von `EditAppointmentBottomSheet.vue`). */
 @Component({
   selector: 'app-edit-appointment-bottom-sheet',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [IconComponent, ReactiveFormsModule],
   templateUrl: './edit-appointment-bottom-sheet.component.html',
   styleUrl: './edit-appointment-bottom-sheet.component.scss',
 })

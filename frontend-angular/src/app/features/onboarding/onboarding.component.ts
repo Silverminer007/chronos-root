@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OnboardingService } from '../../core/onboarding.service';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface Step {
   icon: string;
@@ -15,27 +16,27 @@ const STEPS: Step[] = [
     description: 'Schön, dass du dabei bist. Lass uns kurz zeigen, was Chronos für dich und dein Team kann.',
   },
   {
-    icon: 'bi-calendar3',
+    icon: 'calendar',
     title: 'Termine verwalten',
     description: 'Erstelle Termine, lade Mitglieder ein und behalte den Überblick über alle anstehenden Events.',
   },
   {
-    icon: 'bi-person',
+    icon: 'user',
     title: 'Freunde & Familie',
     description: 'Lade Freunde und Familie ein, um sie zu Terminen hinzuzufügen.',
   },
   {
-    icon: 'bi-people',
+    icon: 'users',
     title: 'Teams & Gruppen',
     description: 'Erstelle Gruppen, um mehrere Freunde gleichzeitig zu einem Termin hinzuzufügen',
   },
   {
-    icon: 'bi-people',
+    icon: 'users',
     title: 'Rollen & Verantwortlichkeiten',
     description: 'Weise Teilnehmenden eine Rolle für den Termin zu - von Gast bis Organisator',
   },
   {
-    icon: 'bi-bell',
+    icon: 'bell',
     title: 'Immer informiert',
     description: 'Erhalte Push-Benachrichtigungen bei neuen Terminen, Änderungen und Zu- oder Absagen.',
   },
@@ -43,6 +44,7 @@ const STEPS: Step[] = [
 
 /** Seite `/onboarding` ohne Layout: sechs Einführungsschritte (Port von `pages/onboarding.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-onboarding',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './onboarding.component.html',

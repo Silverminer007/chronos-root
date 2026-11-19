@@ -8,6 +8,7 @@ import { ToastService } from '../../core/toast.service';
 import { SearchHeaderComponent } from '../agenda/search-header.component';
 import { AdminStatistics, AdminUser } from './admin.models';
 import { AdminService } from './admin.service';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const RECENT_LOGIN_COUNT = 20;
 const AB_VARIANTS = ['a', 'b', 'c'] as const;
@@ -18,7 +19,7 @@ type AbVariant = (typeof AB_VARIANTS)[number];
 @Component({
   selector: 'app-admin',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent, RouterLink, NgTemplateOutlet],
+  imports: [IconComponent, SearchHeaderComponent, RouterLink, NgTemplateOutlet],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss',
 })
@@ -38,12 +39,12 @@ export class AdminComponent implements OnInit {
   protected readonly stats = computed(() => {
     const s = this.statistics();
     return [
-      { label: 'Registrierte Nutzer', icon: 'bi-people', value: s?.users.total ?? 0 },
-      { label: 'Anstehende Termine', icon: 'bi-calendar-event', value: s?.appointments.planned ?? 0 },
-      { label: 'Gruppen', icon: 'bi-folder', value: s?.groups.total ?? 0 },
-      { label: 'Freundschaften', icon: 'bi-heart', value: s?.friendships.accepted ?? 0 },
-      { label: 'Nachrichten', icon: 'bi-chat-square', value: s?.messages.total ?? 0 },
-      { label: 'Push-Abonnements', icon: 'bi-bell', value: s?.pushSubscriptions.total ?? 0, link: '/admin/push' },
+      { label: 'Registrierte Nutzer', icon: 'users', value: s?.users.total ?? 0 },
+      { label: 'Anstehende Termine', icon: 'calendar', value: s?.appointments.planned ?? 0 },
+      { label: 'Gruppen', icon: 'folder', value: s?.groups.total ?? 0 },
+      { label: 'Freundschaften', icon: 'heart', value: s?.friendships.accepted ?? 0 },
+      { label: 'Nachrichten', icon: 'message-square', value: s?.messages.total ?? 0 },
+      { label: 'Push-Abonnements', icon: 'bell', value: s?.pushSubscriptions.total ?? 0, link: '/admin/push' },
     ];
   });
 

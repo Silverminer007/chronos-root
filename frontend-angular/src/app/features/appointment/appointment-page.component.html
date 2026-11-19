@@ -8,7 +8,7 @@
 } @else if (error()) {
   <div class="min-vh-100 d-flex align-items-center justify-content-center text-center px-3">
     <div class="error-box">
-      <i class="bi bi-exclamation-circle fs-1 text-danger d-block mb-3" aria-hidden="true"></i>
+      <app-icon name="alert-circle" class="fs-1 text-danger d-block mb-3" />
       <h2 class="fw-bold mb-2">Termin nicht gefunden</h2>
       <p class="text-body-secondary mb-4">{{ error() }}</p>
       <button type="button" class="btn btn-gradient btn-lg" (click)="backNavigation.back()">Zurück zur Übersicht</button>

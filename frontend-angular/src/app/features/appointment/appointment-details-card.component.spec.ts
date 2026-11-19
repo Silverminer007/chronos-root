@@ -36,7 +36,7 @@ describe('AppointmentDetailsCardComponent', () => {
   it('lässt Ort und Beschreibung ohne Wert weg und zeigt bei geplanten Terminen keinen Status', () => {
     const { el } = render({ venue: null, description: null });
     expect(el.textContent).not.toContain('Beschreibung');
-    expect(el.querySelector('.bi-geo-alt')).toBeNull();
+    expect(el.querySelector('app-icon[name="map-pin"]')).toBeNull();
     expect(el.querySelector('[data-testid="status"]')).toBeNull();
   });
 

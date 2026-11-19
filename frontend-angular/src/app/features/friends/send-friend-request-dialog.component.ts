@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inj
 import { getErrorMessage } from '../../core/errors';
 import { ToastService } from '../../core/toast.service';
 import { FriendshipStore } from './friendship.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Dialog zum Senden einer Freundschaftsanfrage per E-Mail (Port von `SendFriendRequestDialog.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-send-friend-request-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -16,14 +18,14 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><i class="bi bi-person-plus fs-4"></i></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="user-plus" class="fs-4" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="send-request-title">Freund hinzufügen</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
             <div class="modal-body">
               <label for="friend-email" class="form-label fw-medium">E-Mail-Adresse</label>
               <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+                <span class="input-group-text"><app-icon name="mail" /></span>
                 <input
                   id="friend-email"
                   type="email"
@@ -47,7 +49,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 @if (loading()) {
                   <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 } @else {
-                  <i class="bi bi-send me-2" aria-hidden="true"></i>
+                  <app-icon name="send" class="me-2" />
                 }
                 Anfrage senden
               </button>

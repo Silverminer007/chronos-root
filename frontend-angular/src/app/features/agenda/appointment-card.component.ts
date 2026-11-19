@@ -6,6 +6,7 @@ import { Appointment } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { MessageDialogComponent } from '../../shared/message-dialog.component';
 import { AppointmentStore } from './appointment.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const MAX_AVATARS = 4;
 
@@ -13,7 +14,7 @@ const MAX_AVATARS = 4;
 @Component({
   selector: 'app-appointment-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MessageDialogComponent],
+  imports: [IconComponent, RouterLink, MessageDialogComponent],
   templateUrl: './appointment-card.component.html',
   styleUrl: './appointment-card.component.scss',
 })

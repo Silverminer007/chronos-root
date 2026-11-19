@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signa
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { AppointmentStore } from './appointment.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface MenuLink {
   label: string;
@@ -13,7 +14,7 @@ interface MenuLink {
 @Component({
   selector: 'app-search-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [IconComponent, RouterLink],
   host: { '(document:click)': 'closeOnOutsideClick($event)' },
   templateUrl: './search-header.component.html',
   styleUrl: './search-header.component.scss',
@@ -29,10 +30,10 @@ export class SearchHeaderComponent {
     () => `${this.user()?.first_name?.charAt(0) ?? ''}${this.user()?.last_name?.charAt(0) ?? ''}`,
   );
   protected readonly links: MenuLink[] = [
-    { label: 'Profil', icon: 'bi-person', path: '/profile' },
-    { label: 'Freunde', icon: 'bi-people', path: '/friends' },
-    { label: 'Gruppen', icon: 'bi-diagram-3', path: '/groups' },
-    { label: 'Einstellungen', icon: 'bi-gear', path: '/settings' },
+    { label: 'Profil', icon: 'user', path: '/profile' },
+    { label: 'Freunde', icon: 'users', path: '/friends' },
+    { label: 'Gruppen', icon: 'network', path: '/groups' },
+    { label: 'Einstellungen', icon: 'settings', path: '/settings' },
   ];
 
   protected search(query: string): void {

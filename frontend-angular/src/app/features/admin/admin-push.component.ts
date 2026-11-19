@@ -6,6 +6,7 @@ import { getErrorMessage } from '../../core/errors';
 import { SearchHeaderComponent } from '../agenda/search-header.component';
 import { PushLogEntry } from './admin.models';
 import { AdminService } from './admin.service';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 type StatusFilter = 'all' | 'success' | 'error';
 
@@ -29,7 +30,7 @@ export function parsePayload(payload: string): { title: string; body: string } {
 @Component({
   selector: 'app-admin-push',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent, RouterLink, FormsModule],
+  imports: [IconComponent, SearchHeaderComponent, RouterLink, FormsModule],
   templateUrl: './admin-push.component.html',
   styleUrl: './admin.component.scss',
 })

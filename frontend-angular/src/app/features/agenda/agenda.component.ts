@@ -5,12 +5,13 @@ import { AppointmentCardSkeletonComponent } from './appointment-card-skeleton.co
 import { AppointmentCardComponent } from './appointment-card.component';
 import { AppointmentStore } from './appointment.store';
 import { SearchHeaderComponent } from './search-header.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Terminübersicht `/agenda` (Port von `pages/agenda.vue`) mit Anlegen-Button und Stepper. */
 @Component({
   selector: 'app-agenda',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [IconComponent, 
     SearchHeaderComponent,
     AppointmentCardComponent,
     AppointmentCardSkeletonComponent,

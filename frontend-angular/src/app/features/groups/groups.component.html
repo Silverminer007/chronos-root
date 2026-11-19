@@ -8,7 +8,7 @@
         <p class="text-body-secondary mb-0">Verwalte deine Gruppen für Termine</p>
       </div>
       <button type="button" class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showCreateDialog.set(true)">
-        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <app-icon name="plus" />
         <span>Neue Gruppe</span>
       </button>
     </div>
@@ -20,7 +20,7 @@
       </div>
     } @else if (store.error(); as error) {
       <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
-        <i class="bi bi-exclamation-triangle fs-5" aria-hidden="true"></i>
+        <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
           <p class="small mb-0">{{ error }}</p>
@@ -35,12 +35,12 @@
         @if (store.groups().length === 0) {
           <div class="text-center py-5 px-3">
             <div class="icon-tile rounded-circle empty-icon mb-3">
-              <i class="bi bi-people fs-2" aria-hidden="true"></i>
+              <app-icon name="users" class="fs-2" />
             </div>
             <h3 class="h4 fw-bold mb-2">Noch keine Gruppen</h3>
             <p class="text-body-secondary mb-4">Erstelle Gruppen, um mehrere Personen gleichzeitig zu Terminen einzuladen.</p>
             <button type="button" class="btn btn-gradient fw-medium px-4" (click)="showCreateDialog.set(true)">
-              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Erste Gruppe erstellen
+              <app-icon name="plus" class="me-2" />Erste Gruppe erstellen
             </button>
           </div>
         }
@@ -55,7 +55,7 @@
   aria-label="Neue Gruppe"
   (click)="showCreateDialog.set(true)"
 >
-  <i class="bi bi-plus-lg fs-3" aria-hidden="true"></i>
+  <app-icon name="plus" class="fs-3" />
 </button>
 
 <app-create-group-dialog [visible]="showCreateDialog()" (closed)="showCreateDialog.set(false)" />

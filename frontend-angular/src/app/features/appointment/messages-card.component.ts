@@ -4,25 +4,26 @@ import { Appointment } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { MessageDialogComponent } from '../../shared/message-dialog.component';
 import { AppointmentStore } from '../agenda/appointment.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Nachrichtenverlauf eines Termins mit Senden-Dialog (Port von `MessagesCard.vue`). */
 @Component({
   selector: 'app-messages-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MessageDialogComponent],
+  imports: [IconComponent, MessageDialogComponent],
   template: `
     <div class="card shadow-sm">
       <div class="card-header p-4 bg-transparent d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
         <h3 class="card-heading fw-bold mb-0">Nachrichten</h3>
         <button type="button" class="btn btn-gradient d-flex align-items-center justify-content-center gap-2" (click)="showDialog.set(true)">
-          <i class="bi bi-send" aria-hidden="true"></i><span>Nachricht senden</span>
+          <app-icon name="send" /><span>Nachricht senden</span>
         </button>
       </div>
 
       <ul class="list-group list-group-flush">
         @for (message of messages(); track message.id) {
           <li class="list-group-item p-4 d-flex gap-3" data-testid="message">
-            <span class="avatar flex-shrink-0" aria-hidden="true"><i class="bi bi-person"></i></span>
+            <span class="avatar flex-shrink-0" aria-hidden="true"><app-icon name="user" /></span>
             <div class="min-w-0">
               <p class="fw-semibold mb-0" data-testid="sender">{{ message.sender_name }}</p>
               <p class="small text-body-secondary mb-2">{{ time(message.timestamp) }}</p>
@@ -31,7 +32,7 @@ import { AppointmentStore } from '../agenda/appointment.store';
           </li>
         } @empty {
           <li class="list-group-item p-5 text-center text-body-secondary">
-            <i class="bi bi-inbox fs-1 d-block mb-3" aria-hidden="true"></i>
+            <app-icon name="inbox" class="fs-1 d-block mb-3" />
             <p class="mb-0">Noch keine Nachrichten</p>
           </li>
         }

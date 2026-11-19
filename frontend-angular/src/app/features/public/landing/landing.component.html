@@ -1,6 +1,6 @@
 <section class="container py-5 text-center">
   <div class="mx-auto hero">
-    <div class="pill mb-3"><i class="bi bi-lightning-charge" aria-hidden="true"></i> Für Jugendverbände gemacht</div>
+    <div class="pill mb-3"><app-icon name="zap" /> Für Jugendverbände gemacht</div>
 
     <h1 class="display-4 fw-bold text-white mb-3">Terminplanung,<br />die funktioniert</h1>
 
@@ -44,7 +44,7 @@
     @for (feature of features; track feature.title) {
       <div class="col-12 col-sm-6 col-lg-3">
         <div class="glass-card h-100 p-4">
-          <span class="icon-tile mb-3" aria-hidden="true"><i class="bi fs-4" [class]="feature.icon"></i></span>
+          <span class="icon-tile mb-3" aria-hidden="true"><app-icon [name]="feature.icon" class="fs-4" /></span>
           <h3 class="h5 fw-bold mb-2">{{ feature.title }}</h3>
           <p class="text-body-secondary mb-0">{{ feature.description }}</p>
         </div>

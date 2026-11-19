@@ -7,9 +7,11 @@ import { ModalService } from '../../core/modal.service';
 import { ToastService } from '../../core/toast.service';
 import { AppointmentStore } from '../agenda/appointment.store';
 import { isResponsible } from './participation';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Aktionen für Organisierende: Termin absagen und löschen (Port von `AppointmentResponsibleActions.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-appointment-responsible-actions',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -23,7 +25,7 @@ import { isResponsible } from './participation';
             [disabled]="busy() || appointment().status === 'CANCELLED'"
             (click)="cancel()"
           >
-            <i class="bi bi-x-circle" aria-hidden="true"></i><span>Termin absagen</span>
+            <app-icon name="x-circle" /><span>Termin absagen</span>
           </button>
           <button
             type="button"
@@ -31,7 +33,7 @@ import { isResponsible } from './participation';
             [disabled]="busy()"
             (click)="remove()"
           >
-            <i class="bi bi-trash" aria-hidden="true"></i><span>Termin löschen</span>
+            <app-icon name="trash-2" /><span>Termin löschen</span>
           </button>
         </div>
       </div>

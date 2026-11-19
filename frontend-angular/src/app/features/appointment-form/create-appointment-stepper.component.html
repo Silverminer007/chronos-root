@@ -21,34 +21,33 @@
       <ul class="list-unstyled small text-body-secondary d-flex flex-column gap-2 mb-auto">
         @if (startLabel(); as label) {
           <li class="d-flex align-items-center gap-2">
-            <i class="bi bi-calendar-event" aria-hidden="true"></i>{{ label }}
+            <app-icon name="calendar" />{{ label }}
           </li>
         }
         @if (durationText(); as label) {
           <li class="d-flex align-items-center gap-2">
-            <i class="bi bi-stopwatch" aria-hidden="true"></i>{{ label }}
+            <app-icon name="timer" />{{ label }}
           </li>
         }
         @if (formValue().description) {
           <li class="d-flex align-items-start gap-2">
-            <i class="bi bi-file-text" aria-hidden="true"></i
-            ><span class="clamp-2">{{ formValue().description }}</span>
+            <app-icon name="file-text" /><span class="clamp-2">{{ formValue().description }}</span>
           </li>
         }
         @if (formValue().venue) {
           <li class="d-flex align-items-center gap-2">
-            <i class="bi bi-geo-alt" aria-hidden="true"></i>{{ formValue().venue }}
+            <app-icon name="map-pin" />{{ formValue().venue }}
           </li>
         }
         @if (formValue().hasAttendees) {
           <li class="d-flex align-items-center gap-2">
-            <i class="bi bi-people" aria-hidden="true"></i>Mindestens
+            <app-icon name="users" />Mindestens
             {{ formValue().minimalAttendees }} Teilnehmer
           </li>
         }
         @if (participantsLabel(); as label) {
           <li class="d-flex align-items-center gap-2">
-            <i class="bi bi-person-check" aria-hidden="true"></i>{{ label }}
+            <app-icon name="user-check" />{{ label }}
           </li>
         }
       </ul>
@@ -61,7 +60,7 @@
           >
             <span class="step-dot" [class.done]="i + 1 < step()" [class.current]="i + 1 === step()">
               @if (i + 1 < step()) {
-                <i class="bi bi-check-lg" aria-hidden="true"></i>
+                <app-icon name="check" />
               } @else {
                 {{ i + 1 }}
               }
@@ -82,12 +81,7 @@
           [attr.aria-label]="step() > 1 ? 'Zurück' : 'Schließen'"
           (click)="step() > 1 ? goBack() : close()"
         >
-          <i
-            class="bi"
-            [class.bi-arrow-left]="step() > 1"
-            [class.bi-x-lg]="step() === 1"
-            aria-hidden="true"
-          ></i>
+          <app-icon [name]="step() > 1 ? 'arrow-left' : 'x'" />
         </button>
         <div class="d-flex align-items-center gap-2 d-lg-none" aria-hidden="true">
           @for (s of steps; track s) {
@@ -130,8 +124,7 @@
               }
               @case (2) {
                 <span class="icon-tile mb-4" aria-hidden="true"
-                  ><i class="bi bi-calendar-event fs-2"></i
-                ></span>
+                  ><app-icon name="calendar" class="fs-2" /></span>
                 <h1 class="h3 fw-bold">Wann?</h1>
                 <p class="text-body-secondary mb-4">Wähle Datum und Uhrzeit.</p>
                 <div class="d-flex gap-2 mb-4">
@@ -154,8 +147,7 @@
               }
               @case (3) {
                 <span class="icon-tile mb-4" aria-hidden="true"
-                  ><i class="bi bi-stopwatch fs-2"></i
-                ></span>
+                  ><app-icon name="timer" class="fs-2" /></span>
                 <h1 class="h3 fw-bold">Wie lange?</h1>
                 <p class="text-body-secondary mb-4">Wähle die Dauer des Termins.</p>
                 <div class="row row-cols-2 g-3 option-grid">
@@ -219,8 +211,7 @@
               }
               @case (4) {
                 <span class="icon-tile mb-4" aria-hidden="true"
-                  ><i class="bi bi-file-text fs-2"></i
-                ></span>
+                  ><app-icon name="file-text" class="fs-2" /></span>
                 <h1 class="h3 fw-bold">Beschreibung</h1>
                 <p class="text-body-secondary mb-4">Optional – überspringe einfach mit „Weiter".</p>
                 <textarea
@@ -234,8 +225,7 @@
               }
               @case (5) {
                 <span class="icon-tile mb-4" aria-hidden="true"
-                  ><i class="bi bi-geo-alt fs-2"></i
-                ></span>
+                  ><app-icon name="map-pin" class="fs-2" /></span>
                 <h1 class="h3 fw-bold">Wo findet es statt?</h1>
                 <p class="text-body-secondary mb-4">Optional – überspringe einfach mit „Weiter".</p>
                 <input
@@ -258,8 +248,7 @@
         >
           <div class="text-center">
             <span class="icon-tile rounded-4 mb-3" aria-hidden="true"
-              ><i class="bi bi-people fs-2"></i
-            ></span>
+              ><app-icon name="users" class="fs-2" /></span>
             <h1 class="h3 fw-bold mb-1">Teilnehmer</h1>
             <p class="small text-body-secondary mb-0">Mindestanzahl und Einladungen festlegen.</p>
           </div>
@@ -339,12 +328,7 @@
           }
           <span>{{ step() < totalSteps ? 'Weiter' : saving() ? 'Erstelle…' : 'Erstellen' }}</span>
           @if (!saving()) {
-            <i
-              class="bi"
-              [class.bi-arrow-right]="step() < totalSteps"
-              [class.bi-check-lg]="step() === totalSteps"
-              aria-hidden="true"
-            ></i>
+            <app-icon [name]="step() < totalSteps ? 'arrow-right' : 'check'" />
           }
         </button>
       </footer>

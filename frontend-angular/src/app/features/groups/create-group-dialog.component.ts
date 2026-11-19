@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inj
 import { getErrorMessage } from '../../core/errors';
 import { ToastService } from '../../core/toast.service';
 import { GroupStore } from './group.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const MIN_NAME_LENGTH = 2;
 
 /** Dialog zum Anlegen einer Gruppe (Port von `CreateGroupDialog.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-create-group-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -16,14 +18,14 @@ const MIN_NAME_LENGTH = 2;
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><i class="bi bi-people fs-4"></i></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="users" class="fs-4" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="create-group-title">Neue Gruppe</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
             <div class="modal-body">
               <label for="group-name" class="form-label fw-medium">Gruppenname</label>
               <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-tag" aria-hidden="true"></i></span>
+                <span class="input-group-text"><app-icon name="tag" /></span>
                 <input
                   id="group-name"
                   type="text"
@@ -45,7 +47,7 @@ const MIN_NAME_LENGTH = 2;
                 @if (loading()) {
                   <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 } @else {
-                  <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>
+                  <app-icon name="plus" class="me-2" />
                 }
                 Erstellen
               </button>

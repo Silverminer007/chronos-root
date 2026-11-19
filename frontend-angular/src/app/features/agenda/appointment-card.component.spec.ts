@@ -79,7 +79,7 @@ describe('AppointmentCardComponent', () => {
 
   it('lässt Ort und Beschreibung ohne Werte weg', () => {
     render({ venue: null, description: null });
-    expect(el().querySelector('.bi-geo-alt')).toBeNull();
+    expect(el().querySelector('app-icon[name="map-pin"]')).toBeNull();
     expect(el().querySelector('.line-clamp-2')).toBeNull();
   });
 

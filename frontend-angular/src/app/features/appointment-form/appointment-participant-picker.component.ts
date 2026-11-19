@@ -10,6 +10,7 @@ import {
 import { Friend, Group, Role } from '../../core/models';
 import { GroupStore } from '../groups/group.store';
 import { FriendshipStore } from '../friends/friendship.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 export type ParticipationRole = Exclude<Role, 'NONE'>;
 
@@ -46,6 +47,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
 
 /** Auswahl von Personen und Gruppen für einen neuen Termin (Port von `AppointmentParticipantPicker.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-appointment-participant-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -59,7 +61,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
           [attr.aria-selected]="tab() === 'users'"
           (click)="setTab('users')"
         >
-          <i class="bi bi-person me-1" aria-hidden="true"></i>Personen
+          <app-icon name="user" class="me-1" />Personen
         </button>
         <button
           type="button"
@@ -69,12 +71,12 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
           [attr.aria-selected]="tab() === 'groups'"
           (click)="setTab('groups')"
         >
-          <i class="bi bi-people me-1" aria-hidden="true"></i>Gruppen
+          <app-icon name="users" class="me-1" />Gruppen
         </button>
       </div>
 
       <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+        <span class="input-group-text"><app-icon name="search" /></span>
         <input
           type="text"
           class="form-control"
@@ -102,8 +104,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
                 (click)="selectUser(friend)"
               >
                 <span class="avatar flex-shrink-0" aria-hidden="true"
-                  ><i class="bi bi-person"></i
-                ></span>
+                  ><app-icon name="user" /></span>
                 <span class="min-w-0 flex-grow-1">
                   <span class="d-block fw-medium text-truncate">{{ friend.name }}</span>
                   @if (friend.email) {
@@ -113,7 +114,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
                   }
                 </span>
                 @if (isUserSelected(friend.user_id)) {
-                  <i class="bi bi-check-lg text-primary" aria-hidden="true"></i>
+                  <app-icon name="check" class="text-primary" />
                 }
               </button>
             }
@@ -127,8 +128,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
                 (click)="selectGroup(group)"
               >
                 <span class="avatar flex-shrink-0" aria-hidden="true"
-                  ><i class="bi bi-people"></i
-                ></span>
+                  ><app-icon name="users" /></span>
                 <span class="min-w-0 flex-grow-1">
                   <span class="d-block fw-medium text-truncate">{{ group.name }}</span>
                   <span class="d-block small text-body-secondary"
@@ -136,7 +136,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
                   >
                 </span>
                 @if (isGroupSelected(group.id)) {
-                  <i class="bi bi-check-lg text-primary" aria-hidden="true"></i>
+                  <app-icon name="check" class="text-primary" />
                 }
               </button>
             }
@@ -150,7 +150,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
         <div class="d-flex flex-wrap gap-2">
           @for (user of selectedUsers(); track user.id) {
             <span class="chip" data-testid="chip-user">
-              <i class="bi bi-person" aria-hidden="true"></i>
+              <app-icon name="user" />
               <span class="chip-name text-truncate">{{ user.name }}</span>
               <button
                 type="button"
@@ -172,7 +172,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
           }
           @for (group of selectedGroups(); track group.id) {
             <span class="chip chip-group" data-testid="chip-group">
-              <i class="bi bi-people" aria-hidden="true"></i>
+              <app-icon name="users" />
               <span class="chip-name text-truncate">{{ group.name }}</span>
               <button
                 type="button"

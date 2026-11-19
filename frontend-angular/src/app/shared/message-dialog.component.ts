@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, HostListener, computed, input, output, signal } from '@angular/core';
+import { IconComponent } from './icon/icon.component';
 
 const MAX_LENGTH = 500;
 
 /** Bootstrap-Modal zum Verfassen einer Nachricht an alle Teilnehmenden (Port von `MessageDialog.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-message-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -13,7 +15,7 @@ const MAX_LENGTH = 500;
         <div class="modal-dialog modal-dialog-centered modal-lg">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><i class="bi bi-send fs-4"></i></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="send" class="fs-4" /></span>
               <div class="flex-grow-1">
                 <h2 class="modal-title fs-5" id="message-dialog-title">Nachricht senden</h2>
                 <p class="small text-body-secondary mb-0">{{ appointmentTitle() }}</p>
@@ -22,7 +24,7 @@ const MAX_LENGTH = 500;
             </div>
             <div class="modal-body">
               <div class="alert alert-primary d-flex gap-3" role="note">
-                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <app-icon name="info" />
                 <div>
                   <p class="fw-medium mb-1">Empfänger</p>
                   <p class="mb-0 small">Alle Teilnehmer dieses Termins ({{ recipientCount() }} Personen)</p>
@@ -47,7 +49,7 @@ const MAX_LENGTH = 500;
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" (click)="closed.emit()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!isValid()" (click)="send()">
-                <i class="bi bi-send me-2" aria-hidden="true"></i>Nachricht senden
+                <app-icon name="send" class="me-2" />Nachricht senden
               </button>
             </div>
           </div>

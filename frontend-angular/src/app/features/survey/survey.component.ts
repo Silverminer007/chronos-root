@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { getErrorStatus } from '../../core/errors';
 import { ToastService } from '../../core/toast.service';
 import { SearchHeaderComponent } from '../agenda/search-header.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Wartezeit nach dem Absenden, bevor zur Agenda weitergeleitet wird. */
 const REDIRECT_DELAY_MS = 2000;
@@ -67,7 +68,7 @@ function toggle(selected: string[], value: string): string[] {
 @Component({
   selector: 'app-survey',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent, RouterLink, FormsModule],
+  imports: [IconComponent, SearchHeaderComponent, RouterLink, FormsModule],
   templateUrl: './survey.component.html',
   styleUrl: './survey.component.scss',
 })

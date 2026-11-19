@@ -4,12 +4,13 @@ import { SearchHeaderComponent } from '../agenda/search-header.component';
 import { CreateGroupDialogComponent } from './create-group-dialog.component';
 import { GroupCardComponent } from './group-card.component';
 import { GroupStore } from './group.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Seite `/groups` mit der Gruppenliste (Port von `pages/groups/index.vue`). */
 @Component({
   selector: 'app-groups',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent, GroupCardComponent, CreateGroupDialogComponent],
+  imports: [IconComponent, SearchHeaderComponent, GroupCardComponent, CreateGroupDialogComponent],
   templateUrl: './groups.component.html',
   styleUrl: './groups.component.scss',
 })

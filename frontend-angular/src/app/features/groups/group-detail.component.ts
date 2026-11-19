@@ -8,6 +8,7 @@ import { SearchHeaderComponent } from '../agenda/search-header.component';
 import { AddGroupMemberDialogComponent } from './add-group-member-dialog.component';
 import { GroupMemberCardComponent } from './group-member-card.component';
 import { GroupStore } from './group.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 const GROUPS_URL = '/groups';
 
@@ -15,7 +16,7 @@ const GROUPS_URL = '/groups';
 @Component({
   selector: 'app-group-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent, GroupMemberCardComponent, AddGroupMemberDialogComponent],
+  imports: [IconComponent, SearchHeaderComponent, GroupMemberCardComponent, AddGroupMemberDialogComponent],
   templateUrl: './group-detail.component.html',
   styleUrl: './group-detail.component.scss',
 })

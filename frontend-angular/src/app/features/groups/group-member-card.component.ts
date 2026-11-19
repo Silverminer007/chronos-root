@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { User } from '../../core/models';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Karte eines Gruppenmitglieds mit optionalem „Entfernen“ (Port von `GroupMemberCard.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-group-member-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -18,7 +20,7 @@ import { User } from '../../core/models';
             aria-label="Mitglied entfernen"
             (click)="remove.emit(member().id)"
           >
-            <i class="bi bi-x-lg" aria-hidden="true"></i>
+            <app-icon name="x" />
           </button>
         }
       </div>

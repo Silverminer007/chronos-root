@@ -7,12 +7,13 @@ import { NotificationGroupSettingsCardComponent } from './notification-group-set
 import { NotificationPushCardComponent } from './notification-push-card.component';
 import { SettingUpdate } from './setting-update';
 import { SettingsStore } from './settings.store';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Seite `/settings` mit den Benachrichtigungseinstellungen (Port von `pages/settings.vue`). */
 @Component({
   selector: 'app-settings',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [IconComponent, 
     SearchHeaderComponent,
     NotificationPushCardComponent,
     NotificationAppointmentSettingsCardComponent,

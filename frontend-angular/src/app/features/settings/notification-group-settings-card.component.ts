@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { GroupNotificationSetting, NotificationSettings } from '../../core/models';
 import { SettingUpdate } from './setting-update';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface GroupOption {
   value: GroupNotificationSetting;
@@ -11,13 +12,14 @@ interface GroupOption {
 
 /** Ein/Aus für Gruppen-Benachrichtigungen (Port von `NotificationGroupSettingsCard.vue`). */
 @Component({
+  imports: [IconComponent],
   selector: 'app-notification-group-settings-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './notification-option.scss',
   template: `
     <div class="card shadow-sm">
       <div class="card-header p-3 p-sm-4 d-flex align-items-center gap-3 bg-transparent">
-        <span class="icon-tile d-none d-sm-inline-flex flex-shrink-0" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
+        <span class="icon-tile d-none d-sm-inline-flex flex-shrink-0" aria-hidden="true"><app-icon name="network" /></span>
         <div class="text-break" style="min-width: 0">
           <h3 class="card-heading fw-bold mb-0">Gruppenbenachrichtigungen</h3>
           <p class="small text-body-secondary mb-0">Benachrichtigungen für Gruppenaktivitäten</p>
@@ -27,7 +29,7 @@ interface GroupOption {
       <div class="card-body p-4">
         <div class="d-flex align-items-center justify-content-between gap-3">
           <div class="d-flex align-items-start gap-3">
-            <i class="bi bi-person-plus text-body-tertiary mt-1" aria-hidden="true"></i>
+            <app-icon name="user-plus" class="text-body-tertiary mt-1" />
             <div>
               <p class="fw-medium mb-0">Mitglied hinzugefügt</p>
               <p class="small text-body-secondary mb-0">Wenn ein neues Mitglied einer Gruppe beitritt</p>
@@ -42,7 +44,7 @@ interface GroupOption {
                 [attr.aria-pressed]="settings().group_member_added === option.value"
                 (click)="update.emit({ key: 'group_member_added', value: option.value })"
               >
-                <i class="bi" [class]="option.icon" aria-hidden="true"></i>
+                <app-icon [name]="option.icon" />
                 <span class="small fw-medium">{{ option.label }}</span>
               </button>
             }
@@ -57,7 +59,7 @@ export class NotificationGroupSettingsCardComponent {
   readonly update = output<SettingUpdate>();
 
   protected readonly options: GroupOption[] = [
-    { value: 'DISABLED', label: 'Aus', icon: 'bi-slash-circle', tone: 'secondary' },
-    { value: 'ENABLED', label: 'An', icon: 'bi-check-lg', tone: 'success' },
+    { value: 'DISABLED', label: 'Aus', icon: 'ban', tone: 'secondary' },
+    { value: 'ENABLED', label: 'An', icon: 'check', tone: 'success' },
   ];
 }

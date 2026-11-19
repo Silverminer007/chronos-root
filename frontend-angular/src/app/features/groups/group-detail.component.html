@@ -8,7 +8,7 @@
 } @else if (error(); as message) {
   <main class="container py-5">
     <div class="text-center mx-auto error-box">
-      <i class="bi bi-exclamation-circle display-5 text-danger d-block mb-3" aria-hidden="true"></i>
+      <app-icon name="alert-circle" class="display-5 text-danger d-block mb-3" />
       <h2 class="h3 fw-bold mb-2">Gruppe nicht gefunden</h2>
       <p class="text-body-secondary mb-4">{{ message }}</p>
       <button type="button" class="btn btn-gradient btn-gradient-blue fw-medium px-4" (click)="goBack()">Zurück zur Übersicht</button>
@@ -18,13 +18,13 @@
   <main class="container pb-5">
     <div class="group-detail mx-auto pt-4">
       <button type="button" class="btn btn-link text-body-secondary text-decoration-none p-0 mb-3 d-inline-flex align-items-center gap-2" (click)="goBack()">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <app-icon name="arrow-left" />
         <span>Zurück</span>
       </button>
 
       <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
         <div class="d-flex align-items-center gap-3">
-          <span class="icon-tile icon-tile-blue flex-shrink-0" aria-hidden="true"><i class="bi bi-people fs-3"></i></span>
+          <span class="icon-tile icon-tile-blue flex-shrink-0" aria-hidden="true"><app-icon name="users" class="fs-3" /></span>
           <div>
             <h1 class="h2 fw-bold mb-1">{{ current.name }}</h1>
             <p class="text-body-secondary mb-0">
@@ -33,7 +33,7 @@
           </div>
         </div>
         <button type="button" class="btn btn-gradient btn-gradient-blue fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddMemberDialog.set(true)">
-          <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          <app-icon name="plus" />
           <span>Mitglied hinzufügen</span>
         </button>
       </div>
@@ -57,12 +57,12 @@
       <div class="mt-4 d-flex flex-column flex-sm-row gap-3">
         @if (isLastMember()) {
           <button type="button" class="btn btn-outline-danger fw-medium px-4 py-2 d-flex align-items-center justify-content-center gap-2" (click)="deleteGroup()">
-            <i class="bi bi-trash" aria-hidden="true"></i>
+            <app-icon name="trash-2" />
             <span>Gruppe löschen</span>
           </button>
         } @else {
           <button type="button" class="btn btn-outline-secondary fw-medium px-4 py-2 d-flex align-items-center justify-content-center gap-2" (click)="leaveGroup()">
-            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <app-icon name="log-out" />
             <span>Gruppe verlassen</span>
           </button>
         }
@@ -76,7 +76,7 @@
     aria-label="Mitglied hinzufügen"
     (click)="showAddMemberDialog.set(true)"
   >
-    <i class="bi bi-plus-lg fs-3" aria-hidden="true"></i>
+    <app-icon name="plus" class="fs-3" />
   </button>
 }
 

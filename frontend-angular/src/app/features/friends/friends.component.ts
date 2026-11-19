@@ -5,6 +5,7 @@ import { FriendCardComponent } from './friend-card.component';
 import { FriendRequestCardComponent } from './friend-request-card.component';
 import { FriendshipStore } from './friendship.store';
 import { SendFriendRequestDialogComponent } from './send-friend-request-dialog.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 type Tab = 'friends' | 'requests';
 
@@ -12,7 +13,7 @@ type Tab = 'friends' | 'requests';
 @Component({
   selector: 'app-friends',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SearchHeaderComponent, FriendCardComponent, FriendRequestCardComponent, SendFriendRequestDialogComponent],
+  imports: [IconComponent, SearchHeaderComponent, FriendCardComponent, FriendRequestCardComponent, SendFriendRequestDialogComponent],
   templateUrl: './friends.component.html',
   styleUrl: './friends.component.scss',
 })
