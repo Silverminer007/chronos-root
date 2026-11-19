@@ -9,4 +9,5 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 })
 export class AppointmentCardSkeletonComponent {
   protected readonly avatars = [1, 2, 3, 4];
+  protected readonly actions = [1, 2, 3];
 }

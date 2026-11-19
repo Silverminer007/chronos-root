@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { formatTimeRange } from '../../core/date-format';
+import { formatAppointmentRange } from '../../core/date-format';
 import { Appointment } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { MessageDialogComponent } from '../../shared/message-dialog.component';
@@ -26,12 +26,16 @@ export class AppointmentCardComponent {
   readonly appointment = input.required<Appointment>();
 
   protected readonly showMessageDialog = signal(false);
-  protected readonly approved = computed(() => this.appointment().participants.filter((p) => p.status === 'APPROVED'));
+  protected readonly approved = computed(() =>
+    this.appointment().participants.filter((p) => p.status === 'APPROVED'),
+  );
   protected readonly avatars = computed(() => this.approved().slice(0, MAX_AVATARS));
   protected readonly hiddenAvatars = computed(() => this.approved().length - MAX_AVATARS);
   protected readonly hasApproved = computed(() => this.ownStatus() === 'APPROVED');
   protected readonly hasRejected = computed(() => this.ownStatus() === 'REJECTED');
-  protected readonly timeRange = computed(() => formatTimeRange(this.appointment().start, this.appointment().end));
+  protected readonly timeRange = computed(() =>
+    formatAppointmentRange(this.appointment().start, this.appointment().end),
+  );
 
   private readonly ownStatus = computed(() => {
     const userId = this.auth.user()?.id;
@@ -39,11 +43,17 @@ export class AppointmentCardComponent {
   });
 
   protected approve(): Promise<void> {
-    return this.respond(() => this.store.approveAppointment(this.appointment().id), 'Zusage bestätigt');
+    return this.respond(
+      () => this.store.approveAppointment(this.appointment().id),
+      'Zusage bestätigt',
+    );
   }
 
   protected reject(): Promise<void> {
-    return this.respond(() => this.store.rejectAppointment(this.appointment().id), 'Absage registriert');
+    return this.respond(
+      () => this.store.rejectAppointment(this.appointment().id),
+      'Absage registriert',
+    );
   }
 
   protected async sendMessage(message: string): Promise<void> {

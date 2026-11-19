@@ -1,45 +1,52 @@
-<div class="card overflow-hidden appointment-card">
+<div class="appointment-card">
   @switch (appointment().status) {
     @case ('CANCELLED') {
-      <div class="status-banner bg-danger text-white px-3 py-2 d-flex align-items-center gap-2">
-        <app-icon name="triangle-alert" />
-        <span class="fw-medium small">Termin abgesagt</span>
+      <div class="status-banner status-banner-cancelled">
+        <app-icon name="triangle-alert" [size]="16" />
+        <span>Termin abgesagt</span>
       </div>
     }
     @case ('NOT_ENOUGH_ATTENDEES') {
-      <div class="status-banner bg-warning text-white px-3 py-2 d-flex align-items-center gap-2">
-        <app-icon name="triangle-alert" />
-        <span class="fw-medium small">Zu wenig Teilnehmende</span>
+      <div class="status-banner status-banner-warning">
+        <app-icon name="triangle-alert" [size]="16" />
+        <span>Zu wenig Teilnehmende</span>
       </div>
     }
   }
 
-  <div class="card-body p-4">
-    <a [routerLink]="['/appointment', appointment().id]" class="d-block text-decoration-none text-reset title-link">
-      <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mb-3">
-        <div class="flex-grow-1 text-start min-w-0">
-          <h3 class="h4 fw-bold mb-1 title">{{ appointment().name }}</h3>
-          <div class="d-flex align-items-center gap-2 small text-body-secondary">
-            <app-icon name="calendar" />
+  <div class="appointment-card-body">
+    <div class="d-flex flex-column gap-3 text-start">
+      <a
+        [routerLink]="['/appointment', appointment().id]"
+        class="d-block text-decoration-none title-link"
+      >
+        <div class="d-flex flex-column gap-1">
+          <h3 class="appointment-title title">{{ appointment().name }}</h3>
+          <div class="appointment-meta">
+            <app-icon name="calendar" [size]="12" />
             <span>{{ timeRange() }}</span>
           </div>
           @if (appointment().venue) {
-            <div class="d-flex align-items-center gap-2 small text-body-secondary mt-1">
-              <app-icon name="map-pin" />
+            <div class="appointment-meta">
+              <app-icon name="map-pin" [size]="12" />
               <span>{{ appointment().venue }}</span>
             </div>
           }
         </div>
+      </a>
 
-        <div class="d-flex align-items-center gap-3 flex-shrink-0">
+      @if (appointment().minimal_attendees || approved().length > 0) {
+        <div class="d-flex align-items-center justify-content-between gap-3">
           @if (appointment().minimal_attendees) {
-            <div class="attendance text-end">
-              <div class="fs-2 fw-bold lh-1">{{ approved().length }}<span class="text-body-tertiary">/{{ appointment().minimal_attendees }}</span></div>
-              <div class="small text-body-secondary">Zusagen</div>
+            <div class="attendance">
+              <div class="attendance-count">
+                {{ approved().length }}<span>/{{ appointment().minimal_attendees }}</span>
+              </div>
+              <div class="attendance-label">Zusagen</div>
             </div>
           }
           @if (approved().length > 0) {
-            <div class="d-flex avatar-stack">
+            <div class="d-flex avatar-stack ms-auto">
               @for (participant of avatars(); track participant.user_id; let i = $index) {
                 <div class="avatar" [title]="participant.name" [style.z-index]="10 - i">
                   {{ participant.name.charAt(0) || '?' }}
@@ -51,48 +58,43 @@
             </div>
           }
         </div>
-      </div>
-    </a>
+      }
+    </div>
 
     @if (appointment().description) {
-      <p class="text-body-secondary text-start small mb-3 line-clamp-2">{{ appointment().description }}</p>
+      <p class="appointment-description">{{ appointment().description }}</p>
     }
 
-    <div class="d-flex flex-wrap gap-2 appointment-actions">
+    <div class="appointment-actions">
       <button
         type="button"
-        class="btn fw-medium d-flex align-items-center justify-content-center gap-2"
-        [class.btn-success]="hasApproved()"
-        [class.btn-outline-success]="!hasApproved()"
+        class="btn btn-respond btn-respond-success"
+        [class.is-selected]="hasApproved()"
         [disabled]="hasApproved()"
         (click)="approve()"
       >
-        <app-icon name="check" />
-        <span class="d-none d-sm-inline">Zusagen</span>
-        <span class="visually-hidden d-sm-none">Zusagen</span>
+        <app-icon name="check" [size]="16" />
+        <span>Zusagen</span>
       </button>
 
       <button
         type="button"
-        class="btn btn-outline-primary fw-medium d-flex align-items-center justify-content-center gap-2"
+        class="btn btn-respond btn-respond-brand"
         (click)="showMessageDialog.set(true)"
       >
-        <app-icon name="send" />
-        <span class="d-none d-sm-inline">Nachricht</span>
-        <span class="visually-hidden d-sm-none">Nachricht</span>
+        <app-icon name="send" [size]="16" />
+        <span>Nachricht</span>
       </button>
 
       <button
         type="button"
-        class="btn fw-medium d-flex align-items-center justify-content-center gap-2"
-        [class.btn-danger]="hasRejected()"
-        [class.btn-outline-danger]="!hasRejected()"
+        class="btn btn-respond btn-respond-danger"
+        [class.is-selected]="hasRejected()"
         [disabled]="hasRejected()"
         (click)="reject()"
       >
-        <app-icon name="x" />
-        <span class="d-none d-sm-inline">Absagen</span>
-        <span class="visually-hidden d-sm-none">Absagen</span>
+        <app-icon name="x" [size]="16" />
+        <span>Absagen</span>
       </button>
     </div>
   </div>

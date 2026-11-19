@@ -24,7 +24,7 @@ export class AgendaComponent implements OnInit {
   protected readonly store = inject(AppointmentStore);
   private readonly router = inject(Router);
 
-  protected readonly skeletons = [1, 2, 3, 4, 5];
+  protected readonly skeletons = [1, 2, 3, 4];
   protected readonly stepperOpen = signal(false);
 
   ngOnInit(): void {

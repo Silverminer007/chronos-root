@@ -1,26 +1,19 @@
-<div class="card shadow-sm" aria-hidden="true">
-  <div class="card-body p-4 placeholder-glow">
-    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-      <span class="placeholder rounded-pill title"></span>
-      <div class="d-flex">
+<div class="appointment-card" aria-hidden="true">
+  <div class="appointment-card-body placeholder-glow">
+    <div class="d-flex align-items-start justify-content-between gap-3">
+      <span class="placeholder rounded-2 title"></span>
+      <div class="d-flex avatar-stack">
         @for (i of avatars; track i) {
           <span class="placeholder rounded-circle placeholder-avatar"></span>
         }
       </div>
     </div>
-    <div class="d-flex flex-column gap-2">
-      <span class="placeholder rounded-pill line"></span>
-      <span class="placeholder rounded-3 block"></span>
-      <div class="d-none d-sm-flex justify-content-between gap-2">
-        <span class="placeholder rounded-2 action-wide"></span>
-        <span class="placeholder rounded-2 action-wide"></span>
-        <span class="placeholder rounded-2 action-wide"></span>
-      </div>
-      <div class="d-flex d-sm-none justify-content-between gap-2">
-        <span class="placeholder rounded-2 action-narrow"></span>
-        <span class="placeholder rounded-2 action-narrow"></span>
-        <span class="placeholder rounded-2 action-narrow"></span>
-      </div>
+    <span class="placeholder rounded-2 line"></span>
+    <span class="placeholder rounded-3 block"></span>
+    <div class="d-flex gap-2">
+      @for (i of actions; track i) {
+        <span class="placeholder rounded-2 action"></span>
+      }
     </div>
   </div>
 </div>

@@ -7,7 +7,7 @@ describe('AppointmentCardSkeletonComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelectorAll('.placeholder-avatar')).toHaveLength(4);
-    expect(el.querySelectorAll('.placeholder').length).toBeGreaterThan(8);
-    expect(el.querySelector('.card')?.getAttribute('aria-hidden')).toBe('true');
+    expect(el.querySelectorAll('.placeholder')).toHaveLength(10);
+    expect(el.querySelector('.appointment-card')?.getAttribute('aria-hidden')).toBe('true');
   });
 });
