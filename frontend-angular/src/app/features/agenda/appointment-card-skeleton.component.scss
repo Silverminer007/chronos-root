@@ -2,37 +2,39 @@
   display: block;
 }
 
+// Flächen in bg/muted (Figma 5:445).
 .placeholder {
   display: inline-block;
+  background-color: var(--bs-secondary-bg);
+  opacity: 1;
 }
 
 .title {
-  width: 90%;
-  height: 2rem;
+  width: 10rem;
+  height: 1.5rem;
 }
 
 .placeholder-avatar {
   width: 2rem;
   height: 2rem;
-  margin: -0.25rem;
+
+  & + & {
+    margin-left: -0.5rem;
+  }
 }
 
 .line {
-  width: 85%;
+  width: 100%;
   height: 1.5rem;
 }
 
 .block {
-  width: 80%;
-  height: 4rem;
+  width: 12.5rem;
+  max-width: 100%;
+  height: 3.125rem;
 }
 
-.action-wide {
-  width: 8rem;
-  height: 3rem;
-}
-
-.action-narrow {
-  width: 3rem;
-  height: 2.5rem;
+.action {
+  width: 2.375rem;
+  height: 2rem;
 }

@@ -58,7 +58,7 @@ describe('AppointmentDemoCardComponent', () => {
   it('zeigt Name, Zeitraum, Beschreibung und Zusagen/Mindestzahl', async () => {
     await create(appointment());
     expect(el.querySelector('h3')?.textContent).toContain('Sommerfest');
-    expect(el.textContent).toContain('Sa., 21.11.2026, 18:00 - 21:00 Uhr');
+    expect(el.textContent).toContain('Sa., 21. November · 18:00 – 21:00');
     expect(el.textContent).toContain('Sommerfest mit allen Mitgliedern');
     expect(el.querySelector('.attendance')?.textContent?.replace(/\s/g, '')).toBe('6/8Zusagen');
   });

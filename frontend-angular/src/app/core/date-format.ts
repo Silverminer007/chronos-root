@@ -1,28 +1,29 @@
 const LOCALE = 'de-DE';
 const DATE = new Intl.DateTimeFormat(LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' });
-const WEEKDAY_DATE = new Intl.DateTimeFormat(LOCALE, {
+const CARD_DATE = new Intl.DateTimeFormat(LOCALE, {
   weekday: 'short',
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
+  day: 'numeric',
+  month: 'long',
 });
 const TIME = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' });
-
-const dateTime = (date: Date) => `${WEEKDAY_DATE.format(date)}, ${TIME.format(date)}`;
 
 /** `21.10.2026` (Port von `useDateFormatter.formatDate`). */
 export function formatDate(iso: string): string {
   return DATE.format(new Date(iso));
 }
 
-/** `Mi., 21.10.2026, 18:00 - 21:00 Uhr` bzw. bei mehreren Tagen beide Zeitpunkte (Port von `formatTimeRange`). */
-export function formatTimeRange(start: string, end: string): string {
+/**
+ * `Sa., 12. Juli · 14:00 – 22:00` (Figma-Termin-Karte: Kurz-Wochentag, Tag + Monatsname, ohne Jahr und „Uhr“);
+ * bei mehreren Tagen `Sa., 12. Juli · 14:00 – So., 13. Juli · 10:00`.
+ */
+export function formatAppointmentRange(start: string, end: string): string {
   const from = new Date(start);
   const to = new Date(end);
+  const first = `${CARD_DATE.format(from)} · ${TIME.format(from)}`;
   if (DATE.format(from) === DATE.format(to)) {
-    return `${dateTime(from)} - ${TIME.format(to)} Uhr`;
+    return `${first} – ${TIME.format(to)}`;
   }
-  return `${dateTime(from)} Uhr - ${dateTime(to)} Uhr`;
+  return `${first} – ${CARD_DATE.format(to)} · ${TIME.format(to)}`;
 }
 
 /** `18:00 Uhr` (Port von `useDateFormatter.formatTime`). */

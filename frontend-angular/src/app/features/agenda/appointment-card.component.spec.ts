@@ -7,7 +7,11 @@ import { ToastService } from '../../core/toast.service';
 import { AppointmentCardComponent } from './appointment-card.component';
 import { AppointmentStore } from './appointment.store';
 
-const participant = (id: number, status: UserParticipant['status'], name = `Person ${id}`): UserParticipant => ({
+const participant = (
+  id: number,
+  status: UserParticipant['status'],
+  name = `Person ${id}`,
+): UserParticipant => ({
   user_id: id,
   name,
   profile_picture_url: '',
@@ -33,9 +37,18 @@ const base: Appointment = {
 
 describe('AppointmentCardComponent', () => {
   let fixture: ComponentFixture<AppointmentCardComponent>;
-  let store: { approveAppointment: ReturnType<typeof vi.fn>; rejectAppointment: ReturnType<typeof vi.fn>; sendMessage: ReturnType<typeof vi.fn> };
+  let store: {
+    approveAppointment: ReturnType<typeof vi.fn>;
+    rejectAppointment: ReturnType<typeof vi.fn>;
+    sendMessage: ReturnType<typeof vi.fn>;
+  };
   let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
-  const user = signal<User | null>({ id: 1, first_name: 'Max', last_name: 'Muster', email: 'm@example.org' });
+  const user = signal<User | null>({
+    id: 1,
+    first_name: 'Max',
+    last_name: 'Muster',
+    email: 'm@example.org',
+  });
 
   const el = () => fixture.nativeElement as HTMLElement;
   const render = (appointment: Partial<Appointment> = {}) => {
@@ -43,7 +56,9 @@ describe('AppointmentCardComponent', () => {
     fixture.detectChanges();
   };
   const button = (label: string) =>
-    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes(label)) as HTMLButtonElement;
+    Array.from(el().querySelectorAll('button')).find((b) =>
+      b.textContent?.includes(label),
+    ) as HTMLButtonElement;
 
   beforeEach(() => {
     user.set({ id: 1, first_name: 'Max', last_name: 'Muster', email: 'm@example.org' });
@@ -67,7 +82,7 @@ describe('AppointmentCardComponent', () => {
   it('zeigt Name, Zeitraum, Ort und Beschreibung', () => {
     render();
     expect(el().querySelector('h3')?.textContent).toContain('Zeltlager');
-    expect(el().textContent).toContain('Mi., 21.10.2026');
+    expect(el().textContent).toContain('Mi., 21. Oktober');
     expect(el().textContent).toContain('Waldwiese');
     expect(el().textContent).toContain('Packliste beachten');
   });
@@ -80,7 +95,7 @@ describe('AppointmentCardComponent', () => {
   it('lässt Ort und Beschreibung ohne Werte weg', () => {
     render({ venue: null, description: null });
     expect(el().querySelector('app-icon[name="map-pin"]')).toBeNull();
-    expect(el().querySelector('.line-clamp-2')).toBeNull();
+    expect(el().querySelector('.appointment-description')).toBeNull();
   });
 
   it('zeigt das Banner „Termin abgesagt“', () => {
@@ -100,7 +115,9 @@ describe('AppointmentCardComponent', () => {
 
   it('zeigt Zusagen gegen das Minimum und höchstens vier Avatare', () => {
     render({
-      participants: [1, 2, 3, 4, 5, 6].map((id) => participant(id, 'APPROVED')).concat(participant(7, 'PENDING')),
+      participants: [1, 2, 3, 4, 5, 6]
+        .map((id) => participant(id, 'APPROVED'))
+        .concat(participant(7, 'PENDING')),
     });
     expect(el().querySelector('.attendance')?.textContent).toContain('6/3');
     expect(el().querySelectorAll('.avatar:not(.avatar-more)')).toHaveLength(4);
@@ -146,7 +163,10 @@ describe('AppointmentCardComponent', () => {
     render();
     button('Zusagen').click();
     await fixture.whenStable();
-    expect(toast.error).toHaveBeenCalledWith('Fehler', 'Teilnahmestatus konnte nicht aktualisiert werden');
+    expect(toast.error).toHaveBeenCalledWith(
+      'Fehler',
+      'Teilnahmestatus konnte nicht aktualisiert werden',
+    );
     expect(toast.success).not.toHaveBeenCalled();
   });
 
@@ -156,7 +176,10 @@ describe('AppointmentCardComponent', () => {
     render();
     button('Absagen').click();
     await fixture.whenStable();
-    expect(toast.error).toHaveBeenCalledWith('Fehler', 'Teilnahmestatus konnte nicht aktualisiert werden');
+    expect(toast.error).toHaveBeenCalledWith(
+      'Fehler',
+      'Teilnahmestatus konnte nicht aktualisiert werden',
+    );
   });
 
   it('tut ohne Benutzer nichts', async () => {
@@ -184,8 +207,10 @@ describe('AppointmentCardComponent', () => {
 
     it('zeigt den Nachricht-Button zwischen Zusagen und Absagen', () => {
       render();
-      const labels = Array.from(el().querySelectorAll('.appointment-actions button')).map((b) => b.textContent?.trim());
-      expect(labels).toEqual(['ZusagenZusagen', 'NachrichtNachricht', 'AbsagenAbsagen']);
+      const labels = Array.from(el().querySelectorAll('.appointment-actions button')).map((b) =>
+        b.textContent?.trim(),
+      );
+      expect(labels).toEqual(['Zusagen', 'Nachricht', 'Absagen']);
     });
 
     it('öffnet den Dialog für den Termin der Karte', () => {
@@ -209,7 +234,10 @@ describe('AppointmentCardComponent', () => {
       store.sendMessage.mockRejectedValue(new Error('x'));
       render();
       await openAndSend('Hallo');
-      expect(toast.error).toHaveBeenCalledWith('Fehler beim Senden', 'Bitte kontaktiere den Entwickler der App');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Fehler beim Senden',
+        'Bitte kontaktiere den Entwickler der App',
+      );
       expect(el().querySelector('[role="dialog"]')).not.toBeNull();
     });
   });

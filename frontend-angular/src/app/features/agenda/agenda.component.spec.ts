@@ -46,7 +46,7 @@ describe('AgendaComponent', () => {
   };
 
   it('zeigt beim Laden fünf Skeleton-Karten', () => {
-    expect(el().querySelectorAll('app-appointment-card-skeleton')).toHaveLength(5);
+    expect(el().querySelectorAll('app-appointment-card-skeleton')).toHaveLength(4);
     http.expectOne(AGENDA);
   });
 

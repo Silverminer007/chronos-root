@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
-import { formatDate, formatTimeRange } from '../../../core/date-format';
+import { formatDate, formatAppointmentRange } from '../../../core/date-format';
 import { Appointment } from '../../../core/models';
 import { ToastService } from '../../../core/toast.service';
 import { MessageDialogComponent } from '../../../shared/message-dialog.component';
@@ -29,7 +29,7 @@ export class AppointmentDemoCardComponent {
   protected readonly hiddenAvatars = computed(() => this.approved().length - MAX_AVATARS);
   protected readonly hasApproved = computed(() => this.ownStatus() === 'APPROVED');
   protected readonly hasRejected = computed(() => this.ownStatus() === 'REJECTED');
-  protected readonly timeRange = computed(() => formatTimeRange(this.appointment().start, this.appointment().end));
+  protected readonly timeRange = computed(() => formatAppointmentRange(this.appointment().start, this.appointment().end));
   protected readonly dialogTitle = computed(
     () => `${this.appointment().name} ${formatDate(this.appointment().start)}`,
   );
