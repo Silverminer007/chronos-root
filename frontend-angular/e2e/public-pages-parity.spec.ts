@@ -41,7 +41,7 @@ for (const path of PAGES) {
     }
   });
 
-  test(`${path}: Karte mit 16 px Rundung und 24 px Innenabstand`, async ({ page }) => {
+  test(`${path}: Karte mit 12 px Rundung und 24 px Innenabstand`, async ({ page }) => {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     const card = page.locator('.glass-card').first();
     await expect(card).toBeVisible();
@@ -49,7 +49,7 @@ for (const path of PAGES) {
       const c = getComputedStyle(el);
       return { radius: c.borderTopLeftRadius, pad: c.paddingTop };
     });
-    expect(s.radius, 'Kartenrundung').toBe('16px');
+    expect(s.radius, 'Kartenrundung').toBe('12px');
     expect(s.pad, 'Karteninnenabstand').toBe('24px');
   });
 }

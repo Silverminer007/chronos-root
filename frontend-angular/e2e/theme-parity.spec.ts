@@ -194,13 +194,13 @@ test.describe('Theme-Parität zum alten Frontend (#210)', () => {
     expect(await link.evaluate((el) => getComputedStyle(el).borderTopColor), 'Verknüpfen Rahmen purple-200').toBe('rgb(233, 213, 255)');
   });
 
-  test('Freunde: Tab-Badges transluzent lila / weiß', async ({ page, baseURL }) => {
+  test('Freunde: Tab-Badges: aktiv Overlay-Ton, inaktiv nicht weiß', async ({ page, baseURL }) => {
     await mockSession(page, baseURL ?? '');
     await page.route('**/api/v2/friendships*', (route) => route.fulfill({ json: [] }));
     await page.goto('/friends', { waitUntil: 'domcontentloaded' });
     const badge = page.locator('[role=tab][aria-selected=true] .badge');
     await expect(badge).toBeVisible();
-    expect(await badge.evaluate((el) => getComputedStyle(el).backgroundColor), 'aktiver Tab: transluzentes Weiß').toBe('rgba(255, 255, 255, 0.2)');
+    expect(await badge.evaluate((el) => getComputedStyle(el).backgroundColor), 'aktiver Tab: transluzenter Overlay-Ton').toBe('rgba(0, 0, 0, 0.15)');
     const inactive = page.locator('[role=tab][aria-selected=false] .badge');
     if (await inactive.count()) {
       expect(await inactive.first().evaluate((el) => getComputedStyle(el).color)).not.toBe('rgb(255, 255, 255)');
