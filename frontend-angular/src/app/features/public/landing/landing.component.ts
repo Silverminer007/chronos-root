@@ -15,6 +15,7 @@ interface Feature {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, AppointmentDemoCardComponent],
   templateUrl: './landing.component.html',
+  styleUrl: './landing.component.scss',
 })
 export class LandingComponent {
   protected readonly demos = demoAppointments(new Date());
