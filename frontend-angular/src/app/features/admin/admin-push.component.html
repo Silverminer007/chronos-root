@@ -45,7 +45,7 @@
         <p class="text-body-secondary mb-0">Wird geladen...</p>
       </div>
     } @else if (error(); as message) {
-      <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
+      <div class="alert alert-danger align-items-center" role="alert">
         <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
@@ -61,9 +61,9 @@
             <div class="flex-grow-1 min-w-0">
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <p class="fw-medium mb-0 text-truncate">{{ payload.title || 'Ohne Titel' }}</p>
-                <span class="badge rounded-pill text-bg-primary">User {{ entry.user_id }}</span>
-                <span class="badge rounded-pill text-bg-secondary">{{ entry.notification_type ?? '—' }}</span>
-                <span class="badge rounded-pill" [class]="entry.success ? 'text-bg-success' : 'text-bg-danger'">{{ entry.status_code }}</span>
+                <span class="badge badge-brand">User {{ entry.user_id }}</span>
+                <span class="badge badge-neutral">{{ entry.notification_type ?? '—' }}</span>
+                <span class="badge" [class]="entry.success ? 'badge-success' : 'badge-danger'">{{ entry.status_code }}</span>
               </div>
               @if (payload.body) {
                 <p class="small text-body-secondary mt-1 mb-0 text-truncate">{{ payload.body }}</p>
@@ -78,7 +78,7 @@
       </ul>
     } @else {
       <div class="text-center py-5 px-3">
-        <div class="icon-tile rounded-circle mx-auto mb-3 empty-icon"><app-icon name="bell-off" class="fs-2" /></div>
+        <div class="icon-tile icon-tile-round mx-auto mb-3"><app-icon name="bell-off" /></div>
         <h3 class="h4 fw-bold mb-2">Keine Einträge</h3>
         <p class="text-body-secondary mb-0">Es wurden keine Push-Benachrichtigungen gefunden.</p>
       </div>

@@ -17,7 +17,7 @@ const MIN_QUERY_LENGTH = 2;
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="user-plus" class="fs-4" /></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="user-plus" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="add-member-title">Mitglied hinzufügen</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
@@ -76,7 +76,7 @@ const MIN_QUERY_LENGTH = 2;
               }
 
               @if (selected(); as person) {
-                <div class="alert alert-primary d-flex align-items-center justify-content-between mb-0">
+                <div class="alert alert-brand justify-content-between align-items-center mb-0">
                   <div class="d-flex align-items-center gap-3">
                     <span class="avatar" aria-hidden="true">{{ person.name.charAt(0).toUpperCase() || '?' }}</span>
                     <div>

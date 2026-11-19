@@ -15,7 +15,7 @@ const MAX_LENGTH = 500;
         <div class="modal-dialog modal-dialog-centered modal-lg">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="send" class="fs-4" /></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="send" /></span>
               <div class="flex-grow-1">
                 <h2 class="modal-title fs-5" id="message-dialog-title">Nachricht senden</h2>
                 <p class="small text-body-secondary mb-0">{{ appointmentTitle() }}</p>
@@ -23,7 +23,7 @@ const MAX_LENGTH = 500;
               <button type="button" class="btn-close" aria-label="Schließen" (click)="closed.emit()"></button>
             </div>
             <div class="modal-body">
-              <div class="alert alert-primary d-flex gap-3" role="note">
+              <div class="alert alert-brand" role="note">
                 <app-icon name="info" />
                 <div>
                   <p class="fw-medium mb-1">Empfänger</p>

@@ -36,10 +36,10 @@ const DEBOUNCE_MS = 250;
 const DEFAULT_ROLE: ParticipationRole = 'ATTENDANT';
 const ROLE_CYCLE: ParticipationRole[] = ['ATTENDANT', 'RESPONSIBLE', 'HELPER', 'GUEST'];
 const ROLE_META: Record<ParticipationRole, { short: string; css: string }> = {
-  ATTENDANT: { short: 'TN', css: 'text-bg-primary' },
-  RESPONSIBLE: { short: 'Org', css: 'text-bg-info' },
-  HELPER: { short: 'Helf', css: 'text-bg-success' },
-  GUEST: { short: 'Gast', css: 'text-bg-secondary' },
+  ATTENDANT: { short: 'TN', css: 'badge-brand' },
+  RESPONSIBLE: { short: 'Org', css: 'badge-info' },
+  HELPER: { short: 'Helf', css: 'badge-success' },
+  GUEST: { short: 'Gast', css: 'badge-neutral' },
 };
 
 const nextRole = (role: ParticipationRole): ParticipationRole =>
@@ -154,7 +154,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
               <span class="chip-name text-truncate">{{ user.name }}</span>
               <button
                 type="button"
-                class="badge rounded-pill border-0 {{ meta[user.role].css }}"
+                class="badge border-0 {{ meta[user.role].css }}"
                 data-testid="role"
                 title="Tippen zum Wechseln"
                 (click)="cycleUserRole(user.id)"
@@ -176,7 +176,7 @@ const nextRole = (role: ParticipationRole): ParticipationRole =>
               <span class="chip-name text-truncate">{{ group.name }}</span>
               <button
                 type="button"
-                class="badge rounded-pill border-0 {{ meta[group.role].css }}"
+                class="badge border-0 {{ meta[group.role].css }}"
                 data-testid="role"
                 title="Tippen zum Wechseln"
                 (click)="cycleGroupRole(group.id)"

@@ -64,6 +64,16 @@ describe('ParticipantsStatusCardComponent', () => {
     expect(rows()[2].textContent).toContain('Ausstehend');
   });
 
+  it('färbt Status- und Rollen-Badges nach den Figma-Tönen', () => {
+    const { rows } = render(2);
+    const tones = (i: number) => Array.from(rows()[i].querySelectorAll('.badge')).map((b) => b.className);
+    expect(tones(1).join(' ')).toContain('badge-info');
+    expect(tones(1).join(' ')).toContain('badge-success');
+    expect(tones(3).join(' ')).toContain('badge-danger');
+    expect(tones(2).join(' ')).toContain('badge-warning');
+    expect(tones(3).join(' ')).toContain('badge-neutral');
+  });
+
   it('zeigt Hinzufügen- und Menü-Buttons nur Organisatoren (Menü nicht für Organisatoren selbst)', () => {
     const plain = render(2);
     expect(plain.el.querySelector('button[aria-label="Teilnehmer hinzufügen"]')).toBeNull();

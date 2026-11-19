@@ -4,13 +4,13 @@
   <div class="survey mx-auto">
     @if (submitted()) {
       <div class="state d-flex flex-column align-items-center justify-content-center text-center px-3">
-        <div class="state-icon icon-tile rounded-circle mb-4"><app-icon name="check" class="fs-1" /></div>
+        <div class="icon-tile icon-tile-round mb-4"><app-icon name="check" /></div>
         <h2 class="h3 fw-bold mb-2">Danke!</h2>
         <p class="text-body-secondary mb-0">Dein Feedback hilft uns, Chronos zu verbessern.</p>
       </div>
     } @else if (alreadyCompleted()) {
       <div class="state d-flex flex-column align-items-center justify-content-center text-center px-3">
-        <div class="state-icon icon-tile rounded-circle mb-4"><app-icon name="check-circle" class="fs-1" /></div>
+        <div class="icon-tile icon-tile-round mb-4"><app-icon name="check-circle" /></div>
         <h2 class="h3 fw-bold mb-2">Danke, du hast bereits geantwortet!</h2>
         <p class="text-body-secondary mb-4">Du hast diese Umfrage bereits ausgefüllt. Dein Feedback hilft uns.</p>
         <a routerLink="/agenda" class="btn btn-gradient fw-medium px-4">Zur Übersicht</a>
@@ -27,7 +27,7 @@
       <div class="d-flex flex-column gap-3">
         <section class="question card p-4">
           <div class="d-flex align-items-start gap-3 mb-3">
-            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">1</span>
+            <span class="avatar avatar-sm">1</span>
             <p class="fw-semibold mb-0">Was wolltest du beim letzten Öffnen von Chronos tun?</p>
           </div>
           <div class="ms-5">
@@ -45,7 +45,7 @@
 
         <section class="question card p-4">
           <div class="d-flex align-items-start gap-3 mb-3">
-            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">2</span>
+            <span class="avatar avatar-sm">2</span>
             <p class="fw-semibold mb-0">Wie hast du die letzten Terminabstimmungen gemacht? Was hat gut geklappt und was nicht?
               <span class="fw-normal text-body-secondary"> (Muss nicht in Chronos gewesen sein)</span></p>
           </div>
@@ -57,7 +57,7 @@
 
         <section class="question card p-4">
           <div class="d-flex align-items-start gap-3 mb-3">
-            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">3</span>
+            <span class="avatar avatar-sm">3</span>
             <p class="fw-semibold mb-0">Was davon hast du in Chronos schon genutzt? Tippe alles an, was du kennst.</p>
           </div>
           <div class="ms-5">
@@ -72,7 +72,7 @@
 
         <section class="question card p-4">
           <div class="d-flex align-items-start gap-3 mb-3">
-            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">4</span>
+            <span class="avatar avatar-sm">4</span>
             <p class="fw-semibold mb-0">Was wäre beim Rückmelden zu Terminen für dich nützlich? Wähle alles aus, was passt.</p>
           </div>
           <div class="ms-5">
@@ -95,7 +95,7 @@
 
         <section class="question card p-4">
           <div class="d-flex align-items-start gap-3 mb-3">
-            <span class="question-number icon-tile rounded-circle fw-bold small flex-shrink-0">5</span>
+            <span class="avatar avatar-sm">5</span>
             <p class="fw-semibold mb-0">Wenn du eine Sache an Chronos ändern könntest – was wäre das?</p>
           </div>
           <div class="ms-5">

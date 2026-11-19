@@ -18,16 +18,16 @@ interface OpenMenu {
 const MENU_HEIGHT = 240;
 
 const ROLE_BADGE: Record<string, string> = {
-  RESPONSIBLE: 'bg-primary-subtle text-primary-emphasis',
-  ATTENDANT: 'bg-info-subtle text-info-emphasis',
-  HELPER: 'bg-success-subtle text-success-emphasis',
-  GUEST: 'bg-secondary-subtle text-secondary-emphasis',
+  RESPONSIBLE: 'badge-brand',
+  ATTENDANT: 'badge-info',
+  HELPER: 'badge-success',
+  GUEST: 'badge-neutral',
 };
 
 const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
-  APPROVED: { css: 'bg-success-subtle text-success-emphasis', icon: 'check' },
-  REJECTED: { css: 'bg-danger-subtle text-danger-emphasis', icon: 'x' },
-  PENDING: { css: 'bg-warning-subtle text-warning-emphasis', icon: 'clock' },
+  APPROVED: { css: 'badge-success', icon: 'check' },
+  REJECTED: { css: 'badge-danger', icon: 'x' },
+  PENDING: { css: 'badge-warning', icon: 'clock' },
 };
 
 /** Teilnehmerliste mit Fortschritt, Rollenmenü und Hinzufügen (Port von `ParticipantsStatusCard.vue`). */
@@ -65,10 +65,10 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
                     <span class="badge {{ roleBadge(p.role) }}">{{ label(p.role) }}</span>
                   }
                   @if (p.via_group_name) {
-                    <span class="badge bg-primary-subtle text-primary-emphasis"><app-icon name="users" class="me-1" />{{ p.via_group_name }}</span>
+                    <span class="badge badge-brand"><app-icon name="users" />{{ p.via_group_name }}</span>
                   }
                   <span class="badge {{ statusBadge(p.status).css }}">
-                    <app-icon [name]="statusBadge(p.status).icon" class="me-1" />{{ statusText(p.status) }}
+                    <app-icon [name]="statusBadge(p.status).icon" />{{ statusText(p.status) }}
                   </span>
                 </div>
               </div>

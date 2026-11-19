@@ -28,6 +28,8 @@ describe('InstallComponent', () => {
     expect(browsers(el)).toEqual(['Firefox', 'Chrome / Edge', 'Safari']);
     expect(el.querySelectorAll('.badge')).toHaveLength(1);
     expect(el.querySelector('.badge')?.textContent).toContain('Dein Browser');
+    expect(el.querySelector('.badge')?.classList).toContain('badge-brand');
+    expect(el.querySelectorAll('.glass-card-highlight')).toHaveLength(1);
   });
 
   it('markiert bei unbekanntem Browser keinen', async () => {

@@ -21,7 +21,7 @@ interface BeforeInstallPromptEvent extends Event {
           <div class="modal-content">
             <div class="modal-body p-4">
               <div class="d-flex align-items-center gap-3 mb-3">
-                <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="download" class="fs-4" /></span>
+                <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="download" /></span>
                 <h2 class="h5 fw-bold mb-0" id="pwa-install-title">App installieren</h2>
               </div>
               <p class="small text-body-secondary mb-4">

@@ -8,7 +8,7 @@
     </div>
 
     @if (error(); as message) {
-      <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
+      <div class="alert alert-danger align-items-center" role="alert">
         <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
@@ -34,7 +34,7 @@
     </div>
 
     <ng-template #statBody let-stat>
-      <div class="stat-icon icon-tile rounded-circle mb-3"><app-icon [name]="stat.icon" class="fs-5" /></div>
+      <div class="icon-tile icon-tile-lg mb-3"><app-icon [name]="stat.icon" /></div>
       <p class="stat-value h3 fw-bold mb-0">{{ stat.value }}</p>
       <p class="small text-body-secondary mb-0">{{ stat.label }}</p>
     </ng-template>
@@ -42,7 +42,7 @@
     <section class="card p-4 mb-4">
       <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
         <div class="d-flex align-items-center gap-3">
-          <div class="stat-icon icon-tile rounded-circle flex-shrink-0"><app-icon name="clipboard-list" class="fs-5" /></div>
+          <div class="icon-tile flex-shrink-0"><app-icon name="clipboard-list" /></div>
           <div>
             <h2 class="card-heading fw-semibold mb-0">Umfrage</h2>
             <p class="small text-body-secondary mb-0">Push-Einladungen an alle noch nicht eingeladenen Nutzer senden</p>
@@ -61,7 +61,7 @@
 
     <section class="card p-4 mb-4">
       <div class="d-flex align-items-center gap-3 mb-3">
-        <div class="stat-icon icon-tile rounded-circle flex-shrink-0"><app-icon name="flask-conical" class="fs-5" /></div>
+        <div class="icon-tile flex-shrink-0"><app-icon name="flask-conical" /></div>
         <div>
           <h2 class="card-heading fw-semibold mb-0">A/B-Test Erstellungsmaske</h2>
           <p class="small text-body-secondary mb-0">Zuweisung per <code>user.id % 3</code></p>
@@ -73,7 +73,7 @@
             <div class="ab-variant border rounded overflow-hidden h-100">
               <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-body-secondary">
                 <span class="small fw-bold text-uppercase">Variante {{ v }}</span>
-                <span class="badge rounded-pill text-bg-primary">{{ abGroups()[v].length }}</span>
+                <span class="badge badge-brand">{{ abGroups()[v].length }}</span>
               </div>
               <ul class="list-group list-group-flush">
                 @for (user of abGroups()[v]; track user.id) {
@@ -95,7 +95,7 @@
       <ul class="recent-logins list-group list-group-flush">
         @for (user of users(); track user.id) {
           <li class="list-group-item d-flex align-items-center gap-3 px-4 py-3">
-            <div class="icon-tile rounded-circle fw-semibold small flex-shrink-0 login-avatar">{{ initials(user) }}</div>
+            <div class="avatar">{{ initials(user) }}</div>
             <p class="fw-medium mb-0 flex-grow-1 text-truncate">{{ user.firstName }} {{ user.lastName }}</p>
             <span class="small text-body-secondary flex-shrink-0">{{ formatRelativeTime(user.lastSeen) }}</span>
           </li>

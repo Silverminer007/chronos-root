@@ -18,7 +18,7 @@ const MIN_NAME_LENGTH = 2;
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="users" class="fs-4" /></span>
+              <span class="icon-tile me-3" aria-hidden="true"><app-icon name="users" /></span>
               <h2 class="modal-title fs-5 flex-grow-1" id="create-group-title">Neue Gruppe</h2>
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
@@ -38,7 +38,7 @@ const MIN_NAME_LENGTH = 2;
               </div>
               <p class="small text-body-secondary mt-2 mb-0">Nach dem Erstellen kannst du Mitglieder zur Gruppe hinzufügen.</p>
               @if (error()) {
-                <div class="alert alert-danger small mt-3 mb-0" role="alert">{{ error() }}</div>
+                <div class="alert alert-danger mt-3 mb-0" role="alert">{{ error() }}</div>
               }
             </div>
             <div class="modal-footer">

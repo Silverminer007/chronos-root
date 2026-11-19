@@ -10,7 +10,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
     <div class="card shadow-sm">
       <div class="card-body p-3 p-sm-4">
         <div class="d-flex align-items-center gap-3">
-          <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="bell" class="fs-4" /></span>
+          <span class="icon-tile flex-shrink-0" aria-hidden="true"><app-icon name="bell" /></span>
           <div class="flex-grow-1 text-break" style="min-width: 0">
             <h3 class="card-heading fw-bold mb-0">Push-Benachrichtigungen</h3>
             <p class="small text-body-secondary mb-0">Erhalte Benachrichtigungen auf diesem Gerät</p>
@@ -30,7 +30,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
         </div>
 
         @if (permission() === 'denied') {
-          <div class="alert alert-warning small mt-3 mb-0" role="alert">
+          <div class="alert alert-warning mt-3 mb-0" role="alert">
             <app-icon name="info" class="me-2" />
             Push-Benachrichtigungen wurden im Browser blockiert. Bitte ändere die Berechtigung in den Browsereinstellungen.
           </div>

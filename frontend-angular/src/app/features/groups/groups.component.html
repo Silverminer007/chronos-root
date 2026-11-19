@@ -19,7 +19,7 @@
         <p class="text-body-secondary mb-0">Wird geladen...</p>
       </div>
     } @else if (store.error(); as error) {
-      <div class="alert alert-danger d-flex align-items-center gap-3 mb-0" role="alert">
+      <div class="alert alert-danger align-items-center mb-0" role="alert">
         <app-icon name="triangle-alert" class="fs-5" />
         <div>
           <p class="fw-semibold mb-0">Fehler beim Laden</p>
@@ -34,7 +34,7 @@
 
         @if (store.groups().length === 0) {
           <div class="text-center py-5 px-3">
-            <div class="icon-tile rounded-circle empty-icon mb-3">
+            <div class="icon-tile icon-tile-round mb-3">
               <app-icon name="users" class="fs-2" />
             </div>
             <h3 class="h4 fw-bold mb-2">Noch keine Gruppen</h3>

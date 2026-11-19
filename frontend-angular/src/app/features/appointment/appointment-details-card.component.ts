@@ -6,12 +6,12 @@ import { AppointmentShareService } from './appointment-share.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>> = {
-  CANCELLED: { label: 'Abgesagt', css: 'bg-danger-subtle text-danger-emphasis' },
+  CANCELLED: { label: 'Abgesagt', css: 'badge-danger' },
   NOT_ENOUGH_ATTENDEES: {
     label: 'Zu wenig Teilnehmer',
-    css: 'bg-warning-subtle text-warning-emphasis',
+    css: 'badge-warning',
   },
-  DELETED: { label: 'Gelöscht', css: 'bg-secondary-subtle text-secondary-emphasis' },
+  DELETED: { label: 'Gelöscht', css: 'badge-neutral' },
 };
 
 /** Kopfkarte der Detailseite: Name, Status, Zeit, Ort, Beschreibung, Teilen (Port von `AppointmentDetailsCard.vue`). */
@@ -26,7 +26,7 @@ const STATUS: Partial<Record<AppointmentStatus, { label: string; css: string }>>
           <h2 class="h3 fw-bold mb-0 text-white">{{ appointment().name }}</h2>
           <div class="d-flex align-items-center gap-2 flex-shrink-0">
             @if (status(); as s) {
-              <span class="badge rounded-pill {{ s.css }}" data-testid="status">{{ s.label }}</span>
+              <span class="badge {{ s.css }}" data-testid="status">{{ s.label }}</span>
             }
             <button
               type="button"
