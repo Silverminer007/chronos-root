@@ -1,5 +1,72 @@
 @use 'variables' as *;
 
+// Figma-Farb-Tokens als CSS Custom Properties (`--chronos-bg-page`, `--chronos-text-muted`, ...), Light in :root, Dark unter
+// `[data-bs-theme='dark']`. Bootstrap-Variablen sind in `_variables.scss` auf dieselben Werte gesetzt.
+:root {
+  @each $name, $values in $chronos-colors {
+    --chronos-#{$name}: #{chronos-color($name, 0)};
+  }
+
+  --chronos-overlay-tint: #{$overlay-tint};
+  --chronos-gradient-brand: #{$brand-gradient};
+  --chronos-gradient-landing: #{$landing-gradient};
+  --chronos-shadow-sm: #{$box-shadow-sm};
+  --chronos-shadow-md: #{$box-shadow};
+  --chronos-shadow-lg: #{$box-shadow-lg};
+}
+
+[data-bs-theme='dark'] {
+  @each $name, $values in $chronos-colors {
+    --chronos-#{$name}: #{chronos-color($name, 1)};
+  }
+}
+
+// Typografie-Skala (Größe/Zeilenhöhe/Gewicht) nach Figma. Überschriften-Elemente tragen dieselben Werte.
+h1,
+.h1 {
+  line-height: 2.375rem; // 38 px
+}
+
+h2,
+.h2 {
+  line-height: 2rem; // 32 px
+}
+
+h3,
+.h3 {
+  font-weight: 600;
+  line-height: 1.6875rem; // 27 px
+}
+
+.text-display {
+  font-size: 3rem;
+  line-height: 3.4375rem; // 55 px
+  font-weight: 700;
+}
+
+.text-body-m {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+}
+
+.text-body-s {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+.text-body-m.fw-semibold,
+.text-body-s.fw-semibold {
+  font-weight: 600;
+}
+
 // Markenfarbe als Gradient (Lila → Pink).
 .text-gradient {
   background: $brand-gradient;
@@ -34,7 +101,7 @@
 .glass-card {
   background-color: rgba(var(--bs-body-bg-rgb), 0.9);
   border: 2px solid #e9d5ff; // purple-200
-  border-radius: var(--bs-border-radius-xxl);
+  border-radius: var(--bs-border-radius-lg); // 12 px
   backdrop-filter: blur(4px);
 }
 
@@ -78,9 +145,9 @@
   --bs-btn-color: #fff;
   --bs-btn-hover-color: #fff;
   --bs-btn-active-color: #fff;
-  --bs-btn-bg: rgba(255, 255, 255, 0.2);
-  --bs-btn-hover-bg: rgba(255, 255, 255, 0.3);
-  --bs-btn-active-bg: rgba(255, 255, 255, 0.3);
+  --bs-btn-bg: #{$overlay-tint};
+  --bs-btn-hover-bg: rgba(0, 0, 0, 0.25);
+  --bs-btn-active-bg: rgba(0, 0, 0, 0.25);
   --bs-btn-border-color: transparent;
   --bs-btn-hover-border-color: transparent;
   --bs-btn-active-border-color: transparent;
@@ -168,7 +235,7 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-radius: 50rem;
-  background: rgba(255, 255, 255, 0.2);
+  background: $overlay-tint;
   color: #fff;
   font-size: 0.875rem;
   font-weight: 500;
@@ -244,9 +311,9 @@
   --bs-offcanvas-bg: #fff;
 }
 
-// Karten und Eingabefelder wie im Nuxt-Frontend: Schatten, grau gefüllte Felder (nur hell; dunkel bleibt Bootstrap).
+// Karten und Eingabefelder: Figma-Schatten sm, grau gefüllte Felder (nur hell; dunkel bleibt Bootstrap).
 .card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: $box-shadow-sm;
 }
 
 .form-control,
@@ -284,27 +351,29 @@
 }
 
 .badge-on-brand {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: $overlay-tint;
   color: #fff;
 }
 
 // Kartenüberschriften: 18 px wie Nuxt `text-lg` (Bootstrap `.h5` wäre 20 px und bricht auf 390 px mitten im Wort um).
 .card-heading {
   font-size: 1.125rem;
-  line-height: 1.75rem;
+  line-height: 1.6875rem;
+  font-weight: 600;
   overflow-wrap: break-word;
 }
 
 // Dialoge wie im Nuxt-Frontend: fetter Titel (18 px), Footer-Buttons untereinander in voller Breite
 // (Primäraktion oben), 16 px Rand links/rechts, größere Rundung. Gilt für alle Bootstrap-Modals.
 .modal {
-  --bs-modal-border-radius: 1rem;
+  --bs-modal-border-radius: #{$modal-content-border-radius};
   --bs-modal-margin: 1rem;
 }
 
 .modal-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  line-height: 1.6875rem;
+  font-weight: 600;
 }
 
 .modal-footer {
@@ -335,9 +404,9 @@
   border-radius: 0 0.75rem 0.75rem 0;
 }
 
-// Platzhalter im Anlegen-/Bearbeiten-Stepper hellgrau wie im alten Frontend (gray-300).
+// Platzhalter im Anlegen-/Bearbeiten-Stepper: text/muted (ausreichender Kontrast).
 .line-input::placeholder {
-  color: #d1d5db; // gray-300
+  color: var(--chronos-text-muted);
 }
 
 // Rechtstext-Karten (Impressum/Datenschutz): 16 px Rundung wie im alten Frontend (Nuxt: `rounded-2xl`, `p-6`).
