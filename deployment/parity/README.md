@@ -13,7 +13,8 @@ expose the same API contract (ticket #137, KB entry `kb/architecture/ARCH-2026-1
 
 Both backends use the realm `chronos`, client `chronos-backend` (secret `backend-secret`, the value of
 `values-local.yaml`). Test users (password = user name): `parity-user-1`, `parity-user-2`, `parity-admin`
-(role `ADMIN_API`). The client's service account has `manage-users`/`view-users` for the user and admin endpoints.
+(role `ADMIN_API`). `parity-user-2` has the composite role `default-roles-chronos` like a normally created user, so its
+token carries `aud: account`; `run-contract.sh` aborts if that claim is missing (#174). The client's service account has `manage-users`/`view-users` for the user and admin endpoints.
 `parity-user-1` already has the name and e-mail the contract scenario patches the user to (`Parity Test`,
 `parity@example.org`): Java sends a verification mail when the e-mail changes, and Keycloak here has no SMTP server, so a
 real change would make Java answer 500 while Rust answers 200 (environment, not a parity finding).
@@ -102,7 +103,7 @@ deployment/parity/run-contract.sh --explore    # multi-user flows and error path
 ```
 
 Both modes apply `contract-tests/allowlist.json`; only Java defects (`java-defect (#162)`) may be in it. Entries of explorative steps
-are reported as `NOTE unused allowlist entry` by the plain harness run and vice versa. Result of the final run: `kb/architecture/ARCH-2026-10-20-002-rust-port-final-proof.md`.
+are reported as `NOTE unused allowlist entry` by the plain harness run and vice versa. Results: `kb/architecture/ARCH-2026-10-20-002-rust-port-final-proof.md`, latest on fresh `main` images: `kb/architecture/ARCH-2026-10-22-003-rust-port-proof-on-fresh-main-images.md`.
 
 Both databases must be fresh for a run (the scenario creates groups, appointments etc. and expects no earlier
 data); reset with `deployment/parity/reset-databases.sh` (drops and recreates both databases, restarts Keycloak and both

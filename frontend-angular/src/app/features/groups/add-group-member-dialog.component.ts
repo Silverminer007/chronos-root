@@ -23,7 +23,7 @@ const MIN_QUERY_LENGTH = 2;
             </div>
             <div class="modal-body d-flex flex-column gap-4">
               <div>
-                <label for="add-member-search" class="form-label fw-medium">Freund suchen</label>
+                <label for="add-member-search" class="form-label">Freund suchen</label>
                 <div class="input-group">
                   <span class="input-group-text"><app-icon name="search" /></span>
                   <input
@@ -89,7 +89,7 @@ const MIN_QUERY_LENGTH = 2;
               }
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" (click)="close()">Abbrechen</button>
+              <button type="button" class="btn btn-secondary" (click)="close()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!selected()" (click)="add()">
                 <app-icon name="plus" class="me-2" />Hinzufügen
               </button>

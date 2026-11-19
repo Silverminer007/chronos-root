@@ -93,13 +93,13 @@ describe('AgendaComponent', () => {
   it('enthält den Suchkopf und den Anlegen-Button', async () => {
     await respond({ data: [], meta: { page: 0, size: 20, total: 0 } });
     expect(el().querySelector('app-search-header')).not.toBeNull();
-    expect(el().querySelector('button.fab[aria-label="Termin erstellen"]')).not.toBeNull();
+    expect(el().querySelector('button.btn-fab[aria-label="Termin erstellen"]')).not.toBeNull();
   });
 
   it('öffnet über den Anlegen-Button den Stepper und springt nach dem Anlegen zum Termin', async () => {
     await respond({ data: [], meta: { page: 0, size: 20, total: 0 } });
     expect(el().querySelector('.stepper')).toBeNull();
-    (el().querySelector('.fab') as HTMLElement).click();
+    (el().querySelector('.btn-fab') as HTMLElement).click();
     fixture.detectChanges();
     expect(el().querySelector('.stepper')).not.toBeNull();
 

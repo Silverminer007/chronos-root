@@ -1,43 +1,220 @@
+@use 'sass:list';
+@use 'sass:map';
+
 // Bootstrap-Variablen überschreiben; muss vor dem Bootstrap-Import eingebunden werden.
-$brand-purple: #9333ea; // purple-600
-$brand-pink: #ec4899; // pink-500
+$brand-purple: #9333ea; // purple-600 (brand/primary)
+$brand-pink: #ec4899; // pink-500; nur noch Icon-Kacheln und Avatare, der Markenverlauf endet in $brand-pink-700
+$brand-pink-700: #be185d;
 
 $gray-50: #f9fafb;
 $gray-200: #e5e7eb;
 $gray-600: #4b5563;
 $gray-900: #111827;
 
+// Figma-Foundations: Farb-Tokens je Modus (Light / Dark). Werden in `_theme.scss` als `--chronos-<gruppe>-<name>` ausgegeben
+// und unten auf die Bootstrap-Variablen abgebildet. Keine Werte außerhalb dieser Map in Komponenten duplizieren.
+$chronos-colors: (
+  'bg-page': (#f9fafb, #171717),
+  'bg-surface': (#ffffff, #262626),
+  'bg-muted': (#f3f4f6, #404040),
+  'bg-brand-subtle': (#faf5ff, #581c87),
+  'bg-success-subtle': (#f0fdf4, #262626),
+  'bg-danger-subtle': (#fef2f2, #262626),
+  'bg-warning-subtle': (#fefce8, #262626),
+  'border-default': (#e5e7eb, #404040),
+  'border-brand': (#9333ea, #c084fc),
+  'border-success': (#16a34a, #22c55e),
+  'border-danger': (#dc2626, #ef4444),
+  'border-control': (#6b7280, #9ca3af),
+  'text-primary': (#111827, #ffffff),
+  'text-secondary': (#374151, #e5e7eb),
+  'text-muted': (#4b5563, #d1d5db),
+  'text-brand': (#9333ea, #d8b4fe),
+  'text-on-brand': (#ffffff, #ffffff),
+  'text-success': (#15803d, #22c55e),
+  'text-danger': (#b91c1c, #f87171),
+  'brand-primary': (#9333ea, #9333ea),
+  'status-success': (#15803d, #15803d),
+  'status-danger': (#dc2626, #dc2626),
+  'status-warning': (#b45309, #b45309),
+);
+
+@function chronos-color($name, $mode: 0) {
+  @return list.nth(map.get($chronos-colors, $name), $mode + 1);
+}
+
+// Overlay „Tint“ auf Verlaufsflächen (Glas-Knöpfe, Pillen, Badges).
+$overlay-tint: rgba(0, 0, 0, 0.15);
+
+$brand-gradient: linear-gradient(to right, $brand-purple, $brand-pink-700);
+$landing-gradient: linear-gradient(156.4deg, #7e22ce 0%, #be185d 35.7%, #c2410c 71.4%);
+
 $primary: $brand-purple;
 $link-color: $brand-purple;
-$body-bg: $gray-50;
-$body-color: $gray-600;
-$headings-color: $gray-900;
-$body-secondary-color: $gray-600; // Nuxt: Nebentexte ebenfalls gray-600, nicht 75 % transparent
+$success: #15803d;
+$danger: #dc2626;
+$warning: #b45309;
+$body-bg: #f9fafb;
+$body-color: #374151;
+$headings-color: #111827;
+$body-secondary-color: #374151; // Nuxt: Nebentexte ebenfalls dunkel, nicht 75 % transparent
+$border-color: #e5e7eb; // Dark: `$border-color-dark`
+
+// Dark-Mode: Figma-Dark-Werte statt Bootstrap-Grau (#212529/#2b3035/#495057).
+$body-bg-dark: #171717;
+$body-color-dark: #e5e7eb;
+$body-emphasis-color-dark: #ffffff;
+$body-secondary-color-dark: #e5e7eb;
+$body-secondary-bg-dark: #404040;
+$body-tertiary-bg-dark: #262626;
+$border-color-dark: #404040;
+$link-color-dark: #d8b4fe;
+$primary-bg-subtle-dark: #581c87;
+$success-bg-subtle-dark: #262626;
+$danger-bg-subtle-dark: #262626;
+$warning-bg-subtle-dark: #262626;
+
+$primary-bg-subtle: #faf5ff;
+$success-bg-subtle: #f0fdf4;
+$danger-bg-subtle: #fef2f2;
+$warning-bg-subtle: #fefce8;
+
+// Schatten (Figma sm/md/lg).
+$box-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+$box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+$box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+// Schatten des Primärbuttons.
+$button-shadow: 0 4px 3px rgba(0, 0, 0, 0.1), 0 2px 2px rgba(0, 0, 0, 0.1);
+
+// Radien: md 8 px (Buttons, Inputs, Badges), lg 12 px (Karten, Dialoge, Icon-Kacheln).
+$border-radius: 0.5rem;
 $border-radius-lg: 0.75rem;
 $border-radius-xl: 1rem;
-$card-border-radius: 1rem;
-$input-border-radius: 0.75rem;
-$border-color: $gray-200; // nur hell; dunkel nutzt Bootstraps $border-color-dark. Eingabefelder erben adaptiv via var(--bs-border-color).
+$btn-border-radius: 0.5rem;
+$input-border-radius: 0.5rem;
+$card-border-radius: 0.75rem;
+$modal-content-border-radius: 0.75rem;
 
-$brand-gradient: linear-gradient(90deg, $brand-purple, $brand-pink);
+// Abstände: Figma 0/4/8/12/16/20/24/32/40/48/64/80 px. Stufen 0-5 bleiben wie in Bootstrap (4/8/16/24/48 px),
+// damit bestehende Klassen unverändert wirken; 6 = 12 px, 7 = 20 px, 8 = 32 px, 9 = 40 px, 10 = 64 px, 11 = 80 px.
+$spacers: (
+  0: 0,
+  1: 0.25rem,
+  2: 0.5rem,
+  3: 1rem,
+  4: 1.5rem,
+  5: 3rem,
+  6: 0.75rem,
+  7: 1.25rem,
+  8: 2rem,
+  9: 2.5rem,
+  10: 4rem,
+  11: 5rem,
+);
 
-$font-family-sans-serif: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+// Schrift: Inter (400/600/700) wird selbst gehostet (`@fontsource/inter`, siehe angular.json).
+$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$headings-font-weight: 700;
+$h1-font-size: 1.875rem;
+$h2-font-size: 1.5rem;
+$h3-font-size: 1.125rem;
+$input-placeholder-color: var(--chronos-text-muted);
+$input-border-color: var(--chronos-border-control);
+
+// Buttons (Figma „Buttons“): md 10/16 px, lg 16/32 px, SemiBold, Rahmen 2 px; Landing-Nav mobil = sm (14/20, 8/12 px).
+$btn-padding-y: 0.625rem;
+$btn-padding-x: 1rem;
+$btn-font-weight: 600;
+$btn-padding-y-lg: 1rem;
+$btn-padding-x-lg: 2rem;
+$btn-font-size-lg: 1.125rem;
+$btn-padding-y-sm: 0.5rem;
+$btn-padding-x-sm: 0.75rem;
+$btn-font-size-sm: 0.875rem;
+$btn-border-width: 2px;
+
+// Formularelemente (Figma „Formular“): Feld bg/surface, Rahmen 2 px border/control, Fokus border/brand, Padding 12 px.
+$input-bg: #fff;
+$input-border-width: 2px;
+$input-focus-border-color: $brand-purple;
+$input-padding-y: 0.75rem;
+$input-padding-x: 0.75rem;
+$form-label-font-size: 0.875rem;
+$form-label-font-weight: 600;
+$form-label-color: var(--chronos-text-secondary);
+$form-switch-width: 3.5rem;
+$form-switch-padding-start: 4.25rem;
+$form-check-input-border: 2px solid #6b7280;
 $enable-dark-mode: true;
 
 // Muss per `meta.load-css(..., $with:)` an Bootstrap übergeben werden: ein bloßes `@use ... as *` konfiguriert
 // Bootstrap nicht, die !default-Variablen blieben dann auf den Bootstrap-Standardwerten (#0d6efd, weißer Hintergrund).
 $bootstrap-config: (
   'primary': $primary,
+  'success': $success,
+  'danger': $danger,
+  'warning': $warning,
   'link-color': $link-color,
   'body-bg': $body-bg,
   'body-color': $body-color,
   'headings-color': $headings-color,
+  'headings-font-weight': $headings-font-weight,
+  'h1-font-size': $h1-font-size,
+  'h2-font-size': $h2-font-size,
+  'h3-font-size': $h3-font-size,
   'body-secondary-color': $body-secondary-color,
+  'border-radius': $border-radius,
   'border-radius-lg': $border-radius-lg,
   'border-radius-xl': $border-radius-xl,
+  'btn-border-radius': $btn-border-radius,
   'card-border-radius': $card-border-radius,
+  'modal-content-border-radius': $modal-content-border-radius,
   'input-border-radius': $input-border-radius,
+  'input-border-color': $input-border-color,
+  'input-placeholder-color': $input-placeholder-color,
+  'btn-padding-y': $btn-padding-y,
+  'btn-padding-x': $btn-padding-x,
+  'btn-font-weight': $btn-font-weight,
+  'btn-padding-y-lg': $btn-padding-y-lg,
+  'btn-padding-x-lg': $btn-padding-x-lg,
+  'btn-font-size-lg': $btn-font-size-lg,
+  'btn-padding-y-sm': $btn-padding-y-sm,
+  'btn-padding-x-sm': $btn-padding-x-sm,
+  'btn-font-size-sm': $btn-font-size-sm,
+  'btn-border-width': $btn-border-width,
+  'input-bg': $input-bg,
+  'input-border-width': $input-border-width,
+  'input-focus-border-color': $input-focus-border-color,
+  'input-padding-y': $input-padding-y,
+  'input-padding-x': $input-padding-x,
+  'form-label-font-size': $form-label-font-size,
+  'form-label-font-weight': $form-label-font-weight,
+  'form-label-color': $form-label-color,
+  'form-switch-width': $form-switch-width,
+  'form-switch-padding-start': $form-switch-padding-start,
+  'form-check-input-border': $form-check-input-border,
   'border-color': $border-color,
+  'primary-bg-subtle': $primary-bg-subtle,
+  'success-bg-subtle': $success-bg-subtle,
+  'danger-bg-subtle': $danger-bg-subtle,
+  'warning-bg-subtle': $warning-bg-subtle,
+  'body-bg-dark': $body-bg-dark,
+  'body-color-dark': $body-color-dark,
+  'body-emphasis-color-dark': $body-emphasis-color-dark,
+  'body-secondary-color-dark': $body-secondary-color-dark,
+  'body-secondary-bg-dark': $body-secondary-bg-dark,
+  'body-tertiary-bg-dark': $body-tertiary-bg-dark,
+  'border-color-dark': $border-color-dark,
+  'link-color-dark': $link-color-dark,
+  'primary-bg-subtle-dark': $primary-bg-subtle-dark,
+  'success-bg-subtle-dark': $success-bg-subtle-dark,
+  'danger-bg-subtle-dark': $danger-bg-subtle-dark,
+  'warning-bg-subtle-dark': $warning-bg-subtle-dark,
+  'box-shadow-sm': $box-shadow-sm,
+  'box-shadow': $box-shadow,
+  'box-shadow-lg': $box-shadow-lg,
+  'spacers': $spacers,
   'font-family-sans-serif': $font-family-sans-serif,
   'enable-dark-mode': $enable-dark-mode,
 );

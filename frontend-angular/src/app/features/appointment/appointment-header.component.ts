@@ -11,7 +11,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
   template: `
     <header class="sticky-top bg-body border-bottom">
       <div class="container py-3 d-flex align-items-center gap-3">
-        <button type="button" class="btn btn-outline-secondary border-0 flex-shrink-0" aria-label="Zurück" (click)="backNavigation.back()">
+        <button type="button" class="btn btn-icon btn-icon-bordered" aria-label="Zurück" (click)="backNavigation.back()">
           <app-icon name="arrow-left" />
         </button>
         <h1 class="h4 fw-bold mb-0 text-truncate">{{ appointment().name }}</h1>

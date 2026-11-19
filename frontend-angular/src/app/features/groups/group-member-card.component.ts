@@ -15,7 +15,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
         @if (canRemove()) {
           <button
             type="button"
-            class="btn btn-sm remove-btn border-0"
+            class="btn btn-icon btn-ghost remove-btn"
             title="Mitglied entfernen"
             aria-label="Mitglied entfernen"
             (click)="remove.emit(member().id)"

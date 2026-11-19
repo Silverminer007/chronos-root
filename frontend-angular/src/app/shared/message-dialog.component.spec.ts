@@ -68,7 +68,7 @@ describe('MessageDialogComponent', () => {
 
   it('schließt über „Abbrechen“, das X und Escape', async () => {
     const fixture = await create(true);
-    (el.querySelector('.btn-outline-secondary') as HTMLButtonElement).click();
+    (el.querySelector('.btn-secondary') as HTMLButtonElement).click();
     (el.querySelector('.btn-close') as HTMLButtonElement).click();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await fixture.whenStable();

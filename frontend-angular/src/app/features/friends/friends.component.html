@@ -7,7 +7,7 @@
         <h1 class="h2 fw-bold mb-1">Freunde</h1>
         <p class="text-body-secondary mb-0">Verwalte deine Freundschaften</p>
       </div>
-      <button type="button" class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddDialog.set(true)">
+      <button type="button" class="btn btn-gradient d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddDialog.set(true)">
         <app-icon name="plus" />
         <span>Hinzufügen</span>
       </button>
@@ -17,8 +17,8 @@
       <button
         type="button"
         role="tab"
-        class="btn fw-medium flex-fill flex-sm-grow-0 px-4 py-2"
-        [class]="activeTab() === 'friends' ? 'btn-gradient' : 'btn-outline-secondary'"
+        class="btn flex-fill flex-sm-grow-0 px-4 py-2"
+        [class]="activeTab() === 'friends' ? 'btn-gradient' : 'btn-secondary'"
         [attr.aria-selected]="activeTab() === 'friends'"
         (click)="activeTab.set('friends')"
       >
@@ -28,8 +28,8 @@
       <button
         type="button"
         role="tab"
-        class="btn fw-medium flex-fill flex-sm-grow-0 px-4 py-2"
-        [class]="activeTab() === 'requests' ? 'btn-gradient' : 'btn-outline-secondary'"
+        class="btn flex-fill flex-sm-grow-0 px-4 py-2"
+        [class]="activeTab() === 'requests' ? 'btn-gradient' : 'btn-secondary'"
         [attr.aria-selected]="activeTab() === 'requests'"
         (click)="activeTab.set('requests')"
       >
@@ -66,7 +66,7 @@
             </div>
             <h3 class="h4 fw-bold mb-2">Noch keine Freunde</h3>
             <p class="text-body-secondary mb-4">Füge Freunde hinzu, um Termine gemeinsam zu planen.</p>
-            <button type="button" class="btn btn-gradient fw-medium px-4" (click)="showAddDialog.set(true)">
+            <button type="button" class="btn btn-gradient px-4" (click)="showAddDialog.set(true)">
               <app-icon name="plus" class="me-2" />Freund hinzufügen
             </button>
           </div>
@@ -117,11 +117,11 @@
 
 <button
   type="button"
-  class="fab btn btn-gradient rounded-circle shadow-lg d-flex align-items-center justify-content-center d-sm-none"
+  class="btn btn-fab btn-gradient d-sm-none"
   aria-label="Freund hinzufügen"
   (click)="showAddDialog.set(true)"
 >
-  <app-icon name="plus" class="fs-3" />
+  <app-icon name="plus" />
 </button>
 
 <app-send-friend-request-dialog [visible]="showAddDialog()" (closed)="showAddDialog.set(false)" />

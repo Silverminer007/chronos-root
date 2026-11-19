@@ -48,7 +48,7 @@
             <p class="small text-body-secondary mb-0">Push-Einladungen an alle noch nicht eingeladenen Nutzer senden</p>
           </div>
         </div>
-        <button type="button" class="btn btn-gradient fw-medium d-flex align-items-center gap-2" [disabled]="surveyLoading()" (click)="sendSurveyInvitations()">
+        <button type="button" class="btn btn-gradient d-flex align-items-center gap-2" [disabled]="surveyLoading()" (click)="sendSurveyInvitations()">
           @if (surveyLoading()) {
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
           } @else {

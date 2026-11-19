@@ -41,7 +41,7 @@ const COLOR_STYLE: Record<ConfirmColor, { variant: string; icon: string; confirm
             </div>
             <div class="modal-body">{{ v.request.message }}</div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" (click)="modal.resolve(false)">Abbrechen</button>
+              <button type="button" class="btn btn-secondary" (click)="modal.resolve(false)">Abbrechen</button>
               <button
                 type="button"
                 class="btn"

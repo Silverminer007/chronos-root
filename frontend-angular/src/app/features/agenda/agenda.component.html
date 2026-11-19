@@ -38,7 +38,7 @@
       <div class="d-flex justify-content-center pt-2">
         <button
           type="button"
-          class="btn btn-outline-primary fw-medium d-flex align-items-center gap-2"
+          class="btn btn-outline-primary d-flex align-items-center gap-2"
           (click)="loadMore()"
         >
           <app-icon name="refresh-cw" />
@@ -51,11 +51,11 @@
 
 <button
   type="button"
-  class="fab btn btn-gradient rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+  class="btn btn-fab btn-gradient"
   aria-label="Termin erstellen"
   (click)="stepperOpen.set(true)"
 >
-  <app-icon name="plus" class="fs-3" />
+  <app-icon name="plus" />
 </button>
 
 <app-create-appointment-stepper [(open)]="stepperOpen" (created)="onCreated($event)" />

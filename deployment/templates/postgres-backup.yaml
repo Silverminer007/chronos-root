@@ -1,4 +1,4 @@
-# postgres-backup-cronjob.yaml
+{{- /* postgres-backup-cronjob.yaml */ -}}
 {{- if .Values.postgresql.backup.enabled }}
 {{- $secretName := include "chronos.secretName" . -}}
 apiVersion: batch/v1

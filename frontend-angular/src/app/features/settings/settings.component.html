@@ -12,7 +12,7 @@
       @if (pushAvailable) {
         <button
           type="button"
-          class="btn btn-gradient fw-medium d-none d-sm-inline-flex align-items-center gap-2"
+          class="btn btn-gradient d-none d-sm-inline-flex align-items-center gap-2"
           [disabled]="store.saving()"
           (click)="save()"
         >
@@ -56,7 +56,7 @@
 @if (pushAvailable) {
   <button
     type="button"
-    class="btn btn-gradient rounded-circle shadow-lg d-sm-none fab"
+    class="btn btn-gradient d-sm-none btn-fab"
     aria-label="Speichern"
     [disabled]="store.saving()"
     (click)="save()"
@@ -64,7 +64,7 @@
     @if (store.saving()) {
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
     } @else {
-      <app-icon name="save" class="fs-5" />
+      <app-icon name="save" />
     }
   </button>
 }

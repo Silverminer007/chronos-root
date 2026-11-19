@@ -23,7 +23,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
             </div>
             <div class="modal-body d-flex flex-column gap-4">
               <div>
-                <label for="add-group-search" class="form-label fw-medium">Gruppe suchen</label>
+                <label for="add-group-search" class="form-label">Gruppe suchen</label>
                 <div class="input-group">
                   <span class="input-group-text"><app-icon name="search" /></span>
                   <input
@@ -38,7 +38,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
               </div>
 
               <div>
-                <span class="form-label fw-medium d-block">Rolle für Gruppenmitglieder</span>
+                <span class="form-label d-block">Rolle für Gruppenmitglieder</span>
                 <app-role-picker [(value)]="role" />
               </div>
 
@@ -93,7 +93,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
               }
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" [disabled]="adding()" (click)="closed.emit()">Abbrechen</button>
+              <button type="button" class="btn btn-secondary" [disabled]="adding()" (click)="closed.emit()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!selected() || adding()" (click)="add()">
                 @if (adding()) {
                   <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>

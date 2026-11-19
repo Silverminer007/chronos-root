@@ -11,7 +11,7 @@
       <app-icon name="alert-circle" class="display-5 text-danger d-block mb-3" />
       <h2 class="h3 fw-bold mb-2">Gruppe nicht gefunden</h2>
       <p class="text-body-secondary mb-4">{{ message }}</p>
-      <button type="button" class="btn btn-gradient btn-gradient-blue fw-medium px-4" (click)="goBack()">Zurück zur Übersicht</button>
+      <button type="button" class="btn btn-gradient btn-gradient-blue px-4" (click)="goBack()">Zurück zur Übersicht</button>
     </div>
   </main>
 } @else if (group(); as current) {
@@ -32,7 +32,7 @@
             </p>
           </div>
         </div>
-        <button type="button" class="btn btn-gradient btn-gradient-blue fw-medium d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddMemberDialog.set(true)">
+        <button type="button" class="btn btn-gradient btn-gradient-blue d-none d-sm-inline-flex align-items-center gap-2" (click)="showAddMemberDialog.set(true)">
           <app-icon name="plus" />
           <span>Mitglied hinzufügen</span>
         </button>
@@ -56,12 +56,12 @@
 
       <div class="mt-4 d-flex flex-column flex-sm-row gap-3">
         @if (isLastMember()) {
-          <button type="button" class="btn btn-outline-danger fw-medium px-4 py-2 d-flex align-items-center justify-content-center gap-2" (click)="deleteGroup()">
+          <button type="button" class="btn btn-outline-danger px-4 py-2 d-flex align-items-center justify-content-center gap-2" (click)="deleteGroup()">
             <app-icon name="trash-2" />
             <span>Gruppe löschen</span>
           </button>
         } @else {
-          <button type="button" class="btn btn-outline-secondary fw-medium px-4 py-2 d-flex align-items-center justify-content-center gap-2" (click)="leaveGroup()">
+          <button type="button" class="btn btn-secondary px-4 py-2 d-flex align-items-center justify-content-center gap-2" (click)="leaveGroup()">
             <app-icon name="log-out" />
             <span>Gruppe verlassen</span>
           </button>
@@ -72,11 +72,11 @@
 
   <button
     type="button"
-    class="fab btn btn-gradient btn-gradient-blue rounded-circle shadow-lg d-flex align-items-center justify-content-center d-sm-none"
+    class="btn btn-fab btn-gradient btn-gradient-blue d-sm-none"
     aria-label="Mitglied hinzufügen"
     (click)="showAddMemberDialog.set(true)"
   >
-    <app-icon name="plus" class="fs-3" />
+    <app-icon name="plus" />
   </button>
 }
 

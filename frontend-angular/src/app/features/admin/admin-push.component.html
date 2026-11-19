@@ -13,27 +13,27 @@
     <div class="card p-4 mb-4">
       <div class="row g-3 mb-3">
         <div class="col-12 col-sm-6">
-          <label for="filter-user" class="form-label small fw-medium">User ID</label>
+          <label for="filter-user" class="form-label">User ID</label>
           <input id="filter-user" class="form-control" type="number" placeholder="User ID" [ngModel]="filterUserId()" (ngModelChange)="filterUserId.set($event)" />
         </div>
         <div class="col-12 col-sm-6">
-          <label for="filter-type" class="form-label small fw-medium">Benachrichtigungstyp</label>
+          <label for="filter-type" class="form-label">Benachrichtigungstyp</label>
           <input id="filter-type" class="form-control" placeholder="z.B. appointment" [ngModel]="filterType()" (ngModelChange)="filterType.set($event)" />
         </div>
         <div class="col-12 col-sm-6">
-          <label for="filter-from" class="form-label small fw-medium">Von</label>
+          <label for="filter-from" class="form-label">Von</label>
           <input id="filter-from" class="form-control" type="date" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" />
         </div>
         <div class="col-12 col-sm-6">
-          <label for="filter-to" class="form-label small fw-medium">Bis</label>
+          <label for="filter-to" class="form-label">Bis</label>
           <input id="filter-to" class="form-control" type="date" [min]="filterFrom() || null" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" />
         </div>
       </div>
       <div>
-        <span class="form-label small fw-medium d-block">Status</span>
+        <span class="form-label d-block">Status</span>
         <div class="btn-group" role="group" aria-label="Status">
           @for (option of statusFilters; track option.value) {
-            <button type="button" class="btn btn-sm" [class]="filterStatus() === option.value ? 'btn-primary' : 'btn-outline-secondary'" [attr.aria-pressed]="filterStatus() === option.value" (click)="filterStatus.set(option.value)">{{ option.label }}</button>
+            <button type="button" class="btn btn-sm" [class]="filterStatus() === option.value ? 'btn-primary' : 'btn-secondary'" [attr.aria-pressed]="filterStatus() === option.value" (click)="filterStatus.set(option.value)">{{ option.label }}</button>
           }
         </div>
       </div>

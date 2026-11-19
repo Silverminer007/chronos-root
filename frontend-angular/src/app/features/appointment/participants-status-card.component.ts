@@ -73,7 +73,7 @@ const STATUS_BADGE: Record<string, { css: string; icon: string }> = {
                 </div>
               </div>
               @if (responsible() && p.role !== 'RESPONSIBLE') {
-                <button type="button" class="btn btn-outline-secondary border-0 btn-sm flex-shrink-0" [attr.aria-label]="'Aktionen für ' + p.name" aria-haspopup="menu" (click)="toggleMenu($event, p)">
+                <button type="button" class="btn btn-icon btn-icon-tint" [attr.aria-label]="'Aktionen für ' + p.name" aria-haspopup="menu" (click)="toggleMenu($event, p)">
                   <app-icon name="more-vertical" />
                 </button>
               }

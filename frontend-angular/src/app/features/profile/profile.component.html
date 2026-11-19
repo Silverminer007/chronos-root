@@ -19,46 +19,46 @@
 
         <div class="row g-3">
           <div class="col-12 col-sm-6">
-            <label for="profile-first-name" class="form-label fw-medium">Vorname</label>
+            <label for="profile-first-name" class="form-label">Vorname</label>
             <input
               id="profile-first-name"
               type="text"
-              class="form-control"
+              class="form-control form-control-soft"
               placeholder="Vorname"
               [value]="firstName()"
               (input)="firstName.set($any($event.target).value)"
             />
           </div>
           <div class="col-12 col-sm-6">
-            <label for="profile-last-name" class="form-label fw-medium">Nachname</label>
+            <label for="profile-last-name" class="form-label">Nachname</label>
             <input
               id="profile-last-name"
               type="text"
-              class="form-control"
+              class="form-control form-control-soft"
               placeholder="Nachname"
               [value]="lastName()"
               (input)="lastName.set($any($event.target).value)"
             />
           </div>
           <div class="col-12">
-            <label for="profile-email" class="form-label fw-medium">E-Mail-Adresse</label>
+            <label for="profile-email" class="form-label">E-Mail-Adresse</label>
             <input
               id="profile-email"
               type="email"
-              class="form-control"
+              class="form-control form-control-soft"
               placeholder="deine@email.de"
               [value]="email()"
               (input)="email.set($any($event.target).value)"
             />
           </div>
           <div class="col-12 d-flex justify-content-between pt-2">
-            <button type="button" class="btn btn-gradient fw-medium d-inline-flex align-items-center gap-2" (click)="changePassword()">
+            <button type="button" class="btn btn-gradient d-inline-flex align-items-center gap-2" (click)="changePassword()">
               <app-icon name="key" />
               <span>Passwort ändern</span>
             </button>
             <button
               type="button"
-              class="btn btn-gradient fw-medium d-inline-flex align-items-center gap-2"
+              class="btn btn-gradient d-inline-flex align-items-center gap-2"
               [disabled]="savingProfile()"
               (click)="saveProfile()"
             >

@@ -23,7 +23,7 @@ const MIN_NAME_LENGTH = 2;
               <button type="button" class="btn-close" aria-label="Schließen" (click)="close()"></button>
             </div>
             <div class="modal-body">
-              <label for="group-name" class="form-label fw-medium">Gruppenname</label>
+              <label for="group-name" class="form-label">Gruppenname</label>
               <div class="input-group">
                 <span class="input-group-text"><app-icon name="tag" /></span>
                 <input
@@ -42,7 +42,7 @@ const MIN_NAME_LENGTH = 2;
               }
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" (click)="close()">Abbrechen</button>
+              <button type="button" class="btn btn-secondary" (click)="close()">Abbrechen</button>
               <button type="button" class="btn btn-gradient" [disabled]="!valid() || loading()" (click)="create()">
                 @if (loading()) {
                   <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
