@@ -1,0 +1,44 @@
+---
+title: Kapitelbeschreibung (Vorlage)
+quelle: https://req42.de/download (req42-framework-DE-withhelp-gitHubMarkdownMP.zip, 10_Teamstruktur.md)
+abgerufen: 2026-11-20
+---
+
+> Unveränderte Hilfe der offiziellen Vorlage. Der Inhalt des Kapitels steht in den Dateien dieses Ordners.
+
+# Teamstruktur
+
+Inhalt
+
+Bei kleinen Produktentwicklungen mit nur einem Entwicklungsteam kann
+dieser Abschnitt entfallen, da die Teammitglieder bereits im vorherigen
+Abschnitt aufgeführt sind. Bei skalierten großen Produkten sollte hier
+das Organigramm Ihrer Teams stehen und eine Zuordnung zu den Themen
+(z.B. Epics, Features, …​), für die dieses Team zuständig ist.
+
+Motivation
+
+Wenn Sie über mehrere Teams verfügen, ist es selbstverständlich, dass
+Sie einen Überblick darüber haben, wer in welchem (Sub-)Team arbeitet
+und wie diese Teams organisiert sind.
+
+Der Fokus sollte darauf liegen, dass die (Teil-)Teams so organisiert
+sind, dass sie möglichst selbstständig Funktionen/Features oder
+Teilprodukte liefern können, ohne sich ständig mit allen anderen
+abstimmen zu müssen.
+
+Notationen/Tools
+
+Listen von Teams (jeweils mit zugewiesenen Personen und zugewiesenen
+Themen aus der Roadmap oder aus dem Product Backlog (z. B. Epics oder
+Features).
+
+| Team         | Team-Mitglied       | Themen              |
+|--------------|---------------------|---------------------|
+| *\<Team-1\>* | PO: *\<Name\>*      | *\<Teilprodukt-A\>* |
+|              | *\<Team-Member-1\>* |                     |
+|              |                     |                     |
+| *\<Team-2\>* | PO: *\<Name\>*      | *\<Teilprodukt-B\>* |
+|              | *\<Team-Member-1\>* |                     |
+|              | *\<Team-Member-2\>* |                     |
+|              |                     |                     |

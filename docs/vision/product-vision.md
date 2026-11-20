@@ -3,26 +3,32 @@ title: Produktvision
 status: entwurf   # Menschen: nach Prüfung auf "freigegeben" setzen
 freigegeben-am:
 freigegeben-von:
+quellen:
+  - frontend/app/pages/index.vue
+  - backend/src/main/java/de/chronos_live/chronos_date_api/domain/
+  - backend/src/main/java/de/chronos_live/chronos_date_api/application/reminder/
 ---
 
 # Produktvision
 
-> ENTWURF, abgeleitet aus `CLAUDE.md` und dem Ist-Zustand. Alle Aussagen mit **(?)** sind Annahmen und müssen von einem Menschen bestätigt oder ersetzt werden.
+> ENTWURF, rückwärts aus dem Ist-Zustand abgeleitet (Landing-Seite, Domänenmodell, Funktionen). Aussagen mit **(?)** sind Annahmen und müssen von einem Menschen bestätigt oder ersetzt werden.
 
 ## Vision (?)
 
-Jugendorganisationen planen Termine gemeinsam, ohne hinterherzutelefonieren: Wer eingeladen ist, sagt zu oder ab, und alle sehen sofort, ob die Veranstaltung stattfinden kann.
+Jugendverbände planen Termine gemeinsam, ohne hinterherzutelefonieren: Wer eingeladen ist, sagt zu oder ab, und alle sehen sofort, ob die Veranstaltung stattfinden kann.
 
-## Zielgruppe (?)
+## Zielgruppe
 
-- Gruppenleitungen und Verantwortliche in Jugendorganisationen, die Termine anlegen.
-- Mitglieder und Helfer, die Termine bestätigen und Erinnerungen erhalten.
+- Jugendverbände: Gruppenleitungen und Verantwortliche, die Termine anlegen (Rolle `RESPONSIBLE`). Die Landing-Seite wirbt mit „Für Jugendverbände gemacht".
+- Mitglieder, Helfer:innen und Gäste, die Termine bestätigen und Erinnerungen erhalten (Rollen `ATTENDANT`, `HELPER`, `GUEST`).
+- Administrator:innen mit der Rolle `ADMIN_API`, die Termine, Gruppen, Benutzer und Push-Versand verwalten und auswerten (Admin-API).
 
 ## Kernnutzen
 
-- Termine anlegen, Freunde und ganze Gruppen einladen.
-- Teilnahme (Zusage/Absage/ausstehend) und Mindestteilnehmerzahl im Blick behalten.
-- Push-Benachrichtigungen und Erinnerungen statt Nachfragen.
+- Termine anlegen und Freunde oder ganze Gruppen einladen.
+- Zu-/Absage und Mindestteilnehmerzahl im Blick behalten; der Termin meldet selbst, wenn zu wenige zugesagt haben.
+- Push-Benachrichtigungen und automatische Rückmelde-Erinnerungen statt Nachfragen, einstellbar je Ereignisart.
+- Als installierbare Web-App (PWA) auf dem Smartphone nutzbar.
 
 ## Abgrenzung (?)
 
@@ -34,6 +40,5 @@ Chronos ist kein allgemeiner Kalender und kein Chat-Ersatz; Nachrichten gibt es 
 
 ## Offene Fragen an den Product Owner
 
-- [ ] Vision und Zielgruppe bestätigen.
+- [ ] Vision und Abgrenzung bestätigen.
 - [ ] Erfolgskriterien festlegen.
-- [ ] Ist der Rust-Port (`rust-backend/`) Ersatz oder Ergänzung des Java-Backends?

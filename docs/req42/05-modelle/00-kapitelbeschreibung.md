@@ -1,0 +1,73 @@
+---
+title: Kapitelbeschreibung (Vorlage)
+quelle: https://req42.de/download (req42-framework-DE-withhelp-gitHubMarkdownMP.zip, 05_Modelle-zur-Unterstuetzung.md)
+abgerufen: 2026-11-20
+---
+
+> Unveränderte Hilfe der offiziellen Vorlage. Der Inhalt des Kapitels steht in den Dateien dieses Ordners.
+
+# Modelle zur Unterstützung
+
+Inhalt
+
+Jegliche Art von grafischen Modellen, die das Verständnis (von
+Zusammenhängen) von Backlog Items erleichtern. Die Diagramme sollten mit
+Items aus dem Product Backlog verlinkt sein.
+
+Motivation
+
+In der agilen Welt hat es sich weit verbreitet, Anforderungen in Form
+von Epics, Features oder User Storys auf Kärtchen zu schreiben oder in
+äquivalenter Form in Tools abzulegen.
+
+Trotzdem wird die Kommunikation unter allen Beteiligten manchmal
+erheblich einfacher, wenn man zusätzlich auch die Hilfsmittel verwendet,
+die wir in den letzten Jahrzehnten zur Präzisierung der Umgangssprache
+kennengelernt haben. Scheuen Sie also nicht davor zurück Modelle zu
+verwenden, wenn sie die Kommunikation fördern.
+
+Keine Angst: diese Modelle müssen nicht perfekt sein. Aber insbesondere
+mit anwachsender Komplexität (Schleifen oder Fallunterscheidungen)
+fördert eine grafische Visualisierung der Schritte eines
+Geschäftsprozesses das Verständnis besser als viele Tickets im System
+ohne erkennbare Abfolgen und Abhängigkeiten.
+
+Notationen/Tools
+
+- Flussdiagramme
+
+- Aktivitätsdiagramme
+
+- BPMN
+
+- Zustandsmodelle
+
+- Datenmodelle
+
+- UI-Prototypen
+
+- Mock-ups
+
+- Wireframes
+
+Einfache Modellierungstools wie Gliffy, Diagrams.Net (früher DrawIO),
+…​…​, oder DSLs wie PlantUML, Kroki, …​ oder UML-Modellierungstools wie
+Enterprise Architect, Visual Paradigm, MagicDraw eignen sich zum
+Erstellen der Modelle. Die Modelle sollten mit Ihren Backlog-Items
+verlinkt sein (in beide Richtungen)
+
+*\<Diagrammtitel 1:\>*. *\<hier Diagramm und evtl. Erläuterungen
+einfügen\>* *\<optional: Link zu Epics, Features oder Storys\>*
+
+*\<Diagrammtitel 2:\>*. *\<hier Diagramm und evtl. Erläuterungen
+einfügen\>* *\<optional: Link zu Epics, Features oder Storys\>*
+
+*\<Diagrammtitel 3:\>*. *\<hier Diagramm und evtl. Erläuterungen
+einfügen\>* *\<optional: Link zu Epics, Features oder Storys\>*
+
+    .
+    .
+    .
+
+*\<Diagrammtitel n:\>*. *\<hier Diagramm und evtl. Erläuterungen
+einfügen\>* *\<optional: Link zu Epics, Features oder Storys\>*

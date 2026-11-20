@@ -9,8 +9,6 @@ verknuepft: []
 
 # 1 Einführung und Ziele
 
-Kurze Einführung; Details liegen in `docs/vision/` und `docs/req42/`.
-
 | ID | Titel |
 |---|---|
 | [EIN-001](EIN-001-aufgabenstellung.md) | Aufgabenstellung |

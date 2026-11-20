@@ -4,11 +4,11 @@ title: PostgreSQL mit Flyway, nur vorwärts
 status: entwurf
 typ: strategie
 quellen:
-  - kb/adr/ADR-2025-09-28-008-postgres-flyway.md
-  - kb/adr/ADR-2025-09-28-009-panache.md
-verknuepft: [RB-003, KZ-006]
+  - backend/pom.xml
+  - backend/src/main/resources/application.properties
+verknuepft: [AE-011, AE-012, BB-018, KZ-006]
 ---
 
 # PostgreSQL mit Flyway, nur vorwärts
 
-Eine relationale Datenbank, Schema ausschließlich über versionierte Flyway-Migrationen, die nach Deployment unveränderlich sind. Java nutzt Hibernate ORM mit Panache; Tests laden Fixtures aus `src/test/resources/db/testdata/`.
+Eine relationale Datenbank, Schema ausschließlich über versionierte Flyway-Migrationen, die nach dem Deployment unveränderlich sind (KZ-006). Das Backend nutzt Hibernate ORM mit Panache und migriert beim Start. Tests laufen gegen echtes PostgreSQL mit Fixtures ([KZ-010](../08-konzepte/KZ-010-teststrategie.md)). Begründungen: [AE-011](../09-entscheidungen/AE-011-postgresql-mit-flyway.md), [AE-012](../09-entscheidungen/AE-012-hibernate-panache-als-persistenz-api.md).

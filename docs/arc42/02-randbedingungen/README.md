@@ -4,24 +4,20 @@ title: "2 Randbedingungen"
 status: entwurf
 typ: index
 quellen: []
-verknuepft: [RB-001, RB-002, RB-003, RB-004, RB-005]
+verknuepft: [RB-001, RB-002, RB-005, RB-006, RB-008, RB-010, RB-011, RB-014]
 ---
 
 # 2 Randbedingungen
 
-Die fachlichen und grundlegenden Randbedingungen RB-001 bis RB-005 stehen in `docs/req42/` (`06-randbedingungen/`) und werden hier nicht wiederholt. Diese Datei listet nur die zusätzlichen technischen und organisatorischen Randbedingungen (`RA-nnn`).
+Die verbindlichen Randbedingungen RB-001 bis RB-014 (siehe Index) stehen in [req42](../../req42/07-randbedingungen/README.md) und werden hier nicht wiederholt. Dieses Verzeichnis führt nur zusätzliche technische und organisatorische Randbedingungen (`RA-nnn`), die in req42 fehlen oder dort nur grob stehen.
 
 | ID | Titel |
 |---|---|
 | [RA-001](RA-001-branch-und-pr-workflow.md) | Branch- und PR-Workflow |
-| [RA-002](RA-002-qualitaets-gates-java-backend.md) | Qualitäts-Gates Java-Backend |
-| [RA-003](RA-003-qualitaets-gates-rust-backend.md) | Qualitäts-Gates Rust-Backend |
-| [RA-004](RA-004-qualitaets-gates-frontend.md) | Qualitäts-Gates Frontend |
-| [RA-005](RA-005-testgetriebene-entwicklung.md) | Testgetriebene Entwicklung |
-| [RA-006](RA-006-java-ist-die-referenz-des-rust-ports.md) | Java ist die Referenz des Rust-Ports |
-| [RA-007](RA-007-frontend-nutzt-nur-nuxt-server-routen.md) | Frontend nutzt nur Nuxt-Server-Routen |
-| [RA-008](RA-008-keine-lokalen-agent-einstellungen-im-git.md) | Keine lokalen Agent-Einstellungen im Git |
+| [RA-004](RA-004-qualitaets-gates-frontend.md) | Qualitäts-Gates und Code-Stil Frontend |
 | [RA-009](RA-009-geheimnisse-ueber-austauschbare-provider.md) | Geheimnisse über austauschbare Provider |
 | [RA-010](RA-010-kubernetes-helm-deployment-mit-zwei-umgebungen.md) | Kubernetes/Helm-Deployment mit zwei Umgebungen |
 | [RA-011](RA-011-agenten-orchestrierung-und-steward.md) | Agenten-Orchestrierung und Steward |
-| [RA-012](RA-012-datenbankmigrationen-nur-vorwaerts-ausnahme-rust-schema.md) | Datenbankmigrationen nur vorwärts, Ausnahme Rust-Schema |
+| [RA-013](RA-013-laufzeit-und-werkzeugversionen.md) | Laufzeit- und Werkzeugversionen |
+
+Entfallene IDs (nicht wiederverwenden): RA-002, RA-005, RA-007, RA-008 und RA-012 (inhaltlich durch RB-008, RB-011, AE-013 und KZ-006 abgedeckt), RA-003 und RA-006 (entfallen).

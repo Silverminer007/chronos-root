@@ -4,10 +4,16 @@ title: "Zugriffsschutz der Admin-API"
 status: entwurf
 typ: qualitaetsszenario
 quellen:
-  - kb/adr/ADR-2026-10-20-023-admin-endpoints.md
-verknuepft: [FA-007]
+  - backend/src/main/java/de/chronos_live/admin/presentation/
+  - backend/src/test/java/de/chronos_live/chronos_date_api/presentation/AdminEndpointIntegrationTest.java
+verknuepft: [QA-009, FA-007, AE-051, G-051, TD-016]
 ---
 
 # QS-007: Zugriffsschutz der Admin-API
 
-**Szenario:** Anonym, normaler Benutzer und Admin rufen alle 14 Admin-Routen des Rust-Backends auf. **Erwartung:** 401 ohne Token, leeres 403 ohne Rolle `ADMIN_API`, Zugriff mit Rolle. **Nachweis:** `admin_endpoints_test` im Rust-Backend.
+| | |
+|---|---|
+| **Reiz** | Anonym, ein normaler Benutzer oder ein Benutzer mit Realm-Rolle `ADMIN_API` ruft eine Route unter `/api/v2/admin/*` auf. |
+| **Antwort** | Ohne gültiges Token 401, ohne Rolle `ADMIN_API` 403 (`@RolesAllowed` an allen sechs Admin-Resources), mit Rolle Zugriff. |
+| **Messung** | Zugriff ohne Rolle auf alle sechs Resources (Appointment, Group, Friendship, User, Push, Statistics) ergibt 403. |
+| **Nachweis** | `AdminEndpointIntegrationTest` prüft 403 für Nicht-Admins je Resource; der Erfolgsfall und 401 sind nicht abgedeckt, da OIDC im Test abgeschaltet ist **(?)**. |

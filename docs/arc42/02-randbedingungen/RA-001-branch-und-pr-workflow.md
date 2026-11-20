@@ -4,13 +4,17 @@ title: "Branch- und PR-Workflow"
 status: entwurf
 typ: randbedingung
 quellen:
-  - CLAUDE.md
-  - kb/constraints/003-deployment-rules.md
-verknuepft: [RB-005]
+  - .agent-orchestrator/prompts/rules.extra.md
+  - .github/CODEOWNERS
+  - .github/workflows/backend-ci.yml
+  - .github/workflows/frontend-ci.yml
+verknuepft: [RB-005, RB-010, VT-004]
 ---
 
 # RA-001: Branch- und PR-Workflow
 
-Nie direkt auf `main`. Jede Änderung läuft über einen neuen Branch und einen Draft-PR. PR-Titel `Resolve #<Ticket>: <Titel>`, Body beginnt mit `Closes #<Ticket>` (`.agent-orchestrator/prompts/rules.extra.md`). Branch-Schutz laut `003-deployment-rules.md`: mindestens eine Freigabe, grüne CI, kein Force-Push; `main` deployt nach Produktion, `develop` nach Staging.
+Ergänzt RB-005 (nie direkt auf `main`) und RB-010 (Deployment-Regeln) um die technische Ausgestaltung:
 
-Diese Randbedingung konkretisiert RB-005.
+- **PR-Konvention:** Titel `Resolve #<Ticket>: <Titel>`, Body beginnt mit `Closes #<Ticket>`; Pull Requests richten sich gegen `main` oder `develop` (`.agent-orchestrator/prompts/rules.extra.md`, Trigger der Workflows).
+- **Prüfungen:** Die Workflows laufen pfadgefiltert (`backend/**`, `frontend/**`, `deployment/**`); Wirkung siehe [VT-004](../07-verteilung/VT-004-ci-cd-kette.md).
+- **Freigabe von `docs/`:** `.github/CODEOWNERS` weist `/docs/` und `CODEOWNERS` dem Product Owner zu. Zusammen mit dem Branch-Schutz „Require review from Code Owners“ (laut Kommentar in `CODEOWNERS`; die Einstellung selbst liegt in GitHub und ist aus dem Repository nicht prüfbar **(?)**) erzwingt das die menschliche Freigabe.

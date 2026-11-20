@@ -4,12 +4,12 @@ title: "Service Worker"
 status: entwurf
 typ: begriff
 quellen:
-  - kb/glossary/glossary.md
-verknuepft: []
+  - frontend/public/push-sw.js
+verknuepft: [AE-008, AE-053, R-003]
 ---
 
 # G-039: Service Worker
 
-**Begriff:** Service Worker
+**Code-Name:** `push-sw.js` (registriert durch `register-sw.client.ts`)
 
-JavaScript worker that runs in browser background. Intercepts fetch requests, handles token refresh, sends/receives messages. Critical for auth in Chronos. (Quelle englisch, aus `kb/glossary/glossary.md`.)
+Browser-Hintergrundskript der PWA mit zwei Aufgaben: Token-Erneuerung für alle `/api/*`-Anfragen ([AE-008](../09-entscheidungen/AE-008-token-refresh-im-service-worker.md)) und Anzeige eingehender [Push-Benachrichtigungen](G-013-push-benachrichtigung.md) mit Schnellaktionen.

@@ -17,3 +17,5 @@ status: entwurf
 | LZ-008 | [Freundschaftsanfrage](LZ-008-freundschaftsanfrage.md) |
 | LZ-009 | [Nachricht im Termin senden](LZ-009-termin-nachricht.md) |
 | LZ-010 | [Push abonnieren](LZ-010-push-abonnieren.md) |
+| LZ-011 | [Mindestteilnehmerzahl und Terminstatus](LZ-011-mindestteilnehmerzahl.md) |
+| LZ-012 | [Start und Stop einer Backend-Instanz](LZ-012-start-und-stop-des-backends.md) |

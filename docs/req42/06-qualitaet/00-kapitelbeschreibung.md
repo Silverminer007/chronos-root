@@ -1,0 +1,52 @@
+---
+title: Kapitelbeschreibung (Vorlage)
+quelle: https://req42.de/download (req42-framework-DE-withhelp-gitHubMarkdownMP.zip, 06_Qualitaetsanforderungen.md)
+abgerufen: 2026-11-20
+---
+
+> Unveränderte Hilfe der offiziellen Vorlage. Der Inhalt des Kapitels steht in den Dateien dieses Ordners.
+
+# Qualitätsanforderungen
+
+Inhalt
+
+Anforderungen an Qualitäten sind das "Wie" zum "Was" – qualitative
+Definitionen oder Präzisierungen der funktionalen Anforderungen.
+
+Motivation
+
+Unsere Erfahrung zeigt: Qualitätsanforderungen sind (leider) nicht nur
+in der agilen Welt immer noch heftig unterschätzt. Jeder will qualitativ
+gute Produkte und Services, aber nur wenige machen es explizit, was
+damit genau gemeint ist.
+
+Einige Qualitätsanforderungen (wie Antwortzeiten) lassen sich vielleicht
+direkt in eine Story integrieren (oder als Abnahmekriterium
+dazuschreiben).
+
+Die große Mehrheit an Qualitätsanforderungen bezieht sich jedoch auf
+viele, wenn nicht sogar auf alle funktionalen Anforderungen des Product
+Backlogs.
+
+Deshalb brauchen Sie als Product Owner irgendwo die Möglichkeit, die
+gewünschten Qualitäten Ihrer Produkte und Services zu spezifizieren und
+zuzuweisen. Für diese Tätigkeit stehen Ihnen industrie-erprobten
+Checklisten (wie Q42, ISO 25010 und andere) zur Verfügung, welche Ihnen
+helfen, rasch die wichtigsten Kategorien zu identifizieren und managen
+zu können.
+
+Notationen/Tools
+
+Einfache textuelle Szenarien, evtl. nach den Kapiteln des ISO 25010
+Qualitätsbaums oder nach VOLERE gegliedert.
+
+*\<Text Qualitätsanforderungen bzw. -Szenario 1\>* : *\<Link auf
+funktionale Anforderungen bzw. Gültigkeitsbereich\>*
+
+*\<Text Qualitätsanforderungen bzw. -Szenario 2\>* : *\<Link auf
+funktionale Anforderungen bzw. Gültigkeitsbereich\>*
+
+*\<Text Qualitätsanforderungen bzw. -Szenario 3\>* : *\<Link auf
+funktionale Anforderungen bzw. Gültigkeitsbereich\>* . . . *\<Text
+Qualitätsanforderungen bzw. -Szenario n\>* : *\<Link auf funktionale
+Anforderungen bzw. Gültigkeitsbereich\>*

@@ -16,3 +16,6 @@ status: entwurf
 | KT-007 | [Nachbarsystem Prometheus und Grafana](KT-007-prometheus-grafana.md) |
 | KT-008 | [Nachbarsystem Sentry](KT-008-sentry.md) |
 | KT-009 | [Nachbarsystem Browser und PWA](KT-009-browser-pwa.md) |
+| KT-010 | [Nachbarsystem jsDelivr (CDN)](KT-010-jsdelivr.md) |
+| KT-011 | [Nachbarsystem GitHub (Actions und Container-Registry)](KT-011-github.md) |
+| KT-012 | [Nachbarsystem Bitwarden Secrets Manager](KT-012-bitwarden.md) |

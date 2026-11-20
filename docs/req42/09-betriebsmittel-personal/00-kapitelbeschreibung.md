@@ -1,0 +1,51 @@
+---
+title: Kapitelbeschreibung (Vorlage)
+quelle: https://req42.de/download (req42-framework-DE-withhelp-gitHubMarkdownMP.zip, 09_Betriebsmittel-und-Personal.md)
+abgerufen: 2026-11-20
+---
+
+> Unveränderte Hilfe der offiziellen Vorlage. Der Inhalt des Kapitels steht in den Dateien dieses Ordners.
+
+# Betriebsmittel und Personal
+
+Inhalt
+
+Unter Betriebsmittel und Personal („Assets“) fassen wir das zusammen,
+was Ihnen Ihre Auftraggeber oder Chefs mitgeben, um Sie als Product
+Owner (zusammen mit Ihrem Team) zu befähigen, Ihren Job erfolgreich
+auszuführen.
+
+Die Assets schließen auf jeden Fall Zeit und Budget ein, d.h. Mittel,
+die man Ihnen für Ihre Aufgabe zur Verfügung stellt. Vielleicht müssen
+Sie sich Ihr Team mit diesen Mitteln selbst besorgen oder man stellt
+Ihnen auch Personal (Ihr Team), Arbeitsräume, Infrastruktur, etc. zur
+Verfügung.
+
+Motivation
+
+Wenn Sie den Job als Product Owner übernehmen, dann müssen Sie über
+diese Assets mit Ihren Auftraggebern verhandeln und sicherlich im
+Endeffekt über deren Verwendung auch (durch hoffentlich erfolgreiche
+Ergebnisse) Rechenschaft ablegen.
+
+Auf jeden Fall sollten Sie wissen, was Ihnen an Geld, Personal, Zeit,
+Infrastruktur, …​ zur Verfügung steht. Diese Assets sind eine wesentliche
+Randbedingung für Ihre Arbeit als Product Owner.
+
+Notationen/Tools
+
+Einfache Listen, Tabellen
+
+## Budget
+
+(evtl. gegliedert nach Roadmap oder Zwischenzielen, bzw. aufgeteilt in
+Personalbudget, Sachbudget, …​)
+
+## Zeitrahmen/Endtermin
+
+## Teammitglieder
+
+(Aufzählung oder aber ein Link auf komplexe Teamstruktur in Abschnitt
+10)
+
+## Externe Ressourcen

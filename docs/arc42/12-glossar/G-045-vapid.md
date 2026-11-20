@@ -4,12 +4,13 @@ title: "VAPID"
 status: entwurf
 typ: begriff
 quellen:
-  - kb/glossary/glossary.md
-verknuepft: []
+  - backend/src/main/resources/application.properties
+  - backend/src/main/java/de/chronos_live/chronos_date_api/config/PushConfig.java
+verknuepft: [AE-053, G-013, RB-006]
 ---
 
 # G-045: VAPID
 
-**Begriff:** VAPID
+**Code-Name:** Konfiguration `push.vapid.public`/`private`/`mailto` (Umgebung `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_MAILTO`)
 
-Voluntary Application Server Identification. Public/private key pair used for Web Push. Without VAPID, push notifications won't work. (Quelle englisch, aus `kb/glossary/glossary.md`.)
+Schlüsselpaar, mit dem das Backend seine Web-Push-Nachrichten gegenüber den Push-Diensten signiert; der öffentliche Schlüssel dient dem Browser beim Abonnieren ([Push-Benachrichtigung](G-013-push-benachrichtigung.md)). Fehlen die Schlüssel, wird nicht gepusht.

@@ -4,11 +4,12 @@ title: Automatische Qualitäts-Gates
 status: entwurf
 typ: strategie
 quellen:
-  - kb/constraints/001-code-quality-gates.md
   - .github/workflows
-verknuepft: [QA-002, VT-004]
+  - backend/pom.xml
+  - scripts/check-no-local-settings.sh
+verknuepft: [RA-004, RB-008, RB-011, VT-004]
 ---
 
 # Automatische Qualitäts-Gates
 
-Backend: Checkstyle, SpotBugs, PMD bei `./mvnw verify`; Rust: `cargo fmt --check`, `clippy -D warnings`, Unit- und Integrationstests; Frontend: ESLint, Typecheck, `npm audit`, Secret-Detection; Repo: Prüfung auf eingecheckte lokale Agent-Einstellungen. Jeder PR durchläuft diese Prüfungen.
+Jeder Pull Request durchläuft automatische Prüfungen, die ohne menschliches Zutun blockieren: Backend: Tests sowie Checkstyle, SpotBugs und PMD (RB-008); Frontend: Secret-Detection, Audit, Lint, Typecheck, Build und E2E ([RA-004](../02-randbedingungen/RA-004-qualitaets-gates-frontend.md)); Chart: Rendertests aller Secret-Provider; Repository: Prüfung auf eingecheckte lokale Agent-Einstellungen (RB-011). Zuordnung zu Workflows: [VT-004](../07-verteilung/VT-004-ci-cd-kette.md).

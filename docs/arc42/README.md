@@ -10,7 +10,7 @@ Gliederung nach [arc42](https://arc42.org/). Jede Entität (Nachbarsystem, Baust
 | Kapitel | Verzeichnis | ID-Präfix |
 |---|---|---|
 | 1 Einführung und Ziele | [01-einfuehrung](01-einfuehrung/README.md) | EIN |
-| 2 Randbedingungen | [02-randbedingungen](02-randbedingungen/README.md) (fachliche in [req42](../req42/06-randbedingungen/README.md)) | RA |
+| 2 Randbedingungen | [02-randbedingungen](02-randbedingungen/README.md) (fachliche in [req42](../req42/07-randbedingungen/README.md)) | RA |
 | 3 Kontext und Abgrenzung | [03-kontext](03-kontext/README.md) | KT |
 | 4 Lösungsstrategie | [04-loesungsstrategie](04-loesungsstrategie/README.md) | LS |
 | 5 Bausteinsicht | [05-bausteine](05-bausteine/README.md) | BB |
@@ -22,4 +22,4 @@ Gliederung nach [arc42](https://arc42.org/). Jede Entität (Nachbarsystem, Baust
 | 11 Risiken und technische Schulden | [11-risiken](11-risiken/README.md) | R, TD |
 | 12 Glossar | [12-glossar](12-glossar/README.md) | G |
 
-IDs sind stabil. Anforderungen stehen in [req42](../req42/README.md). Die Quellen im bisherigen `kb/` bleiben bis zur Migration unverändert.
+IDs sind stabil. Anforderungen stehen in [req42](../req42/README.md). Jedes Kapitelverzeichnis enthält `00-kapitelbeschreibung.md` (Hilfe der offiziellen arc42-Vorlage, Stand 2026-11-20). Dokumentiert sind Java/Quarkus-Backend und Nuxt-Frontend; das Rust-Experiment (`rust-backend/`) ist nicht in Betrieb und bewusst ausgeklammert.

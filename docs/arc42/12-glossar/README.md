@@ -3,60 +3,47 @@ id: G-index
 title: "12 Glossar"
 status: entwurf
 typ: index
-quellen: []
+quellen:
+  - backend/src/main/java/de/chronos_live/chronos_date_api/domain/
+  - frontend/app/types/index.ts
 verknuepft: []
 ---
 
 # 12 Glossar
 
-Begriffe, je eine Datei (`G-nnn`). Fachbegriffe mit Code-Namen (Java/Rust/Frontend) stehen zuerst, danach technische Begriffe.
+Begriffe, die Leser:innen für Fachlichkeit und Code brauchen, je Datei (`G-nnn`) mit Code-Namen (Backend/Frontend). Allgemein bekannte Technikbegriffe (Cookie, JWT, DTO, ORM u. ä.) stehen hier nicht. IDs sind stabil; entfallene IDs werden nicht wiederverwendet.
 
-| ID | Titel |
-|---|---|
-| [G-001](G-001-termin.md) | Termin |
-| [G-002](G-002-terminstatus.md) | Terminstatus |
-| [G-003](G-003-teilnehmer.md) | Teilnehmer |
-| [G-004](G-004-rolle-teilnehmer.md) | Rolle (Teilnehmer) |
-| [G-005](G-005-zusage-absage.md) | Zusage / Absage |
-| [G-006](G-006-gruppe.md) | Gruppe |
-| [G-007](G-007-gruppenmitglied.md) | Gruppenmitglied |
-| [G-008](G-008-gruppenteilnahme.md) | Gruppenteilnahme |
-| [G-009](G-009-freundschaft.md) | Freundschaft |
-| [G-010](G-010-erinnerung.md) | Erinnerung |
-| [G-011](G-011-systemnachricht.md) | Systemnachricht |
-| [G-012](G-012-verschiebung.md) | Verschiebung |
-| [G-013](G-013-push-benachrichtigung.md) | Push-Benachrichtigung |
-| [G-014](G-014-accesstoken.md) | AccessToken |
-| [G-015](G-015-activerecord.md) | ActiveRecord |
-| [G-016](G-016-oidc.md) | OIDC |
-| [G-017](G-017-cookie.md) | Cookie |
-| [G-018](G-018-cors.md) | CORS |
-| [G-019](G-019-dto.md) | DTO |
-| [G-020](G-020-domain-model.md) | Domain Model |
-| [G-021](G-021-entity.md) | Entity |
-| [G-022](G-022-flyway.md) | Flyway |
-| [G-023](G-023-frontend.md) | Frontend |
-| [G-024](G-024-hibernate.md) | Hibernate |
-| [G-025](G-025-httponly-cookie.md) | httpOnly Cookie |
-| [G-026](G-026-jwt.md) | JWT |
-| [G-027](G-027-keycloak.md) | Keycloak |
-| [G-028](G-028-mapstruct.md) | MapStruct |
-| [G-029](G-029-middleware.md) | Middleware |
-| [G-030](G-030-nuxt.md) | Nuxt |
-| [G-031](G-031-orm.md) | ORM |
-| [G-032](G-032-organizer.md) | Organizer |
-| [G-033](G-033-panache.md) | Panache |
-| [G-034](G-034-principalcontext.md) | PrincipalContext |
-| [G-035](G-035-quarkus.md) | Quarkus |
-| [G-036](G-036-repository.md) | Repository |
-| [G-037](G-037-refreshtoken.md) | RefreshToken |
-| [G-038](G-038-service.md) | Service |
-| [G-039](G-039-service-worker.md) | Service Worker |
-| [G-040](G-040-session.md) | Session |
-| [G-041](G-041-spa.md) | SPA |
-| [G-042](G-042-ssr.md) | SSR |
-| [G-043](G-043-token.md) | Token |
-| [G-044](G-044-transaction.md) | Transaction |
-| [G-045](G-045-vapid.md) | VAPID |
-| [G-046](G-046-vue-3.md) | Vue 3 |
-| [G-047](G-047-web-push-api.md) | Web Push API |
+## Fachbegriffe
+
+| ID | Begriff | Code-Name |
+|---|---|---|
+| [G-001](G-001-termin.md) | Termin | `Appointment` |
+| [G-002](G-002-terminstatus.md) | Terminstatus | `AppointmentStatus` |
+| [G-003](G-003-teilnehmer.md) | Teilnehmer | `AppointmentParticipation` |
+| [G-004](G-004-rolle-teilnehmer.md) | Rolle (Teilnehmer) | `UserRole` |
+| [G-005](G-005-zusage-absage.md) | Zusage / Absage | `ParticipationStatus` |
+| [G-006](G-006-gruppe.md) | Gruppe (und Mitglied) | `Group`, `GroupMember` |
+| [G-008](G-008-gruppenteilnahme.md) | Gruppenteilnahme | `AppointmentGroupParticipation` |
+| [G-009](G-009-freundschaft.md) | Freundschaft | `FriendshipRequest` |
+| [G-010](G-010-erinnerung.md) | Erinnerung | `ReminderRule` |
+| [G-011](G-011-nachricht-und-systemnachricht.md) | Nachricht / Systemnachricht | `Message` |
+| [G-012](G-012-verschiebung.md) | Verschiebung | `AppointmentMovedEvent` |
+| [G-013](G-013-push-benachrichtigung.md) | Push-Benachrichtigung | `PushSubscription`, `Settings` |
+| [G-049](G-049-mindestteilnehmerzahl.md) | Mindestteilnehmerzahl | `minimalAttendees` |
+| [G-051](G-051-admin-api.md) | Admin-API | `/api/v2/admin/*`, `ADMIN_API` |
+| [G-052](G-052-rueckmeldung-rsvp.md) | Rückmeldung (RSVP) | `RSVP`, `sendRSVPReminder` |
+
+## Technische Begriffe mit Chronos-Bedeutung
+
+| ID | Begriff | Code-Name |
+|---|---|---|
+| [G-014](G-014-access-und-refresh-token.md) | Access- und Refresh-Token | `kc_access`, `kc_refresh`, `kc_expires` |
+| [G-027](G-027-keycloak.md) | Keycloak | Realm `chronos` |
+| [G-034](G-034-principalcontext.md) | PrincipalContext | `PrincipalContext` |
+| [G-039](G-039-service-worker.md) | Service Worker | `push-sw.js` |
+| [G-045](G-045-vapid.md) | VAPID | `push.vapid.*` |
+| [G-048](G-048-oidcid.md) | oidcId | `userOidcId`, `user_id` |
+| [G-050](G-050-profil-cache.md) | Profil-Cache | `user_profiles`, `IdentityPort` |
+| [G-053](G-053-leader.md) | Leader | `isLeader()`, Lease `chronos-scheduler` |
+| [G-054](G-054-domaenenereignis.md) | Domänenereignis | `application.events` |
+| [G-055](G-055-pwa.md) | PWA (installierbare Web-App) | `manifest.webmanifest`, `push-sw.js` |

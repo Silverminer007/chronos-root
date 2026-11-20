@@ -1,0 +1,35 @@
+---
+title: Kapitelbeschreibung (Vorlage)
+quelle: https://req42.de/download (req42-framework-DE-withhelp-gitHubMarkdownMP.zip, 11_Roadmaps.md)
+abgerufen: 2026-11-20
+---
+
+> Unveränderte Hilfe der offiziellen Vorlage. Der Inhalt des Kapitels steht in den Dateien dieses Ordners.
+
+# Roadmaps
+
+Inhalt
+
+"Liefergegenstände auf die Zeitleiste gelegt" – wer liefert wann was?
+
+Motivation
+
+Auch agile Projekte brauchen einen Plan. Je weiter ein Ziel in der Ferne
+liegt, desto ungenauer kann der Plan sein. Je näher, desto genauer. Eine
+explizit bekannte Roadmap ermöglicht allen Beteiligten sich
+untereinander abzustimmen und mitzudenken und daher bei kurzfristigen
+Entscheidungen zu berücksichtigen, was da mittelfristig noch alles
+kommen wird.
+
+Wenn Sie nur von der Hand in den Mund leben, treffen Sie unter Umständen
+unwissentlich kurzfristig Entscheidungen, die dem längerfristigen
+Produkterfolg entgegenstehen. In unseren Kursen zeigen wir Ihnen, wie
+grob oder fein eine Roadmap sein kann, darf oder sollte.
+
+Notationen/Tools
+
+Was auch immer Sie als Planungswerkzeug im Einsatz haben oder was Ihnen
+erlaubt, möglichst auf einer Seite einen entsprechenden Überblick über
+einen längeren Zeitraum darzustellen.
+
+*\< Hier Ihre Planung einfügen \>*
