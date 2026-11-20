@@ -23,7 +23,7 @@ last-verified: 2026-11-20
 ## Stolperstellen
 
 - Die `docs/`-Sperre erfasst nur Write/Edit, nicht Shell-Befehle (`sed`, `git mv`).
-- `wiki-stop-check.sh` zählt jede Änderung außerhalb von `wiki/`, `docs/` und `.idea/`, also auch vorgemerkte Löschungen. Bei großen Umbauten blockiert er deshalb einmal; `stop_hook_active` verhindert Schleifen.
+- `wiki-stop-check.sh` zählt jede Änderung außerhalb von `wiki/`, `docs/` und `.idea/`, also auch vorgemerkte Löschungen; das Log gilt als gepflegt, wenn `wiki/log.md` jünger ist als jede geänderte Datei (Änderungszeit, auch wenn schon committed). Sonst blockiert er einmal; `stop_hook_active` verhindert Schleifen.
 - opencode kennt `.opencode/plugin/` und `.opencode/plugins/` (1.18.30); der Hook `experimental.chat.system.transform` ist experimentell und kann sich ändern.
 - `CLAUDE.md` nie komplett ersetzen: Der Import `@AGENTS.md` wird **angehängt**, die Projektregeln bleiben (ein Commit hatte sie versehentlich entfernt, im Folgecommit korrigiert).
 - Beim Start der Session waren 80 Dateien (`kb/`, `CLAUDE.md`, `README.md` …) als gelöscht vorgemerkt, nicht von diesem Agenten. Vor dem Commit nur eigene Pfade angeben (`git commit -- <pfade>`).
