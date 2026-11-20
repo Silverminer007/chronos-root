@@ -20,3 +20,7 @@ Ablauf in jeder Session:
 
 Werkzeuge: Skill `chronos-wiki` (Claude Code und opencode), Befehle `/wiki-ingest`, `/wiki-lint`, `/wiki-query`.
 Erzwingung: Claude Code über `.claude/settings.json` (Hooks), opencode über `opencode.json` und `.opencode/plugin/chronos-wiki.js`.
+
+## Tickets
+
+Ticket-Typen (Epic, Feature, Story, Task), Struktur und Definition of Done: `docs/req42/04-product-backlog/ticket-typen.md`. Neue Tickets mit den Vorlagen in `.github/ISSUE_TEMPLATE/` und Typ-Label (`epic`, `feature`, `story`, `task`) anlegen; `ready-for-agent` nur an vollständige Tasks vergeben.
