@@ -12,7 +12,7 @@ Agenten: zuerst hier lesen. Eine Zeile pro Seite, nach Typ gruppiert. Pflichtpfl
 - *(noch leer; `kb/adr/` wird per Migration hierher bzw. nach `docs/arc42/09` verteilt)*
 
 ## Lektionen
-- *(noch leer)*
+- [Wiki-Nutzung in Claude Code und opencode erzwingen](lessons/agent-integration-wiki-erzwingen.md): Hooks, Plugin, Stolperstellen
 
 ## Tickets
 - *(noch leer)*
